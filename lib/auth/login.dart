@@ -1,3 +1,4 @@
+import 'package:bac_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -59,7 +60,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
           _isLoading = false;
         });
         // Navigate to POS Screen
-        Get.to(() => const PosScreen());
+        Get.off(() => const Homepage());
       });
     }
   }
@@ -209,8 +210,9 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
+                              keyboardType: TextInputType.number,
                               decoration: InputDecoration(
-                                labelText: 'Password',
+                                labelText: 'Passcode',
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
                                   color: Colors.blue.shade700,
