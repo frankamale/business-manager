@@ -5,8 +5,11 @@ class PosScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      child: Text("POS Screen"),
+    return Scaffold(
+      appBar: null,
+      body: Center(
+        child: Text("POS Screen"),
+      )
     );
   }
 }

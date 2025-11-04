@@ -1,4 +1,5 @@
 import 'package:bac_pos/pages/pos_screen.dart';
+import 'package:bac_pos/pages/sales_point_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -86,7 +87,13 @@ class _HomepageState extends State<Homepage>
         foregroundColor: Colors.white,
         title: Row(
           children: [
-            Icon(Icons.store_rounded, size: 28),
+            Container(
+              width: 30,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(100))
+                ),
+                child: Image.asset("assets/images/logo.png")
+            ),
             const SizedBox(width: 12),
             const Text(
               "Testing Company LTD",
@@ -114,7 +121,7 @@ class _HomepageState extends State<Homepage>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 10,),
+                    SizedBox(height: 10),
                     Text(
                       "Select a service point",
                       style: TextStyle(
@@ -165,7 +172,7 @@ class _HomepageState extends State<Homepage>
         child: InkWell(
           onTap: () {
             Get.to(
-              () => const PosScreen(),
+              () => SalesPointDetails(servicePoint: point),
               transition: Transition.rightToLeft,
               duration: const Duration(milliseconds: 300),
             );
