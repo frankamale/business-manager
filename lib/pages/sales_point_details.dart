@@ -1,5 +1,7 @@
+import 'package:bac_pos/pages/daily_summary.dart';
 import 'package:bac_pos/pages/homepage.dart';
 import 'package:bac_pos/pages/pos_screen.dart';
+import 'package:bac_pos/pages/sales_listing.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -27,9 +29,21 @@ class SalesPointDetails extends StatelessWidget {
               spacing: 10,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _actionButton("ENTER NEW BILL/SALE", Icons.monetization_on_outlined, "To homescreen"),
-                _actionButton("VIEW SALE ORDERS/BILLS", Icons.monetization_on_outlined, "To homescreen"),
-                _actionButton("DAILY SUMMARY", Icons.monetization_on_outlined, "To homescreen"),
+                _actionButton(
+                  "ENTER NEW BILL/SALE",
+                  Icons.monetization_on_outlined,
+                  PosScreen(),
+                ),
+                _actionButton(
+                  "VIEW SALE ORDERS/BILLS",
+                  Icons.list,
+                  SalesListing(),
+                ),
+                _actionButton(
+                  "DAILY SUMMARY",
+                  Icons.dashboard_outlined,
+                  DailySummary(),
+                ),
               ],
             ),
           ),
@@ -38,10 +52,10 @@ class SalesPointDetails extends StatelessWidget {
     );
   }
 
-  Widget _actionButton(String label, IconData icon, String string) {
+  Widget _actionButton(String label, IconData icon, Widget destination) {
     return InkWell(
       onTap: (() {
-        Get.to(() => PosScreen());
+        Get.to(() => destination);
       }),
       child: Container(
         width: double.infinity,

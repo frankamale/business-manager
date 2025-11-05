@@ -1,4 +1,3 @@
-import 'package:bac_pos/pages/pos_screen.dart';
 import 'package:bac_pos/pages/sales_point_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
