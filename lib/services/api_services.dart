@@ -26,61 +26,36 @@ class ApiService extends GetxService {
   // Sign in with credentials
   Future<AuthResponse> signIn(String username, String password) async {
     try {
-      print('═══════════════════════════════════════════════════');
-      print('🔐 AUTHENTICATION REQUEST STARTED');
-      print('═══════════════════════════════════════════════════');
-      print('📍 URL: $baseurl/auth/signin');
-      print('👤 Username: $username');
-      print('🔑 Password: ${password.replaceAll(RegExp(r'.'), '*')}');
-      print('───────────────────────────────────────────────────');
 
       final requestBody = json.encode({
         'username': username,
         'password': password,
       });
 
-      print('📦 Request Body: $requestBody');
-      print('📋 Headers: {Content-Type: application/json}');
-      print('⏳ Sending POST request...');
-
       final response = await http.post(
         Uri.parse("$baseurl/auth/signin"),
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
-
-      print('───────────────────────────────────────────────────');
-      print('📥 RESPONSE RECEIVED');
       print('📊 Status Code: ${response.statusCode}');
       print('📄 Response Body: ${response.body}');
-      print('───────────────────────────────────────────────────');
 
       if (response.statusCode == 200) {
-        print('✅ Authentication successful!');
+        print('Authentication successful!');
         final authResponse = AuthResponse.fromJson(json.decode(response.body));
 
-        print('💾 Storing auth data securely...');
-        // Store auth data
         await _saveAuthData(authResponse);
-        print('✅ Auth data stored successfully');
-        print('═══════════════════════════════════════════════════');
+        print(' Auth data stored successfully');
 
         return authResponse;
       } else {
-        print('❌ Authentication failed!');
-        print('❌ Status Code: ${response.statusCode}');
-        print('❌ Response: ${response.body}');
-        print('═══════════════════════════════════════════════════');
+        print('Status Code: ${response.statusCode}');
+        print('Response: ${response.body}');
         throw Exception("Failed to sign in: ${response.statusCode}");
       }
     } catch (e, stackTrace) {
-      print('═══════════════════════════════════════════════════');
-      print('💥 EXCEPTION OCCURRED');
-      print('❌ Error Type: ${e.runtimeType}');
-      print('❌ Error Message: $e');
-      print('📍 Stack Trace:');
-      print(stackTrace);
-      print('═══════════════════════════════════════════════════');
+      print(' Error Type: ${e.runtimeType}');
+      print('Error Message: $e');
       rethrow;
     }
   }
@@ -140,60 +115,46 @@ class ApiService extends GetxService {
 
   Future<List<User>> fetchUsers() async {
     try {
-      print('═══════════════════════════════════════════════════');
-      print('👥 FETCHING USERS REQUEST STARTED');
-      print('═══════════════════════════════════════════════════');
+      print('FETCHING USERS REQUEST STARTED');
 
       final token = await getAccessToken();
-      print('🔑 Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
+      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
 
       final headers = <String, String>{
         'Content-Type': 'application/json',
       };
 
-      // Add authorization header if token exists
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
-        print('✅ Authorization header added');
+        print(' Authorization header added');
       } else {
-        print('⚠️  No authorization token available');
+        print(' No authorization token available');
       }
-
-      print('📍 URL: $baseurl/users');
-      print('📋 Headers: $headers');
-      print('⏳ Sending GET request...');
 
       final response = await http.get(
         Uri.parse("$baseurl/users"),
         headers: headers,
       );
 
-      print('───────────────────────────────────────────────────');
-      print('📥 RESPONSE RECEIVED');
-      print('📊 Status Code: ${response.statusCode}');
-      print('📄 Response Body Length: ${response.body.length} characters');
-      print('───────────────────────────────────────────────────');
+      print(' Status Code: ${response.statusCode}');
+      print(' Response Body Length: ${response.body.length} characters');
+
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        print('✅ Successfully parsed ${data.length} users');
-        print('═══════════════════════════════════════════════════');
+        print('Successfully parsed ${data.length} users');
         return data.map((json) => User.fromMap(json)).toList();
       } else {
-        print('❌ Failed to load users');
-        print('❌ Status Code: ${response.statusCode}');
-        print('❌ Response: ${response.body}');
-        print('═══════════════════════════════════════════════════');
+        print(' Status Code: ${response.statusCode}');
+        print(' Response: ${response.body}');
         throw Exception("Failed to load user");
       }
     } catch (e, stackTrace) {
       print('═══════════════════════════════════════════════════');
-      print('💥 EXCEPTION IN FETCH USERS');
-      print('❌ Error Type: ${e.runtimeType}');
-      print('❌ Error Message: $e');
-      print('📍 Stack Trace:');
+      print(' Error Type: ${e.runtimeType}');
+      print('Error Message: $e');
+      print('Stack Trace:');
       print(stackTrace);
-      print('═══════════════════════════════════════════════════');
       rethrow;
     }
   }

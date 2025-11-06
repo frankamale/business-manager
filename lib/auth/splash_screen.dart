@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../auth/login.dart';
+import 'login.dart';
 import '../services/api_services.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -50,18 +50,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _authenticateApp() async {
     try {
-      print('\n');
-      print('╔════════════════════════════════════════════════════╗');
-      print('║          SPLASH SCREEN - AUTHENTICATION            ║');
-      print('╚════════════════════════════════════════════════════╝');
-      print('🚀 Starting app authentication process...');
+
+      print(' Starting app authentication process...');
 
       setState(() {
         _statusMessage = 'Connecting to server...';
       });
 
-      print('📡 Updating UI: Connecting to server...');
-      print('🔄 Calling API Service signin method...');
 
       // Authenticate using the provided credentials
       final authResponse = await _apiService.signIn(
@@ -69,47 +64,36 @@ class _SplashScreenState extends State<SplashScreen>
         'Ba@123456',
       );
 
-      print('✅ Received auth response from API');
-      print('👤 User ID: ${authResponse.id}');
-      print('📧 Username: ${authResponse.username}');
-      print('🎭 Roles: ${authResponse.roles}');
-      print('🔑 Token received: ${authResponse.accessToken.substring(0, 20)}...');
+
 
       setState(() {
-        _statusMessage = 'Authentication successful';
+        _statusMessage = 'Finishing set up ...';
       });
 
-      print('📡 Updating UI: Authentication successful');
-      print('⏳ Waiting 800ms before navigation...');
+      print(' Updating UI: Authentication successful');
+      print(' Waiting 800ms before navigation...');
 
       // Wait a moment before navigating
       await Future.delayed(const Duration(milliseconds: 800));
 
-      print('🚀 Navigating to Login page...');
+      print(' Navigating to Login page...');
 
       // Navigate to login page
       if (mounted) {
         Get.off(() => const Login());
-        print('✅ Navigation complete');
       }
 
-      print('╔════════════════════════════════════════════════════╗');
-      print('║        AUTHENTICATION COMPLETED SUCCESSFULLY       ║');
-      print('╚════════════════════════════════════════════════════╝');
-      print('\n');
+      print('AUTHENTICATION COMPLETED SUCCESSFULLY ');
     } catch (e) {
-      print('╔════════════════════════════════════════════════════╗');
-      print('║           AUTHENTICATION ERROR OCCURRED            ║');
-      print('╚════════════════════════════════════════════════════╝');
-      print('💥 Error caught in splash screen');
-      print('❌ Error: $e');
+
+      print(' Error: $e');
 
       setState(() {
         _hasError = true;
         _statusMessage = 'Connection failed';
       });
 
-      print('📡 Updating UI: Connection failed');
+      print(' Updating UI: Connection failed');
 
       // Show error snackbar
       Get.snackbar(
@@ -121,12 +105,11 @@ class _SplashScreenState extends State<SplashScreen>
         duration: const Duration(seconds: 4),
       );
 
-      print('🔄 Retrying in 3 seconds...');
 
       // Retry after a delay
       await Future.delayed(const Duration(seconds: 3));
       if (mounted) {
-        print('🔁 Initiating retry...\n');
+        print('Initiating retry...\n');
         _authenticateApp();
       }
     }
@@ -142,6 +125,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        padding: EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -164,10 +148,12 @@ class _SplashScreenState extends State<SplashScreen>
                   child: FadeTransition(
                     opacity: _fadeAnimation,
                     child: Container(
+                      margin: EdgeInsets.only(top: 4),
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
+
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.2),
