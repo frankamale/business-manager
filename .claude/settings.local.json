@@ -3,7 +3,8 @@
     "allow": [
       "Bash(flutter run:*)",
       "Bash(flutter pub get:*)",
-      "Bash(flutter clean:*)"
+      "Bash(flutter clean:*)",
+      "Bash(flutter devices:*)"
     ],
     "deny": [],
     "ask": []

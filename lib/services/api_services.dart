@@ -142,8 +142,21 @@ class ApiService extends GetxService {
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        print('Successfully parsed ${data.length} users');
-        return data.map((json) => User.fromMap(json)).toList();
+        print('✅ Successfully parsed ${data.length} users from API endpoint');
+
+        final users = data.map((json) => User.fromMap(json)).toList();
+
+        print('📋 Users received from endpoint:');
+        for (var i = 0; i < users.length; i++) {
+          print('   ${i + 1}. ${users[i].name}');
+          print('      - Username: ${users[i].username}');
+          print('      - Role: ${users[i].role}');
+          print('      - Branch: ${users[i].branchname}');
+          print('      - Company: ${users[i].companyName}');
+          print('      ---');
+        }
+
+        return users;
       } else {
         print(' Status Code: ${response.statusCode}');
         print(' Response: ${response.body}');

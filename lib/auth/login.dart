@@ -1,6 +1,7 @@
 import 'package:bac_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controllers/auth_controller.dart';
 
 
 class Login extends StatefulWidget {
@@ -13,18 +14,12 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
+  final AuthController _authController = Get.put(AuthController());
   String? selectedItem;
   bool _obscurePassword = true;
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
-  final List<String> items = [
-    "Supervisor",
-    "Cashier",
-    "Sales Person",
-    "Manager"
-  ];
 
   @override
   void initState() {
@@ -154,7 +149,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             const SizedBox(height: 40),
 
                             // User Role Dropdown
-                            DropdownButtonFormField<String>(
+                            Obx(() => DropdownButtonFormField<String>(
                               value: selectedItem,
                               decoration: InputDecoration(
                                 labelText: 'User Role',
@@ -185,7 +180,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                 fillColor: Colors.grey.shade50,
                               ),
                               hint: const Text('Select your role'),
-                              items: items.map((String item) {
+                              items: _authController.userRoles.map((String item) {
                                 return DropdownMenuItem<String>(
                                   value: item,
                                   child: Text(item),
@@ -202,7 +197,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                 }
                                 return null;
                               },
-                            ),
+                            )),
                             const SizedBox(height: 20),
 
                             // Password Field

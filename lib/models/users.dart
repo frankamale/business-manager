@@ -11,7 +11,7 @@ class User {
   final String staffid;
   final String salespersonid;
   final String companyid;
-  final String pospassword;
+  final int pospassword;
 
   User({
     required this.id,
@@ -31,19 +31,19 @@ class User {
 
   Map<String, dynamic> toMap() {
     return {
-      id: "id",
-      name: "name",
-      branch: "branch",
-      company: "company",
-      role: "role",
-      branchname: "branchname",
-      companyName: "companyName",
-      username: "username",
-      staff: "staff",
-      staffid: "staffid",
-      salespersonid: "salespersonid",
-      companyid: "companyid",
-      pospassword: "pospassword",
+      'id': id,
+      'name': name,
+      'branch': branch,
+      'company': company,
+      'role': role,
+      'branchname': branchname,
+      'companyName': companyName,
+      'username': username,
+      'staff': staff,
+      'staffid': staffid,
+      'salespersonid': salespersonid,
+      'companyid': companyid,
+      'pospassword': pospassword,
     };
   }
   factory User.fromMap(Map<String, dynamic> map){
@@ -60,7 +60,7 @@ class User {
       staffid: map['staffid'] ?? '',
       salespersonid: map['salespersonid'] ?? '',
       companyid: map['companyid'] ?? '',
-      pospassword: map['pospassword'] ?? '',
+      pospassword: map['pospassword'],
     );
   }
 }

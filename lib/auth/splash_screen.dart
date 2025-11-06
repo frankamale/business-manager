@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'login.dart';
 import '../services/api_services.dart';
+import '../controllers/auth_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -65,6 +66,17 @@ class _SplashScreenState extends State<SplashScreen>
       );
 
 
+
+      setState(() {
+        _statusMessage = 'Syncing users from server...';
+      });
+
+      // Initialize AuthController and sync users
+      print(' Initializing AuthController...');
+      final authController = Get.put(AuthController());
+
+      print(' Syncing users from API...');
+      await authController.syncUsersFromAPI();
 
       setState(() {
         _statusMessage = 'Finishing set up ...';
