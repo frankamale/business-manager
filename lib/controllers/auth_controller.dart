@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../database/db_helper.dart';
 import '../services/api_services.dart';
+import '../models/users.dart';
 
 class AuthController extends GetxController {
   final _dbHelper = DatabaseHelper();
@@ -9,9 +10,13 @@ class AuthController extends GetxController {
   // Reactive list of user roles
   var userRoles = <String>[].obs;
 
+  // Current logged in user
+  var currentUser = Rxn<User>();
+
   // Loading state
   var isLoadingRoles = false.obs;
   var isSyncingUsers = false.obs;
+  var isLoggingIn = false.obs;
 
   @override
   void onInit() {
@@ -92,5 +97,72 @@ class AuthController extends GetxController {
       print('Error syncing users from API: $e');
 
     }
+  }
+
+  // Login user with role and password
+  Future<bool> login(String role, String password) async {
+    try {
+      print(' Attempting login with role: $role');
+      isLoggingIn.value = true;
+
+      // Convert password to integer
+      final int? passwordInt = int.tryParse(password);
+      if (passwordInt == null) {
+        print('Invalid password format. Password must be a number');
+        Get.snackbar(
+          'Invalid Password',
+          'Password must be a number',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        isLoggingIn.value = false;
+        return false;
+      }
+
+      // Authenticate user
+      final user = await _dbHelper.authenticateUser(role, passwordInt);
+
+      if (user == null) {
+        print('Login failed - Invalid role or password');
+        Get.snackbar(
+          'Login Failed',
+          'Invalid role or password',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        isLoggingIn.value = false;
+        return false;
+      }
+
+      // Set current user
+      currentUser.value = user;
+      print('Login successful! Welcome ${user.name}');
+      print('   Role: ${user.role}');
+      print('   Username: ${user.username}');
+      print('   Branch: ${user.branchname}');
+      print('   Company: ${user.companyName}');
+
+      Get.snackbar(
+        'Login Successful',
+        'Welcome ${user.name}!',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+
+      isLoggingIn.value = false;
+      return true;
+    } catch (e) {
+      print('Login error: $e');
+      Get.snackbar(
+        'Login Error',
+        'An error occurred during login',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      isLoggingIn.value = false;
+      return false;
+    }
+  }
+
+  // Logout user
+  void logout() {
+    currentUser.value = null;
+    print('User logged out');
   }
 }

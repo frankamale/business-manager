@@ -49,18 +49,18 @@ class User {
   factory User.fromMap(Map<String, dynamic> map){
     return User(
       id: map['id'] ?? '',
-      name: map['name'] ?? '',
+      name: map['staff'] ?? map['name'] ?? '',  // API uses 'staff' field for name
       branch: map['branch'] ?? '',
       company: map['company'] ?? '',
       role: map['role'] ?? '',
       branchname: map['branchname'] ?? '',
-      companyName: map['companyName'] ?? '',
+      companyName: map['companyname'] ?? map['companyName'] ?? '',  // API uses 'companyname'
       username: map['username'] ?? '',
       staff: map['staff'] ?? '',
       staffid: map['staffid'] ?? '',
       salespersonid: map['salespersonid'] ?? '',
       companyid: map['companyid'] ?? '',
-      pospassword: map['pospassword'],
+      pospassword: map['pospassword'] ?? 0,
     );
   }
 }

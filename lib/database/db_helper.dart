@@ -18,7 +18,20 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), "my_database.db");
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
+    return await openDatabase(
+      path,
+      version: 2,  // Incremented version to trigger migration
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Drop old table and recreate with correct schema
+      await db.execute('DROP TABLE IF EXISTS user');
+      await _onCreate(db, newVersion);
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -36,9 +49,9 @@ class DatabaseHelper {
       staffid TEXT,
       salespersonid TEXT,
       companyid TEXT,
-      pospassword TEXT
+      pospassword INTEGER
       )
-      
+
       ''');
   }
 
@@ -100,5 +113,39 @@ class DatabaseHelper {
     return List.generate(maps.length, (i) {
       return User.fromMap(maps[i]);
     });
+  }
+
+  // Authenticate user by role and password
+  Future<User?> authenticateUser(String role, int password) async {
+    try {
+      final db = await database;
+      print('Authenticating user with role: $role and password: $password');
+
+      final List<Map<String, dynamic>> maps = await db!.query(
+        'user',
+        where: 'role = ? AND pospassword = ?',
+        whereArgs: [role, password],
+        limit: 1,
+      );
+
+      if (maps.isEmpty) {
+        print('No user found with role: $role and the provided password');
+        return null;
+      }
+
+      final user = User.fromMap(maps.first);
+      print('Authentication successful for user: ${user.name} (${user.username})');
+      return user;
+    } catch (e) {
+      print('Error during authentication: $e');
+      return null;
+    }
+  }
+
+  // Delete all users (useful for re-syncing)
+  Future<void> deleteAllUsers() async {
+    final db = await database;
+    await db!.delete('user');
+    print('🗑️ All users deleted from database');
   }
 }

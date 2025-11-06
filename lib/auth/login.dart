@@ -42,20 +42,27 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  void _handleLogin() {
+  Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      // Simulate login process
-      Future.delayed(const Duration(seconds: 1), () {
-        setState(() {
-          _isLoading = false;
-        });
-        // Navigate to POS Screen
-        Get.off(() => const Homepage());
+      // Authenticate user
+      final success = await _authController.login(
+        selectedItem!,
+        _passwordController.text,
+      );
+
+      setState(() {
+        _isLoading = false;
       });
+
+      // Navigate to POS Screen if login successful
+      if (success) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        Get.off(() => const Homepage());
+      }
     }
   }
 
@@ -258,30 +265,6 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 12),
 
-                            // Forgot Password
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {
-                                  // Add forgot password logic
-                                  Get.snackbar(
-                                    'Info',
-                                    'Contact administrator to reset password',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                    backgroundColor: Colors.blue.shade100,
-                                    colorText: Colors.blue.shade900,
-                                  );
-                                },
-                                child: Text(
-                                  'Forgot Password?',
-                                  style: TextStyle(
-                                    color: Colors.blue.shade700,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
 
                             // Sign In Button
                             SizedBox(
@@ -326,7 +309,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
 
                             // Footer
                             Text(
-                              '© 2024 Komusoft Solutions',
+                              '© 2025 Komusoft Solutions',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,
