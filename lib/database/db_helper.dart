@@ -1,4 +1,5 @@
 import 'package:bac_pos/models/users.dart';
+import 'package:bac_pos/models/service_point.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -20,7 +21,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), "my_database.db");
     return await openDatabase(
       path,
-      version: 2,  // Incremented version to trigger migration
+      version: 3,  // Incremented version to add service points table
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -31,6 +32,24 @@ class DatabaseHelper {
       // Drop old table and recreate with correct schema
       await db.execute('DROP TABLE IF EXISTS user');
       await _onCreate(db, newVersion);
+    }
+
+    if (oldVersion < 3) {
+      // Add service_point table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS service_point (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          code TEXT NOT NULL,
+          fullName TEXT NOT NULL,
+          servicepointtype TEXT NOT NULL,
+          facilityName TEXT NOT NULL,
+          sales INTEGER NOT NULL,
+          stores INTEGER NOT NULL,
+          production INTEGER NOT NULL,
+          booking INTEGER NOT NULL
+        )
+      ''');
     }
   }
 
@@ -51,8 +70,22 @@ class DatabaseHelper {
       companyid TEXT,
       pospassword INTEGER
       )
-
       ''');
+
+    await db.execute('''
+      CREATE TABLE service_point (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        code TEXT NOT NULL,
+        fullName TEXT NOT NULL,
+        servicepointtype TEXT NOT NULL,
+        facilityName TEXT NOT NULL,
+        sales INTEGER NOT NULL,
+        stores INTEGER NOT NULL,
+        production INTEGER NOT NULL,
+        booking INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<int> insertUser(User user) async {
@@ -146,6 +179,65 @@ class DatabaseHelper {
   Future<void> deleteAllUsers() async {
     final db = await database;
     await db!.delete('user');
-    print('🗑️ All users deleted from database');
+    print('All users deleted from database');
+  }
+
+  // SERVICE POINT METHODS
+
+  // Insert a service point
+  Future<int> insertServicePoint(ServicePoint servicePoint) async {
+    final db = await database;
+    return await db!.insert(
+      'service_point',
+      servicePoint.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Insert multiple service points
+  Future<void> insertServicePoints(List<ServicePoint> servicePoints) async {
+    final db = await database;
+    final batch = db!.batch();
+
+    for (var servicePoint in servicePoints) {
+      batch.insert(
+        'service_point',
+        servicePoint.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  // Get all service points
+  Future<List<ServicePoint>> getServicePoints() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query('service_point');
+
+    return List.generate(maps.length, (i) {
+      return ServicePoint.fromMap(maps[i]);
+    });
+  }
+
+  // Get service points with sales enabled
+  Future<List<ServicePoint>> getSalesServicePoints() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'service_point',
+      where: 'sales = ?',
+      whereArgs: [1],
+    );
+
+    return List.generate(maps.length, (i) {
+      return ServicePoint.fromMap(maps[i]);
+    });
+  }
+
+  // Delete all service points
+  Future<void> deleteAllServicePoints() async {
+    final db = await database;
+    await db!.delete('service_point');
+    print('All service points deleted from database');
   }
 }

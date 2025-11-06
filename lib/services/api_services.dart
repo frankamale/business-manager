@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../models/users.dart';
 import '../models/auth_response.dart';
+import '../models/service_point.dart';
 
 class ApiService extends GetxService {
   final String baseurl = "http://52.30.142.12:8080/rest";
@@ -161,6 +162,64 @@ class ApiService extends GetxService {
         print(' Status Code: ${response.statusCode}');
         print(' Response: ${response.body}');
         throw Exception("Failed to load user");
+      }
+    } catch (e, stackTrace) {
+      print('═══════════════════════════════════════════════════');
+      print(' Error Type: ${e.runtimeType}');
+      print('Error Message: $e');
+      print('Stack Trace:');
+      print(stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<List<ServicePoint>> fetchServicePoints() async {
+    try {
+      print('FETCHING SERVICE POINTS REQUEST STARTED');
+
+      final token = await getAccessToken();
+      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+        print(' Authorization header added');
+      } else {
+        print(' No authorization token available');
+      }
+
+      final response = await http.get(
+        Uri.parse("$baseurl/servicepoints"),
+        headers: headers,
+      );
+
+      print(' Status Code: ${response.statusCode}');
+      print(' Response Body Length: ${response.body.length} characters');
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        print('Successfully parsed ${data.length} service points from API endpoint');
+
+        final servicePoints = data.map((json) => ServicePoint.fromMap(json)).toList();
+
+        print('Service points received from endpoint:');
+        for (var i = 0; i < servicePoints.length; i++) {
+          print('   ${i + 1}. ${servicePoints[i].name}');
+          print('      - Code: ${servicePoints[i].code}');
+          print('      - Type: ${servicePoints[i].servicepointtype}');
+          print('      - Full Name: ${servicePoints[i].fullName}');
+          print('      - Sales: ${servicePoints[i].sales}');
+          print('      ---');
+        }
+
+        return servicePoints;
+      } else {
+        print(' Status Code: ${response.statusCode}');
+        print(' Response: ${response.body}');
+        throw Exception("Failed to load service points");
       }
     } catch (e, stackTrace) {
       print('═══════════════════════════════════════════════════');

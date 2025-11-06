@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'login.dart';
 import '../services/api_services.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/service_point_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -77,6 +78,17 @@ class _SplashScreenState extends State<SplashScreen>
 
       print(' Syncing users from API...');
       await authController.syncUsersFromAPI();
+
+      setState(() {
+        _statusMessage = 'Syncing service points...';
+      });
+
+      // Initialize ServicePointController and sync service points
+      print(' Initializing ServicePointController...');
+      final servicePointController = Get.put(ServicePointController());
+
+      print(' Syncing service points from API...');
+      await servicePointController.syncServicePointsFromAPI();
 
       setState(() {
         _statusMessage = 'Finishing set up ...';
