@@ -2,7 +2,6 @@ import 'package:bac_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../pages/pos_screen.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -87,7 +86,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
           child: Center(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(
-                horizontal: isSmallScreen ? 24.0 : 48.0,
+                horizontal: isSmallScreen ? 10.0 : 20.0,
                 vertical: 24.0,
               ),
               child: FadeTransition(

@@ -53,7 +53,50 @@ class DatabaseHelper {
 
   Future<List<User>> get users async {
     Database? db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query('users');
+    final List<Map<String, dynamic>> maps = await db!.query('user');
+    return List.generate(maps.length, (i) {
+      return User.fromMap(maps[i]);
+    });
+  }
+
+  // Insert multiple users
+  Future<void> insertUsers(List<User> users) async {
+    final db = await database;
+    final batch = db!.batch();
+
+    for (var user in users) {
+      batch.insert(
+        'user',
+        user.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  // Get unique roles from users
+  Future<List<String>> getUniqueRoles() async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db!.query(
+      'user',
+      columns: ['role'],
+      distinct: true,
+      orderBy: 'role ASC',
+    );
+
+    return result.map((map) => map['role'] as String).toList();
+  }
+
+  // Get users by role
+  Future<List<User>> getUsersByRole(String role) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'user',
+      where: 'role = ?',
+      whereArgs: [role],
+    );
+
     return List.generate(maps.length, (i) {
       return User.fromMap(maps[i]);
     });
