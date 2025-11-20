@@ -1,6 +1,8 @@
 import 'package:bac_pos/pages/sales_point_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controllers/service_point_controller.dart';
+import '../models/service_point.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -13,39 +15,7 @@ class _HomepageState extends State<Homepage>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
-  final List<ServicePoint> servicePoints = [
-    ServicePoint(
-      name: "Cafeteria",
-      icon: Icons.local_cafe_rounded,
-      color: Colors.brown,
-      gradient: [Colors.brown.shade400, Colors.brown.shade700],
-    ),
-    ServicePoint(
-      name: "Pharmacy",
-      icon: Icons.local_pharmacy_rounded,
-      color: Colors.green,
-      gradient: [Colors.green.shade400, Colors.green.shade700],
-    ),
-    ServicePoint(
-      name: "Hardware",
-      icon: Icons.hardware_rounded,
-      color: Colors.orange,
-      gradient: [Colors.orange.shade400, Colors.orange.shade700],
-    ),
-    ServicePoint(
-      name: "Restaurant",
-      icon: Icons.restaurant_rounded,
-      color: Colors.red,
-      gradient: [Colors.red.shade400, Colors.red.shade700],
-    ),
-    ServicePoint(
-      name: "Bar",
-      icon: Icons.local_bar_rounded,
-      color: Colors.purple,
-      gradient: [Colors.purple.shade400, Colors.purple.shade700],
-    ),
-  ];
+  final ServicePointController _servicePointController = Get.find<ServicePointController>();
 
   @override
   void initState() {
@@ -65,6 +35,28 @@ class _HomepageState extends State<Homepage>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  IconData _getIconForServicePoint(String type) {
+    final lowerType = type.toLowerCase();
+    if (lowerType.contains('restaurant')) return Icons.restaurant_rounded;
+    if (lowerType.contains('bar')) return Icons.local_bar_rounded;
+    if (lowerType.contains('cafe') || lowerType.contains('cafeteria')) return Icons.local_cafe_rounded;
+    if (lowerType.contains('pharmacy')) return Icons.local_pharmacy_rounded;
+    if (lowerType.contains('hardware')) return Icons.hardware_rounded;
+    if (lowerType.contains('shop')) return Icons.shopping_bag_rounded;
+    return Icons.store_rounded;
+  }
+
+  List<Color> _getGradientForServicePoint(String type) {
+    final lowerType = type.toLowerCase();
+    if (lowerType.contains('restaurant')) return [Colors.red.shade400, Colors.red.shade700];
+    if (lowerType.contains('bar')) return [Colors.purple.shade400, Colors.purple.shade700];
+    if (lowerType.contains('cafe') || lowerType.contains('cafeteria')) return [Colors.brown.shade400, Colors.brown.shade700];
+    if (lowerType.contains('pharmacy')) return [Colors.green.shade400, Colors.green.shade700];
+    if (lowerType.contains('hardware')) return [Colors.orange.shade400, Colors.orange.shade700];
+    if (lowerType.contains('shop')) return [Colors.blue.shade400, Colors.blue.shade700];
+    return [Colors.teal.shade400, Colors.teal.shade700];
   }
 
   @override
@@ -133,21 +125,52 @@ class _HomepageState extends State<Homepage>
                 ),
                 const SizedBox(height: 10),
 
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 5,
-                    childAspectRatio: 2.8,
-                  ),
-                  itemCount: servicePoints.length,
-                  itemBuilder: (context, index) {
-                    final point = servicePoints[index];
-                    return _buildServicePointCard(point, index);
-                  },
-                ),
+                Obx(() {
+                  if (_servicePointController.isLoadingServicePoints.value) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  final servicePoints = _servicePointController.servicePoints;
+
+                  if (servicePoints.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40.0),
+                        child: Column(
+                          children: [
+                            Icon(Icons.store_rounded, size: 64, color: Colors.grey),
+                            SizedBox(height: 14),
+                            Text(
+                              'No service points available',
+                              style: TextStyle(color: Colors.grey, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 5,
+                      childAspectRatio: 3,
+                    ),
+                    itemCount: servicePoints.length,
+                    itemBuilder: (context, index) {
+                      final point = servicePoints[index];
+                      return _buildServicePointCard(point, index);
+                    },
+                  );
+                }),
               ],
             ),
           ),
@@ -157,6 +180,10 @@ class _HomepageState extends State<Homepage>
   }
 
   Widget _buildServicePointCard(ServicePoint point, int index) {
+    final icon = _getIconForServicePoint(point.servicepointtype);
+    final gradient = _getGradientForServicePoint(point.servicepointtype);
+    final color = gradient[0];
+
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 400 + (index * 100)),
@@ -166,7 +193,7 @@ class _HomepageState extends State<Homepage>
       },
       child: Card(
         elevation: 4,
-        shadowColor: point.color.withOpacity(0.4),
+        shadowColor: color.withOpacity(0.4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: InkWell(
           onTap: () {
@@ -180,7 +207,7 @@ class _HomepageState extends State<Homepage>
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: point.gradient,
+                colors: gradient,
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -193,7 +220,7 @@ class _HomepageState extends State<Homepage>
                   right: -20,
                   top: -20,
                   child: Icon(
-                    point.icon,
+                    icon,
                     size: 120,
                     color: Colors.white.withOpacity(0.1),
                   ),
@@ -203,7 +230,6 @@ class _HomepageState extends State<Homepage>
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,28 +242,16 @@ class _HomepageState extends State<Homepage>
                               color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              const Text(
-                                "Open",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.greenAccent,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(height: 2),
+                          Text(
+                            point.code,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
+
                         ],
                       ),
                     ],
@@ -250,18 +264,4 @@ class _HomepageState extends State<Homepage>
       ),
     );
   }
-}
-
-class ServicePoint {
-  final String name;
-  final IconData icon;
-  final Color color;
-  final List<Color> gradient;
-
-  ServicePoint({
-    required this.name,
-    required this.icon,
-    required this.color,
-    required this.gradient,
-  });
 }

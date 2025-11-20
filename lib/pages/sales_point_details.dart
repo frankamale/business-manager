@@ -1,22 +1,35 @@
 import 'package:bac_pos/pages/daily_summary.dart';
-import 'package:bac_pos/pages/homepage.dart';
 import 'package:bac_pos/pages/pos_screen.dart';
 import 'package:bac_pos/pages/sales_listing.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
+import '../models/service_point.dart';
 
 class SalesPointDetails extends StatelessWidget {
   final ServicePoint servicePoint;
 
   const SalesPointDetails({super.key, required this.servicePoint});
 
+  Color _getColorForServicePoint(String type) {
+    final lowerType = type.toLowerCase();
+    if (lowerType.contains('restaurant')) return Colors.red;
+    if (lowerType.contains('bar')) return Colors.purple;
+    if (lowerType.contains('cafe') || lowerType.contains('cafeteria'))
+      return Colors.brown;
+    if (lowerType.contains('pharmacy')) return Colors.green;
+    if (lowerType.contains('hardware')) return Colors.orange;
+    if (lowerType.contains('shop')) return Colors.blue;
+    return Colors.teal;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final color = _getColorForServicePoint(servicePoint.servicepointtype);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(servicePoint.name),
-        backgroundColor: servicePoint.color,
+        backgroundColor: color,
         foregroundColor: Colors.white,
       ),
 
@@ -53,23 +66,25 @@ class SalesPointDetails extends StatelessWidget {
   }
 
   Widget _actionButton(String label, IconData icon, Widget destination) {
+    final baseColor = _getColorForServicePoint(servicePoint.servicepointtype);
+
     return InkWell(
-      onTap: (() {
+      onTap: () {
         Get.to(() => destination);
-      }),
+      },
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: 24, horizontal: 20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: servicePoint.gradient,
+            colors: [baseColor.withOpacity(0.8), baseColor],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: servicePoint.color.withOpacity(0.3),
+              color: baseColor.withOpacity(0.3),
               blurRadius: 8,
               offset: Offset(0, 4),
             ),
