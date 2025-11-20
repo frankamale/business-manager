@@ -1,5 +1,6 @@
 import 'package:bac_pos/models/users.dart';
 import 'package:bac_pos/models/service_point.dart';
+import 'package:bac_pos/models/inventory_item.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -21,7 +22,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), "my_database.db");
     return await openDatabase(
       path,
-      version: 3,  // Incremented version to add service points table
+      version: 4,  // Incremented version to add inventory table
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -48,6 +49,37 @@ class DatabaseHelper {
           stores INTEGER NOT NULL,
           production INTEGER NOT NULL,
           booking INTEGER NOT NULL
+        )
+      ''');
+    }
+
+    if (oldVersion < 4) {
+      // Add inventory table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS inventory (
+          id TEXT PRIMARY KEY,
+          ipdid TEXT NOT NULL,
+          code TEXT NOT NULL,
+          externalserial TEXT NOT NULL,
+          name TEXT NOT NULL,
+          category TEXT NOT NULL,
+          price REAL NOT NULL,
+          costprice REAL,
+          packsize REAL NOT NULL,
+          packaging TEXT NOT NULL,
+          packagingid TEXT NOT NULL,
+          soldfrom TEXT NOT NULL,
+          shortform TEXT NOT NULL,
+          packagingcode TEXT NOT NULL,
+          efris INTEGER NOT NULL,
+          efrisid TEXT NOT NULL,
+          measurmentunitidefris TEXT NOT NULL,
+          measurmentunit TEXT NOT NULL,
+          measurmentunitid TEXT NOT NULL,
+          vatcategoryid TEXT NOT NULL,
+          branchid TEXT NOT NULL,
+          companyid TEXT NOT NULL,
+          downloadlink TEXT
         )
       ''');
     }
@@ -84,6 +116,34 @@ class DatabaseHelper {
         stores INTEGER NOT NULL,
         production INTEGER NOT NULL,
         booking INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE inventory (
+        id TEXT PRIMARY KEY,
+        ipdid TEXT NOT NULL,
+        code TEXT NOT NULL,
+        externalserial TEXT NOT NULL,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        price REAL NOT NULL,
+        costprice REAL,
+        packsize REAL NOT NULL,
+        packaging TEXT NOT NULL,
+        packagingid TEXT NOT NULL,
+        soldfrom TEXT NOT NULL,
+        shortform TEXT NOT NULL,
+        packagingcode TEXT NOT NULL,
+        efris INTEGER NOT NULL,
+        efrisid TEXT NOT NULL,
+        measurmentunitidefris TEXT NOT NULL,
+        measurmentunit TEXT NOT NULL,
+        measurmentunitid TEXT NOT NULL,
+        vatcategoryid TEXT NOT NULL,
+        branchid TEXT NOT NULL,
+        companyid TEXT NOT NULL,
+        downloadlink TEXT
       )
     ''');
   }
@@ -239,5 +299,103 @@ class DatabaseHelper {
     final db = await database;
     await db!.delete('service_point');
     print('All service points deleted from database');
+  }
+
+  // INVENTORY METHODS
+
+  // Insert a single inventory item
+  Future<int> insertInventoryItem(InventoryItem item) async {
+    final db = await database;
+    return await db!.insert(
+      'inventory',
+      item.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Insert multiple inventory items
+  Future<void> insertInventoryItems(List<InventoryItem> items) async {
+    final db = await database;
+    final batch = db!.batch();
+
+    for (var item in items) {
+      batch.insert(
+        'inventory',
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await batch.commit(noResult: true);
+    print('✅ ${items.length} inventory items inserted into database');
+  }
+
+  // Get all inventory items
+  Future<List<InventoryItem>> getInventoryItems() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query('inventory');
+
+    return List.generate(maps.length, (i) {
+      return InventoryItem.fromMap(maps[i]);
+    });
+  }
+
+  // Search inventory items by name, code, or category
+  Future<List<InventoryItem>> searchInventoryItems(String query) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'inventory',
+      where: 'name LIKE ? OR code LIKE ? OR category LIKE ?',
+      whereArgs: ['%$query%', '%$query%', '%$query%'],
+      orderBy: 'name ASC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return InventoryItem.fromMap(maps[i]);
+    });
+  }
+
+  // Get inventory items by category
+  Future<List<InventoryItem>> getInventoryItemsByCategory(String category) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'inventory',
+      where: 'category = ?',
+      whereArgs: [category],
+      orderBy: 'name ASC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return InventoryItem.fromMap(maps[i]);
+    });
+  }
+
+  // Get unique categories
+  Future<List<String>> getInventoryCategories() async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db!.query(
+      'inventory',
+      columns: ['category'],
+      distinct: true,
+      orderBy: 'category ASC',
+    );
+
+    return result.map((map) => map['category'] as String).toList();
+  }
+
+  // Delete all inventory items
+  Future<void> deleteAllInventoryItems() async {
+    final db = await database;
+    await db!.delete('inventory');
+    print('All inventory items deleted from database');
+  }
+
+  // Get inventory count
+  Future<int> getInventoryCount() async {
+    final db = await database;
+    final count = Sqflite.firstIntValue(
+      await db!.rawQuery('SELECT COUNT(*) FROM inventory'),
+    );
+    return count ?? 0;
   }
 }

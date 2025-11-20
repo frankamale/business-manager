@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/users.dart';
 import '../models/auth_response.dart';
 import '../models/service_point.dart';
+import '../models/inventory_item.dart';
 
 class ApiService extends GetxService {
   final String baseurl = "http://52.30.142.12:8080/rest";
@@ -220,6 +221,66 @@ class ApiService extends GetxService {
         print(' Status Code: ${response.statusCode}');
         print(' Response: ${response.body}');
         throw Exception("Failed to load service points");
+      }
+    } catch (e, stackTrace) {
+      print('═══════════════════════════════════════════════════');
+      print(' Error Type: ${e.runtimeType}');
+      print('Error Message: $e');
+      print('Stack Trace:');
+      print(stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<List<InventoryItem>> fetchInventory() async {
+    try {
+      print('FETCHING INVENTORY REQUEST STARTED');
+
+      final token = await getAccessToken();
+      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+        print(' Authorization header added');
+      } else {
+        print(' No authorization token available');
+      }
+
+      final response = await http.get(
+        Uri.parse("$baseurl/inventory/"),
+        headers: headers,
+      );
+
+      print(' Status Code: ${response.statusCode}');
+      print(' Response Body Length: ${response.body.length} characters');
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        print('✅ Successfully parsed ${data.length} inventory items from API endpoint');
+
+        final inventoryItems = data.map((json) => InventoryItem.fromMap(json)).toList();
+
+        print('📦 Inventory items received from endpoint: ${inventoryItems.length} items');
+        if (inventoryItems.isNotEmpty) {
+          print('   Sample items:');
+          for (var i = 0; i < (inventoryItems.length < 5 ? inventoryItems.length : 5); i++) {
+            print('   ${i + 1}. ${inventoryItems[i].name}');
+            print('      - Code: ${inventoryItems[i].code}');
+            print('      - Category: ${inventoryItems[i].category}');
+            print('      - Price: UGX ${inventoryItems[i].price}');
+            print('      ---');
+          }
+        }
+
+        return inventoryItems;
+      } else {
+        print(' Status Code: ${response.statusCode}');
+        print(' Response: ${response.body}');
+        throw Exception("Failed to load inventory");
       }
     } catch (e, stackTrace) {
       print('═══════════════════════════════════════════════════');

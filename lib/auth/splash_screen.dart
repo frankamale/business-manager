@@ -4,6 +4,7 @@ import 'login.dart';
 import '../services/api_services.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/service_point_controller.dart';
+import '../controllers/inventory_controller.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -89,6 +90,17 @@ class _SplashScreenState extends State<SplashScreen>
 
       print(' Syncing service points from API...');
       await servicePointController.syncServicePointsFromAPI();
+
+      setState(() {
+        _statusMessage = 'Syncing inventory items...';
+      });
+
+      // Initialize InventoryController and sync inventory
+      print(' Initializing InventoryController...');
+      final inventoryController = Get.put(InventoryController());
+
+      print(' Syncing inventory from API...');
+      await inventoryController.syncInventoryFromAPI();
 
       setState(() {
         _statusMessage = 'Finishing set up ...';

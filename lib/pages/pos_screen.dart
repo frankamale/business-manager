@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'inventory_items_screen.dart';
+import '../models/inventory_item.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -21,15 +24,67 @@ class _PosScreenState extends State<PosScreen> {
   final TextEditingController refController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
 
-  // Sample selected items
-  final List<Map<String, dynamic>> selectedItems = [
-    {"name": "Rolex", "quantity": 2, "amount": 6000},
-    {"name": "Soft Drink", "quantity": 1, "amount": 2000},
-    {"name": "Chips", "quantity": 3, "amount": 9000},
-  ];
+  // Selected items
+  final List<Map<String, dynamic>> selectedItems = [];
 
   double get totalAmount {
     return selectedItems.fold(0, (sum, item) => sum + (item['amount'] as num));
+  }
+
+  void _addItemToCart(InventoryItem item) {
+    setState(() {
+      // Check if item already exists in cart
+      final existingItemIndex = selectedItems.indexWhere(
+        (cartItem) => cartItem['id'] == item.id,
+      );
+
+      if (existingItemIndex != -1) {
+        // Item exists, increase quantity
+        selectedItems[existingItemIndex]['quantity'] += 1;
+        selectedItems[existingItemIndex]['amount'] =
+            selectedItems[existingItemIndex]['quantity'] * item.price;
+      } else {
+        // New item, add to cart
+        selectedItems.add({
+          'id': item.id,
+          'name': item.name,
+          'quantity': 1,
+          'price': item.price,
+          'amount': item.price,
+          'item': item,
+        });
+      }
+    });
+
+    // Show success message
+    Get.snackbar(
+      'Item Added',
+      '${item.name} added to cart',
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 1),
+      backgroundColor: Colors.green[100],
+      colorText: Colors.green[900],
+      margin: const EdgeInsets.all(8),
+    );
+  }
+
+  void _removeItemFromCart(int index) {
+    setState(() {
+      selectedItems.removeAt(index);
+    });
+  }
+
+  void _updateQuantity(int index, int newQuantity) {
+    if (newQuantity <= 0) {
+      _removeItemFromCart(index);
+      return;
+    }
+
+    setState(() {
+      selectedItems[index]['quantity'] = newQuantity;
+      selectedItems[index]['amount'] =
+          newQuantity * selectedItems[index]['price'];
+    });
   }
 
   @override
@@ -258,7 +313,7 @@ class _PosScreenState extends State<PosScreen> {
                                   return Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
-                                      vertical: 10,
+                                      vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
                                       border: Border(
@@ -271,27 +326,81 @@ class _PosScreenState extends State<PosScreen> {
                                       children: [
                                         Expanded(
                                           flex: 3,
-                                          child: Text(
-                                            item['name'],
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                            ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item['name'],
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                              Text(
+                                                'UGX ${item['price'].toStringAsFixed(0)} each',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                        SizedBox(
-                                          width: 50,
-                                          child: Text(
-                                            "(${item['quantity']})",
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey,
+                                        Row(
+                                          children: [
+                                            InkWell(
+                                              onTap: () => _updateQuantity(
+                                                index,
+                                                item['quantity'] - 1,
+                                              ),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.red[50],
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Icon(
+                                                  Icons.remove,
+                                                  size: 16,
+                                                  color: Colors.red[700],
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                                              child: Text(
+                                                "${item['quantity']}",
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            InkWell(
+                                              onTap: () => _updateQuantity(
+                                                index,
+                                                item['quantity'] + 1,
+                                              ),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green[50],
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Icon(
+                                                  Icons.add,
+                                                  size: 16,
+                                                  color: Colors.green[700],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
+                                        const SizedBox(width: 12),
                                         SizedBox(
                                           width: 80,
                                           child: Text(
-                                            "${item['amount']}",
+                                            "${item['amount'].toStringAsFixed(0)}",
                                             textAlign: TextAlign.right,
                                             style: const TextStyle(
                                               fontSize: 14,
@@ -356,7 +465,16 @@ class _PosScreenState extends State<PosScreen> {
                   const SizedBox(width: 3),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () async {
+                        final selectedItem = await Get.to(
+                          () => InventoryItemsScreen(
+                            onItemSelected: _addItemToCart,
+                          ),
+                        );
+                        if (selectedItem != null && selectedItem is InventoryItem) {
+                          _addItemToCart(selectedItem);
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Colors.yellow[700],
