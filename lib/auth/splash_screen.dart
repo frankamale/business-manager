@@ -63,11 +63,17 @@ class _SplashScreenState extends State<SplashScreen>
 
       // Authenticate using the provided credentials
       final authResponse = await _apiService.signIn(
-        'test.account123@qc.com',
-        'Ba@123456',
+        'admin@sdry.com',
+        'Admin@2025',
       );
 
+      setState(() {
+        _statusMessage = 'Loading company info...';
+      });
 
+      // Fetch and store company info
+      print(' Fetching company info...');
+      await _apiService.fetchAndStoreCompanyInfo();
 
       setState(() {
         _statusMessage = 'Syncing users from server...';

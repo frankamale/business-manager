@@ -4,7 +4,8 @@
       "Bash(flutter run:*)",
       "Bash(flutter pub get:*)",
       "Bash(flutter clean:*)",
-      "Bash(flutter devices:*)"
+      "Bash(flutter devices:*)",
+      "Bash(flutter analyze:*)"
     ],
     "deny": [],
     "ask": []

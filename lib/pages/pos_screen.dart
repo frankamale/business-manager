@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import 'inventory_items_screen.dart';
 import '../models/inventory_item.dart';
+import '../services/api_services.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -11,6 +14,14 @@ class PosScreen extends StatefulWidget {
 }
 
 class _PosScreenState extends State<PosScreen> {
+  final ApiService _apiService = Get.find<ApiService>();
+  final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
+  bool _isProcessing = false;
+
+  String formatMoney(double amount) {
+    return _numberFormat.format(amount.toInt());
+  }
+
   final List<String> customers = [
     "Walk-in Customer",
     "Customer 1",
@@ -23,6 +34,8 @@ class _PosScreenState extends State<PosScreen> {
   String? selectedCustomer;
   final TextEditingController refController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
+  final TextEditingController amountPaidController = TextEditingController();
+  int receiptCounter = 1;
 
   // Selected items
   final List<Map<String, dynamic>> selectedItems = [];
@@ -97,7 +110,246 @@ class _PosScreenState extends State<PosScreen> {
   void dispose() {
     refController.dispose();
     notesController.dispose();
+    amountPaidController.dispose();
     super.dispose();
+  }
+
+  Future<void> _processSale() async {
+    print("saveBill called");
+
+    // Validation
+    if (selectedItems.isEmpty) {
+      print("saveBill: validation failed - no items in cart");
+      Get.snackbar('Error', 'No items in cart',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900]);
+      return;
+    }
+    print("saveBill: validation passed");
+
+    setState(() => _isProcessing = true);
+
+    try {
+      // Get user and company info
+      final userData = await _apiService.getStoredUserData();
+      final companyInfo = await _apiService.getCompanyInfo();
+
+      if (userData == null) {
+        print("saveBill: userInfo not available");
+        Get.snackbar('Error', 'User information not available. Please refresh and try again.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red[100],
+            colorText: Colors.red[900]);
+        return;
+      }
+      print("saveBill: userInfo available, proceeding");
+
+      final userId = userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
+      final branchId = companyInfo['branchId'] ?? '';
+      final companyId = companyInfo['companyId'] ?? '';
+      final servicePointId = companyInfo['servicePointId'] ?? branchId;
+
+      // Generate receipt number
+      final receiptnumber = 'REC-${receiptCounter.toString().padLeft(4, '0')}';
+      setState(() {
+        receiptCounter++;
+      });
+
+      // Generate UUID for sale
+      const uuid = Uuid();
+      final saleId = uuid.v4();
+      print("saveBill: generated saleId: $saleId");
+
+      final transactionTimestamp = DateTime.now().millisecondsSinceEpoch;
+      final dateReadyValue = notesController.text;
+      print("saveBill: dateReadyValue: $dateReadyValue");
+
+      // Create line items
+      final lineItems = selectedItems.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        final inventoryItem = item['item'] as InventoryItem;
+
+        return {
+          "itemName": inventoryItem.name,
+          "category": inventoryItem.category ?? "",
+          "notes": item['notes'] ?? "",
+          "id": uuid.v4(),
+          "costprice": 0.0,
+          "packsize": inventoryItem.packsize ?? 1.0,
+          "quantity": item['quantity'].toDouble(),
+          "inventoryid": inventoryItem.id.toString(),
+          "packagingid": servicePointId,
+          "ipdid": "",
+          "salesid": saleId,
+          "transactionstatusid": 1,
+          "servicepointid": null,
+          "sellingprice": inventoryItem.price,
+          "ordernumber": index,
+          "complimentaryid": 0,
+          "remarks": item['notes'] ?? "",
+          "sellingprice_original": inventoryItem.price ?? 0.0,
+        };
+      }).toList();
+
+      // Create sale payload
+      final salePayload = {
+        "id": saleId,
+        "transactionDate": transactionTimestamp,
+        "clientid": "00000000-0000-0000-0000-000000000000",
+        "transactionstatusid": 1,
+        "salespersonid": userId,
+        "servicepointid": servicePointId,
+        "modeid": 2,
+        "remarks": dateReadyValue.isNotEmpty ? dateReadyValue : "New sale added",
+        "otherRemarks": "",
+        "branchId": branchId,
+        "companyId": companyId,
+        "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+        "receiptnumber": receiptnumber,
+        "saleActionId": 1,
+        "lineItems": lineItems,
+      };
+
+      print("saveBill: about to post sale, saleData: $salePayload");
+      final result = await _apiService.createSale(salePayload);
+      print("saveBill: postSale result: $result");
+
+      // Handle payment if amount is provided
+      final amountPaidText = amountPaidController.text.trim();
+      final amountPaid = amountPaidText.isNotEmpty ? double.tryParse(amountPaidText) ?? 0.0 : 0.0;
+      print("saveBill: Amount paid: $amountPaid");
+
+      if (amountPaid > 0) {
+        print("saveBill: amountPaid > 0, proceeding to create payment");
+
+        // Fetch the transaction to get its actual date
+        final transactionData = await _apiService.fetchSingleTransaction(saleId);
+        print('POS: Fetched transaction data: $transactionData');
+
+        // Calculate the outstanding balance
+        final lineItemsList = transactionData['lineItems'] as List<dynamic>? ?? [];
+        final totalAmount = lineItemsList.fold<double>(
+          0.0,
+          (sum, item) => sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
+        );
+        final currentPaid = double.tryParse(transactionData['amountpaid']?.toString() ??
+                                           transactionData['amountPaid']?.toString() ?? '0') ?? 0.0;
+        final outstandingBalance = totalAmount - currentPaid;
+
+        print('POS: Total amount: $totalAmount');
+        print('POS: Current paid: $currentPaid');
+        print('POS: Outstanding balance: $outstandingBalance');
+        print('POS: Amount from form: $amountPaid');
+
+        // Use the minimum of amountPaid or outstanding balance
+        final paymentAmount = amountPaid < outstandingBalance ? amountPaid : outstandingBalance;
+        print('POS: Final payment amount to send: $paymentAmount');
+
+        // Get the transaction date
+        int invoiceTimestamp = DateTime.now().millisecondsSinceEpoch;
+        if (transactionData['transactiondate'] != null) {
+          print('POS: Raw transactiondate from backend: ${transactionData['transactiondate']}');
+          invoiceTimestamp = transactionData['transactiondate'];
+        }
+        print('POS: Invoice timestamp as date: ${DateTime.fromMillisecondsSinceEpoch(invoiceTimestamp).toIso8601String()}');
+
+        // Add 2 seconds buffer (2000ms) to ensure payment date is after invoice date
+        final paymentTimestamp = invoiceTimestamp + 2000;
+        print('POS: Payment date (with 2s buffer, milliseconds): $paymentTimestamp');
+        print('POS: Payment date as date: ${DateTime.fromMillisecondsSinceEpoch(paymentTimestamp).toIso8601String()}');
+
+        final paymentPayload = {
+          "id": uuid.v4(),
+          "currencyid": "aa7eed85-3c4e-42df-b0aa-0337009bee85",
+          "referenceid": saleId,
+          "servicepointid": servicePointId,
+          "transactiontypeid": 1,
+          "amount": paymentAmount,
+          "method": "Cash",
+          "methodId": 1,
+          "chequeno": "",
+          "cashaccountid": "11111111-1111-1111-1111-111111111111",
+          "paydate": paymentTimestamp,
+          "receipt": true,
+          "currency": "Uganda Shillings",
+          "type": "Sales",
+          "bp": selectedCustomer ?? "",
+          "direction": 1,
+          "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+        };
+
+        print("saveBill: paymentPayload created: $paymentPayload");
+        print("saveBill: about to post payment");
+
+        try {
+          final paymentResult = await _apiService.createPayment(paymentPayload);
+          print("saveBill: postPayment result: $paymentResult");
+
+          Get.snackbar(
+            'Success',
+            'Bill saved, posted, and payment processed successfully!',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green[100],
+            colorText: Colors.green[900],
+          );
+        } catch (paymentError) {
+          print("saveBill: payment error: $paymentError");
+          Get.snackbar(
+            'Partial Success',
+            'Bill saved and posted, but payment failed: $paymentError',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.orange[100],
+            colorText: Colors.orange[900],
+            duration: const Duration(seconds: 5),
+          );
+        }
+      } else {
+        Get.snackbar(
+          'Success',
+          'Bill saved and posted successfully!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[900],
+        );
+      }
+
+      // Clear form
+      setState(() {
+        selectedItems.clear();
+        refController.clear();
+        notesController.clear();
+        amountPaidController.clear();
+        selectedCustomer = customers[0];
+      });
+    } catch (e) {
+      print("saveBill: error: $e");
+
+      // Check for authentication errors
+      if (e.toString().contains("Full authentication is required")) {
+        Get.snackbar(
+          'Session Expired',
+          'Your session has expired. Please login again.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900],
+        );
+        await _apiService.clearAuthData();
+        Get.offAllNamed('/login');
+      } else {
+        Get.snackbar(
+          'Error',
+          'Bill saved locally but failed to post: ${e.toString()}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900],
+          duration: const Duration(seconds: 5),
+        );
+      }
+    } finally {
+      setState(() => _isProcessing = false);
+    }
   }
 
   @override
@@ -127,7 +379,7 @@ class _PosScreenState extends State<PosScreen> {
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  "UGX ${totalAmount.toStringAsFixed(0)}",
+                  "UGX ${formatMoney(totalAmount)}",
                   style: const TextStyle(
                     color: Colors.green,
                     fontSize: 32,
@@ -222,6 +474,37 @@ class _PosScreenState extends State<PosScreen> {
                       controller: notesController,
                       decoration: InputDecoration(
                         hintText: "Add notes",
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Amount Paid Field
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 60,
+                    child: Text(
+                      "Paid:",
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Expanded(
+                    child: TextField(
+                      controller: amountPaidController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: "Amount paid (optional)",
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 8,
@@ -337,7 +620,7 @@ class _PosScreenState extends State<PosScreen> {
                                                 ),
                                               ),
                                               Text(
-                                                'UGX ${item['price'].toStringAsFixed(0)} each',
+                                                'UGX ${formatMoney(item['price'])} each',
                                                 style: TextStyle(
                                                   fontSize: 11,
                                                   color: Colors.grey[600],
@@ -400,7 +683,7 @@ class _PosScreenState extends State<PosScreen> {
                                         SizedBox(
                                           width: 80,
                                           child: Text(
-                                            "${item['amount'].toStringAsFixed(0)}",
+                                            formatMoney(item['amount']),
                                             textAlign: TextAlign.right,
                                             style: const TextStyle(
                                               fontSize: 14,
@@ -426,7 +709,7 @@ class _PosScreenState extends State<PosScreen> {
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: _isProcessing ? null : _processSale,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         backgroundColor: Colors.blue[700],
@@ -436,7 +719,16 @@ class _PosScreenState extends State<PosScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text("PAY"),
+                      child: _isProcessing
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text("PAY"),
                     ),
                   ),
                   const SizedBox(width: 3),
@@ -447,6 +739,7 @@ class _PosScreenState extends State<PosScreen> {
                           selectedItems.clear();
                           refController.clear();
                           notesController.clear();
+                          amountPaidController.clear();
                           selectedCustomer = customers[0];
                         });
                       },
@@ -465,15 +758,12 @@ class _PosScreenState extends State<PosScreen> {
                   const SizedBox(width: 3),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                        final selectedItem = await Get.to(
+                      onPressed: () {
+                        Get.to(
                           () => InventoryItemsScreen(
                             onItemSelected: _addItemToCart,
                           ),
                         );
-                        if (selectedItem != null && selectedItem is InventoryItem) {
-                          _addItemToCart(selectedItem);
-                        }
                       },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),

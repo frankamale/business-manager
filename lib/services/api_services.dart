@@ -24,6 +24,9 @@ class ApiService extends GetxService {
   static const String _userIdKey = 'user_id';
   static const String _usernameKey = 'username';
   static const String _rolesKey = 'roles';
+  static const String _branchIdKey = 'branch_id';
+  static const String _companyIdKey = 'company_id';
+  static const String _servicePointIdKey = 'service_point_id';
 
   // Sign in with credentials
   Future<AuthResponse> signIn(String username, String password) async {
@@ -113,6 +116,65 @@ class ApiService extends GetxService {
     await _secureStorage.delete(key: _userIdKey);
     await _secureStorage.delete(key: _usernameKey);
     await _secureStorage.delete(key: _rolesKey);
+    await _secureStorage.delete(key: _branchIdKey);
+    await _secureStorage.delete(key: _companyIdKey);
+    await _secureStorage.delete(key: _servicePointIdKey);
+  }
+
+  // Save company info
+  Future<void> saveCompanyInfo(Map<String, dynamic> companyInfo) async {
+    final branchId = companyInfo['branch'] ?? '';
+    final companyId = companyInfo['company'] ?? '';
+    final servicePointId = companyInfo['sellingPointId'] ?? companyInfo['branch'] ?? '';
+
+    await _secureStorage.write(key: _branchIdKey, value: branchId);
+    await _secureStorage.write(key: _companyIdKey, value: companyId);
+    await _secureStorage.write(key: _servicePointIdKey, value: servicePointId);
+  }
+
+  // Get company info
+  Future<Map<String, String>> getCompanyInfo() async {
+    return {
+      'branchId': await _secureStorage.read(key: _branchIdKey) ?? '',
+      'companyId': await _secureStorage.read(key: _companyIdKey) ?? '',
+      'servicePointId': await _secureStorage.read(key: _servicePointIdKey) ?? '',
+    };
+  }
+
+  // Fetch company info from API and store it
+  Future<Map<String, dynamic>> fetchAndStoreCompanyInfo() async {
+    try {
+      print('FETCHING COMPANY INFO REQUEST STARTED');
+
+      final token = await getAccessToken();
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse("$baseurl/company/details"),
+        headers: headers,
+      );
+
+      print('Status Code: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        await saveCompanyInfo(data);
+        print('Company info stored successfully');
+        return data;
+      } else {
+        throw Exception("Failed to fetch company info: ${response.statusCode}");
+      }
+    } catch (e) {
+      print('Error fetching company info: $e');
+      rethrow;
+    }
   }
 
   Future<List<User>> fetchUsers() async {
@@ -288,6 +350,166 @@ class ApiService extends GetxService {
       print('Error Message: $e');
       print('Stack Trace:');
       print(stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> createSale(Map<String, dynamic> saleData) async {
+    try {
+      print('═══════════════════════════════════════════════════');
+      print('CREATING SALE REQUEST STARTED');
+      print('═══════════════════════════════════════════════════');
+
+      final token = await getAccessToken();
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer ${token.substring(0, 20)}...';
+      }
+
+      print('📤 REQUEST URL: $baseurl/sales/');
+      print('📋 REQUEST HEADERS:');
+      headers.forEach((key, value) => print('   $key: $value'));
+
+      print('\n📦 SALE PAYLOAD (Main Fields):');
+      print('   id: ${saleData['id']}');
+      print('   transactionDate: ${saleData['transactionDate']}');
+      print('   clientid: ${saleData['clientid']}');
+      print('   transactionstatusid: ${saleData['transactionstatusid']}');
+      print('   salespersonid: ${saleData['salespersonid']}');
+      print('   servicepointid: ${saleData['servicepointid']}');
+      print('   modeid: ${saleData['modeid']}');
+      print('   remarks: ${saleData['remarks']}');
+      print('   otherRemarks: ${saleData['otherRemarks']}');
+      print('   branchId: ${saleData['branchId']}');
+      print('   companyId: ${saleData['companyId']}');
+      print('   glproxySubCategoryId: ${saleData['glproxySubCategoryId']}');
+      print('   receiptnumber: ${saleData['receiptnumber']}');
+      print('   saleActionId: ${saleData['saleActionId']}');
+
+      final lineItems = saleData['lineItems'] as List<dynamic>? ?? [];
+      print('\n📋 LINE ITEMS (${lineItems.length} items):');
+      for (var i = 0; i < lineItems.length; i++) {
+        final item = lineItems[i] as Map<String, dynamic>;
+        print('   Item ${i + 1}:');
+        print('      id: ${item['id']}');
+        print('      itemName: ${item['itemName']}');
+        print('      category: ${item['category']}');
+        print('      quantity: ${item['quantity']}');
+        print('      sellingprice: ${item['sellingprice']}');
+        print('      sellingprice_original: ${item['sellingprice_original']}');
+        print('      costprice: ${item['costprice']}');
+        print('      packsize: ${item['packsize']}');
+        print('      inventoryid: ${item['inventoryid']}');
+        print('      packagingid: ${item['packagingid']}');
+        print('      salesid: ${item['salesid']}');
+        print('      transactionstatusid: ${item['transactionstatusid']}');
+        print('      servicepointid: ${item['servicepointid']}');
+        print('      ordernumber: ${item['ordernumber']}');
+        print('      complimentaryid: ${item['complimentaryid']}');
+        print('      ipdid: ${item['ipdid']}');
+        print('      remarks: ${item['remarks']}');
+        print('      notes: ${item['notes']}');
+      }
+
+      print('\n📤 FULL JSON PAYLOAD:');
+      final jsonPayload = json.encode(saleData);
+      print(jsonPayload);
+
+      final response = await http.post(
+        Uri.parse("$baseurl/sales/"),
+        headers: headers,
+        body: jsonPayload,
+      );
+
+      print('\n📥 RESPONSE:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ SALE CREATED SUCCESSFULLY');
+        print('═══════════════════════════════════════════════════');
+        return json.decode(response.body);
+      } else {
+        print('❌ SALE CREATION FAILED');
+        print('   Status: ${response.statusCode}');
+        print('   Error: ${response.body}');
+        print('═══════════════════════════════════════════════════');
+        throw Exception("Failed to create sale: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      print('❌ ERROR CREATING SALE: $e');
+      print('═══════════════════════════════════════════════════');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchSingleTransaction(String saleId) async {
+    try {
+      print('FETCHING SINGLE TRANSACTION REQUEST STARTED');
+
+      final token = await getAccessToken();
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(
+        Uri.parse("$baseurl/sales/$saleId"),
+        headers: headers,
+      );
+
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception("Failed to fetch transaction: ${response.statusCode}");
+      }
+    } catch (e) {
+      print('Error fetching transaction: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> createPayment(Map<String, dynamic> paymentData) async {
+    try {
+      print('CREATING PAYMENT REQUEST STARTED');
+
+      final token = await getAccessToken();
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.post(
+        Uri.parse("$baseurl/payments/"),
+        headers: headers,
+        body: json.encode(paymentData),
+      );
+
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        throw Exception("Failed to create payment: ${response.statusCode}");
+      }
+    } catch (e) {
+      print('Error creating payment: $e');
       rethrow;
     }
   }
