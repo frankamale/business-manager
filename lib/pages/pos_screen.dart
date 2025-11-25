@@ -97,6 +97,14 @@ class _PosScreenState extends State<PosScreen> {
     });
   }
 
+  void _updatePrice(int index, double newPrice) {
+    setState(() {
+      selectedItems[index]['price'] = newPrice;
+      selectedItems[index]['amount'] =
+          selectedItems[index]['quantity'] * newPrice;
+    });
+  }
+
   void _onSearchChanged() {
     inventoryController.searchInventory(searchController.text);
   }
@@ -407,7 +415,7 @@ class _PosScreenState extends State<PosScreen> {
                       items: salespeople.map((user) {
                         return DropdownMenuItem<String>(
                           value: user.salespersonid,
-                          child: Text(user.username),
+                          child: Text(user.staff),
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
@@ -580,12 +588,55 @@ class _PosScreenState extends State<PosScreen> {
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
-                                              Text(
-                                                'UGX ${formatMoney(item['price'])} each',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey[600],
-                                                ),
+                                              Row(
+                                                children: [
+                                                  const Text(
+                                                    'UGX ',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                    width: 80,
+                                                    child: TextField(
+                                                      keyboardType: TextInputType.number,
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      decoration: InputDecoration(
+                                                        isDense: true,
+                                                        contentPadding: const EdgeInsets.symmetric(
+                                                          horizontal: 4,
+                                                          vertical: 2,
+                                                        ),
+                                                        border: OutlineInputBorder(
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                                        ),
+                                                        enabledBorder: OutlineInputBorder(
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                                        ),
+                                                      ),
+                                                      controller: TextEditingController(
+                                                        text: item['price'].toStringAsFixed(0),
+                                                      ),
+                                                      onChanged: (value) {
+                                                        final newPrice = double.tryParse(value) ?? item['price'];
+                                                        _updatePrice(index, newPrice);
+                                                      },
+                                                    ),
+                                                  ),
+                                                  const Text(
+                                                    ' each',
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
@@ -724,8 +775,15 @@ class _PosScreenState extends State<PosScreen> {
                             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                           ),
                           builder: (BuildContext context) {
+                            // Calculate height to leave space for the price display section
+                            final screenHeight = MediaQuery.of(context).size.height;
+                            final appBarHeight = kToolbarHeight + MediaQuery.of(context).padding.top;
+                            final priceDisplayHeight = 65.0; // Height of price display container
+                            final spacing = 16.0; // Additional spacing
+                            final modalHeight = screenHeight - appBarHeight - priceDisplayHeight - spacing;
+
                             return Container(
-                              height: MediaQuery.of(context).size.height * 0.85,
+                              height: modalHeight,
                               child: Column(
                                 children: [
                                   // Search Bar

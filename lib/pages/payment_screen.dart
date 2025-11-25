@@ -112,6 +112,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final index = entry.key;
         final item = entry.value;
         final inventoryItem = item['item'] as InventoryItem;
+        // Use the edited price from cart item, fallback to inventory price
+        final sellingPrice = (item['price'] as num?)?.toDouble() ?? inventoryItem.price;
 
         return {
           "id": uuid.v4(),
@@ -120,7 +122,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           "ipdid": inventoryItem.ipdid,
           "quantity": (item['quantity'] as num).toInt(),
           "packsize": (inventoryItem.packsize ?? 1.0).toInt(),
-          "sellingprice": inventoryItem.price.toInt(),
+          "sellingprice": sellingPrice.toInt(),
           "ordernumber": index,
           "remarks": item['notes'] ?? "",
           "transactionstatusid": 1,
@@ -128,7 +130,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           "itemName": inventoryItem.name,
           "category": inventoryItem.category ?? "",
           "notes": item['notes'] ?? "",
-          "costprice": 0,
+          "costprice": inventoryItem.costprice ?? 0.0,
           "packagingid": servicePointId,
           "servicepointid": null,
           "complimentaryid": 0,
@@ -141,7 +143,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         "transactionDate": transactionTimestamp,
         "transactionstatusid": 1,
         "receiptnumber": receiptnumber,
-        "clientid": "00000000-0000-0000-0000-000000000000",
+        "clientid": widget.customer ?? "00000000-0000-0000-0000-000000000000",
         "remarks": dateReadyValue.isNotEmpty ? dateReadyValue : "New sale added",
         "otherRemarks": "",
         "companyId": companyId,
@@ -154,25 +156,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         "saleActionId": 1,
       };
 
-      print("═══════════════════════════════════════════════════");
-      print("saveBill: VALIDATION CHECKS");
-      print("═══════════════════════════════════════════════════");
-      print("✓ userId: $userId");
-      print("✓ salespersonId: $salespersonId");
-      print("✓ branchId: $branchId");
-      print("✓ companyId: $companyId");
-      print("✓ servicePointId: $servicePointId");
-      print("✓ Line items count: ${lineItems.length}");
-      print("✓ Transaction timestamp: $transactionTimestamp (${DateTime.fromMillisecondsSinceEpoch(transactionTimestamp)})");
-      print("✓ Receipt number: $receiptnumber");
-      print("═══════════════════════════════════════════════════");
-
-      // STEP 1: Save the bill first (like React app)
-      print("saveBill: about to post sale, saleData:");
       final result = await _apiService.createSale(salePayload);
-      print("saveBill: postSale result: $result");
 
-      // STEP 2: Handle payment if amount is provided (after sale is successfully saved)
+
       final amountPaid = amountTendered;
       print("saveBill: Amount paid from form: $amountPaid");
 
@@ -181,9 +167,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
         // Fetch the transaction to get its actual date (same approach as React bill listing)
         final transactionData = await _apiService.fetchSingleTransaction(saleId);
-        print('POS: Fetched transaction data: $transactionData');
 
-        // Calculate the outstanding balance
         final lineItemsList = transactionData['lineItems'] as List<dynamic>? ?? [];
         final totalAmount = lineItemsList.fold<double>(
           0.0,
@@ -195,14 +179,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ) ?? 0.0;
         final outstandingBalance = totalAmount - currentPaid;
 
-        print('POS: Total amount: $totalAmount');
-        print('POS: Current paid: $currentPaid');
-        print('POS: Outstanding balance: $outstandingBalance');
-        print('POS: Amount from form: $amountPaid');
 
         // Use the minimum of amountPaid or outstanding balance
         final paymentAmount = amountPaid < outstandingBalance ? amountPaid : outstandingBalance;
-        print('POS: Final payment amount to send: $paymentAmount');
 
         // Get the transaction date - keep it in the same format as backend stored it
         int invoiceTimestamp = DateTime.now().millisecondsSinceEpoch; // Default to now in milliseconds
