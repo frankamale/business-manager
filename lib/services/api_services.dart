@@ -324,6 +324,12 @@ class ApiService extends GetxService {
         final List data = json.decode(response.body);
         print('✅ Successfully parsed ${data.length} inventory items from API endpoint');
 
+        // Debug: Print first item's raw JSON to see field names
+        if (data.isNotEmpty) {
+          print('🔍 DEBUG: First inventory item raw JSON:');
+          print(json.encode(data[0]));
+        }
+
         final inventoryItems = data.map((json) => InventoryItem.fromMap(json)).toList();
 
         print('📦 Inventory items received from endpoint: ${inventoryItems.length} items');
@@ -331,6 +337,8 @@ class ApiService extends GetxService {
           print('   Sample items:');
           for (var i = 0; i < (inventoryItems.length < 5 ? inventoryItems.length : 5); i++) {
             print('   ${i + 1}. ${inventoryItems[i].name}');
+            print('      - ID: ${inventoryItems[i].id} (type: ${inventoryItems[i].id.runtimeType})');
+            print('      - IPDID: ${inventoryItems[i].ipdid}');
             print('      - Code: ${inventoryItems[i].code}');
             print('      - Category: ${inventoryItems[i].category}');
             print('      - Price: UGX ${inventoryItems[i].price}');
@@ -367,28 +375,34 @@ class ApiService extends GetxService {
       };
 
       if (token != null) {
-        headers['Authorization'] = 'Bearer ${token.substring(0, 20)}...';
+        headers['Authorization'] = 'Bearer $token';
       }
 
       print('📤 REQUEST URL: $baseurl/sales/');
       print('📋 REQUEST HEADERS:');
-      headers.forEach((key, value) => print('   $key: $value'));
+      headers.forEach((key, value) {
+        if (key == 'Authorization') {
+          print('   $key: Bearer ${value.substring(7, 27)}...');
+        } else {
+          print('   $key: $value');
+        }
+      });
 
       print('\n📦 SALE PAYLOAD (Main Fields):');
-      print('   id: ${saleData['id']}');
-      print('   transactionDate: ${saleData['transactionDate']}');
-      print('   clientid: ${saleData['clientid']}');
-      print('   transactionstatusid: ${saleData['transactionstatusid']}');
-      print('   salespersonid: ${saleData['salespersonid']}');
-      print('   servicepointid: ${saleData['servicepointid']}');
-      print('   modeid: ${saleData['modeid']}');
-      print('   remarks: ${saleData['remarks']}');
-      print('   otherRemarks: ${saleData['otherRemarks']}');
-      print('   branchId: ${saleData['branchId']}');
-      print('   companyId: ${saleData['companyId']}');
-      print('   glproxySubCategoryId: ${saleData['glproxySubCategoryId']}');
-      print('   receiptnumber: ${saleData['receiptnumber']}');
-      print('   saleActionId: ${saleData['saleActionId']}');
+      print('   id: ${saleData['id']} ${_validateField(saleData['id'], 'UUID')}');
+      print('   transactionDate: ${saleData['transactionDate']} ${_validateField(saleData['transactionDate'], 'number')}');
+      print('   clientid: ${saleData['clientid']} ${_validateField(saleData['clientid'], 'UUID')}');
+      print('   transactionstatusid: ${saleData['transactionstatusid']} ${_validateField(saleData['transactionstatusid'], 'number')}');
+      print('   salespersonid: ${saleData['salespersonid']} ${_validateField(saleData['salespersonid'], 'UUID')}');
+      print('   servicepointid: ${saleData['servicepointid']} ${_validateField(saleData['servicepointid'], 'UUID')}');
+      print('   modeid: ${saleData['modeid']} ${_validateField(saleData['modeid'], 'number')}');
+      print('   remarks: "${saleData['remarks']}" ${_validateField(saleData['remarks'], 'string')}');
+      print('   otherRemarks: "${saleData['otherRemarks']}" ${_validateField(saleData['otherRemarks'], 'string')}');
+      print('   branchId: ${saleData['branchId']} ${_validateField(saleData['branchId'], 'UUID')}');
+      print('   companyId: ${saleData['companyId']} ${_validateField(saleData['companyId'], 'UUID')}');
+      print('   glproxySubCategoryId: ${saleData['glproxySubCategoryId']} ${_validateField(saleData['glproxySubCategoryId'], 'UUID')}');
+      print('   receiptnumber: ${saleData['receiptnumber']} ${_validateField(saleData['receiptnumber'], 'string')}');
+      print('   saleActionId: ${saleData['saleActionId']} ${_validateField(saleData['saleActionId'], 'number')}');
 
       final lineItems = saleData['lineItems'] as List<dynamic>? ?? [];
       print('\n📋 LINE ITEMS (${lineItems.length} items):');
@@ -512,5 +526,25 @@ class ApiService extends GetxService {
       print('Error creating payment: $e');
       rethrow;
     }
+  }
+
+  // Helper method to validate fields in logging
+  String _validateField(dynamic value, String expectedType) {
+    if (value == null) {
+      return '⚠️ NULL';
+    }
+    if (value is String && value.isEmpty) {
+      return '⚠️ EMPTY';
+    }
+    if (expectedType == 'UUID') {
+      final uuidRegex = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
+      if (value is String && !uuidRegex.hasMatch(value)) {
+        return '❌ INVALID UUID';
+      }
+    }
+    if (expectedType == 'number' && value is! int && value is! double) {
+      return '❌ NOT A NUMBER';
+    }
+    return '✓';
   }
 }
