@@ -6,6 +6,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/service_point_controller.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/sales_controller.dart';
+import '../controllers/payment_controller.dart';
 import '../controllers/customer_controller.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -120,6 +121,10 @@ class _SplashScreenState extends State<SplashScreen>
 
       print(' Syncing sales transactions from API...');
       await salesController.syncSalesTransactionsFromAPI();
+
+      // Initialize PaymentController
+      print(' Initializing PaymentController...');
+      Get.put(PaymentController());
 
       setState(() {
         _statusMessage = 'Loading customers...';

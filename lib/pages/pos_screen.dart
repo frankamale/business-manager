@@ -10,7 +10,22 @@ import '../controllers/auth_controller.dart';
 import '../models/users.dart';
 
 class PosScreen extends StatefulWidget {
-  const PosScreen({super.key});
+  final String? existingSalesId;
+  final List<Map<String, dynamic>>? existingItems;
+  final String? existingCustomerId;
+  final String? existingReference;
+  final String? existingNotes;
+  final String? existingSalespersonId;
+
+  const PosScreen({
+    super.key,
+    this.existingSalesId,
+    this.existingItems,
+    this.existingCustomerId,
+    this.existingReference,
+    this.existingNotes,
+    this.existingSalespersonId,
+  });
 
   @override
   State<PosScreen> createState() => _PosScreenState();
@@ -117,18 +132,66 @@ class _PosScreenState extends State<PosScreen> {
   @override
   void initState() {
     super.initState();
-    // Set default customer to "Cash Customer"
-    final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
-    if (cashCustomer != null) {
-      selectedCustomerId = cashCustomer.id;
+
+    // If editing existing sale, load the data
+    if (widget.existingItems != null && widget.existingItems!.isNotEmpty) {
+      _loadExistingSale();
+    } else {
+      // Set default customer to "Cash Customer"
+      final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+      if (cashCustomer != null) {
+        selectedCustomerId = cashCustomer.id;
+      }
+      // Set default salesperson to logged-in user
+      final currentUser = authController.currentUser.value;
+      if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+        selectedSalespersonId = currentUser.salespersonid;
+      }
     }
-    // Set default salesperson to logged-in user
-    final currentUser = authController.currentUser.value;
-    if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
-      selectedSalespersonId = currentUser.salespersonid;
-    }
+
     _loadSalespeople();
     searchController.addListener(_onSearchChanged);
+  }
+
+  void _loadExistingSale() {
+    setState(() {
+      // Load existing items into cart
+      if (widget.existingItems != null) {
+        selectedItems.addAll(widget.existingItems!);
+      }
+
+      // Load existing customer
+      if (widget.existingCustomerId != null) {
+        selectedCustomerId = widget.existingCustomerId;
+      }
+
+      // Load existing reference
+      if (widget.existingReference != null) {
+        refController.text = widget.existingReference!;
+      }
+
+      // Load existing notes
+      if (widget.existingNotes != null) {
+        notesController.text = widget.existingNotes!;
+      }
+
+      // Load existing salesperson
+      if (widget.existingSalespersonId != null) {
+        selectedSalespersonId = widget.existingSalespersonId;
+      }
+    });
+
+    // Show edit mode indicator
+    Get.snackbar(
+      'Edit Mode',
+      'Editing existing sale',
+      snackPosition: SnackPosition.TOP,
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.orange[100],
+      colorText: Colors.orange[900],
+      icon: Icon(Icons.edit, color: Colors.orange[900]),
+      margin: const EdgeInsets.all(8),
+    );
   }
 
   @override

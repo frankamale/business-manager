@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
+import '../controllers/inventory_controller.dart';
+import '../controllers/customer_controller.dart';
+import '../controllers/auth_controller.dart';
+import 'pos_screen.dart';
 
 class SalesListing extends StatelessWidget {
   const SalesListing({super.key});
@@ -362,14 +366,153 @@ class SalesListing extends StatelessWidget {
     );
   }
 
-  void _handleEdit(Map<String, dynamic> sale) {
+  Future<void> _handleEdit(Map<String, dynamic> sale) async {
+    final salesController = Get.find<SalesController>();
+    final inventoryController = Get.find<InventoryController>();
+    final customerController = Get.find<CustomerController>();
+
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
-    Get.snackbar(
-      'Edit',
-      'Editing $receiptNumber...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.green.shade700,
-      colorText: Colors.white,
-    );
+    final salesId = sale['salesId'] as String?;
+
+    if (salesId == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot edit sale: Invalid sale ID',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      // Show loading indicator
+      Get.dialog(
+        Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Loading sale details...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Fetch all items for this sale from database
+      final saleTransactions = await salesController.getSaleTransactionsBySalesId(salesId);
+
+      // Close loading dialog
+      Get.back();
+
+      if (saleTransactions.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'No items found for this sale',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade700,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Get customer from first transaction (all have same customer)
+      final firstTransaction = saleTransactions.first;
+      final customerName = firstTransaction.destinationbp;
+      print('🔍 Looking up customer: $customerName');
+
+      // Try exact match first, then try with/without trailing space
+      var customer = customerController.getCustomerByFullnames(customerName);
+      if (customer == null) {
+        customer = customerController.getCustomerByFullnames(customerName.trim());
+      }
+      if (customer == null && !customerName.endsWith(' ')) {
+        customer = customerController.getCustomerByFullnames('$customerName ');
+      }
+
+      final customerId = customer?.id;
+      print('✅ Customer ID found: $customerId');
+
+      // Get salesperson from first transaction
+      final salespersonName = firstTransaction.issuedby.trim();
+      print('🔍 Looking for salesperson: "$salespersonName"');
+
+      // Try to find salesperson by username or name
+      final authController = Get.find<AuthController>();
+      final salespeople = await authController.getSalespeople();
+
+      String? salespersonId;
+      if (salespersonName.isNotEmpty && salespersonName != '  ') {
+        final salesperson = salespeople.firstWhereOrNull(
+          (user) => user.username.toLowerCase() == salespersonName.toLowerCase() ||
+                    user.name.toLowerCase() == salespersonName.toLowerCase(),
+        );
+        salespersonId = salesperson?.salespersonid;
+        print('✅ Salesperson ID found: $salespersonId');
+      }
+
+      // Transform sale transactions to cart items format
+      final cartItems = <Map<String, dynamic>>[];
+      for (var transaction in saleTransactions) {
+        // Try to find the inventory item by name (search inventory)
+        final inventoryItems = inventoryController.inventoryItems;
+        final inventoryItem = inventoryItems.firstWhereOrNull(
+          (item) => item.name.toLowerCase() == transaction.inventoryname.toLowerCase(),
+        );
+
+        // Use inventory item ID if found, otherwise use transaction ID
+        final itemId = inventoryItem?.id ?? transaction.id;
+
+        cartItems.add({
+          'id': itemId,
+          'name': transaction.inventoryname,
+          'quantity': transaction.quantity.toInt(),
+          'price': transaction.sellingprice,
+          'amount': transaction.amount,
+          'item': inventoryItem, // Include full inventory item if found
+        });
+      }
+
+      // Extract other sale details
+      final reference = sale['reference'] as String? ?? '';
+      final notes = firstTransaction.remarks;
+
+      // Navigate to POS screen with existing sale data
+      await Get.to(
+        () => PosScreen(
+          existingSalesId: salesId,
+          existingItems: cartItems,
+          existingCustomerId: customerId,
+          existingReference: reference,
+          existingNotes: notes,
+          existingSalespersonId: salespersonId,
+        ),
+        transition: Transition.rightToLeft,
+      );
+
+      // Refresh sales list after returning from POS screen
+      await salesController.loadSalesTransactions();
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      print('Error loading sale for edit: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to load sale details: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    }
   }
 }

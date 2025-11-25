@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
-import '../models/inventory_item.dart';
-import '../services/api_services.dart';
+import '../controllers/payment_controller.dart';
 
 class PaymentScreen extends StatefulWidget {
    final List<Map<String, dynamic>> cartItems;
@@ -26,18 +24,16 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  final ApiService _apiService = Get.find<ApiService>();
+  final PaymentController _paymentController = Get.find<PaymentController>();
   final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
   final TextEditingController amountTenderedController = TextEditingController();
-  bool _isProcessing = false;
-  int receiptCounter = 1;
 
   String formatMoney(double amount) {
     return _numberFormat.format(amount.toInt());
   }
 
   double get totalAmount {
-    return widget.cartItems.fold(0, (sum, item) => sum + (item['amount'] as num));
+    return _paymentController.calculateTotalAmount(widget.cartItems);
   }
 
   double get amountTendered {
@@ -46,7 +42,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   double get balance {
-    return amountTendered - totalAmount;
+    return _paymentController.calculateBalance(amountTendered, totalAmount);
   }
 
   @override
@@ -56,198 +52,49 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _saveBillAndPayment() async {
-    print("saveBill called");
+    print("💰 saveBill called");
 
     // Validation
     if (widget.cartItems.isEmpty) {
-      print("saveBill: validation failed - no items in cart");
-      Get.snackbar('Error', 'No items in cart',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900]);
+      print("❌ saveBill: validation failed - no items in cart");
+      Get.snackbar(
+        'Error',
+        'No items in cart',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+      );
       return;
     }
-    print("saveBill: validation passed");
-
-    setState(() => _isProcessing = true);
+    print("✅ saveBill: validation passed");
 
     try {
-      // Get user and company info
-      final userData = await _apiService.getStoredUserData();
-      final companyInfo = await _apiService.getCompanyInfo();
+      // Process sale and payment using controller
+      final result = await _paymentController.processSaleAndPayment(
+        cartItems: widget.cartItems,
+        amountTendered: amountTendered,
+        customerId: widget.customer,
+        reference: widget.reference,
+        notes: widget.notes,
+        salespersonId: widget.salespersonId,
+      );
 
-      if (userData == null) {
-        print("saveBill: userInfo not available");
-        Get.snackbar('Error', 'User information not available. Please refresh and try again.',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red[100],
-            colorText: Colors.red[900]);
-        return;
-      }
-      print("saveBill: userInfo available, proceeding");
+      // Handle success
+      final hasPayment = result['hasPayment'] as bool;
+      final receiptnumber = result['receiptnumber'] as String;
 
-      final userId = userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
-      final salespersonId = widget.salespersonId ?? userData['salespersonid'] ?? userData['staffid'] ?? userId;
-      final branchId = companyInfo['branchId'] ?? '';
-      final companyId = companyInfo['companyId'] ?? '';
-      final servicePointId = companyInfo['servicePointId'] ?? branchId;
+      Get.back(result: true); // Return to POS screen
 
-      // Generate receipt number
-      final receiptnumber = 'REC-${receiptCounter.toString().padLeft(4, '0')}';
-      setState(() {
-        receiptCounter++;
-      });
-
-      // Generate UUID for sale
-      const uuid = Uuid();
-      final saleId = uuid.v4();
-      print("saveBill: generated saleId: $saleId");
-
-      final transactionTimestamp = DateTime.now().millisecondsSinceEpoch;
-      final dateReadyValue = widget.notes ?? "";
-      print("saveBill: dateReadyValue: $dateReadyValue");
-
-      // Create line items matching DtoSaleDetail interface
-      final lineItems = widget.cartItems.asMap().entries.map((entry) {
-        final index = entry.key;
-        final item = entry.value;
-        final inventoryItem = item['item'] as InventoryItem;
-        // Use the edited price from cart item, fallback to inventory price
-        final sellingPrice = (item['price'] as num?)?.toDouble() ?? inventoryItem.price;
-
-        return {
-          "id": uuid.v4(),
-          "salesid": saleId,
-          "inventoryid": inventoryItem.id,
-          "ipdid": inventoryItem.ipdid,
-          "quantity": (item['quantity'] as num).toInt(),
-          "packsize": (inventoryItem.packsize ?? 1.0).toInt(),
-          "sellingprice": sellingPrice.toInt(),
-          "ordernumber": index,
-          "remarks": item['notes'] ?? "",
-          "transactionstatusid": 1,
-          "sellingprice_original": (inventoryItem.price ?? 0.0).toInt(),
-          "itemName": inventoryItem.name,
-          "category": inventoryItem.category ?? "",
-          "notes": item['notes'] ?? "",
-          "costprice": inventoryItem.costprice ?? 0.0,
-          "packagingid": servicePointId,
-          "servicepointid": null,
-          "complimentaryid": 0,
-        };
-      }).toList();
-
-      // Create sale payload matching SaleEntry interface
-      final salePayload = {
-        "id": saleId,
-        "transactionDate": transactionTimestamp,
-        "transactionstatusid": 1,
-        "receiptnumber": receiptnumber,
-        "clientid": widget.customer ?? "00000000-0000-0000-0000-000000000000",
-        "remarks": dateReadyValue.isNotEmpty ? dateReadyValue : "New sale added",
-        "otherRemarks": "",
-        "companyId": companyId,
-        "branchId": branchId,
-        "servicepointid": servicePointId,
-        "salespersonid": salespersonId,
-        "modeid": 2,
-        "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
-        "lineItems": lineItems,
-        "saleActionId": 1,
-      };
-
-      final result = await _apiService.createSale(salePayload);
-
-
-      final amountPaid = amountTendered;
-      print("saveBill: Amount paid from form: $amountPaid");
-
-      if (amountPaid > 0) {
-        print("saveBill: amountPaid > 0, proceeding to create payment");
-
-        // Fetch the transaction to get its actual date (same approach as React bill listing)
-        final transactionData = await _apiService.fetchSingleTransaction(saleId);
-
-        final lineItemsList = transactionData['lineItems'] as List<dynamic>? ?? [];
-        final totalAmount = lineItemsList.fold<double>(
-          0.0,
-          (sum, item) => sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
+      if (hasPayment) {
+        Get.snackbar(
+          'Success',
+          'Bill saved, posted, and payment processed successfully!\nReceipt: $receiptnumber',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[900],
+          duration: const Duration(seconds: 3),
         );
-        final currentPaid = double.tryParse(
-          transactionData['amountpaid']?.toString() ??
-          transactionData['amountPaid']?.toString() ?? '0'
-        ) ?? 0.0;
-        final outstandingBalance = totalAmount - currentPaid;
-
-
-        // Use the minimum of amountPaid or outstanding balance
-        final paymentAmount = amountPaid < outstandingBalance ? amountPaid : outstandingBalance;
-
-        // Get the transaction date - keep it in the same format as backend stored it
-        int invoiceTimestamp = DateTime.now().millisecondsSinceEpoch; // Default to now in milliseconds
-        if (transactionData['transactiondate'] != null) {
-          print('POS: Raw transactiondate from backend: ${transactionData['transactiondate']}');
-          // Backend stores in milliseconds, so use it directly
-          invoiceTimestamp = transactionData['transactiondate'];
-        }
-        print('POS: Invoice timestamp as date: ${DateTime.fromMillisecondsSinceEpoch(invoiceTimestamp).toIso8601String()}');
-
-        // Add 2 seconds buffer (2000ms) to ensure payment date is after invoice date
-        final paymentTimestamp = invoiceTimestamp + 2000;
-        print('POS: Payment date (with 2s buffer, milliseconds): $paymentTimestamp');
-        print('POS: Payment date as date: ${DateTime.fromMillisecondsSinceEpoch(paymentTimestamp).toIso8601String()}');
-
-        final paymentPayload = {
-          "id": uuid.v4(),
-          "currencyid": "aa7eed85-3c4e-42df-b0aa-0337009bee85",
-          "referenceid": saleId,
-          "servicepointid": servicePointId,
-          "transactiontypeid": 1,
-          "amount": paymentAmount,
-          "method": "Cash",
-          "methodId": 1,
-          "chequeno": "",
-          "cashaccountid": "11111111-1111-1111-1111-111111111111",
-          "paydate": paymentTimestamp,
-          "receipt": true,
-          "currency": "Uganda Shillings",
-          "type": "Sales",
-          "bp": widget.customer ?? "",
-          "direction": 1,
-          "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
-        };
-
-        print("saveBill: paymentPayload created: $paymentPayload");
-        print("saveBill: about to post payment");
-
-        try {
-          final paymentResult = await _apiService.postSale(paymentPayload);
-          print("saveBill: postPayment result: $paymentResult");
-
-          Get.back(result: true); // Return to POS screen
-          Get.snackbar(
-            'Success',
-            'Bill saved, posted, and payment processed successfully!\nReceipt: $receiptnumber',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green[100],
-            colorText: Colors.green[900],
-            duration: const Duration(seconds: 3),
-          );
-        } catch (paymentError) {
-          print("saveBill: payment error: $paymentError");
-          Get.back(result: true); // Return to POS screen
-          Get.snackbar(
-            'Partial Success',
-            'Bill saved and posted, but payment failed: $paymentError',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.orange[100],
-            colorText: Colors.orange[900],
-            duration: const Duration(seconds: 5),
-          );
-        }
       } else {
-        // No payment, just bill saved
-        Get.back(result: true); // Return to POS screen
         Get.snackbar(
           'Success',
           'Bill saved and posted successfully!\nReceipt: $receiptnumber',
@@ -258,10 +105,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
       }
     } catch (e) {
-      print("saveBill: error: $e");
+      print("❌ saveBill: error: $e");
 
-      // Check for authentication errors
-      if (e.toString().contains("Full authentication is required")) {
+      // Handle session expiry
+      if (e.toString().contains("SESSION_EXPIRED")) {
         Get.snackbar(
           'Session Expired',
           'Your session has expired. Please login again.',
@@ -269,20 +116,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
           backgroundColor: Colors.red[100],
           colorText: Colors.red[900],
         );
-        await _apiService.clearAuthData();
         Get.offAllNamed('/login');
       } else {
         Get.snackbar(
           'Error',
-          'Bill saved locally but failed to post: ${e.toString()}',
+          'Failed to process payment: ${e.toString()}',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red[100],
           colorText: Colors.red[900],
           duration: const Duration(seconds: 5),
         );
       }
-    } finally {
-      setState(() => _isProcessing = false);
     }
   }
 
@@ -305,7 +149,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Receipt Number
-              Container(
+              Obx(() => Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.blue[50],
@@ -324,7 +168,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'REC-${receiptCounter.toString().padLeft(4, '0')}',
+                      'REC-${_paymentController.receiptCounter.value.toString().padLeft(4, '0')}',
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -333,7 +177,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                   ],
                 ),
-              ),
+              )),
               const SizedBox(height: 24),
 
               // Amount Due
@@ -456,11 +300,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 16),
 
               // Action Buttons
-              Row(
+              Obx(() => Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => Get.back(),
+                      onPressed: _paymentController.isProcessing.value
+                        ? null
+                        : () => Get.back(),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         backgroundColor: Colors.grey[600],
@@ -480,7 +326,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
-                      onPressed: _isProcessing ? null : _saveBillAndPayment,
+                      onPressed: _paymentController.isProcessing.value
+                        ? null
+                        : _saveBillAndPayment,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         backgroundColor: Colors.green[700],
@@ -490,7 +338,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: _isProcessing
+                      child: _paymentController.isProcessing.value
                           ? const SizedBox(
                               height: 20,
                               width: 20,
@@ -506,7 +354,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                   ),
                 ],
-              ),
+              )),
             ],
           ),
         ),
