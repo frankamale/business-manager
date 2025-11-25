@@ -155,13 +155,13 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 40),
 
-                            // User Role Dropdown
+                            // Account Selection Dropdown
                             Obx(() => DropdownButtonFormField<String>(
                               value: selectedItem,
                               decoration: InputDecoration(
-                                labelText: 'User Role',
+                                labelText: 'Select Account',
                                 prefixIcon: Icon(
-                                  Icons.person_outline_rounded,
+                                  Icons.account_circle_outlined,
                                   color: Colors.blue.shade700,
                                 ),
                                 border: OutlineInputBorder(
@@ -186,7 +186,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                 filled: true,
                                 fillColor: Colors.grey.shade50,
                               ),
-                              hint: const Text('Select your role'),
+                              hint: const Text('Select your account'),
                               items: _authController.userRoles.map((String item) {
                                 return DropdownMenuItem<String>(
                                   value: item,
@@ -200,7 +200,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                               },
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
-                                  return 'Please select a role';
+                                  return 'Please select an account';
                                 }
                                 return null;
                               },

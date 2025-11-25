@@ -4,6 +4,10 @@ import 'package:intl/intl.dart';
 import 'inventory_items_screen.dart';
 import 'payment_screen.dart';
 import '../models/inventory_item.dart';
+import '../controllers/inventory_controller.dart';
+import '../controllers/customer_controller.dart';
+import '../controllers/auth_controller.dart';
+import '../models/users.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -13,27 +17,25 @@ class PosScreen extends StatefulWidget {
 }
 
 class _PosScreenState extends State<PosScreen> {
-  final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
+   final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
+   final InventoryController inventoryController = Get.find();
+   final CustomerController customerController = Get.find();
+   final AuthController authController = Get.find();
+   String selectedCategory = 'All';
+   final TextEditingController searchController = TextEditingController();
+   List<User> salespeople = [];
+   String? selectedSalespersonId;
 
-  String formatMoney(double amount) {
-    return _numberFormat.format(amount.toInt());
-  }
+   String formatMoney(double amount) {
+     return _numberFormat.format(amount.toInt());
+   }
 
-  final List<String> customers = [
-    "Walk-in Customer",
-    "Customer 1",
-    "Customer 2",
-    "Customer 3",
-    "Customer 4",
-    "Customer 5",
-  ];
+   String? selectedCustomerId;
+   final TextEditingController refController = TextEditingController();
+   final TextEditingController notesController = TextEditingController();
 
-  String? selectedCustomer;
-  final TextEditingController refController = TextEditingController();
-  final TextEditingController notesController = TextEditingController();
-
-  // Selected items
-  final List<Map<String, dynamic>> selectedItems = [];
+   // Selected items
+   final List<Map<String, dynamic>> selectedItems = [];
 
   double get totalAmount {
     return selectedItems.fold(0, (sum, item) => sum + (item['amount'] as num));
@@ -95,16 +97,38 @@ class _PosScreenState extends State<PosScreen> {
     });
   }
 
+  void _onSearchChanged() {
+    inventoryController.searchInventory(searchController.text);
+  }
+
+  Future<void> _loadSalespeople() async {
+    salespeople = await authController.getSalespeople();
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
-    selectedCustomer = customers[0];
+    // Set default customer to "Cash Customer"
+    final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+    if (cashCustomer != null) {
+      selectedCustomerId = cashCustomer.id;
+    }
+    // Set default salesperson to logged-in user
+    final currentUser = authController.currentUser.value;
+    if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+      selectedSalespersonId = currentUser.salespersonid;
+    }
+    _loadSalespeople();
+    searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
     refController.dispose();
     notesController.dispose();
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
     super.dispose();
   }
 
@@ -120,9 +144,10 @@ class _PosScreenState extends State<PosScreen> {
     final result = await Get.to(
       () => PaymentScreen(
         cartItems: selectedItems,
-        customer: selectedCustomer,
+        customer: selectedCustomerId,
         reference: refController.text,
         notes: notesController.text,
+        salespersonId: selectedSalespersonId,
       ),
     );
 
@@ -132,9 +157,143 @@ class _PosScreenState extends State<PosScreen> {
         selectedItems.clear();
         refController.clear();
         notesController.clear();
-        selectedCustomer = customers[0];
+        final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+        selectedCustomerId = cashCustomer?.id;
+        // Reset salesperson to logged-in user
+        final currentUser = authController.currentUser.value;
+        if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+          selectedSalespersonId = currentUser.salespersonid;
+        }
       });
     }
+  }
+
+  Widget _buildItemCard(InventoryItem item) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      elevation: 1,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: InkWell(
+        onTap: () {
+          _addItemToCart(item);
+          Navigator.of(context).pop();
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.inventory_2,
+                  color: Colors.blue[700],
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Item Details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                      if (item.code.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            item.code,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Expanded(
+                        child: Text(
+                          item.category,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${item.packaging} • ${item.measurmentunit}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Price
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'UGX ${item.price.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green[700],
+                    ),
+                  ),
+                  if (item.costprice != null && item.costprice! > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Cost: ${item.costprice!.toStringAsFixed(0)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -185,8 +344,56 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                   ),
                   Expanded(
+                    child: Obx(() {
+                      if (customerController.isLoadingCustomers.value) {
+                        return const SizedBox(
+                          height: 36,
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      return DropdownButtonFormField<String>(
+                        value: selectedCustomerId,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          isDense: true,
+                        ),
+                        items: customerController.customers.map((customer) {
+                          return DropdownMenuItem<String>(
+                            value: customer.id,
+                            child: Text(customer.fullnames),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedCustomerId = newValue;
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Salesperson Dropdown
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 60,
+                    child: Text(
+                      "Salesperson:",
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                  Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: selectedCustomer,
+                      value: selectedSalespersonId,
                       decoration: InputDecoration(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -197,15 +404,15 @@ class _PosScreenState extends State<PosScreen> {
                         ),
                         isDense: true,
                       ),
-                      items: customers.map((String customer) {
+                      items: salespeople.map((user) {
                         return DropdownMenuItem<String>(
-                          value: customer,
-                          child: Text(customer),
+                          value: user.salespersonid,
+                          child: Text(user.username),
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
                         setState(() {
-                          selectedCustomer = newValue;
+                          selectedSalespersonId = newValue;
                         });
                       },
                     ),
@@ -484,7 +691,13 @@ class _PosScreenState extends State<PosScreen> {
                           selectedItems.clear();
                           refController.clear();
                           notesController.clear();
-                          selectedCustomer = customers[0];
+                          final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+                          selectedCustomerId = cashCustomer?.id;
+                          // Reset salesperson to logged-in user
+                          final currentUser = authController.currentUser.value;
+                          if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+                            selectedSalespersonId = currentUser.salespersonid;
+                          }
                         });
                       },
                       style: ElevatedButton.styleFrom(
@@ -503,10 +716,150 @@ class _PosScreenState extends State<PosScreen> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        Get.to(
-                          () => InventoryItemsScreen(
-                            onItemSelected: _addItemToCart,
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.grey[100],
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                           ),
+                          builder: (BuildContext context) {
+                            return Container(
+                              height: MediaQuery.of(context).size.height * 0.85,
+                              child: Column(
+                                children: [
+                                  // Search Bar
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    color: Colors.white,
+                                    child: TextField(
+                                      controller: searchController,
+                                      decoration: InputDecoration(
+                                        hintText: 'Search by name, code, or category...',
+                                        prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                                        suffixIcon: searchController.text.isNotEmpty
+                                            ? IconButton(
+                                                icon: const Icon(Icons.clear, color: Colors.grey),
+                                                onPressed: () {
+                                                  searchController.clear();
+                                                  inventoryController.searchInventory('');
+                                                },
+                                              )
+                                            : null,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                          borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.grey[50],
+                                        contentPadding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  // Category Filter
+                                  Obx(() {
+                                    if (inventoryController.categories.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+
+                                    return Container(
+                                      height: 50,
+                                      color: Colors.white,
+                                      child: ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        itemCount: inventoryController.categories.length + 1,
+                                        itemBuilder: (context, index) {
+                                          final category = index == 0 ? 'All' : inventoryController.categories[index - 1];
+                                          final isSelected = selectedCategory == category;
+
+                                          return Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                            child: ChoiceChip(
+                                              label: Text(category),
+                                              selected: isSelected,
+                                              onSelected: (selected) {
+                                                setState(() {
+                                                  selectedCategory = category;
+                                                });
+                                                inventoryController.filterByCategory(category);
+                                                searchController.clear();
+                                              },
+                                              selectedColor: Colors.blue[700],
+                                              labelStyle: TextStyle(
+                                                color: isSelected ? Colors.white : Colors.black87,
+                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                              ),
+                                              backgroundColor: Colors.grey[200],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  }),
+
+                                  const Divider(height: 1),
+
+                                  // Items List
+                                  Expanded(
+                                    child: Obx(() {
+                                      if (inventoryController.isLoadingInventory.value) {
+                                        return const Center(
+                                          child: CircularProgressIndicator(),
+                                        );
+                                      }
+
+                                      if (inventoryController.filteredItems.isEmpty) {
+                                        return Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.inventory_2_outlined,
+                                                size: 80,
+                                                color: Colors.grey[400],
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                searchController.text.isNotEmpty
+                                                    ? 'No items found for "${searchController.text}"'
+                                                    : 'No items available',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+
+                                      return ListView.builder(
+                                        padding: const EdgeInsets.all(8),
+                                        itemCount: inventoryController.filteredItems.length,
+                                        itemBuilder: (context, index) {
+                                          final item = inventoryController.filteredItems[index];
+                                          return _buildItemCard(item);
+                                        },
+                                      );
+                                    }),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         );
                       },
                       style: ElevatedButton.styleFrom(

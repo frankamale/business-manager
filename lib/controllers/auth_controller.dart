@@ -24,16 +24,16 @@ class AuthController extends GetxController {
     loadUserRoles();
   }
 
-  // Load unique user roles from database
+  // Load all user roles from database (including duplicates)
   Future<void> loadUserRoles() async {
     try {
       print('📋 Loading user roles from database...');
       isLoadingRoles.value = true;
-      final roles = await _dbHelper.getUniqueRoles();
+      final roles = await _dbHelper.getAllRoles();
       userRoles.value = roles;
       isLoadingRoles.value = false;
 
-      print('Successfully loaded ${roles.length} unique roles from database:');
+      print('Successfully loaded ${roles.length} roles from database:');
       for (var i = 0; i < roles.length; i++) {
         print('   ${i + 1}. ${roles[i]}');
       }
@@ -99,10 +99,10 @@ class AuthController extends GetxController {
     }
   }
 
-  // Login user with role and password
-  Future<bool> login(String role, String password) async {
+  // Login user with username and password
+  Future<bool> login(String username, String password) async {
     try {
-      print(' Attempting login with role: $role');
+      print(' Attempting login with username: $username');
       isLoggingIn.value = true;
 
       // Convert password to integer
@@ -118,14 +118,14 @@ class AuthController extends GetxController {
         return false;
       }
 
-      // Authenticate user
-      final user = await _dbHelper.authenticateUser(role, passwordInt);
+      // Authenticate user by username and password
+      final user = await _dbHelper.authenticateUserByUsername(username, passwordInt);
 
       if (user == null) {
-        print('Login failed - Invalid role or password');
+        print('Login failed - Invalid username or password');
         Get.snackbar(
           'Login Failed',
-          'Invalid role or password',
+          'Invalid username or password',
           snackPosition: SnackPosition.BOTTOM,
         );
         isLoggingIn.value = false;
@@ -157,6 +157,18 @@ class AuthController extends GetxController {
       );
       isLoggingIn.value = false;
       return false;
+    }
+  }
+
+  // Get salespeople (users with salespersonid)
+  Future<List<User>> getSalespeople() async {
+    try {
+      final users = await _dbHelper.getUsersWithSalespersonId();
+      print('Found ${users.length} salespeople');
+      return users;
+    } catch (e) {
+      print('Error fetching salespeople: $e');
+      return [];
     }
   }
 

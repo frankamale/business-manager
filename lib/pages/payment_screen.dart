@@ -6,18 +6,20 @@ import '../models/inventory_item.dart';
 import '../services/api_services.dart';
 
 class PaymentScreen extends StatefulWidget {
-  final List<Map<String, dynamic>> cartItems;
-  final String? customer;
-  final String? reference;
-  final String? notes;
+   final List<Map<String, dynamic>> cartItems;
+   final String? customer;
+   final String? reference;
+   final String? notes;
+   final String? salespersonId;
 
-  const PaymentScreen({
-    super.key,
-    required this.cartItems,
-    this.customer,
-    this.reference,
-    this.notes,
-  });
+   const PaymentScreen({
+     super.key,
+     required this.cartItems,
+     this.customer,
+     this.reference,
+     this.notes,
+     this.salespersonId,
+   });
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
@@ -85,6 +87,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       print("saveBill: userInfo available, proceeding");
 
       final userId = userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
+      final salespersonId = widget.salespersonId ?? userData['salespersonid'] ?? userData['staffid'] ?? userId;
       final branchId = companyInfo['branchId'] ?? '';
       final companyId = companyInfo['companyId'] ?? '';
       final servicePointId = companyInfo['servicePointId'] ?? branchId;
@@ -144,7 +147,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         "companyId": companyId,
         "branchId": branchId,
         "servicepointid": servicePointId,
-        "salespersonid": "da040b68-b5f9-4022-907d-13110d022e9c",
+        "salespersonid": salespersonId,
         "modeid": 2,
         "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
         "lineItems": lineItems,
@@ -154,7 +157,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       print("═══════════════════════════════════════════════════");
       print("saveBill: VALIDATION CHECKS");
       print("═══════════════════════════════════════════════════");
-      print("✓ userId (salespersonid): $userId");
+      print("✓ userId: $userId");
+      print("✓ salespersonId: $salespersonId");
       print("✓ branchId: $branchId");
       print("✓ companyId: $companyId");
       print("✓ servicePointId: $servicePointId");
@@ -238,7 +242,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         print("saveBill: about to post payment");
 
         try {
-          final paymentResult = await _apiService.createPayment(paymentPayload);
+          final paymentResult = await _apiService.postSale(paymentPayload);
           print("saveBill: postPayment result: $paymentResult");
 
           Get.back(result: true); // Return to POS screen

@@ -8,6 +8,7 @@ import '../models/users.dart';
 import '../models/auth_response.dart';
 import '../models/service_point.dart';
 import '../models/inventory_item.dart';
+import '../models/customer.dart';
 
 class ApiService extends GetxService {
   final String baseurl = "http://52.30.142.12:8080/rest";
@@ -362,6 +363,63 @@ class ApiService extends GetxService {
     }
   }
 
+  Future<List<Customer>> fetchCustomers() async {
+    try {
+      print('FETCHING CUSTOMERS REQUEST STARTED');
+
+      final token = await getAccessToken();
+      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+        print(' Authorization header added');
+      } else {
+        print(' No authorization token available');
+      }
+
+      final response = await http.get(
+        Uri.parse("$baseurl/bp/customers"),
+        headers: headers,
+      );
+
+      print(' Status Code: ${response.statusCode}');
+      print(' Response Body Length: ${response.body.length} characters');
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        print('✅ Successfully parsed ${data.length} customers from API endpoint');
+
+        final customers = data.map((json) => Customer.fromMap(json)).toList();
+
+        print('👥 Customers received from endpoint:');
+        for (var i = 0; i < customers.length; i++) {
+          print('   ${i + 1}. ${customers[i].fullnames}');
+          print('      - ID: ${customers[i].id}');
+          print('      - Code: ${customers[i].code}');
+          print('      - Phone: ${customers[i].phone1}');
+          print('      ---');
+        }
+
+        return customers;
+      } else {
+        print(' Status Code: ${response.statusCode}');
+        print(' Response: ${response.body}');
+        throw Exception("Failed to load customers");
+      }
+    } catch (e, stackTrace) {
+      print('═══════════════════════════════════════════════════');
+      print(' Error Type: ${e.runtimeType}');
+      print('Error Message: $e');
+      print('Stack Trace:');
+      print(stackTrace);
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> createSale(Map<String, dynamic> saleData) async {
     try {
       print('═══════════════════════════════════════════════════');
@@ -524,6 +582,64 @@ class ApiService extends GetxService {
       }
     } catch (e) {
       print('Error creating payment: $e');
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> postSale(Map<String, dynamic> saleData) async {
+    try {
+      print('═══════════════════════════════════════════════════');
+      print('POSTING SALE TO /rest/payment/');
+      print('═══════════════════════════════════════════════════');
+
+      final token = await getAccessToken();
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      print('📤 REQUEST URL: $baseurl/payment/');
+      print('📋 REQUEST HEADERS:');
+      headers.forEach((key, value) {
+        if (key == 'Authorization') {
+          print('   $key: Bearer ${value.substring(7, 27)}...');
+        } else {
+          print('   $key: $value');
+        }
+      });
+
+      print('\n📦 SALE PAYLOAD:');
+      final jsonPayload = json.encode(saleData);
+      print(jsonPayload);
+
+      final response = await http.post(
+        Uri.parse("$baseurl/payment/"),
+        headers: headers,
+        body: jsonPayload,
+      );
+
+      print('\n📥 RESPONSE:');
+      print('   Status Code: ${response.statusCode}');
+      print('   Response Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ SALE POSTED SUCCESSFULLY');
+        print('═══════════════════════════════════════════════════');
+        return json.decode(response.body);
+      } else {
+        print('❌ SALE POST FAILED');
+        print('   Status: ${response.statusCode}');
+        print('   Error: ${response.body}');
+        print('═══════════════════════════════════════════════════');
+        throw Exception("Failed to post sale: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      print('❌ ERROR POSTING SALE: $e');
+      print('═══════════════════════════════════════════════════');
       rethrow;
     }
   }

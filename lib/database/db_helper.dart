@@ -194,6 +194,20 @@ class DatabaseHelper {
     return result.map((map) => map['role'] as String).toList();
   }
 
+  // Get all usernames for login display (only users with salespersonid)
+  Future<List<String>> getAllRoles() async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db!.query(
+      'user',
+      columns: ['username'],
+      where: 'salespersonid IS NOT NULL AND salespersonid != ?',
+      whereArgs: [''],
+      orderBy: 'username ASC',
+    );
+
+    return result.map((map) => map['username'] as String).toList();
+  }
+
   // Get users by role
   Future<List<User>> getUsersByRole(String role) async {
     final db = await database;
@@ -201,6 +215,20 @@ class DatabaseHelper {
       'user',
       where: 'role = ?',
       whereArgs: [role],
+    );
+
+    return List.generate(maps.length, (i) {
+      return User.fromMap(maps[i]);
+    });
+  }
+
+  // Get users with salespersonid (not null or empty)
+  Future<List<User>> getUsersWithSalespersonId() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'user',
+      where: 'salespersonid IS NOT NULL AND salespersonid != ?',
+      whereArgs: [''],
     );
 
     return List.generate(maps.length, (i) {
@@ -223,6 +251,33 @@ class DatabaseHelper {
 
       if (maps.isEmpty) {
         print('No user found with role: $role and the provided password');
+        return null;
+      }
+
+      final user = User.fromMap(maps.first);
+      print('Authentication successful for user: ${user.name} (${user.username})');
+      return user;
+    } catch (e) {
+      print('Error during authentication: $e');
+      return null;
+    }
+  }
+
+  // Authenticate user by username and password
+  Future<User?> authenticateUserByUsername(String username, int password) async {
+    try {
+      final db = await database;
+      print('Authenticating user with username: $username and password: $password');
+
+      final List<Map<String, dynamic>> maps = await db!.query(
+        'user',
+        where: 'username = ? AND pospassword = ?',
+        whereArgs: [username, password],
+        limit: 1,
+      );
+
+      if (maps.isEmpty) {
+        print('No user found with username: $username and the provided password');
         return null;
       }
 
