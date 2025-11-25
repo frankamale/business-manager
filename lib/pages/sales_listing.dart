@@ -1,44 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:get/get.dart';
+import '../controllers/sales_controller.dart';
 
-class SalesListing extends StatefulWidget {
+class SalesListing extends StatelessWidget {
   const SalesListing({super.key});
 
   @override
-  State<SalesListing> createState() => _SalesListingState();
-}
-
-class _SalesListingState extends State<SalesListing> {
-  // Sample data - replace with actual data from database/API
-  final List<Sale> sales = [
-    Sale(
-      receiptNumber: 'RCP-001',
-      numberOfItems: 5,
-      totalAmount: 450000,
-      date: DateTime.now(),
-      reference: 'REF-2024-001',
-      notes: 'Customer paid by card',
-    ),
-    Sale(
-      receiptNumber: 'RCP-002',
-      numberOfItems: 3,
-      totalAmount: 275000,
-      date: DateTime.now().subtract(Duration(hours: 2)),
-      reference: 'REF-2024-002',
-      notes: 'Cash payment',
-    ),
-    Sale(
-      receiptNumber: 'RCP-003',
-      numberOfItems: 8,
-      totalAmount: 780000,
-      date: DateTime.now().subtract(Duration(hours: 5)),
-      reference: 'REF-2024-003',
-      notes: 'Corporate order',
-    ),
-  ];
-
-  @override
   Widget build(BuildContext context) {
+    final SalesController salesController = Get.find<SalesController>();
+
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
@@ -47,6 +18,11 @@ class _SalesListingState extends State<SalesListing> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: () => salesController.loadSalesTransactions(),
+            tooltip: 'Refresh',
+          ),
           IconButton(
             icon: Icon(Icons.filter_list),
             onPressed: () {
@@ -64,34 +40,62 @@ class _SalesListingState extends State<SalesListing> {
         ],
       ),
       body: SafeArea(
-        child: sales.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.receipt_long, size: 80, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text(
-                      "No sales found",
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              )
-            : ListView.builder(
-                padding: EdgeInsets.all(12),
-                itemCount: sales.length,
-                itemBuilder: (context, index) {
-                  return _buildSaleCard(sales[index]);
-                },
+        child: Obx(() {
+          if (salesController.isLoadingSales.value) {
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (salesController.groupedSales.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.receipt_long, size: 80, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    "No sales found",
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "Sales data synced on startup",
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
               ),
+            );
+          }
+
+          return ListView.builder(
+            padding: EdgeInsets.all(12),
+            itemCount: salesController.groupedSales.length,
+            itemBuilder: (context, index) {
+              return _buildSaleCard(salesController.groupedSales[index]);
+            },
+          );
+        }),
       ),
     );
   }
 
-  Widget _buildSaleCard(Sale sale) {
+  Widget _buildSaleCard(Map<String, dynamic> sale) {
     final dateTimeFormat = DateFormat('MMM dd, yyyy • hh:mm a');
     final currencyFormat = NumberFormat('#,###', 'en_US');
+
+    final receiptNumber = sale['receiptnumber'] as String? ?? '';
+    final numberOfItems = sale['numberOfItems'] as int? ?? 0;
+    final totalAmount = sale['totalAmount'] as double? ?? 0.0;
+    final totalPaid = sale['totalPaid'] as double? ?? 0.0;
+    final totalBalance = sale['totalBalance'] as double? ?? 0.0;
+    final transactionDate = sale['transactiondate'] as int? ?? 0;
+    final reference = sale['reference'] as String? ?? '';
+    final notes = sale['notes'] as String? ?? '';
+    final paymentType = sale['paymenttype'] as String? ?? 'Unknown';
+    final cancelled = sale['cancelled'] as int? ?? 0;
+
+    final date = DateTime.fromMillisecondsSinceEpoch(transactionDate);
 
     return Card(
       margin: EdgeInsets.only(bottom: 10),
@@ -107,20 +111,15 @@ class _SalesListingState extends State<SalesListing> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  sale.receiptNumber,
+                  receiptNumber,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade700,
+                    color: cancelled > 0 ? Colors.red.shade700 : Colors.blue.shade700,
                   ),
                 ),
-                // Icon(
-                //   Icons.shopping_cart,
-                //   size: 14,
-                //   color: Colors.grey.shade600,
-                // ),
                 Text(
-                  '(${sale.numberOfItems} items)',
+                  '($numberOfItems items)',
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                 ),
                 Row(
@@ -153,6 +152,7 @@ class _SalesListingState extends State<SalesListing> {
                                 size: 18,
                                 color: Colors.white,
                               ),
+                              SizedBox(width: 8),
                               Text(
                                 'Upload',
                                 style: TextStyle(color: Colors.white),
@@ -169,6 +169,7 @@ class _SalesListingState extends State<SalesListing> {
                                 size: 18,
                                 color: Colors.white,
                               ),
+                              SizedBox(width: 8),
                               Text(
                                 'Fiscalise',
                                 style: TextStyle(color: Colors.white),
@@ -205,68 +206,117 @@ class _SalesListingState extends State<SalesListing> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Total: " + sale.totalAmount.toString()),
-
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Total: UGX ${currencyFormat.format(totalAmount)}",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    if (totalBalance > 0) ...[
+                      SizedBox(height: 2),
+                      Text(
+                        "Balance: UGX ${currencyFormat.format(totalBalance)}",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
                 Text(
-                  dateTimeFormat.format(sale.date),
+                  dateTimeFormat.format(date),
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                 ),
               ],
             ),
             SizedBox(height: 6),
 
-            // Items and Reference
+            // Payment Type
             Row(
               children: [
+                Icon(
+                  Icons.payment,
+                  size: 14,
+                  color: Colors.grey.shade600,
+                ),
                 SizedBox(width: 4),
                 Text(
-                  "Upload Status:  Pending",
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
-                ),
-                Text(
-                  "Efris Status:  Pending",
+                  "Payment: $paymentType",
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                 ),
               ],
             ),
+            SizedBox(height: 4),
+
+            // Reference
             Row(
               children: [
+                Icon(
+                  Icons.tag,
+                  size: 14,
+                  color: Colors.grey.shade600,
+                ),
                 SizedBox(width: 4),
                 Text(
                   "Reference: ",
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                 ),
                 Text(
-                  sale.reference,
+                  reference,
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                 ),
               ],
             ),
 
+            // Status indicators
+            if (cancelled > 0) ...[
+              SizedBox(height: 6),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  "CANCELLED",
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.red.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+
             // Notes if present
-            if (sale.notes.isNotEmpty) ...[
+            if (notes.isNotEmpty) ...[
               SizedBox(height: 6),
               Row(
                 children: [
-                  Text(
-                    "Notes: ",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontStyle: FontStyle.italic,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Icon(
+                    Icons.note,
+                    size: 14,
+                    color: Colors.grey.shade600,
                   ),
-                  Text(
-                    sale.notes,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                      fontStyle: FontStyle.italic,
+                  SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      notes,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -277,61 +327,49 @@ class _SalesListingState extends State<SalesListing> {
     );
   }
 
-  void _handlePrint(Sale sale) {
-    // Implement print functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Printing receipt ${sale.receiptNumber}...'),
-        backgroundColor: Colors.blue.shade700,
-      ),
+  void _handlePrint(Map<String, dynamic> sale) {
+    final receiptNumber = sale['receiptnumber'] as String? ?? '';
+    Get.snackbar(
+      'Print',
+      'Printing receipt $receiptNumber...',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.blue.shade700,
+      colorText: Colors.white,
     );
   }
 
-  void _handleAction(String action, Sale sale) {
+  void _handleAction(String action, Map<String, dynamic> sale) {
+    final receiptNumber = sale['receiptnumber'] as String? ?? '';
     String message = '';
     switch (action) {
       case 'upload':
-        message = 'Uploading ${sale.receiptNumber} to server...';
+        message = 'Uploading $receiptNumber to server...';
         break;
       case 'fiscalise':
-        message = 'Fiscalising ${sale.receiptNumber}...';
+        message = 'Fiscalising $receiptNumber...';
         break;
       case 'synchronise':
-        message = 'Synchronising ${sale.receiptNumber}...';
+        message = 'Synchronising $receiptNumber...';
         break;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.orange.shade700),
+    Get.snackbar(
+      action.toUpperCase(),
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.orange.shade700,
+      colorText: Colors.white,
     );
   }
 
-  void _handleEdit(Sale sale) {
-    // Implement edit functionality - navigate to edit screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editing ${sale.receiptNumber}...'),
-        backgroundColor: Colors.green.shade700,
-      ),
+  void _handleEdit(Map<String, dynamic> sale) {
+    final receiptNumber = sale['receiptnumber'] as String? ?? '';
+    Get.snackbar(
+      'Edit',
+      'Editing $receiptNumber...',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.shade700,
+      colorText: Colors.white,
     );
   }
-}
-
-// Sale Model
-class Sale {
-  final String receiptNumber;
-  final int numberOfItems;
-  final double totalAmount;
-  final DateTime date;
-  final String reference;
-  final String notes;
-
-  Sale({
-    required this.receiptNumber,
-    required this.numberOfItems,
-    required this.totalAmount,
-    required this.date,
-    required this.reference,
-    this.notes = '',
-  });
 }

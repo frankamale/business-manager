@@ -2,7 +2,9 @@ import 'package:bac_pos/pages/sales_point_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/service_point_controller.dart';
+import '../controllers/auth_controller.dart';
 import '../models/service_point.dart';
+import '../auth/login.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -16,6 +18,7 @@ class _HomepageState extends State<Homepage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   final ServicePointController _servicePointController = Get.find<ServicePointController>();
+  final AuthController authController = Get.find();
 
   @override
   void initState() {
@@ -97,6 +100,14 @@ class _HomepageState extends State<Homepage>
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {},
             tooltip: 'Notifications',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              authController.logout();
+              Get.offAll(() => const Login());
+            },
+            tooltip: 'Logout',
           ),
         ],
       ),

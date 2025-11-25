@@ -4,12 +4,14 @@ import 'package:bac_pos/pages/sales_listing.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/service_point.dart';
-import '../services/api_services.dart';
+import '../controllers/auth_controller.dart';
+import '../auth/login.dart';
 
 class SalesPointDetails extends StatelessWidget {
   final ServicePoint servicePoint;
+  final AuthController authController = Get.find();
 
-  const SalesPointDetails({super.key, required this.servicePoint});
+   SalesPointDetails({super.key, required this.servicePoint});
 
   Color _getColorForServicePoint(String type) {
     final lowerType = type.toLowerCase();
@@ -32,6 +34,16 @@ class SalesPointDetails extends StatelessWidget {
         title: Text(servicePoint.name),
         backgroundColor: color,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              authController.logout();
+              Get.offAll(() => const Login());
+            },
+            tooltip: 'Logout',
+          ),
+        ],
       ),
 
       body: SafeArea(

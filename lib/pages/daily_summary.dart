@@ -1,8 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:get/get.dart';
+import '../controllers/sales_controller.dart';
 
-class DailySummary extends StatelessWidget {
+class DailySummary extends StatefulWidget {
   const DailySummary({super.key});
+
+  @override
+  State<DailySummary> createState() => _DailySummaryState();
+}
+
+class _DailySummaryState extends State<DailySummary> {
+  final SalesController _salesController = Get.find<SalesController>();
+  DateTime selectedDate = DateTime.now();
+  Map<String, dynamic>? summaryData;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSummary();
+  }
+
+  Future<void> _loadSummary() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      final summary = await _salesController.getDailySummary(selectedDate);
+      setState(() {
+        summaryData = summary;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading summary: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(Duration(days: 365)),
+    );
+
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+      _loadSummary();
+    }
+  }
 
   Widget _buildSummaryTable({
     required String title,
@@ -139,8 +192,117 @@ class DailySummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedDate = DateTime(2025, 1, 1);
     final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(selectedDate);
+    final currencyFormat = NumberFormat('#,###', 'en_US');
+
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
+        appBar: AppBar(
+          title: const Text(
+            "Daily Summary",
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.blue[700],
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final overallTotal = summaryData?['overallTotal'] as Map<String, dynamic>? ?? {};
+    final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
+    final totalPaid = (overallTotal['totalPaid'] as num?)?.toDouble() ?? 0.0;
+    final totalBalance = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
+    final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
+
+    final paymentSummary = summaryData?['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
+    final categorySummary = summaryData?['categorySummary'] as List<Map<String, dynamic>>? ?? [];
+    final complementaryTotal = (summaryData?['complementaryTotal'] as num?)?.toDouble() ?? 0.0;
+
+    // Build payment method list
+    final paymentData = <Map<String, dynamic>>[];
+    for (var payment in paymentSummary) {
+      final type = payment['paymenttype'] as String? ?? 'Unknown';
+      final amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
+
+      IconData icon;
+      Color color;
+      String label;
+
+      switch (type.toLowerCase()) {
+        case 'cash':
+          icon = Icons.payments_outlined;
+          color = Colors.green;
+          label = 'Total Cash Amount';
+          break;
+        case 'card':
+          icon = Icons.credit_card;
+          color = Colors.blue;
+          label = 'Card Amount';
+          break;
+        case 'mobile':
+          icon = Icons.phone_android;
+          color = Colors.orange;
+          label = 'Mobile Money';
+          break;
+        default:
+          icon = Icons.account_balance_wallet;
+          color = Colors.purple;
+          label = type;
+      }
+
+      paymentData.add({
+        'icon': icon,
+        'label': label,
+        'amount': 'UGX ${currencyFormat.format(amount)}',
+        'color': color,
+      });
+    }
+
+    // Build category data
+    final categoryData = <Map<String, dynamic>>[];
+    for (var category in categorySummary) {
+      final catName = category['category'] as String? ?? 'Unknown';
+      final amount = (category['totalAmount'] as num?)?.toDouble() ?? 0.0;
+
+      IconData icon;
+      Color color;
+
+      switch (catName.toLowerCase()) {
+        case 'drinks':
+        case 'beverage':
+          icon = Icons.local_drink;
+          color = Colors.cyan;
+          break;
+        case 'food':
+        case 'menu':
+          icon = Icons.restaurant_menu;
+          color = Colors.red;
+          break;
+        default:
+          icon = Icons.shopping_bag;
+          color = Colors.blue;
+      }
+
+      categoryData.add({
+        'icon': icon,
+        'label': '$catName Amount',
+        'amount': 'UGX ${currencyFormat.format(amount)}',
+        'color': color,
+      });
+    }
+
+    // Add complementary if exists
+    if (complementaryTotal > 0) {
+      categoryData.add({
+        'icon': Icons.card_giftcard,
+        'label': 'Complementary Items',
+        'amount': 'UGX ${currencyFormat.format(complementaryTotal)}',
+        'color': Colors.teal,
+      });
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -152,58 +314,116 @@ class DailySummary extends StatelessWidget {
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadSummary,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
           children: [
             // Date Header Card
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blue[700]!, Colors.blue[500]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+            GestureDetector(
+              onTap: _selectDate,
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.blue[700]!, Colors.blue[500]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "REVIEW DATE",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.calendar_today, color: Colors.white, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        formattedDate,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "REVIEW DATE (Tap to change)",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today, color: Colors.white, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Divider(color: Colors.white30),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total Transactions',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              '$totalTransactions',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Total Sales',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'UGX ${currencyFormat.format(totalSales)}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -215,62 +435,41 @@ class DailySummary extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Payment Methods Table
-                    _buildSummaryTable(
-                      title: "Payment Methods",
-                      data: [
-                        {
-                          'icon': Icons.payments_outlined,
-                          'label': 'Total Cash Amount',
-                          'amount': 'UGX 0',
-                          'color': Colors.green,
-                        },
-                        {
-                          'icon': Icons.credit_card,
-                          'label': 'Card Amount',
-                          'amount': 'UGX 0',
-                          'color': Colors.blue,
-                        },
-                        {
-                          'icon': Icons.phone_android,
-                          'label': 'Mobile Money',
-                          'amount': 'UGX 0',
-                          'color': Colors.orange,
-                        },
-                        {
-                          'icon': Icons.account_balance_wallet,
-                          'label': 'Credit Amount',
-                          'amount': 'UGX 0',
-                          'color': Colors.purple,
-                        },
-                      ],
-                    ),
+                    if (paymentData.isNotEmpty)
+                      _buildSummaryTable(
+                        title: "Payment Methods",
+                        data: paymentData,
+                      ),
                     const SizedBox(height: 16),
 
                     // Sales Summary Table
-                    _buildSummaryTable(
-                      title: "Sales Summary",
-                      data: [
-                        {
-                          'icon': Icons.local_drink,
-                          'label': 'Total Drinks Amount',
-                          'amount': 'UGX 0',
-                          'color': Colors.cyan,
-                        },
-                        {
-                          'icon': Icons.restaurant_menu,
-                          'label': 'Total Menu Amount',
-                          'amount': 'UGX 0',
-                          'color': Colors.red,
-                        },
-                        {
-                          'icon': Icons.card_giftcard,
-                          'label': 'Complementary Items',
-                          'amount': 'UGX 0',
-                          'color': Colors.teal,
-                        },
-                      ],
-                    ),
+                    if (categoryData.isNotEmpty)
+                      _buildSummaryTable(
+                        title: "Sales Summary by Category",
+                        data: categoryData,
+                      ),
                     const SizedBox(height: 16),
+
+                    // Show message if no data
+                    if (paymentData.isEmpty && categoryData.isEmpty)
+                      Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40.0),
+                          child: Column(
+                            children: [
+                              Icon(Icons.inbox, size: 64, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text(
+                                'No sales data for selected date',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                   ],
                 ),
               ),

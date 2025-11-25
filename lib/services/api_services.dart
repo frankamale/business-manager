@@ -9,6 +9,8 @@ import '../models/auth_response.dart';
 import '../models/service_point.dart';
 import '../models/inventory_item.dart';
 import '../models/customer.dart';
+import '../models/sale_transaction.dart';
+import '../database/db_helper.dart';
 
 class ApiService extends GetxService {
   final String baseurl = "http://52.30.142.12:8080/rest";
@@ -662,5 +664,84 @@ class ApiService extends GetxService {
       return '❌ NOT A NUMBER';
     }
     return '✓';
+  }
+
+  // Fetch sales transactions from the API and save to database
+  Future<List<SaleTransaction>> fetchAndStoreSalesTransactions() async {
+    try {
+      print('═══════════════════════════════════════════════════');
+      print('FETCHING SALES TRANSACTIONS REQUEST STARTED');
+      print('═══════════════════════════════════════════════════');
+
+      final token = await getAccessToken();
+      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+        print(' Authorization header added');
+      } else {
+        print(' No authorization token available');
+      }
+
+      final response = await http.get(
+        Uri.parse("$baseurl/sales/reports/transaction/detail"),
+        headers: headers,
+      );
+
+      print(' Status Code: ${response.statusCode}');
+      print(' Response Body Length: ${response.body.length} characters');
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        print('✅ Successfully parsed ${data.length} sale transactions from API endpoint');
+
+        // Convert JSON to SaleTransaction objects
+        final transactions = data.map((json) => SaleTransaction.fromJson(json)).toList();
+
+        // Save to database
+        final dbHelper = DatabaseHelper();
+        await dbHelper.insertSaleTransactions(transactions);
+
+        print('📊 Sales transactions saved to database:');
+        print('   Total transactions: ${transactions.length}');
+
+        // Group by salesId to show unique sales
+        final uniqueSalesIds = transactions.map((t) => t.salesId).toSet();
+        print('   Unique sales (receipts): ${uniqueSalesIds.length}');
+
+        // Show first few sales
+        if (transactions.isNotEmpty) {
+          print('\n   Sample transactions:');
+          for (var i = 0; i < (transactions.length < 3 ? transactions.length : 3); i++) {
+            print('   ${i + 1}. ${transactions[i].inventoryname}');
+            print('      - Receipt: ${transactions[i].receiptnumber}');
+            print('      - Amount: ${transactions[i].amount}');
+            print('      - Date: ${DateTime.fromMillisecondsSinceEpoch(transactions[i].transactiondate)}');
+            print('      - SalesId: ${transactions[i].salesId}');
+            print('      ---');
+          }
+        }
+
+        print('═══════════════════════════════════════════════════');
+        return transactions;
+      } else {
+        print('❌ Status Code: ${response.statusCode}');
+        print(' Response: ${response.body}');
+        print('═══════════════════════════════════════════════════');
+        throw Exception("Failed to load sales transactions");
+      }
+    } catch (e, stackTrace) {
+      print('═══════════════════════════════════════════════════');
+      print('❌ Error Type: ${e.runtimeType}');
+      print('Error Message: $e');
+      print('Stack Trace:');
+      print(stackTrace);
+      print('═══════════════════════════════════════════════════');
+      rethrow;
+    }
   }
 }

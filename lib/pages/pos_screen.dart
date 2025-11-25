@@ -308,6 +308,8 @@ class _PosScreenState extends State<PosScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        foregroundColor: Colors.white,
+
         title: const Text(
           "POS Sale",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -320,7 +322,6 @@ class _PosScreenState extends State<PosScreen> {
           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
           child: Column(
             children: [
-              // Total Display
               Container(
                 width: double.infinity,
                 height: 65,
