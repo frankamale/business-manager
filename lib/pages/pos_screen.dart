@@ -780,53 +780,69 @@ class _PosScreenState extends State<PosScreen> {
               const SizedBox(height: 8),
 
               // Action Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _navigateToPayment,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Colors.blue[700],
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+              widget.existingSalesId != null
+                ? // Edit mode - only show Close button
+                  ElevatedButton(
+                    onPressed: () => Get.back(),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: Colors.grey[700],
+                      foregroundColor: Colors.white,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text("CLOSE (Edit Mode)"),
+                  )
+                : // New sale mode - show PAY and New buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _navigateToPayment,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.blue[700],
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text("PAY"),
                         ),
                       ),
-                      child: const Text("PAY"),
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          selectedItems.clear();
-                          refController.clear();
-                          notesController.clear();
-                          final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
-                          selectedCustomerId = cashCustomer?.id;
-                          // Reset salesperson to logged-in user
-                          final currentUser = authController.currentUser.value;
-                          if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
-                            selectedSalespersonId = currentUser.salespersonid;
-                          }
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Colors.green[700],
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              selectedItems.clear();
+                              refController.clear();
+                              notesController.clear();
+                              final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+                              selectedCustomerId = cashCustomer?.id;
+                              // Reset salesperson to logged-in user
+                              final currentUser = authController.currentUser.value;
+                              if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+                                selectedSalespersonId = currentUser.salespersonid;
+                              }
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.green[700],
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text("New"),
                         ),
                       ),
-                      child: const Text("New"),
-                    ),
-                  ),
                   const SizedBox(width: 3),
                   Expanded(
                     child: ElevatedButton(

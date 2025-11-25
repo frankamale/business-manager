@@ -2,19 +2,110 @@ import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import '../services/api_services.dart';
 import '../models/inventory_item.dart';
+import '../database/db_helper.dart';
 
 class PaymentController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   // Reactive state
   var isProcessing = false.obs;
   var receiptCounter = 1.obs;
 
+  @override
+  void onInit() {
+    super.onInit();
+    _initializeReceiptCounter();
+  }
+
+  // Initialize receipt counter from database
+  Future<void> _initializeReceiptCounter() async {
+    try {
+      final latestReceiptNumber = await _getLatestReceiptNumber();
+      if (latestReceiptNumber != null) {
+        // Extract numeric part from receipt number (e.g., "REC-0005" -> 5)
+        final numericPart = latestReceiptNumber.replaceAll(RegExp(r'[^0-9]'), '');
+        if (numericPart.isNotEmpty) {
+          final latestNumber = int.tryParse(numericPart) ?? 0;
+          receiptCounter.value = latestNumber + 1;
+          print('📊 Receipt counter initialized to: ${receiptCounter.value}');
+        }
+      } else {
+        print('📊 No existing receipts found, starting from 1');
+      }
+    } catch (e) {
+      print('⚠️ Error initializing receipt counter: $e');
+      // Default to 1 if there's an error
+      receiptCounter.value = 1;
+    }
+  }
+
+  // Get the latest receipt number from database
+  Future<String?> _getLatestReceiptNumber() async {
+    try {
+      final db = await _dbHelper.database;
+      if (db == null) {
+        print('⚠️ Database is null, cannot fetch latest receipt number');
+        return null;
+      }
+
+      final result = await db.rawQuery(
+        'SELECT receiptnumber FROM sales_transactions ORDER BY transactiondate DESC LIMIT 1'
+      );
+
+      if (result.isNotEmpty) {
+        return result.first['receiptnumber'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('⚠️ Error fetching latest receipt number: $e');
+      return null;
+    }
+  }
+
   // Generate unique receipt number
-  String generateReceiptNumber() {
-    final number = 'REC-${receiptCounter.value.toString().padLeft(4, '0')}';
+  Future<String> generateReceiptNumber() async {
+    // Generate receipt number with current counter
+    String number = 'REC-${receiptCounter.value.toString().padLeft(4, '0')}';
+
+    // Safety check: ensure this number doesn't exist in database
+    bool exists = await _receiptNumberExists(number);
+
+    // If it exists, keep incrementing until we find a unique one
+    while (exists) {
+      print('⚠️ Receipt number $number already exists, incrementing...');
+      receiptCounter.value++;
+      number = 'REC-${receiptCounter.value.toString().padLeft(4, '0')}';
+      exists = await _receiptNumberExists(number);
+    }
+
+    // Increment counter for next receipt
     receiptCounter.value++;
+
+    print('✅ Generated unique receipt number: $number');
     return number;
+  }
+
+  // Check if receipt number already exists in database
+  Future<bool> _receiptNumberExists(String receiptNumber) async {
+    try {
+      final db = await _dbHelper.database;
+      if (db == null) {
+        print('⚠️ Database is null, cannot check receipt number existence');
+        return false;
+      }
+
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM sales_transactions WHERE receiptnumber = ?',
+        [receiptNumber]
+      );
+
+      final count = result.first['count'] as int;
+      return count > 0;
+    } catch (e) {
+      print('⚠️ Error checking receipt number existence: $e');
+      return false; // Assume doesn't exist on error
+    }
   }
 
   // Create sale payload
@@ -146,7 +237,7 @@ class PaymentController extends GetxController {
       final servicePointId = companyInfo['servicePointId'] ?? branchId;
 
       // Generate receipt number and sale ID
-      final receiptnumber = generateReceiptNumber();
+      final receiptnumber = await generateReceiptNumber();
       const uuid = Uuid();
       final saleId = uuid.v4();
 

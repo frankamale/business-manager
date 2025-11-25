@@ -83,7 +83,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final hasPayment = result['hasPayment'] as bool;
       final receiptnumber = result['receiptnumber'] as String;
 
-      Get.back(result: true); // Return to POS screen
+      Get.back(result: true);
 
       if (hasPayment) {
         Get.snackbar(
