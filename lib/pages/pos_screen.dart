@@ -778,7 +778,7 @@ class _PosScreenState extends State<PosScreen> {
                             // Calculate height to leave space for the price display section
                             final screenHeight = MediaQuery.of(context).size.height;
                             final appBarHeight = kToolbarHeight + MediaQuery.of(context).padding.top;
-                            final priceDisplayHeight = 65.0; // Height of price display container
+                            final priceDisplayHeight = 100.0; // Height of price display container
                             final spacing = 16.0; // Additional spacing
                             final modalHeight = screenHeight - appBarHeight - priceDisplayHeight - spacing;
 
