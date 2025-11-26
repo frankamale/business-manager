@@ -7,40 +7,138 @@ import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
 import 'pos_screen.dart';
 
-class SalesListing extends StatelessWidget {
+class SalesListing extends StatefulWidget {
   const SalesListing({super.key});
 
   @override
+  State<SalesListing> createState() => _SalesListingState();
+}
+
+class _SalesListingState extends State<SalesListing> {
+  final SalesController salesController = Get.find<SalesController>();
+  final TextEditingController searchController = TextEditingController();
+  final RxList<Map<String, dynamic>> filteredSales = <Map<String, dynamic>>[].obs;
+  bool isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    filteredSales.assignAll(salesController.groupedSales);
+    searchController.addListener(_filterSales);
+
+    // Update filtered sales when grouped sales change
+    ever(salesController.groupedSales, (_) => _filterSales());
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterSales() {
+    final query = searchController.text.toLowerCase();
+    if (query.isEmpty) {
+      filteredSales.assignAll(salesController.groupedSales);
+    } else {
+      filteredSales.assignAll(
+        salesController.groupedSales.where((sale) {
+          final receipt = (sale['receiptnumber'] as String? ?? '').toLowerCase();
+          final reference = (sale['reference'] as String? ?? '').toLowerCase();
+          final paymentType = (sale['paymenttype'] as String? ?? '').toLowerCase();
+          final notes = (sale['notes'] as String? ?? '').toLowerCase();
+          return receipt.contains(query) ||
+                 reference.contains(query) ||
+                 paymentType.contains(query) ||
+                 notes.contains(query);
+        }).toList(),
+      );
+    }
+  }
+
+  void _startSearch() {
+    setState(() {
+      isSearching = true;
+    });
+  }
+
+  void _stopSearch() {
+    setState(() {
+      isSearching = false;
+      searchController.clear();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final SalesController salesController = Get.find<SalesController>();
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: Text("Sales Orders / Bills"),
+        title: isSearching
+            ? TextField(
+                controller: searchController,
+                autofocus: true,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search by receipt, reference, payment...',
+                  hintStyle: TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+              )
+            : Text("Sales Orders / Bills"),
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: () => salesController.loadSalesTransactions(),
-            tooltip: 'Refresh',
-          ),
-          IconButton(
-            icon: Icon(Icons.filter_list),
-            onPressed: () {
-              // Add filter functionality
-            },
-            tooltip: 'Filter',
-          ),
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () {
-              // Add search functionality
-            },
-            tooltip: 'Search',
-          ),
+          if (!isSearching) ...[
+            Obx(() => IconButton(
+              icon: salesController.isSyncingSales.value
+                  ? SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(Icons.sync),
+              onPressed: salesController.isSyncingSales.value
+                  ? null
+                  : () async {
+                      try {
+                        await salesController.syncSalesTransactionsFromAPI();
+                        Get.snackbar(
+                          'Sync Complete',
+                          'Sales data synced successfully',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.green[700],
+                          colorText: Colors.white,
+                        );
+                      } catch (e) {
+                        Get.snackbar(
+                          'Sync Failed',
+                          'Failed to sync sales data: $e',
+                          snackPosition: SnackPosition.BOTTOM,
+                          backgroundColor: Colors.red[700],
+                          colorText: Colors.white,
+                        );
+                      }
+                    },
+              tooltip: 'Sync Sales',
+            )),
+            IconButton(
+              icon: Icon(Icons.search),
+              onPressed: _startSearch,
+              tooltip: 'Search',
+            ),
+          ] else ...[
+            IconButton(
+              icon: Icon(Icons.close),
+              onPressed: _stopSearch,
+              tooltip: 'Close Search',
+            ),
+          ],
         ],
       ),
       body: SafeArea(
@@ -51,20 +149,30 @@ class SalesListing extends StatelessWidget {
             );
           }
 
-          if (salesController.groupedSales.isEmpty) {
+          if (filteredSales.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.receipt_long, size: 80, color: Colors.grey),
+                  Icon(
+                    isSearching && searchController.text.isNotEmpty
+                        ? Icons.search_off
+                        : Icons.receipt_long,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
                   SizedBox(height: 16),
                   Text(
-                    "No sales found",
+                    isSearching && searchController.text.isNotEmpty
+                        ? "No sales match your search"
+                        : "No sales found",
                     style: TextStyle(fontSize: 18, color: Colors.grey),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    "Sales data synced on startup",
+                    isSearching && searchController.text.isNotEmpty
+                        ? "Try a different search term"
+                        : "Sales data synced on startup",
                     style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ],
@@ -74,9 +182,9 @@ class SalesListing extends StatelessWidget {
 
           return ListView.builder(
             padding: EdgeInsets.all(12),
-            itemCount: salesController.groupedSales.length,
+            itemCount: filteredSales.length,
             itemBuilder: (context, index) {
-              return _buildSaleCard(salesController.groupedSales[index]);
+              return _buildSaleCard(filteredSales[index]);
             },
           );
         }),

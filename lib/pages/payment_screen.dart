@@ -52,11 +52,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _saveBillAndPayment() async {
-    print("💰 saveBill called");
+    print("saveBill called");
 
     // Validation
     if (widget.cartItems.isEmpty) {
-      print("❌ saveBill: validation failed - no items in cart");
+      print(" saveBill: validation failed - no items in cart");
       Get.snackbar(
         'Error',
         'No items in cart',
@@ -66,7 +66,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
       return;
     }
-    print("✅ saveBill: validation passed");
 
     try {
       // Process sale and payment using controller

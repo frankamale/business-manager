@@ -79,6 +79,7 @@ class _HomepageState extends State<Homepage>
         elevation: 0,
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
+        centerTitle: true,
         title: Row(
           children: [
             Container(
@@ -96,11 +97,11 @@ class _HomepageState extends State<Homepage>
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
-            tooltip: 'Notifications',
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.notifications_outlined),
+          //   onPressed: () {},
+          //   tooltip: 'Notifications',
+          // ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () {

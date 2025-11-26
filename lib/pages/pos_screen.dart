@@ -295,7 +295,7 @@ class _PosScreenState extends State<PosScreen> {
                 child: Icon(
                   Icons.inventory_2,
                   color: Colors.blue[700],
-                  size: 28,
+                  size: 25,
                 ),
               ),
               const SizedBox(width: 12),
@@ -352,14 +352,7 @@ class _PosScreenState extends State<PosScreen> {
                       ),
                     ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${item.packaging} • ${item.measurmentunit}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                      ),
-                    ),
+
                   ],
                 ),
               ),
@@ -385,7 +378,17 @@ class _PosScreenState extends State<PosScreen> {
                         color: Colors.grey[500],
                       ),
                     ),
+
                   ],
+
+                  const SizedBox(height: 4),
+                  Text(
+                    '${item.packaging} • ${item.measurmentunit}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -911,9 +914,8 @@ class _PosScreenState extends State<PosScreen> {
                             // Calculate height to leave space for the price display section
                             final screenHeight = MediaQuery.of(context).size.height;
                             final appBarHeight = kToolbarHeight + MediaQuery.of(context).padding.top;
-                            final priceDisplayHeight = 100.0; // Height of price display container
-                            final spacing = 16.0; // Additional spacing
-                            final modalHeight = screenHeight - appBarHeight - priceDisplayHeight - spacing;
+
+                            final modalHeight = screenHeight - appBarHeight ;
 
                             return Container(
                               height: modalHeight,

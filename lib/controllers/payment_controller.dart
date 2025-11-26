@@ -179,12 +179,13 @@ class PaymentController extends GetxController {
     required int paymentTimestamp,
     required String servicePointId,
     required String? customerId,
+    required String? companyId,
   }) {
     const uuid = Uuid();
 
     return {
       "id": uuid.v4(),
-      "currencyid": "aa7eed85-3c4e-42df-b0aa-0337009bee85",
+      "currencyid": companyId,
       "referenceid": saleId,
       "servicepointid": servicePointId,
       "transactiontypeid": 1,
@@ -304,6 +305,7 @@ class PaymentController extends GetxController {
           paymentTimestamp: paymentTimestamp,
           servicePointId: servicePointId,
           customerId: customerId,
+          companyId: companyId
         );
 
         // Post payment
