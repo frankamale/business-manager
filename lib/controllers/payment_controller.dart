@@ -136,18 +136,13 @@ class PaymentController extends GetxController {
         "inventoryid": inventoryItem.id,
         "ipdid": inventoryItem.ipdid,
         "quantity": (item['quantity'] as num).toInt(),
-        "packsize": (inventoryItem.packsize ?? 1.0).toInt(),
         "sellingprice": sellingPrice.toInt(),
         "ordernumber": index,
         "remarks": item['notes'] ?? "",
         "transactionstatusid": 1,
         "sellingprice_original": (inventoryItem.price ?? 0.0).toInt(),
-        "itemName": inventoryItem.name,
-        "category": inventoryItem.category ?? "",
         "notes": item['notes'] ?? "",
-        "costprice": inventoryItem.costprice ?? 0.0,
-        "packagingid": servicePointId,
-        "complimentaryid": 0,
+
       };
     }).toList();
 
