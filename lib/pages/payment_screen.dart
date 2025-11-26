@@ -105,7 +105,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
       }
     } catch (e) {
-      print("❌ saveBill: error: $e");
 
       // Handle session expiry
       if (e.toString().contains("SESSION_EXPIRED")) {
@@ -132,7 +131,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text(
           "Payment",
@@ -143,164 +145,188 @@ class _PaymentScreenState extends State<PaymentScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Receipt Number
-              Obx(() => Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(12.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      "Receipt Number",
+                    // Receipt Number
+                    if (!isKeyboardVisible) ...[
+                      Obx(() => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              "Receipt: ",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Text(
+                              'REC-${_paymentController.receiptCounter.value.toString().padLeft(4, '0')}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // Amount Due
+                    _buildAmountRow(
+                      "Amount Due",
+                      totalAmount,
+                      Colors.red[700]!,
+                      fontSize: isKeyboardVisible ? 20 : 24,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Amount Tendered Input
+                    TextField(
+                      controller: amountTenderedController,
+                      keyboardType: TextInputType.number,
                       style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'REC-${_paymentController.receiptCounter.value.toString().padLeft(4, '0')}',
-                      style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: isKeyboardVisible ? 18 : 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue,
                       ),
-                    ),
-                  ],
-                ),
-              )),
-              const SizedBox(height: 24),
-
-              // Amount Due
-              _buildAmountRow(
-                "Amount Due",
-                totalAmount,
-                Colors.red[700]!,
-                fontSize: 28,
-              ),
-              const SizedBox(height: 16),
-
-              // Amount Tendered Input
-              TextField(
-                controller: amountTenderedController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                decoration: InputDecoration(
-                  labelText: "Amount Tendered",
-                  labelStyle: const TextStyle(fontSize: 16),
-                  prefixText: "UGX ",
-                  prefixStyle: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.blue[300]!, width: 2),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.blue[200]!, width: 2),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.blue, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                ),
-                onChanged: (value) {
-                  setState(() {}); // Rebuild to update balance
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Balance/Change
-              _buildAmountRow(
-                "Balance",
-                balance,
-                balance >= 0 ? Colors.green[700]! : Colors.red[700]!,
-                fontSize: 28,
-              ),
-              const SizedBox(height: 8),
-
-              if (balance < 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    "Insufficient payment",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.red[700],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-
-              const Spacer(),
-
-              // Items Summary
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Items:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                      decoration: InputDecoration(
+                        labelText: "Amount Tendered",
+                        labelStyle: const TextStyle(fontSize: 14),
+                        prefixText: "UGX ",
+                        prefixStyle: TextStyle(
+                          fontSize: isKeyboardVisible ? 16 : 18,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.blue[300]!, width: 2),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.blue[200]!, width: 2),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: isKeyboardVisible ? 10 : 12,
+                        ),
+                        isDense: true,
                       ),
+                      onChanged: (value) {
+                        setState(() {}); // Rebuild to update balance
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    ...widget.cartItems.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    const SizedBox(height: 12),
+
+                    // Balance/Change
+                    _buildAmountRow(
+                      "Balance",
+                      balance,
+                      balance >= 0 ? Colors.green[700]! : Colors.red[700]!,
+                      fontSize: isKeyboardVisible ? 20 : 24,
+                    ),
+
+                    if (balance < 0)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          "Insufficient payment",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 12),
+
+                    // Items Summary
+                    Container(
+                      constraints: BoxConstraints(
+                        maxHeight: isKeyboardVisible ? 100 : 200,
+                      ),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: Text(
-                              "${item['name']} x${item['quantity']}",
-                              style: const TextStyle(fontSize: 13),
+                          const Text(
+                            "Items:",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
                             ),
                           ),
-                          Text(
-                            "UGX ${formatMoney(item['amount'])}",
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                          const SizedBox(height: 6),
+                          Flexible(
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: widget.cartItems.length,
+                              itemBuilder: (context, index) {
+                                final item = widget.cartItems[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 3),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          "${item['name']} x${item['quantity']}",
+                                          style: const TextStyle(fontSize: 12),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Text(
+                                        "UGX ${formatMoney(item['amount'])}",
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         ],
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+            ),
 
-              // Action Buttons
-              Obx(() => Row(
+            // Action Buttons (fixed at bottom)
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Obx(() => Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
@@ -308,7 +334,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ? null
                         : () => Get.back(),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: Colors.grey[600],
                         foregroundColor: Colors.white,
                         elevation: 2,
@@ -318,11 +344,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                       child: const Text(
                         "Cancel",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     flex: 2,
                     child: ElevatedButton(
@@ -330,7 +356,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ? null
                         : _saveBillAndPayment,
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         backgroundColor: Colors.green[700],
                         foregroundColor: Colors.white,
                         elevation: 2,
@@ -340,8 +366,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                       child: _paymentController.isProcessing.value
                           ? const SizedBox(
-                              height: 20,
-                              width: 20,
+                              height: 18,
+                              width: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 color: Colors.white,
@@ -349,14 +375,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             )
                           : const Text(
                               "Save Bill",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                             ),
                     ),
                   ),
                 ],
               )),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -364,7 +390,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Widget _buildAmountRow(String label, double amount, Color color, {double fontSize = 20}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: color.withAlpha((255 * 0.1).round()),
         borderRadius: BorderRadius.circular(8),

@@ -52,6 +52,9 @@ class _PosScreenState extends State<PosScreen> {
    // Selected items
    final List<Map<String, dynamic>> selectedItems = [];
 
+   // Price controllers for each cart item
+   final Map<String, TextEditingController> _priceControllers = {};
+
   double get totalAmount {
     return selectedItems.fold(0, (sum, item) => sum + (item['amount'] as num));
   }
@@ -78,6 +81,11 @@ class _PosScreenState extends State<PosScreen> {
           'amount': item.price,
           'item': item,
         });
+
+        // Create a controller for this item's price
+        _priceControllers[item.id] = TextEditingController(
+          text: item.price.toStringAsFixed(0),
+        );
       }
     });
 
@@ -95,6 +103,10 @@ class _PosScreenState extends State<PosScreen> {
 
   void _removeItemFromCart(int index) {
     setState(() {
+      final item = selectedItems[index];
+      // Dispose the price controller for this item
+      _priceControllers[item['id']]?.dispose();
+      _priceControllers.remove(item['id']);
       selectedItems.removeAt(index);
     });
   }
@@ -158,6 +170,12 @@ class _PosScreenState extends State<PosScreen> {
       // Load existing items into cart
       if (widget.existingItems != null) {
         selectedItems.addAll(widget.existingItems!);
+        // Create price controllers for existing items
+        for (var item in widget.existingItems!) {
+          _priceControllers[item['id']] = TextEditingController(
+            text: (item['price'] as num).toStringAsFixed(0),
+          );
+        }
       }
 
       // Load existing customer
@@ -200,6 +218,11 @@ class _PosScreenState extends State<PosScreen> {
     notesController.dispose();
     searchController.removeListener(_onSearchChanged);
     searchController.dispose();
+    // Dispose all price controllers
+    for (var controller in _priceControllers.values) {
+      controller.dispose();
+    }
+    _priceControllers.clear();
     super.dispose();
   }
 
@@ -225,6 +248,11 @@ class _PosScreenState extends State<PosScreen> {
     // If payment was successful, clear the cart
     if (result == true) {
       setState(() {
+        // Dispose all price controllers
+        for (var controller in _priceControllers.values) {
+          controller.dispose();
+        }
+        _priceControllers.clear();
         selectedItems.clear();
         refController.clear();
         notesController.clear();
@@ -369,7 +397,10 @@ class _PosScreenState extends State<PosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         foregroundColor: Colors.white,
 
@@ -381,13 +412,14 @@ class _PosScreenState extends State<PosScreen> {
         backgroundColor: Colors.blue,
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
-          child: Column(
-            children: [
-              Container(
+        child: Column(
+          children: [
+            // Fixed Total Display (not scrollable)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: Container(
                 width: double.infinity,
-                height: 65,
+                height: isKeyboardVisible ? 50 : 65,
                 decoration: BoxDecoration(
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(8),
@@ -396,15 +428,22 @@ class _PosScreenState extends State<PosScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
                   "UGX ${formatMoney(totalAmount)}",
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.green,
-                    fontSize: 32,
+                    fontSize: isKeyboardVisible ? 24 : 32,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+            ),
+            SizedBox(height: isKeyboardVisible ? 4 : 8),
 
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Column(
+                  children: [
               // Customer Dropdown
               Row(
                 children: [
@@ -451,47 +490,49 @@ class _PosScreenState extends State<PosScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isKeyboardVisible ? 4 : 8),
 
               // Salesperson Dropdown
-              Row(
-                children: [
-                  const SizedBox(
-                    width: 60,
-                    child: Text(
-                      "Salesperson:",
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: selectedSalespersonId,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        isDense: true,
+              if (!isKeyboardVisible) ...[
+                Row(
+                  children: [
+                    const SizedBox(
+                      width: 60,
+                      child: Text(
+                        "Salesperson:",
+                        style: TextStyle(fontWeight: FontWeight.w500),
                       ),
-                      items: salespeople.map((user) {
-                        return DropdownMenuItem<String>(
-                          value: user.salespersonid,
-                          child: Text(user.staff),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          selectedSalespersonId = newValue;
-                        });
-                      },
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: selectedSalespersonId,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          isDense: true,
+                        ),
+                        items: salespeople.map((user) {
+                          return DropdownMenuItem<String>(
+                            value: user.salespersonid,
+                            child: Text(user.staff),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            selectedSalespersonId = newValue;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
 
               // Reference Field
               Row(
@@ -521,7 +562,7 @@ class _PosScreenState extends State<PosScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isKeyboardVisible ? 4 : 8),
 
               // Notes Field
               Row(
@@ -551,82 +592,82 @@ class _PosScreenState extends State<PosScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isKeyboardVisible ? 4 : 8),
 
               // Selected Items Container
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey.shade50,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(8),
-                            topRight: Radius.circular(8),
-                          ),
-                        ),
-                        child: const Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: Text(
-                                "Item",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 50,
-                              child: Text(
-                                "Qty",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: 80,
-                              child: Text(
-                                "Amount",
-                                textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ],
+              Container(
+                height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey.shade50,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(8),
+                          topRight: Radius.circular(8),
                         ),
                       ),
-                      // Items List
-                      Expanded(
-                        child: selectedItems.isEmpty
-                            ? const Center(
-                                child: Text(
-                                  "No items selected",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: selectedItems.length,
-                                itemBuilder: (context, index) {
-                                  final item = selectedItems[index];
-                                  return Container(
+                      child: const Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              "Item",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 50,
+                            child: Text(
+                              "Qty",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              "Amount",
+                              textAlign: TextAlign.right,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Items List
+                    Expanded(
+                      child: selectedItems.isEmpty
+                          ? const Center(
+                              child: Text(
+                                "No items selected",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
+                          : ListView.builder(
+                              itemCount: selectedItems.length,
+                              itemBuilder: (context, index) {
+                                final item = selectedItems[index];
+                                return Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 8,
@@ -684,12 +725,16 @@ class _PosScreenState extends State<PosScreen> {
                                                           borderSide: BorderSide(color: Colors.grey.shade300),
                                                         ),
                                                       ),
-                                                      controller: TextEditingController(
-                                                        text: item['price'].toStringAsFixed(0),
-                                                      ),
+                                                      controller: _priceControllers[item['id']],
                                                       onChanged: (value) {
-                                                        final newPrice = double.tryParse(value) ?? item['price'];
-                                                        _updatePrice(index, newPrice);
+                                                        if (value.isEmpty) {
+                                                          _updatePrice(index, 0);
+                                                        } else {
+                                                          final newPrice = double.tryParse(value);
+                                                          if (newPrice != null) {
+                                                            _updatePrice(index, newPrice);
+                                                          }
+                                                        }
                                                       },
                                                     ),
                                                   ),
@@ -776,11 +821,14 @@ class _PosScreenState extends State<PosScreen> {
                     ],
                   ),
                 ),
+                ],
               ),
-              const SizedBox(height: 8),
-
-              // Action Buttons
-              widget.existingSalesId != null
+            ),
+          ),
+          // Action Buttons (outside scrollview)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
+            child: widget.existingSalesId != null
                 ? // Edit mode - only show Close button
                   ElevatedButton(
                     onPressed: () => Get.back(),
@@ -819,6 +867,11 @@ class _PosScreenState extends State<PosScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             setState(() {
+                              // Dispose all price controllers
+                              for (var controller in _priceControllers.values) {
+                                controller.dispose();
+                              }
+                              _priceControllers.clear();
                               selectedItems.clear();
                               refController.clear();
                               notesController.clear();
@@ -1030,8 +1083,8 @@ class _PosScreenState extends State<PosScreen> {
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
