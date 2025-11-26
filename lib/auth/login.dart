@@ -2,6 +2,7 @@ import 'package:bac_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
+import '../config.dart';
 
 
 class Login extends StatefulWidget {
@@ -146,7 +147,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Komusoft Solutions - Demo",
+                              "${AppConfig.companyName} - Demo",
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 14 : 16,
                                 color: Colors.blue.shade600,
@@ -309,7 +310,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
 
                             // Footer
                             Text(
-                              '© 2025 Komusoft Solutions',
+                              AppConfig.copyright,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.grey.shade600,

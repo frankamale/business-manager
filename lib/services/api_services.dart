@@ -11,9 +11,10 @@ import '../models/inventory_item.dart';
 import '../models/customer.dart';
 import '../models/sale_transaction.dart';
 import '../database/db_helper.dart';
+import '../config.dart';
 
 class ApiService extends GetxService {
-  final String baseurl = "http://52.30.142.12:8080/rest";
+  final String baseurl = AppConfig.baseUrl;
 
   // Initialize secure storage
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(

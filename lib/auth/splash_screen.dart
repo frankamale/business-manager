@@ -8,6 +8,7 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/customer_controller.dart';
+import '../config.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -64,10 +65,10 @@ class _SplashScreenState extends State<SplashScreen>
       });
 
 
-      // Authenticate using the provided credentials
+      // Authenticate using the configured credentials
       final authResponse = await _apiService.signIn(
-        'admin@sdry.com',
-        'Admin@2025',
+        AppConfig.defaultUsername,
+        AppConfig.defaultPassword,
       );
 
       setState(() {
@@ -253,8 +254,8 @@ class _SplashScreenState extends State<SplashScreen>
                 // App Name
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: const Text(
-                    'BAC POS',
+                  child: Text(
+                    AppConfig.appName,
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -268,8 +269,8 @@ class _SplashScreenState extends State<SplashScreen>
                 // Company Name
                 FadeTransition(
                   opacity: _fadeAnimation,
-                  child: const Text(
-                    'Komusoft Solutions',
+                  child: Text(
+                    AppConfig.companyName,
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.white70,
@@ -321,16 +322,16 @@ class _SplashScreenState extends State<SplashScreen>
 
                 // Footer
                 const Spacer(),
-                const Text(
-                  'Uganda Edition',
+                Text(
+                  AppConfig.edition,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white60,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  '© 2024 Komusoft Solutions',
+                Text(
+                  AppConfig.copyright,
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.white60,

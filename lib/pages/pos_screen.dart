@@ -89,16 +89,6 @@ class _PosScreenState extends State<PosScreen> {
       }
     });
 
-    // Show success message
-    Get.snackbar(
-      'Item Added',
-      '${item.name} added to cart',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-      backgroundColor: Colors.green[100],
-      colorText: Colors.green[900],
-      margin: const EdgeInsets.all(8),
-    );
   }
 
   void _removeItemFromCart(int index) {

@@ -1,5 +1,6 @@
 import 'package:bac_pos/auth/splash_screen.dart';
 import 'package:bac_pos/services/api_services.dart';
+import 'package:bac_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'BAC POS',
+      title: AppConfig.appName,
       debugShowCheckedModeBanner: true,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),

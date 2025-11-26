@@ -305,7 +305,7 @@ class PaymentController extends GetxController {
           paymentTimestamp: paymentTimestamp,
           servicePointId: servicePointId,
           customerId: customerId,
-          companyId: companyId
+          companyId: companyId,
         );
 
         // Post payment
@@ -363,3 +363,4 @@ class PaymentController extends GetxController {
     return amountTendered >= totalAmount;
   }
 }
+
