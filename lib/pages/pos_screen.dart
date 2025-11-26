@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'inventory_items_screen.dart';
 import 'payment_screen.dart';
 import '../models/inventory_item.dart';
+import '../models/service_point.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
@@ -16,6 +17,7 @@ class PosScreen extends StatefulWidget {
   final String? existingReference;
   final String? existingNotes;
   final String? existingSalespersonId;
+  final ServicePoint? servicePoint;
 
   const PosScreen({
     super.key,
@@ -25,6 +27,7 @@ class PosScreen extends StatefulWidget {
     this.existingReference,
     this.existingNotes,
     this.existingSalespersonId,
+    this.servicePoint,
   });
 
   @override
@@ -153,6 +156,11 @@ class _PosScreenState extends State<PosScreen> {
 
     _loadSalespeople();
     searchController.addListener(_onSearchChanged);
+
+    // Filter items by service point type if provided
+    if (widget.servicePoint != null) {
+      inventoryController.filterByServicePointType(widget.servicePoint!.servicepointtype);
+    }
   }
 
   void _loadExistingSale() {

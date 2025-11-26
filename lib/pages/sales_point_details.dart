@@ -58,7 +58,7 @@ class SalesPointDetails extends StatelessWidget {
                 _actionButton(
                   "ENTER NEW BILL/SALE",
                   Icons.monetization_on_outlined,
-                  PosScreen(),
+                  PosScreen(servicePoint: servicePoint),
                 ),
                 _actionButton(
                   "VIEW SALE ORDERS/BILLS",

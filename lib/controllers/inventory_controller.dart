@@ -164,4 +164,20 @@ class InventoryController extends GetxController {
       return 0;
     }
   }
+
+  // Filter by service point type (soldfrom)
+  Future<void> filterByServicePointType(String servicePointType) async {
+    try {
+      isLoadingInventory.value = true;
+
+      final results = await _dbHelper.getInventoryItemsBySoldFrom(servicePointType);
+      filteredItems.value = results;
+
+      isLoadingInventory.value = false;
+      print('🏷️ Filtered by service point type "$servicePointType": ${filteredItems.length} items');
+    } catch (e) {
+      isLoadingInventory.value = false;
+      print('❌ Error filtering by service point type: $e');
+    }
+  }
 }

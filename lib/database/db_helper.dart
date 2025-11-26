@@ -687,6 +687,21 @@ class DatabaseHelper {
     return result.map((map) => map['category'] as String).toList();
   }
 
+  // Get inventory items by soldfrom (service point type)
+  Future<List<InventoryItem>> getInventoryItemsBySoldFrom(String soldFrom) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'inventory',
+      where: 'soldfrom = ?',
+      whereArgs: [soldFrom],
+      orderBy: 'name ASC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return InventoryItem.fromMap(maps[i]);
+    });
+  }
+
   // Delete all inventory items
   Future<void> deleteAllInventoryItems() async {
     final db = await database;
