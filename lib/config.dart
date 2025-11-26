@@ -8,9 +8,6 @@ class AppConfig {
 
   static const String baseUrl = "http://52.30.142.12:8080/rest";
 
-
-  // APPLICATION SETTINGS
-
   static const String appName = 'BAC POS';
 
   /// Company name displayed in the splash screen
