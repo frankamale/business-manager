@@ -65,7 +65,6 @@ class PaymentController extends GetxController {
 
   // Generate unique receipt number
   Future<String> generateReceiptNumber() async {
-    // Generate receipt number with current counter
     String number = 'REC-${receiptCounter.value.toString().padLeft(4, '0')}';
 
     // Safety check: ensure this number doesn't exist in database
@@ -149,8 +148,8 @@ class PaymentController extends GetxController {
       "id": saleId,
       "transactionDate": transactionTimestamp,
       "transactionstatusid": 1,
-      // "receiptnumber": receiptnumber,
-      "clientid": customerId ,
+      "receiptnumber": receiptnumber,
+      "clientid": customerId,
       "remarks": remarks.isNotEmpty ? remarks : "",
       "otherRemarks": "",
       "companyId": companyId,
@@ -233,8 +232,6 @@ class PaymentController extends GetxController {
       final receiptnumber = await generateReceiptNumber();
       const uuid = Uuid();
       final saleId = uuid.v4();
-
-      print('💰 Processing sale: $saleId with receipt: $receiptnumber');
 
       // Create sale payload
       final salePayload = createSalePayload(

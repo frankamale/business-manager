@@ -2,10 +2,8 @@
 
 class AppConfig {
 // authentication credentials
-  static const String defaultUsername = 'admin@sdry.com';
-  static const String defaultPassword = 'Admin@2025';
-
-
+  static const String defaultUsername = 'test.account123@qc.com';
+  static const String defaultPassword = 'Ba@123456';
   static const String baseUrl = "http://52.30.142.12:8080/rest";
 
   static const String appName = 'BAC POS';
@@ -17,7 +15,7 @@ class AppConfig {
   static const String edition = 'Uganda Edition';
 
   /// Copyright text
-  static const String copyright = '© 2024 Komusoft Solutions';
+  static const String copyright = '© 2025 Komusoft Solutions';
 
 
   /// Primary color theme (used in gradients and branding)

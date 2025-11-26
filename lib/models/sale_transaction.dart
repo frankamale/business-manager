@@ -3,7 +3,7 @@ class SaleTransaction {
   final String? purchaseordernumber;
   final int internalrefno;
   final String issuedby;
-  final String receiptnumber;
+  final String? receiptnumber;
   final String? receivedby;
   final String remarks;
   final int transactiondate;
@@ -42,7 +42,7 @@ class SaleTransaction {
     this.purchaseordernumber,
     required this.internalrefno,
     required this.issuedby,
-    required this.receiptnumber,
+    this.receiptnumber,
     this.receivedby,
     required this.remarks,
     required this.transactiondate,
@@ -83,7 +83,7 @@ class SaleTransaction {
       purchaseordernumber: json['purchaseordernumber'] as String?,
       internalrefno: json['internalrefno'] as int,
       issuedby: json['issuedby'] as String,
-      receiptnumber: json['receiptnumber'] as String,
+      receiptnumber: json['receiptnumber'] as String?,
       receivedby: json['receivedby'] as String?,
       remarks: json['remarks'] as String,
       transactiondate: json['transactiondate'] as int,
@@ -167,7 +167,7 @@ class SaleTransaction {
       purchaseordernumber: map['purchaseordernumber'] as String?,
       internalrefno: map['internalrefno'] as int,
       issuedby: map['issuedby'] as String,
-      receiptnumber: map['receiptnumber'] as String,
+      receiptnumber: map['receiptnumber'] as String?,
       receivedby: map['receivedby'] as String?,
       remarks: map['remarks'] as String,
       transactiondate: map['transactiondate'] as int,

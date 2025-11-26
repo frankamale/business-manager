@@ -24,7 +24,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), "my_database.db");
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -94,7 +94,7 @@ class DatabaseHelper {
           purchaseordernumber TEXT,
           internalrefno INTEGER NOT NULL,
           issuedby TEXT NOT NULL,
-          receiptnumber TEXT NOT NULL,
+          receiptnumber TEXT,
           receivedby TEXT,
           remarks TEXT NOT NULL,
           transactiondate INTEGER NOT NULL,
@@ -210,6 +210,11 @@ class DatabaseHelper {
         CREATE INDEX IF NOT EXISTS idx_customer_phone ON customers(phone1)
       ''');
     }
+
+    if (oldVersion < 7) {
+      // Allow receiptnumber to be NULL in sales_transactions table
+      await db.execute('ALTER TABLE sales_transactions ALTER COLUMN receiptnumber TEXT;');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -280,7 +285,7 @@ class DatabaseHelper {
         purchaseordernumber TEXT,
         internalrefno INTEGER NOT NULL,
         issuedby TEXT NOT NULL,
-        receiptnumber TEXT NOT NULL,
+        receiptnumber TEXT,
         receivedby TEXT,
         remarks TEXT NOT NULL,
         transactiondate INTEGER NOT NULL,

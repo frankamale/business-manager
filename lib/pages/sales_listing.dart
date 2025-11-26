@@ -188,7 +188,7 @@ class _SalesListingState extends State<SalesListing> {
     final transactionDate = sale['transactiondate'] as int? ?? 0;
     final reference = sale['reference'] as String? ?? '';
     final notes = sale['notes'] as String? ?? '';
-    final paymentType = sale['paymenttype'] as String? ?? 'Unknown';
+    final paymentType = sale['paymenttype'] as String? ?? 'Pending';
     final cancelled = sale['cancelled'] as int? ?? 0;
 
     final date = DateTime.fromMillisecondsSinceEpoch(transactionDate);
