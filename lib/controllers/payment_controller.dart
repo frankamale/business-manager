@@ -141,8 +141,6 @@ class PaymentController extends GetxController {
         "remarks": item['notes'] ?? "",
         "transactionstatusid": 1,
         "sellingprice_original": (inventoryItem.price ?? 0.0).toInt(),
-        "notes": item['notes'] ?? "",
-
       };
     }).toList();
 
@@ -151,9 +149,9 @@ class PaymentController extends GetxController {
       "id": saleId,
       "transactionDate": transactionTimestamp,
       "transactionstatusid": 1,
-      "receiptnumber": receiptnumber,
+      // "receiptnumber": receiptnumber,
       "clientid": customerId ,
-      "remarks": remarks.isNotEmpty ? remarks : "New sale added",
+      "remarks": remarks.isNotEmpty ? remarks : "",
       "otherRemarks": "",
       "companyId": companyId,
       "branchId": branchId,

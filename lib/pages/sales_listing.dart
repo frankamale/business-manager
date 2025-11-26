@@ -392,31 +392,31 @@ class _SalesListingState extends State<SalesListing> {
             ],
 
             // Notes if present
-            if (notes.isNotEmpty) ...[
-              SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(
-                    Icons.note,
-                    size: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                  SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      notes,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            // if (notes.isNotEmpty) ...[
+            //   SizedBox(height: 6),
+            //   // Row(
+            //   //   children: [
+            //   //     Icon(
+            //   //       Icons.note,
+            //   //       size: 14,
+            //   //       color: Colors.grey.shade600,
+            //   //     ),
+            //   //     // SizedBox(width: 4),
+            //   //     // Expanded(
+            //   //     //   child: Text(
+            //   //     //     notes,
+            //   //     //     style: TextStyle(
+            //   //     //       fontSize: 12,
+            //   //     //       color: Colors.grey.shade600,
+            //   //     //       fontStyle: FontStyle.italic,
+            //   //     //     ),
+            //   //     //     maxLines: 1,
+            //   //     //     overflow: TextOverflow.ellipsis,
+            //   //     //   ),
+            //   //     // ),
+            //   //   ],
+            //   // ),
+            // ],
           ],
         ),
       ),
