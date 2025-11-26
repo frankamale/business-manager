@@ -176,7 +176,7 @@ class PaymentController extends GetxController {
 
     return {
       "id": uuid.v4(),
-      "currencyid": companyId,
+      "currencyid": "3a0e97b4-c13a-4a49-9205-182e62039a5a",
       "referenceid": saleId,
       "servicepointid": servicePointId,
       "transactiontypeid": 1,
@@ -226,7 +226,7 @@ class PaymentController extends GetxController {
         userId;
       final branchId = companyInfo['branchId'] ?? '';
       final companyId = companyInfo['companyId'] ?? '';
-      final servicePointId = companyInfo['servicePointId'] ?? branchId;
+      final servicePointId = "009fbafc-585f-471b-b469-53e1da9438ed";
 
       // Generate receipt number and sale ID
       final receiptnumber = await generateReceiptNumber();
@@ -237,7 +237,7 @@ class PaymentController extends GetxController {
       final salePayload = createSalePayload(
         saleId: saleId,
         cartItems: cartItems,
-        receiptnumber: receiptnumber,
+        receiptnumber: receiptnumber, 
         customerId: customerId,
         salespersonId: actualSalespersonId,
         remarks: notes ?? "",

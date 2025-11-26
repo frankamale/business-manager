@@ -960,46 +960,46 @@ class _PosScreenState extends State<PosScreen> {
                                   ),
 
                                   // Category Filter
-                                  Obx(() {
-                                    if (inventoryController.categories.isEmpty) {
-                                      return const SizedBox.shrink();
-                                    }
-
-                                    return Container(
-                                      height: 50,
-                                      color: Colors.white,
-                                      child: ListView.builder(
-                                        scrollDirection: Axis.horizontal,
-                                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                                        itemCount: inventoryController.categories.length + 1,
-                                        itemBuilder: (context, index) {
-                                          final category = index == 0 ? 'All' : inventoryController.categories[index - 1];
-                                          final isSelected = selectedCategory == category;
-
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                            child: ChoiceChip(
-                                              label: Text(category),
-                                              selected: isSelected,
-                                              onSelected: (selected) {
-                                                setState(() {
-                                                  selectedCategory = category;
-                                                });
-                                                inventoryController.filterByCategory(category);
-                                                searchController.clear();
-                                              },
-                                              selectedColor: Colors.blue[700],
-                                              labelStyle: TextStyle(
-                                                color: isSelected ? Colors.white : Colors.black87,
-                                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                              ),
-                                              backgroundColor: Colors.grey[200],
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  }),
+                                  // Obx(() {
+                                  //   if (inventoryController.categories.isEmpty) {
+                                  //     return const SizedBox.shrink();
+                                  //   }
+                                  //
+                                  //   return Container(
+                                  //     height: 50,
+                                  //     color: Colors.white,
+                                  //     child: ListView.builder(
+                                  //       scrollDirection: Axis.horizontal,
+                                  //       padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  //       itemCount: inventoryController.categories.length + 1,
+                                  //       itemBuilder: (context, index) {
+                                  //         final category = index == 0 ? 'All' : inventoryController.categories[index - 1];
+                                  //         final isSelected = selectedCategory == category;
+                                  //
+                                  //         return Padding(
+                                  //           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                  //           child: ChoiceChip(
+                                  //             label: Text(category),
+                                  //             selected: isSelected,
+                                  //             onSelected: (selected) {
+                                  //               setState(() {
+                                  //                 selectedCategory = category;
+                                  //               });
+                                  //               inventoryController.filterByCategory(category);
+                                  //               searchController.clear();
+                                  //             },
+                                  //             selectedColor: Colors.blue[700],
+                                  //             labelStyle: TextStyle(
+                                  //               color: isSelected ? Colors.white : Colors.black87,
+                                  //               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  //             ),
+                                  //             backgroundColor: Colors.grey[200],
+                                  //           ),
+                                  //         );
+                                  //       },
+                                  //     ),
+                                  //   );
+                                  // }),
 
                                   const Divider(height: 1),
 
