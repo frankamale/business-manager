@@ -8,6 +8,8 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/customer_controller.dart';
+import '../database/db_helper.dart';
+import '../utils/network_helper.dart';
 import '../config.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -23,9 +25,12 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   final ApiService _apiService = ApiService();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
 
   String _statusMessage = 'Initializing...';
   bool _hasError = false;
+  bool _isOfflineMode = false;
+  bool _hasCachedData = false;
 
   @override
   void initState() {
@@ -57,134 +62,163 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _authenticateApp() async {
     try {
-
-      print(' Starting app authentication process...');
-
-      setState(() {
-        _statusMessage = 'Connecting to server...';
-      });
-
-
-      // Authenticate using the configured credentials
-      final authResponse = await _apiService.signIn(
-        AppConfig.defaultUsername,
-        AppConfig.defaultPassword,
-      );
+      print(' Starting app initialization...');
 
       setState(() {
-        _statusMessage = 'Loading company info...';
+        _statusMessage = 'Checking authentication...';
       });
 
-      // Fetch and store company info
-      print(' Fetching company info...');
-      await _apiService.fetchAndStoreCompanyInfo();
+      // Check if already authenticated
+      final isAuthenticated = await _apiService.isAuthenticated();
 
-      setState(() {
-        _statusMessage = 'Syncing users from server...';
-      });
+      if (!isAuthenticated) {
+        // First launch - check network
+        final hasNetwork = await NetworkHelper.hasConnection();
+        if (!hasNetwork) {
+          setState(() {
+            _hasError = true;
+            _isOfflineMode = true;
+            _statusMessage = 'No internet connection';
+          });
+          print('❌ No network connection on first launch');
+          return; // Show retry button, don't loop
+        }
 
-      // Initialize AuthController and sync users
-      print(' Initializing AuthController...');
-      final authController = Get.put(AuthController());
+        // Authenticate
+        setState(() {
+          _statusMessage = 'Connecting to server...';
+        });
 
-      print(' Syncing users from API...');
-      await authController.syncUsersFromAPI();
+        await _apiService.signIn(
+          AppConfig.defaultUsername,
+          AppConfig.defaultPassword,
+        );
 
-      setState(() {
-        _statusMessage = 'Syncing service points...';
-      });
+        setState(() {
+          _statusMessage = 'Loading company info...';
+        });
 
-      // Initialize ServicePointController and sync service points
-      print(' Initializing ServicePointController...');
-      final servicePointController = Get.put(ServicePointController());
-
-      print(' Syncing service points from API...');
-      await servicePointController.syncServicePointsFromAPI();
-
-      setState(() {
-        _statusMessage = 'Syncing inventory items...';
-      });
-
-      // Initialize InventoryController and sync inventory
-      print(' Initializing InventoryController...');
-      final inventoryController = Get.put(InventoryController());
-
-      print(' Syncing inventory from API...');
-      await inventoryController.syncInventoryFromAPI();
-
-      setState(() {
-        _statusMessage = 'Syncing sales transactions...';
-      });
-
-      // Initialize SalesController and sync sales transactions
-      print(' Initializing SalesController...');
-      final salesController = Get.put(SalesController());
-
-      print(' Syncing sales transactions from API...');
-      await salesController.syncSalesTransactionsFromAPI();
-
-      // Initialize PaymentController
-      print(' Initializing PaymentController...');
-      Get.put(PaymentController());
-
-      setState(() {
-        _statusMessage = 'Loading customers...';
-      });
-
-      // Initialize CustomerController and load customers
-      print(' Initializing CustomerController...');
-      final customerController = Get.put(CustomerController());
-
-      print(' Loading customers from API...');
-      await customerController.loadCustomers();
-
-      setState(() {
-        _statusMessage = 'Finishing set up ...';
-      });
-
-      print(' Updating UI: Authentication successful');
-      print(' Waiting 800ms before navigation...');
-
-      // Wait a moment before navigating
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      print(' Navigating to Login page...');
-
-      // Navigate to login page
-      if (mounted) {
-        Get.off(() => const Login());
+        await _apiService.fetchAndStoreCompanyInfo();
       }
 
-      print('AUTHENTICATION COMPLETED SUCCESSFULLY ');
-    } catch (e) {
+      // Initialize all controllers
+      _initializeControllers();
 
-      print(' Error: $e');
+      // Smart data loading
+      await _loadDataWithSmartSync();
+
+      // Navigate to login
+      setState(() {
+        _statusMessage = 'Finishing setup...';
+      });
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (mounted) {
+        print('✅ App initialization completed successfully');
+        Get.off(() => const Login());
+      }
+    } catch (e) {
+      print('❌ Error during initialization: $e');
 
       setState(() {
         _hasError = true;
-        _statusMessage = 'Connection failed';
+        _statusMessage = 'Error loading app';
       });
 
-      print(' Updating UI: Connection failed');
-
-      // Show error snackbar
       Get.snackbar(
-        'Connection Error',
-        'Failed to connect to server. Please check your internet connection.',
+        'Error',
+        'Failed to initialize app: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade900,
         duration: const Duration(seconds: 4),
       );
 
-
-      // Retry after a delay
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted) {
-        print('Initiating retry...\n');
-        _authenticateApp();
-      }
+      // Don't retry automatically - let user control it
     }
+  }
+
+  void _initializeControllers() {
+    print('📱 Initializing controllers...');
+    Get.put(AuthController());
+    Get.put(ServicePointController());
+    Get.put(InventoryController());
+    Get.put(SalesController());
+    Get.put(PaymentController());
+    Get.put(CustomerController());
+    print('✅ Controllers initialized');
+  }
+
+  Future<void> _loadDataWithSmartSync() async {
+    final hasNetwork = await NetworkHelper.hasConnection();
+    print('🌐 Network available: $hasNetwork');
+
+    // Get controllers
+    final authController = Get.find<AuthController>();
+    final servicePointController = Get.find<ServicePointController>();
+    final inventoryController = Get.find<InventoryController>();
+    final salesController = Get.find<SalesController>();
+    final customerController = Get.find<CustomerController>();
+
+    // 1. Users (static - load from cache if exists)
+    setState(() {
+      _statusMessage = 'Loading users...';
+    });
+    final hasUsers = await _dbHelper.hasCachedData('users');
+    if (!hasUsers && hasNetwork) {
+      await authController.syncUsersFromAPI();
+    } else if (hasUsers) {
+      await authController.loadUsersFromCache();
+    }
+
+    // 2. Service Points (static - load from cache if exists)
+    setState(() {
+      _statusMessage = 'Loading service points...';
+    });
+    final hasServicePoints = await _dbHelper.hasCachedData('service_points');
+    if (!hasServicePoints && hasNetwork) {
+      await servicePointController.syncServicePointsFromAPI();
+    } else if (hasServicePoints) {
+      await servicePointController.loadServicePointsFromCache();
+    }
+
+    // 3. Inventory (dynamic - sync if network available)
+    setState(() {
+      _statusMessage = 'Loading inventory...';
+    });
+    final hasInventory = await _dbHelper.hasCachedData('inventory');
+    if (hasNetwork) {
+      await inventoryController.syncInventoryFromAPI();
+    } else if (hasInventory) {
+      await inventoryController.loadInventoryFromCache();
+    }
+
+    // 4. Sales (dynamic - sync if network available)
+    setState(() {
+      _statusMessage = 'Loading sales...';
+    });
+    final hasSales = await _dbHelper.hasCachedData('sales_transactions');
+    if (hasNetwork) {
+      await salesController.syncSalesTransactionsFromAPI();
+    } else if (hasSales) {
+      await salesController.loadSalesFromCache();
+    }
+
+    // 5. Customers (dynamic - sync if network available)
+    setState(() {
+      _statusMessage = 'Loading customers...';
+    });
+    final hasCustomers = await _dbHelper.hasCachedData('customers');
+    if (hasNetwork) {
+      await customerController.syncCustomersFromAPI();
+    } else if (hasCustomers) {
+      await customerController.loadCustomersFromCache();
+    }
+
+    // Check if we have minimum required data
+    _hasCachedData = hasUsers && hasServicePoints;
+    print('📊 Cached data available: $_hasCachedData');
   }
 
   @override
@@ -280,7 +314,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 const SizedBox(height: 60),
 
-                // Loading Indicator
+                // Loading Indicator or Error Icon
                 if (!_hasError)
                   const SizedBox(
                     width: 40,
@@ -307,17 +341,47 @@ class _SplashScreenState extends State<SplashScreen>
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                if (_hasError)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Retrying...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.7),
+
+                // Error Buttons
+                if (_hasError) ...[
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _hasError = false;
+                        _isOfflineMode = false;
+                      });
+                      _authenticateApp();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry Connection'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.blue,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
                     ),
                   ),
+
+                  // Only show Continue Offline if cached data exists
+                  if (_isOfflineMode && _hasCachedData) ...[
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: () => Get.off(() => const Login()),
+                      icon: const Icon(Icons.offline_bolt, color: Colors.white),
+                      label: const Text('Continue Offline'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
                 const SizedBox(height: 40),
 
                 // Footer

@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../database/db_helper.dart';
 import '../services/api_services.dart';
 import '../models/users.dart';
+import '../utils/network_helper.dart';
 
 class AuthController extends GetxController {
   final _dbHelper = DatabaseHelper();
@@ -21,7 +22,7 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadUserRoles();
+    // Don't load on init - will be handled by splash screen
   }
 
   // Load all user roles from database (including duplicates)
@@ -72,8 +73,20 @@ class AuthController extends GetxController {
     }
   }
 
+  // Load users from cache without API call
+  Future<void> loadUsersFromCache() async {
+    try {
+      print('👥 Loading users from cache...');
+      final cachedUsers = await _dbHelper.users;
+      await loadUserRoles();
+      print('✅ Loaded ${cachedUsers.length} users from cache');
+    } catch (e) {
+      print('❌ Error loading users from cache: $e');
+    }
+  }
+
   // Sync users from API to local database
-  Future<void> syncUsersFromAPI() async {
+  Future<void> syncUsersFromAPI({bool showMessage = false}) async {
     try {
       isSyncingUsers.value = true;
 
@@ -84,6 +97,9 @@ class AuthController extends GetxController {
       print('Saving ${users.length} users to local database...');
       await _dbHelper.insertUsers(users);
 
+      // Update sync metadata
+      await _dbHelper.updateSyncMetadata('users', 'success', users.length);
+
       print('Successfully synced ${users.length} users to database');
 
       // Reload roles after sync
@@ -91,12 +107,40 @@ class AuthController extends GetxController {
 
       isSyncingUsers.value = false;
 
-
+      if (showMessage) {
+        Get.snackbar(
+          'Success',
+          '${users.length} users refreshed',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     } catch (e) {
       isSyncingUsers.value = false;
+      await _dbHelper.updateSyncMetadata('users', 'failed', 0, e.toString());
       print('Error syncing users from API: $e');
 
+      if (showMessage) {
+        Get.snackbar(
+          'Error',
+          'Failed to refresh users: $e',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     }
+  }
+
+  // Refresh users (pull-to-refresh)
+  Future<void> refreshUsers() async {
+    final hasNetwork = await NetworkHelper.hasConnection();
+    if (!hasNetwork) {
+      Get.snackbar(
+        'Offline',
+        'Cannot refresh without internet connection',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    await syncUsersFromAPI(showMessage: true);
   }
 
   // Login user with username and password

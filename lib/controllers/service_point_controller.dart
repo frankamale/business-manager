@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../database/db_helper.dart';
 import '../services/api_services.dart';
 import '../models/service_point.dart';
+import '../utils/network_helper.dart';
 
 class ServicePointController extends GetxController {
   final _dbHelper = DatabaseHelper();
@@ -18,13 +19,13 @@ class ServicePointController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadServicePoints();
+    // Don't load on init - will be handled by splash screen
   }
 
-  // Load service points from database
-  Future<void> loadServicePoints() async {
+  // Load service points from database (cache)
+  Future<void> loadServicePointsFromCache() async {
     try {
-      print('Loading service points from database...');
+      print('📍 Loading service points from cache...');
       isLoadingServicePoints.value = true;
 
       final points = await _dbHelper.getServicePoints();
@@ -35,18 +36,18 @@ class ServicePointController extends GetxController {
 
       isLoadingServicePoints.value = false;
 
-      print('Successfully loaded ${points.length} service points from database');
-      print('Sales service points: ${salesPoints.length}');
+      print('✅ Loaded ${points.length} service points from cache');
+      print('   Sales service points: ${salesPoints.length}');
     } catch (e) {
       isLoadingServicePoints.value = false;
-      print('Error loading service points from database: $e');
+      print('❌ Error loading service points from cache: $e');
     }
   }
 
   // Sync service points from API to local database
-  Future<void> syncServicePointsFromAPI() async {
+  Future<void> syncServicePointsFromAPI({bool showMessage = false}) async {
     try {
-      print('Starting service points sync from API to database...');
+      print('📍 Syncing service points from API...');
       isSyncingServicePoints.value = true;
 
       // Fetch service points from API
@@ -56,16 +57,50 @@ class ServicePointController extends GetxController {
       print('Saving ${points.length} service points to local database...');
       await _dbHelper.insertServicePoints(points);
 
-      print('Successfully synced ${points.length} service points to database');
+      // Update sync metadata
+      await _dbHelper.updateSyncMetadata('service_points', 'success', points.length);
+
+      print('✅ Successfully synced ${points.length} service points to database');
 
       // Reload service points after sync
-      await loadServicePoints();
+      await loadServicePointsFromCache();
 
       isSyncingServicePoints.value = false;
+
+      if (showMessage) {
+        Get.snackbar(
+          'Success',
+          '${points.length} service points refreshed',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     } catch (e) {
       isSyncingServicePoints.value = false;
-      print('Error syncing service points from API: $e');
+      await _dbHelper.updateSyncMetadata('service_points', 'failed', 0, e.toString());
+      print('❌ Error syncing service points from API: $e');
+
+      if (showMessage) {
+        Get.snackbar(
+          'Error',
+          'Failed to refresh service points: $e',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     }
+  }
+
+  // Refresh service points (pull-to-refresh)
+  Future<void> refreshServicePoints() async {
+    final hasNetwork = await NetworkHelper.hasConnection();
+    if (!hasNetwork) {
+      Get.snackbar(
+        'Offline',
+        'Cannot refresh without internet connection',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    await syncServicePointsFromAPI(showMessage: true);
   }
 
   // Get service point by ID

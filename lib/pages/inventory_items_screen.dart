@@ -47,6 +47,13 @@ class _InventoryItemsScreenState extends State<InventoryItemsScreen> {
         backgroundColor: Colors.blue[700],
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => inventoryController.refreshInventory(),
+            tooltip: 'Refresh Inventory',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -168,13 +175,16 @@ class _InventoryItemsScreenState extends State<InventoryItemsScreen> {
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(8),
-                itemCount: inventoryController.filteredItems.length,
-                itemBuilder: (context, index) {
-                  final item = inventoryController.filteredItems[index];
-                  return _buildItemCard(item);
-                },
+              return RefreshIndicator(
+                onRefresh: () => inventoryController.refreshInventory(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: inventoryController.filteredItems.length,
+                  itemBuilder: (context, index) {
+                    final item = inventoryController.filteredItems[index];
+                    return _buildItemCard(item);
+                  },
+                ),
               );
             }),
           ),

@@ -105,27 +105,8 @@ class _SalesListingState extends State<SalesListing> {
                   : Icon(Icons.sync),
               onPressed: salesController.isSyncingSales.value
                   ? null
-                  : () async {
-                      try {
-                        await salesController.syncSalesTransactionsFromAPI();
-                        Get.snackbar(
-                          'Sync Complete',
-                          'Sales data synced successfully',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.green[700],
-                          colorText: Colors.white,
-                        );
-                      } catch (e) {
-                        Get.snackbar(
-                          'Sync Failed',
-                          'Failed to sync sales data: $e',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Colors.red[700],
-                          colorText: Colors.white,
-                        );
-                      }
-                    },
-              tooltip: 'Sync Sales',
+                  : () => salesController.refreshSales(),
+              tooltip: 'Refresh Sales',
             )),
             IconButton(
               icon: Icon(Icons.search),
@@ -180,12 +161,15 @@ class _SalesListingState extends State<SalesListing> {
             );
           }
 
-          return ListView.builder(
-            padding: EdgeInsets.all(12),
-            itemCount: filteredSales.length,
-            itemBuilder: (context, index) {
-              return _buildSaleCard(filteredSales[index]);
-            },
+          return RefreshIndicator(
+            onRefresh: () => salesController.refreshSales(),
+            child: ListView.builder(
+              padding: EdgeInsets.all(12),
+              itemCount: filteredSales.length,
+              itemBuilder: (context, index) {
+                return _buildSaleCard(filteredSales[index]);
+              },
+            ),
           );
         }),
       ),
@@ -606,7 +590,7 @@ class _SalesListingState extends State<SalesListing> {
       );
 
       // Refresh sales list after returning from POS screen
-      await salesController.loadSalesTransactions();
+      await salesController.loadSalesFromCache();
     } catch (e) {
       // Close loading dialog if still open
       if (Get.isDialogOpen ?? false) {

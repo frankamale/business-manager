@@ -1,9 +1,12 @@
 import 'package:get/get.dart';
 import '../services/api_services.dart';
 import '../models/customer.dart';
+import '../database/db_helper.dart';
+import '../utils/network_helper.dart';
 
 class CustomerController extends GetxController {
   final _apiService = ApiService();
+  final _dbHelper = DatabaseHelper();
 
   // Reactive list of customers
   var customers = <Customer>[].obs;
@@ -14,25 +17,77 @@ class CustomerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadCustomers();
+    // Don't load on init - will be handled by splash screen
   }
 
-  // Load customers from API
-  Future<void> loadCustomers() async {
+  // Load customers from cache (database)
+  Future<void> loadCustomersFromCache() async {
     try {
-      print('👥 Loading customers from API...');
+      print('👥 Loading customers from cache...');
+      final cachedCustomers = await _dbHelper.getCustomers();
+      customers.value = cachedCustomers;
+      print('✅ Loaded ${cachedCustomers.length} customers from cache');
+    } catch (e) {
+      print('❌ Error loading customers from cache: $e');
+    }
+  }
+
+  // Sync customers from API and save to database
+  Future<void> syncCustomersFromAPI({bool showMessage = false}) async {
+    try {
+      print('👥 Syncing customers from API...');
       isLoadingCustomers.value = true;
 
       final fetchedCustomers = await _apiService.fetchCustomers();
+
+      // Save to database
+      await _dbHelper.deleteAllCustomers();
+      await _dbHelper.insertCustomers(fetchedCustomers);
+
+      // Update sync metadata
+      await _dbHelper.updateSyncMetadata('customers', 'success', fetchedCustomers.length);
+
+      // Update in-memory list
       customers.value = fetchedCustomers;
 
       isLoadingCustomers.value = false;
 
-      print('✅ Successfully loaded ${fetchedCustomers.length} customers from API');
+      print('✅ Successfully synced ${fetchedCustomers.length} customers from API');
+
+      if (showMessage) {
+        Get.snackbar(
+          'Success',
+          '${fetchedCustomers.length} customers refreshed',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     } catch (e) {
       isLoadingCustomers.value = false;
-      print('❌ Error loading customers from API: $e');
+      await _dbHelper.updateSyncMetadata('customers', 'failed', 0, e.toString());
+      print('❌ Error syncing customers from API: $e');
+
+      if (showMessage) {
+        Get.snackbar(
+          'Error',
+          'Failed to refresh customers: $e',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     }
+  }
+
+  // Refresh customers (pull-to-refresh)
+  Future<void> refreshCustomers() async {
+    final hasNetwork = await NetworkHelper.hasConnection();
+    if (!hasNetwork) {
+      Get.snackbar(
+        'Offline',
+        'Cannot refresh without internet connection',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    await syncCustomersFromAPI(showMessage: true);
   }
 
   // Get customer by ID

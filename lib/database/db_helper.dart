@@ -2,6 +2,7 @@ import 'package:bac_pos/models/users.dart';
 import 'package:bac_pos/models/service_point.dart';
 import 'package:bac_pos/models/inventory_item.dart';
 import 'package:bac_pos/models/sale_transaction.dart';
+import 'package:bac_pos/models/customer.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -23,7 +24,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), "my_database.db");
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -144,6 +145,71 @@ class DatabaseHelper {
         CREATE INDEX IF NOT EXISTS idx_transactiondate ON sales_transactions(transactiondate)
       ''');
     }
+
+    if (oldVersion < 6) {
+      // Add sync_metadata table for tracking sync status
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_metadata (
+          data_type TEXT PRIMARY KEY,
+          last_sync_timestamp INTEGER NOT NULL,
+          sync_status TEXT NOT NULL,
+          record_count INTEGER DEFAULT 0,
+          error_message TEXT
+        )
+      ''');
+
+      // Add customers table for caching customer data
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS customers (
+          id TEXT PRIMARY KEY,
+          code TEXT,
+          firstname TEXT,
+          lastname TEXT,
+          othernames TEXT,
+          remarks TEXT,
+          status TEXT,
+          gender TEXT,
+          fullnames TEXT NOT NULL,
+          dob TEXT,
+          category TEXT,
+          designation TEXT,
+          trackerid1 TEXT,
+          trackerid2 TEXT,
+          trackerid3 TEXT,
+          trackerid4 TEXT,
+          trackerid5 TEXT,
+          trackerid6 TEXT,
+          tracker1 TEXT,
+          tracker2 TEXT,
+          tracker3 TEXT,
+          tracker4 TEXT,
+          tracker5 TEXT,
+          tracker6 TEXT,
+          email TEXT,
+          phone1 TEXT,
+          address TEXT,
+          title TEXT,
+          guarantors TEXT,
+          pospassword TEXT,
+          posenabled INTEGER,
+          posusername TEXT,
+          pospasswordexpiry TEXT,
+          statusid TEXT,
+          subscription INTEGER,
+          logo TEXT,
+          mode INTEGER
+        )
+      ''');
+
+      // Create indexes on customers table for faster queries
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_customer_fullnames ON customers(fullnames)
+      ''');
+
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_customer_phone ON customers(phone1)
+      ''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -262,6 +328,69 @@ class DatabaseHelper {
     await db.execute('''
       CREATE INDEX idx_transactiondate ON sales_transactions(transactiondate)
     ''');
+
+    // Create sync_metadata table for tracking sync status
+    await db.execute('''
+      CREATE TABLE sync_metadata (
+        data_type TEXT PRIMARY KEY,
+        last_sync_timestamp INTEGER NOT NULL,
+        sync_status TEXT NOT NULL,
+        record_count INTEGER DEFAULT 0,
+        error_message TEXT
+      )
+    ''');
+
+    // Create customers table for caching customer data
+    await db.execute('''
+      CREATE TABLE customers (
+        id TEXT PRIMARY KEY,
+        code TEXT,
+        firstname TEXT,
+        lastname TEXT,
+        othernames TEXT,
+        remarks TEXT,
+        status TEXT,
+        gender TEXT,
+        fullnames TEXT NOT NULL,
+        dob TEXT,
+        category TEXT,
+        designation TEXT,
+        trackerid1 TEXT,
+        trackerid2 TEXT,
+        trackerid3 TEXT,
+        trackerid4 TEXT,
+        trackerid5 TEXT,
+        trackerid6 TEXT,
+        tracker1 TEXT,
+        tracker2 TEXT,
+        tracker3 TEXT,
+        tracker4 TEXT,
+        tracker5 TEXT,
+        tracker6 TEXT,
+        email TEXT,
+        phone1 TEXT,
+        address TEXT,
+        title TEXT,
+        guarantors TEXT,
+        pospassword TEXT,
+        posenabled INTEGER,
+        posusername TEXT,
+        pospasswordexpiry TEXT,
+        statusid TEXT,
+        subscription INTEGER,
+        logo TEXT,
+        mode INTEGER
+      )
+    ''');
+
+    // Create indexes on customers table
+    await db.execute('''
+      CREATE INDEX idx_customer_fullnames ON customers(fullnames)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_customer_phone ON customers(phone1)
+    ''');
   }
 
   Future<int> insertUser(User user) async {
@@ -281,7 +410,6 @@ class DatabaseHelper {
     });
   }
 
-  // Insert multiple users
   Future<void> insertUsers(List<User> users) async {
     final db = await database;
     final batch = db!.batch();
@@ -739,6 +867,161 @@ class DatabaseHelper {
     final db = await database;
     final count = Sqflite.firstIntValue(
       await db!.rawQuery('SELECT COUNT(DISTINCT salesId) FROM sales_transactions'),
+    );
+    return count ?? 0;
+  }
+
+  // SYNC METADATA METHODS
+
+  // Update sync metadata after a sync operation
+  Future<void> updateSyncMetadata(
+    String dataType,
+    String status,
+    int recordCount, [
+    String? errorMessage,
+  ]) async {
+    final db = await database;
+    await db!.insert(
+      'sync_metadata',
+      {
+        'data_type': dataType,
+        'last_sync_timestamp': DateTime.now().millisecondsSinceEpoch,
+        'sync_status': status,
+        'record_count': recordCount,
+        'error_message': errorMessage,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    print('✅ Sync metadata updated for $dataType: $status ($recordCount records)');
+  }
+
+  // Get sync metadata for a specific data type
+  Future<Map<String, dynamic>?> getSyncMetadata(String dataType) async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db!.query(
+      'sync_metadata',
+      where: 'data_type = ?',
+      whereArgs: [dataType],
+      limit: 1,
+    );
+
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  // Check if cached data exists for a data type
+  Future<bool> hasCachedData(String dataType) async {
+    final db = await database;
+    int count = 0;
+
+    switch (dataType) {
+      case 'users':
+        count = Sqflite.firstIntValue(
+          await db!.rawQuery('SELECT COUNT(*) FROM user'),
+        ) ?? 0;
+        break;
+      case 'service_points':
+        count = Sqflite.firstIntValue(
+          await db!.rawQuery('SELECT COUNT(*) FROM service_point'),
+        ) ?? 0;
+        break;
+      case 'inventory':
+        count = await getInventoryCount();
+        break;
+      case 'sales_transactions':
+        count = await getSalesCount();
+        break;
+      case 'customers':
+        count = Sqflite.firstIntValue(
+          await db!.rawQuery('SELECT COUNT(*) FROM customers'),
+        ) ?? 0;
+        break;
+    }
+
+    return count > 0;
+  }
+
+  // CUSTOMER METHODS
+
+  // Insert a single customer
+  Future<int> insertCustomer(Customer customer) async {
+    final db = await database;
+    return await db!.insert(
+      'customers',
+      customer.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Insert multiple customers
+  Future<void> insertCustomers(List<Customer> customers) async {
+    final db = await database;
+    final batch = db!.batch();
+
+    for (var customer in customers) {
+      batch.insert(
+        'customers',
+        customer.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await batch.commit(noResult: true);
+    print('✅ ${customers.length} customers inserted into database');
+  }
+
+  // Get all customers
+  Future<List<Customer>> getCustomers() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'customers',
+      orderBy: 'fullnames ASC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return Customer.fromMap(maps[i]);
+    });
+  }
+
+  // Search customers by fullnames or phone
+  Future<List<Customer>> searchCustomers(String query) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'customers',
+      where: 'fullnames LIKE ? OR phone1 LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
+      orderBy: 'fullnames ASC',
+    );
+
+    return List.generate(maps.length, (i) {
+      return Customer.fromMap(maps[i]);
+    });
+  }
+
+  // Get customer by ID
+  Future<Customer?> getCustomerById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'customers',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+
+    return maps.isNotEmpty ? Customer.fromMap(maps.first) : null;
+  }
+
+  // Delete all customers
+  Future<void> deleteAllCustomers() async {
+    final db = await database;
+    await db!.delete('customers');
+    print('All customers deleted from database');
+  }
+
+  // Get customer count
+  Future<int> getCustomerCount() async {
+    final db = await database;
+    final count = Sqflite.firstIntValue(
+      await db!.rawQuery('SELECT COUNT(*) FROM customers'),
     );
     return count ?? 0;
   }

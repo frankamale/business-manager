@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../database/db_helper.dart';
 import '../services/api_services.dart';
 import '../models/inventory_item.dart';
+import '../utils/network_helper.dart';
 
 class InventoryController extends GetxController {
   final _dbHelper = DatabaseHelper();
@@ -19,13 +20,13 @@ class InventoryController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadInventory();
+    // Don't load on init - will be handled by splash screen
   }
 
-  // Load inventory from database
-  Future<void> loadInventory() async {
+  // Load inventory from database (cache)
+  Future<void> loadInventoryFromCache() async {
     try {
-      print('📦 Loading inventory from database...');
+      print('📦 Loading inventory from cache...');
       isLoadingInventory.value = true;
 
       final items = await _dbHelper.getInventoryItems();
@@ -37,18 +38,18 @@ class InventoryController extends GetxController {
 
       isLoadingInventory.value = false;
 
-      print('✅ Successfully loaded ${items.length} inventory items from database');
+      print('✅ Loaded ${items.length} inventory items from cache');
       print('📂 Categories found: ${cats.length}');
     } catch (e) {
       isLoadingInventory.value = false;
-      print('❌ Error loading inventory from database: $e');
+      print('❌ Error loading inventory from cache: $e');
     }
   }
 
   // Sync inventory from API to local database
-  Future<void> syncInventoryFromAPI() async {
+  Future<void> syncInventoryFromAPI({bool showMessage = false}) async {
     try {
-      print('🔄 Starting inventory sync from API to database...');
+      print('📦 Syncing inventory from API...');
       isSyncingInventory.value = true;
 
       // Fetch inventory from API
@@ -58,17 +59,51 @@ class InventoryController extends GetxController {
       print('💾 Saving ${items.length} inventory items to local database...');
       await _dbHelper.insertInventoryItems(items);
 
+      // Update sync metadata
+      await _dbHelper.updateSyncMetadata('inventory', 'success', items.length);
+
       print('✅ Successfully synced ${items.length} inventory items to database');
 
       // Reload inventory after sync
-      await loadInventory();
+      await loadInventoryFromCache();
 
       isSyncingInventory.value = false;
+
+      if (showMessage) {
+        Get.snackbar(
+          'Success',
+          '${items.length} inventory items refreshed',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
     } catch (e) {
       isSyncingInventory.value = false;
+      await _dbHelper.updateSyncMetadata('inventory', 'failed', 0, e.toString());
       print('❌ Error syncing inventory from API: $e');
+
+      if (showMessage) {
+        Get.snackbar(
+          'Error',
+          'Failed to refresh inventory: $e',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
       rethrow;
     }
+  }
+
+  // Refresh inventory (pull-to-refresh)
+  Future<void> refreshInventory() async {
+    final hasNetwork = await NetworkHelper.hasConnection();
+    if (!hasNetwork) {
+      Get.snackbar(
+        'Offline',
+        'Cannot refresh without internet connection',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    await syncInventoryFromAPI(showMessage: true);
   }
 
   // Search inventory items
