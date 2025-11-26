@@ -184,11 +184,6 @@ class AuthController extends GetxController {
       print('   Branch: ${user.branchname}');
       print('   Company: ${user.companyName}');
 
-      Get.snackbar(
-        'Login Successful',
-        'Welcome ${user.name}!',
-        snackPosition: SnackPosition.BOTTOM,
-      );
 
       isLoggingIn.value = false;
       return true;
