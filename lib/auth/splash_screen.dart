@@ -194,16 +194,11 @@ class _SplashScreenState extends State<SplashScreen>
       await inventoryController.loadInventoryFromCache();
     }
 
-    // 4. Sales (dynamic - sync if network available)
+    // 4. Sales (local only - no remote sync)
     setState(() {
-      _statusMessage = 'Loading sales...';
+      _statusMessage = 'Loading local sales...';
     });
-    final hasSales = await _dbHelper.hasCachedData('sales_transactions');
-    if (hasNetwork) {
-      await salesController.syncSalesTransactionsFromAPI();
-    } else if (hasSales) {
-      await salesController.loadSalesFromCache();
-    }
+    await salesController.loadSalesFromCache();
 
     // 5. Customers (dynamic - sync if network available)
     setState(() {

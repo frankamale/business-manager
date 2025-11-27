@@ -10,6 +10,9 @@ class PaymentScreen extends StatefulWidget {
    final String? notes;
    final String? salespersonId;
    final String? servicePointId;
+   final bool isUpdateMode;
+   final String? existingSalesId;
+   final String? existingReceiptNumber;
 
    const PaymentScreen({
      super.key,
@@ -19,6 +22,9 @@ class PaymentScreen extends StatefulWidget {
      this.notes,
      this.salespersonId,
      this.servicePointId,
+     this.isUpdateMode = false,
+     this.existingSalesId,
+     this.existingReceiptNumber,
    });
 
   @override
@@ -54,11 +60,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _saveBillAndPayment() async {
-    print("saveBill called");
+    print(widget.isUpdateMode ? "updateSale called" : "saveBill called");
 
     // Validation
     if (widget.cartItems.isEmpty) {
-      print(" saveBill: validation failed - no items in cart");
+      print("validation failed - no items in cart");
       Get.snackbar(
         'Error',
         'No items in cart',
@@ -70,16 +76,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
 
     try {
-      // Process sale and payment using controller
-      final result = await _paymentController.processSaleAndPayment(
-        cartItems: widget.cartItems,
-        amountTendered: amountTendered,
-        customerId: widget.customer,
-        reference: widget.reference,
-        notes: widget.notes,
-        salespersonId: widget.salespersonId,
-        servicePointId: widget.servicePointId,
-      );
+      final Map<String, dynamic> result;
+
+      if (widget.isUpdateMode) {
+        // Update existing sale
+        result = await _paymentController.updateSale(
+          existingSalesId: widget.existingSalesId!,
+          existingReceiptNumber: widget.existingReceiptNumber!,
+          cartItems: widget.cartItems,
+          amountTendered: amountTendered,
+          customerId: widget.customer,
+          reference: widget.reference,
+          notes: widget.notes,
+          salespersonId: widget.salespersonId,
+          servicePointId: widget.servicePointId,
+        );
+      } else {
+        // Create new sale
+        result = await _paymentController.processSaleAndPayment(
+          cartItems: widget.cartItems,
+          amountTendered: amountTendered,
+          customerId: widget.customer,
+          reference: widget.reference,
+          notes: widget.notes,
+          salespersonId: widget.salespersonId,
+          servicePointId: widget.servicePointId,
+        );
+      }
 
       // Handle success
       final hasPayment = result['hasPayment'] as bool;
@@ -87,47 +110,48 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
       Get.back(result: true);
 
-      if (hasPayment) {
+      if (widget.isUpdateMode) {
         Get.snackbar(
           'Success',
-          'Bill saved, posted, and payment processed successfully!\nReceipt: $receiptnumber',
+          'Sale updated successfully!\nReceipt: $receiptnumber',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.green[100],
           colorText: Colors.green[900],
           duration: const Duration(seconds: 3),
         );
       } else {
-        Get.snackbar(
-          'Success',
-          'Bill saved and posted successfully!\nReceipt: $receiptnumber',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green[100],
-          colorText: Colors.green[900],
-          duration: const Duration(seconds: 3),
-        );
+        if (hasPayment) {
+          Get.snackbar(
+            'Success',
+            'Bill saved and payment processed successfully!\nReceipt: $receiptnumber',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green[100],
+            colorText: Colors.green[900],
+            duration: const Duration(seconds: 3),
+          );
+        } else {
+          Get.snackbar(
+            'Success',
+            'Bill saved successfully!\nReceipt: $receiptnumber',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green[100],
+            colorText: Colors.green[900],
+            duration: const Duration(seconds: 3),
+          );
+        }
       }
     } catch (e) {
-
-      // Handle session expiry
-      if (e.toString().contains("SESSION_EXPIRED")) {
-        Get.snackbar(
-          'Session Expired',
-          'Your session has expired. Please login again.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900],
-        );
-        Get.offAllNamed('/login');
-      } else {
-        Get.snackbar(
-          'Error',
-          'Failed to process payment: ${e.toString()}',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900],
-          duration: const Duration(seconds: 5),
-        );
-      }
+      // Handle errors
+      Get.snackbar(
+        'Error',
+        widget.isUpdateMode
+            ? 'Failed to update sale: ${e.toString()}'
+            : 'Failed to process payment: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+        duration: const Duration(seconds: 5),
+      );
     }
   }
 
@@ -375,8 +399,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text(
-                              "Save Bill",
+                          : Text(
+                              widget.isUpdateMode ? "Update Sale" : "Save Bill",
                               style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                             ),
                     ),

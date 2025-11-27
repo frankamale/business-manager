@@ -316,42 +316,6 @@ class _DailySummaryState extends State<DailySummary> {
         elevation: 0,
         actions: [
           
-          Obx(() => IconButton(
-            icon: _salesController.isSyncingSales.value
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : Icon(Icons.sync),
-            onPressed: _salesController.isSyncingSales.value
-                ? null
-                : () async {
-                    try {
-                      await _salesController.syncSalesTransactionsFromAPI();
-                      await _loadSummary(); // Refresh summary after sync
-                      Get.snackbar(
-                        'Sync Complete',
-                        'Sales data synced successfully',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.green[700],
-                        colorText: Colors.white,
-                      );
-                    } catch (e) {
-                      Get.snackbar(
-                        'Sync Failed',
-                        'Failed to sync sales data: $e',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red[700],
-                        colorText: Colors.white,
-                      );
-                    }
-                  },
-            tooltip: 'Sync Sales',
-          )),
         ],
       ),
       body: SafeArea(

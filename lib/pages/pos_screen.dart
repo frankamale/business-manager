@@ -12,6 +12,7 @@ import '../models/users.dart';
 
 class PosScreen extends StatefulWidget {
   final String? existingSalesId;
+  final String? existingReceiptNumber;
   final List<Map<String, dynamic>>? existingItems;
   final String? existingCustomerId;
   final String? existingReference;
@@ -22,6 +23,7 @@ class PosScreen extends StatefulWidget {
   const PosScreen({
     super.key,
     this.existingSalesId,
+    this.existingReceiptNumber,
     this.existingItems,
     this.existingCustomerId,
     this.existingReference,
@@ -263,6 +265,43 @@ class _PosScreenState extends State<PosScreen> {
           selectedSalespersonId = currentUser.salespersonid;
         }
       });
+    }
+  }
+
+  Future<void> _updateSale() async {
+    if (selectedItems.isEmpty) {
+      Get.snackbar('Error', 'No items in cart',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900]);
+      return;
+    }
+
+    if (widget.existingSalesId == null || widget.existingReceiptNumber == null) {
+      Get.snackbar('Error', 'Invalid sale data',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900]);
+      return;
+    }
+
+    final result = await Get.to(
+      () => PaymentScreen(
+        cartItems: selectedItems,
+        customer: selectedCustomerId,
+        reference: refController.text,
+        notes: notesController.text,
+        salespersonId: selectedSalespersonId,
+        servicePointId: widget.servicePoint?.id,
+        isUpdateMode: true,
+        existingSalesId: widget.existingSalesId,
+        existingReceiptNumber: widget.existingReceiptNumber,
+      ),
+    );
+
+    // If update was successful, go back to sales listing
+    if (result == true) {
+      Get.back(result: true);
     }
   }
 
@@ -831,19 +870,43 @@ class _PosScreenState extends State<PosScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
             child: widget.existingSalesId != null
-                ? // Edit mode - only show Close button
-                  ElevatedButton(
-                    onPressed: () => Get.back(),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: Colors.grey[700],
-                      foregroundColor: Colors.white,
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                ? // Edit mode - show Cancel and Update buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () => Get.back(),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.grey[700],
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text("Cancel"),
+                        ),
                       ),
-                    ),
-                    child: const Text("CLOSE (Edit Mode)"),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: _updateSale,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: Colors.orange[700],
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text("Update Sale"),
+                        ),
+                      ),
+                    ],
                   )
                 : // New sale mode - show PAY and New buttons
                   Row(

@@ -300,7 +300,6 @@ class PaymentController extends GetxController {
     }
 
     await batch.commit(noResult: true);
-    print('✅ Saved ${saleTransactions.length} sale transactions to local database');
 
     return {
       'success': true,
@@ -364,7 +363,6 @@ class PaymentController extends GetxController {
       final saleId = uuid.v4();
 
       // Save sale and payment to local database
-      print('💾 Saving sale to local database...');
       final result = await _saveSaleLocally(
         saleId: saleId,
         receiptnumber: receiptnumber,
@@ -380,11 +378,91 @@ class PaymentController extends GetxController {
         issuedByName: issuedByName,
         customerName: customerName,
       );
-      print('✅ Sale saved locally');
 
       return result;
     } catch (e) {
-      print('❌ Error processing sale and payment: $e');
+      rethrow;
+    } finally {
+      isProcessing.value = false;
+    }
+  }
+
+  // Update existing sale
+  Future<Map<String, dynamic>> updateSale({
+    required String existingSalesId,
+    required String existingReceiptNumber,
+    required List<Map<String, dynamic>> cartItems,
+    required double amountTendered,
+    required String? customerId,
+    required String? reference,
+    required String? notes,
+    required String? salespersonId,
+    String? servicePointId,
+  }) async {
+    if (cartItems.isEmpty) {
+      throw Exception('No items in cart');
+    }
+
+    isProcessing.value = true;
+
+    try {
+      // Get user and company info
+      final userData = await _apiService.getStoredUserData();
+      final companyInfo = await _apiService.getCompanyInfo();
+
+      if (userData == null) {
+        throw Exception('User information not available. Please refresh and try again.');
+      }
+
+      final userId = userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
+      final actualSalespersonId = salespersonId ??
+        userData['salespersonid'] ??
+        userData['staffid'] ??
+        userId;
+      final branchId = companyInfo['branchId'] ?? '';
+      final companyId = companyInfo['companyId'] ?? '';
+      final actualServicePointId = servicePointId ?? companyInfo['servicePointId'] ?? branchId;
+      final issuedByName = userData['staff'] ?? userData['name'] ?? '';
+
+      // Get customer name
+      String customerName = 'Cash Customer';
+      if (customerId != null) {
+        try {
+          final customer = await _dbHelper.getCustomerById(customerId);
+          if (customer != null) {
+            customerName = customer.fullnames;
+          }
+        } catch (e) {
+        }
+      }
+
+      // Delete existing transactions for this sale
+      final db = await _dbHelper.database;
+      await db!.delete(
+        'sales_transactions',
+        where: 'salesId = ?',
+        whereArgs: [existingSalesId],
+      );
+
+      // Save updated sale with same salesId and receipt number
+      final result = await _saveSaleLocally(
+        saleId: existingSalesId,
+        receiptnumber: existingReceiptNumber,
+        cartItems: cartItems,
+        amountTendered: amountTendered,
+        customerId: customerId,
+        reference: reference,
+        notes: notes,
+        actualSalespersonId: actualSalespersonId,
+        branchId: branchId,
+        companyId: companyId,
+        actualServicePointId: actualServicePointId,
+        issuedByName: issuedByName,
+        customerName: customerName,
+      );
+
+      return result;
+    } catch (e) {
       rethrow;
     } finally {
       isProcessing.value = false;

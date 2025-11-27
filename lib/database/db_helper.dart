@@ -221,14 +221,12 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN upload_status TEXT DEFAULT "pending"');
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN uploaded_at INTEGER');
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN upload_error TEXT');
-      print('✅ Added upload tracking columns to sales_transactions table');
     }
 
     if (oldVersion < 9) {
       // Add inventory tracking columns to sales_transactions table
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN inventoryid TEXT');
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN ipdid TEXT');
-      print('✅ Added inventoryid and ipdid columns to sales_transactions table');
     }
 
     if (oldVersion < 10) {
@@ -238,7 +236,6 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN branchid TEXT');
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN servicepointid TEXT');
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN salespersonid TEXT');
-      print('✅ Added clientid, companyid, branchid, servicepointid, salespersonid columns to sales_transactions table');
     }
   }
 
@@ -578,7 +575,6 @@ class DatabaseHelper {
   Future<void> deleteAllUsers() async {
     final db = await database;
     await db!.delete('user');
-    print('All users deleted from database');
   }
 
   // SERVICE POINT METHODS
@@ -637,7 +633,6 @@ class DatabaseHelper {
   Future<void> deleteAllServicePoints() async {
     final db = await database;
     await db!.delete('service_point');
-    print('All service points deleted from database');
   }
 
   // INVENTORY METHODS
@@ -666,7 +661,6 @@ class DatabaseHelper {
     }
 
     await batch.commit(noResult: true);
-    print('✅ ${items.length} inventory items inserted into database');
   }
 
   // Get all inventory items
@@ -741,7 +735,6 @@ class DatabaseHelper {
   Future<void> deleteAllInventoryItems() async {
     final db = await database;
     await db!.delete('inventory');
-    print('All inventory items deleted from database');
   }
 
   // Get inventory count
@@ -779,7 +772,6 @@ class DatabaseHelper {
     }
 
     await batch.commit(noResult: true);
-    print('✅ ${transactions.length} sale transactions inserted into database');
   }
 
   // Get all sale transactions
@@ -917,7 +909,6 @@ class DatabaseHelper {
   Future<void> deleteAllSaleTransactions() async {
     final db = await database;
     await db!.delete('sales_transactions');
-    print('All sale transactions deleted from database');
   }
 
   // Get sales count
@@ -948,8 +939,6 @@ class DatabaseHelper {
       where: 'salesId = ?',
       whereArgs: [salesId],
     );
-
-    print('✅ Updated upload status for sale $salesId to: $status');
   }
 
   // Get sales by upload status
@@ -1004,7 +993,6 @@ class DatabaseHelper {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    print('✅ Sync metadata updated for $dataType: $status ($recordCount records)');
   }
 
   // Get sync metadata for a specific data type
@@ -1078,7 +1066,6 @@ class DatabaseHelper {
     }
 
     await batch.commit(noResult: true);
-    print('✅ ${customers.length} customers inserted into database');
   }
 
   // Get all customers

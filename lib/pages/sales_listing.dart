@@ -94,22 +94,11 @@ class _SalesListingState extends State<SalesListing> {
         elevation: 0,
         actions: [
           if (!isSearching) ...[
-            Obx(() => IconButton(
-              icon: salesController.isSyncingSales.value
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Icon(Icons.sync),
-              onPressed: salesController.isSyncingSales.value
-                  ? null
-                  : () => salesController.refreshSales(),
-              tooltip: 'Refresh Sales',
-            )),
+            IconButton(
+              icon: Icon(Icons.refresh),
+              onPressed: () => salesController.refreshSales(),
+              tooltip: 'Reload from Local Database',
+            ),
             IconButton(
               icon: Icon(Icons.search),
               onPressed: _startSearch,
@@ -155,7 +144,7 @@ class _SalesListingState extends State<SalesListing> {
                   Text(
                     isSearching && searchController.text.isNotEmpty
                         ? "Try a different search term"
-                        : "Sales data synced on startup",
+                        : "Create sales using the POS screen",
                     style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
                 ],
@@ -232,10 +221,16 @@ class _SalesListingState extends State<SalesListing> {
                       tooltip: 'Print',
                     ),
                     IconButton(
-                      onPressed: () => _handleEdit(sale),
+                      onPressed: uploadStatus == 'uploaded'
+                          ? null
+                          : () => _handleEdit(sale),
                       icon: Icon(Icons.edit_note_outlined),
-                      color: Colors.green.shade600,
-                      tooltip: 'Edit',
+                      color: uploadStatus == 'uploaded'
+                          ? Colors.grey.shade400
+                          : Colors.green.shade600,
+                      tooltip: uploadStatus == 'uploaded'
+                          ? 'Cannot edit uploaded sale'
+                          : 'Edit',
                       padding: EdgeInsets.all(8),
                     ),
                     PopupMenuButton<String>(
@@ -634,6 +629,7 @@ class _SalesListingState extends State<SalesListing> {
 
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
     final salesId = sale['salesId'] as String?;
+    final uploadStatus = sale['upload_status'] as String? ?? 'pending';
 
     if (salesId == null) {
       Get.snackbar(
@@ -642,6 +638,19 @@ class _SalesListingState extends State<SalesListing> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade700,
         colorText: Colors.white,
+      );
+      return;
+    }
+
+    // Prevent editing uploaded sales
+    if (uploadStatus == 'uploaded') {
+      Get.snackbar(
+        'Cannot Edit',
+        'This sale has been uploaded to the server and cannot be edited.\nReceipt: $receiptNumber',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        duration: Duration(seconds: 4),
       );
       return;
     }
@@ -687,7 +696,6 @@ class _SalesListingState extends State<SalesListing> {
       // Get customer from first transaction (all have same customer)
       final firstTransaction = saleTransactions.first;
       final customerName = firstTransaction.destinationbp;
-      print('🔍 Looking up customer: $customerName');
 
       // Try exact match first, then try with/without trailing space
       var customer = customerController.getCustomerByFullnames(customerName);
@@ -699,11 +707,9 @@ class _SalesListingState extends State<SalesListing> {
       }
 
       final customerId = customer?.id;
-      print('✅ Customer ID found: $customerId');
 
       // Get salesperson from first transaction
       final salespersonName = firstTransaction.issuedby.trim();
-      print('🔍 Looking for salesperson: "$salespersonName"');
 
       // Try to find salesperson by username or name
       final authController = Get.find<AuthController>();
@@ -716,7 +722,6 @@ class _SalesListingState extends State<SalesListing> {
                     user.name.toLowerCase() == salespersonName.toLowerCase(),
         );
         salespersonId = salesperson?.salespersonid;
-        print('✅ Salesperson ID found: $salespersonId');
       }
 
       // Transform sale transactions to cart items format
@@ -749,6 +754,7 @@ class _SalesListingState extends State<SalesListing> {
       await Get.to(
         () => PosScreen(
           existingSalesId: salesId,
+          existingReceiptNumber: receiptNumber,
           existingItems: cartItems,
           existingCustomerId: customerId,
           existingReference: reference,
@@ -766,7 +772,6 @@ class _SalesListingState extends State<SalesListing> {
         Get.back();
       }
 
-      print('Error loading sale for edit: $e');
       Get.snackbar(
         'Error',
         'Failed to load sale details: $e',
