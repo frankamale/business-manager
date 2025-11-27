@@ -24,7 +24,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), "my_database.db");
     return await openDatabase(
       path,
-      version: 7,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -215,6 +215,31 @@ class DatabaseHelper {
       // Allow receiptnumber to be NULL in sales_transactions table
       await db.execute('ALTER TABLE sales_transactions ALTER COLUMN receiptnumber TEXT;');
     }
+
+    if (oldVersion < 8) {
+      // Add upload tracking columns to sales_transactions table
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN upload_status TEXT DEFAULT "pending"');
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN uploaded_at INTEGER');
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN upload_error TEXT');
+      print('✅ Added upload tracking columns to sales_transactions table');
+    }
+
+    if (oldVersion < 9) {
+      // Add inventory tracking columns to sales_transactions table
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN inventoryid TEXT');
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN ipdid TEXT');
+      print('✅ Added inventoryid and ipdid columns to sales_transactions table');
+    }
+
+    if (oldVersion < 10) {
+      // Add full ID columns for proper payload reconstruction
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN clientid TEXT');
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN companyid TEXT');
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN branchid TEXT');
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN servicepointid TEXT');
+      await db.execute('ALTER TABLE sales_transactions ADD COLUMN salespersonid TEXT');
+      print('✅ Added clientid, companyid, branchid, servicepointid, salespersonid columns to sales_transactions table');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -317,7 +342,17 @@ class DatabaseHelper {
         packsize INTEGER NOT NULL,
         packaging TEXT NOT NULL,
         complimentaryid INTEGER NOT NULL,
-        salesId TEXT NOT NULL
+        salesId TEXT NOT NULL,
+        upload_status TEXT DEFAULT 'pending',
+        uploaded_at INTEGER,
+        upload_error TEXT,
+        inventoryid TEXT,
+        ipdid TEXT,
+        clientid TEXT,
+        companyid TEXT,
+        branchid TEXT,
+        servicepointid TEXT,
+        salespersonid TEXT
       )
     ''');
 
@@ -792,7 +827,10 @@ class DatabaseHelper {
         SUM(amountpaid) as totalPaid,
         SUM(balance) as totalBalance,
         MAX(printed) as printed,
-        MAX(cancelled) as cancelled
+        MAX(cancelled) as cancelled,
+        upload_status,
+        uploaded_at,
+        upload_error
       FROM sales_transactions
       GROUP BY salesId
       ORDER BY transactiondate DESC
@@ -889,6 +927,60 @@ class DatabaseHelper {
       await db!.rawQuery('SELECT COUNT(DISTINCT salesId) FROM sales_transactions'),
     );
     return count ?? 0;
+  }
+
+  // Update upload status for a sale (all transactions with same salesId)
+  Future<void> updateSaleUploadStatus(
+    String salesId,
+    String status, {
+    String? errorMessage,
+  }) async {
+    final db = await database;
+    final updateData = {
+      'upload_status': status,
+      'uploaded_at': status == 'uploaded' ? DateTime.now().millisecondsSinceEpoch : null,
+      'upload_error': errorMessage,
+    };
+
+    await db!.update(
+      'sales_transactions',
+      updateData,
+      where: 'salesId = ?',
+      whereArgs: [salesId],
+    );
+
+    print('✅ Updated upload status for sale $salesId to: $status');
+  }
+
+  // Get sales by upload status
+  Future<List<Map<String, dynamic>>> getSalesByUploadStatus(String status) async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db!.rawQuery('''
+      SELECT
+        salesId,
+        receiptnumber,
+        transactiondate,
+        genno as reference,
+        remarks as notes,
+        paymentmode,
+        paymenttype,
+        destinationbp as customer,
+        COUNT(DISTINCT id) as numberOfItems,
+        SUM(amount) as totalAmount,
+        SUM(amountpaid) as totalPaid,
+        SUM(balance) as totalBalance,
+        MAX(printed) as printed,
+        MAX(cancelled) as cancelled,
+        upload_status,
+        uploaded_at,
+        upload_error
+      FROM sales_transactions
+      WHERE upload_status = ?
+      GROUP BY salesId
+      ORDER BY transactiondate DESC
+    ''', [status]);
+
+    return result;
   }
 
   // SYNC METADATA METHODS

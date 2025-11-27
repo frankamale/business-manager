@@ -23,6 +23,8 @@ class _SalesListingState extends State<SalesListing> {
   @override
   void initState() {
     super.initState();
+    // Load sales from cache when screen opens
+    salesController.loadSalesFromCache();
     filteredSales.assignAll(salesController.groupedSales);
     searchController.addListener(_filterSales);
 
@@ -190,6 +192,8 @@ class _SalesListingState extends State<SalesListing> {
     final notes = sale['notes'] as String? ?? '';
     final paymentType = sale['paymenttype'] as String? ?? 'Pending';
     final cancelled = sale['cancelled'] as int? ?? 0;
+    final uploadStatus = sale['upload_status'] as String? ?? 'pending';
+    final uploadError = sale['upload_error'] as String?;
 
     final date = DateTime.fromMillisecondsSinceEpoch(transactionDate);
 
@@ -372,21 +376,104 @@ class _SalesListingState extends State<SalesListing> {
             ),
 
             // Status indicators
-            if (cancelled > 0) ...[
-              SizedBox(height: 6),
+            SizedBox(height: 6),
+            Row(
+              children: [
+                // Upload status badge
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: uploadStatus == 'uploaded'
+                        ? Colors.green.shade100
+                        : uploadStatus == 'failed'
+                            ? Colors.red.shade100
+                            : Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        uploadStatus == 'uploaded'
+                            ? Icons.cloud_done
+                            : uploadStatus == 'failed'
+                                ? Icons.cloud_off
+                                : Icons.cloud_upload,
+                        size: 12,
+                        color: uploadStatus == 'uploaded'
+                            ? Colors.green.shade700
+                            : uploadStatus == 'failed'
+                                ? Colors.red.shade700
+                                : Colors.orange.shade700,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        uploadStatus == 'uploaded'
+                            ? "UPLOADED"
+                            : uploadStatus == 'failed'
+                                ? "UPLOAD FAILED"
+                                : "PENDING UPLOAD",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: uploadStatus == 'uploaded'
+                              ? Colors.green.shade700
+                              : uploadStatus == 'failed'
+                                  ? Colors.red.shade700
+                                  : Colors.orange.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (cancelled > 0) ...[
+                  SizedBox(width: 8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      "CANCELLED",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.red.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
+            // Show upload error if present
+            if (uploadError != null && uploadError.isNotEmpty) ...[
+              SizedBox(height: 4),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade100,
+                  color: Colors.red.shade50,
                   borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: Colors.red.shade200),
                 ),
-                child: Text(
-                  "CANCELLED",
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, size: 14, color: Colors.red.shade700),
+                    SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        uploadError,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.red.shade700,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -434,28 +521,110 @@ class _SalesListingState extends State<SalesListing> {
     );
   }
 
-  void _handleAction(String action, Map<String, dynamic> sale) {
+  Future<void> _handleAction(String action, Map<String, dynamic> sale) async {
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
-    String message = '';
+    final salesId = sale['salesId'] as String?;
+
     switch (action) {
       case 'upload':
-        message = 'Uploading $receiptNumber to server...';
+        if (salesId == null) {
+          Get.snackbar(
+            'Error',
+            'Cannot upload sale: Invalid sale ID',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        // Check if already uploaded
+        final uploadStatus = sale['upload_status'] as String? ?? 'pending';
+        if (uploadStatus == 'uploaded') {
+          Get.snackbar(
+            'Already Uploaded',
+            'Sale $receiptNumber has already been uploaded to the server',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.blue.shade700,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        // Show loading dialog
+        Get.dialog(
+          Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Uploading sale to server...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          barrierDismissible: false,
+        );
+
+        try {
+          // Upload sale to server
+          await salesController.uploadSaleToServer(salesId);
+
+          // Close loading dialog
+          Get.back();
+
+          // Show success message
+          Get.snackbar(
+            'Success',
+            'Sale $receiptNumber uploaded successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade700,
+            colorText: Colors.white,
+            duration: Duration(seconds: 3),
+          );
+        } catch (e) {
+          // Close loading dialog
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+
+          // Show error message
+          Get.snackbar(
+            'Upload Failed',
+            'Failed to upload sale $receiptNumber: ${e.toString()}',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+            duration: Duration(seconds: 5),
+          );
+        }
         break;
+
       case 'fiscalise':
-        message = 'Fiscalising $receiptNumber...';
+        Get.snackbar(
+          'Fiscalise',
+          'Fiscalising $receiptNumber...',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.shade700,
+          colorText: Colors.white,
+        );
         break;
+
       case 'synchronise':
-        message = 'Synchronising $receiptNumber...';
+        Get.snackbar(
+          'Synchronise',
+          'Synchronising $receiptNumber...',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.shade700,
+          colorText: Colors.white,
+        );
         break;
     }
-
-    Get.snackbar(
-      action.toUpperCase(),
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.orange.shade700,
-      colorText: Colors.white,
-    );
   }
 
   Future<void> _handleEdit(Map<String, dynamic> sale) async {

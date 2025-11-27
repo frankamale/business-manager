@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
+import 'package:uuid/uuid.dart';
 import '../database/db_helper.dart';
 import '../services/api_services.dart';
 import '../models/sale_transaction.dart';
+import '../models/inventory_item.dart';
 import '../utils/network_helper.dart';
 
 class SalesController extends GetxController {
@@ -166,6 +168,141 @@ class SalesController extends GetxController {
       print('🗑️ All sales transactions cleared from database');
     } catch (e) {
       print('❌ Error clearing sales transactions: $e');
+      rethrow;
+    }
+  }
+
+  // Upload sale to server
+  Future<void> uploadSaleToServer(String salesId) async {
+    try {
+      print('📤 Uploading sale $salesId to server...');
+
+      // Get sale transactions from database
+      final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(salesId);
+
+      if (saleTransactions.isEmpty) {
+        throw Exception('No sale transactions found for salesId: $salesId');
+      }
+
+      // Get the first transaction for common fields
+      final firstTransaction = saleTransactions.first;
+
+      // Use stored IDs from the local transaction
+      final companyId = firstTransaction.companyid ?? '';
+      final branchId = firstTransaction.branchid ?? '';
+      final servicePointId = firstTransaction.servicepointid ?? '';
+      final customerId = firstTransaction.clientid;
+      final salespersonId = firstTransaction.salespersonid ?? "00000000-0000-0000-0000-000000000000";
+
+      // Reconstruct line items from transactions
+      const uuid = Uuid();
+      final lineItems = saleTransactions.asMap().entries.map((entry) {
+        final index = entry.key;
+        final transaction = entry.value;
+
+        return {
+          "id": uuid.v4(),
+          "salesid": salesId,
+          "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
+          "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
+          "quantity": transaction.quantity.toInt(),
+          "sellingprice": transaction.sellingprice.toInt(),
+          "ordernumber": index,
+          "remarks": "",
+          "transactionstatusid": 1,
+          "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
+        };
+      }).toList();
+
+      // Create sale payload
+      final salePayload = {
+        "id": salesId,
+        "transactionDate": firstTransaction.transactiondate,
+        "transactionstatusid": 1,
+        "receiptnumber": firstTransaction.receiptnumber,
+        "clientid": customerId,
+        "remarks": firstTransaction.remarks,
+        "otherRemarks": "",
+        "companyId": companyId,
+        "branchId": branchId,
+        "servicepointid": servicePointId,
+        "salespersonid": salespersonId,
+        "modeid": 2,
+        "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+        "lineItems": lineItems,
+        "saleActionId": 1,
+      };
+
+      // Create sale via API
+      print('📤 Sending sale to API...');
+      await _apiService.createSale(salePayload);
+      print('✅ Sale created on server');
+
+      // If payment was made, create and post payment
+      final totalPaid = saleTransactions.fold<double>(
+        0.0,
+        (sum, transaction) => sum + transaction.amountpaid,
+      );
+
+      if (totalPaid > 0) {
+        print('💵 Posting payment of $totalPaid...');
+
+        // Fetch transaction details from server to get proper data
+        final transactionData = await _apiService.fetchSingleTransaction(salesId);
+
+        // Get transaction date
+        int invoiceTimestamp = firstTransaction.transactiondate;
+        if (transactionData['transactiondate'] != null) {
+          invoiceTimestamp = transactionData['transactiondate'];
+        }
+
+        // Add 2 seconds buffer
+        final paymentTimestamp = invoiceTimestamp + 2000;
+
+        // Create payment payload
+        final paymentPayload = {
+          "id": uuid.v4(),
+          "currencyid": "3a0e97b4-c13a-4a49-9205-182e62039a5a",
+          "referenceid": salesId,
+          "servicepointid": servicePointId,
+          "transactiontypeid": 1,
+          "amount": totalPaid,
+          "method": "Cash",
+          "methodId": 1,
+          "chequeno": "",
+          "cashaccountid": "11111111-1111-1111-1111-111111111111",
+          "paydate": paymentTimestamp,
+          "receipt": true,
+          "currency": "Uganda Shillings",
+          "type": "Sales",
+          "bp": customerId ?? "",
+          "direction": 1,
+          "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+        };
+
+        await _apiService.postSale(paymentPayload);
+        print('✅ Payment posted to server');
+      }
+
+      // Update upload status to 'uploaded'
+      await _dbHelper.updateSaleUploadStatus(salesId, 'uploaded');
+      print('✅ Sale $salesId uploaded successfully');
+
+      // Reload sales to reflect updated status
+      await loadSalesFromCache();
+    } catch (e) {
+      print('❌ Error uploading sale: $e');
+
+      // Update upload status to 'failed' with error message
+      await _dbHelper.updateSaleUploadStatus(
+        salesId,
+        'failed',
+        errorMessage: e.toString(),
+      );
+
+      // Reload sales to reflect updated status
+      await loadSalesFromCache();
+
       rethrow;
     }
   }

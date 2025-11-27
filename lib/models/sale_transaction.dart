@@ -36,6 +36,16 @@ class SaleTransaction {
   final String packaging;
   final int complimentaryid;
   final String salesId;
+  final String? uploadStatus;
+  final int? uploadedAt;
+  final String? uploadError;
+  final String? inventoryid;
+  final String? ipdid;
+  final String? clientid;
+  final String? companyid;
+  final String? branchid;
+  final String? servicepointid;
+  final String? salespersonid;
 
   SaleTransaction({
     required this.id,
@@ -75,6 +85,16 @@ class SaleTransaction {
     required this.packaging,
     required this.complimentaryid,
     required this.salesId,
+    this.uploadStatus,
+    this.uploadedAt,
+    this.uploadError,
+    this.inventoryid,
+    this.ipdid,
+    this.clientid,
+    this.companyid,
+    this.branchid,
+    this.servicepointid,
+    this.salespersonid,
   });
 
   factory SaleTransaction.fromJson(Map<String, dynamic> json) {
@@ -116,6 +136,16 @@ class SaleTransaction {
       packaging: json['packaging'] as String,
       complimentaryid: json['complimentaryid'] as int,
       salesId: json['salesId'] as String,
+      uploadStatus: json['upload_status'] as String?,
+      uploadedAt: json['uploaded_at'] as int?,
+      uploadError: json['upload_error'] as String?,
+      inventoryid: json['inventoryid'] as String?,
+      ipdid: json['ipdid'] as String?,
+      clientid: json['clientid'] as String?,
+      companyid: json['companyid'] as String?,
+      branchid: json['branchid'] as String?,
+      servicepointid: json['servicepointid'] as String?,
+      salespersonid: json['salespersonid'] as String?,
     );
   }
 
@@ -158,6 +188,16 @@ class SaleTransaction {
       'packaging': packaging,
       'complimentaryid': complimentaryid,
       'salesId': salesId,
+      'upload_status': uploadStatus,
+      'uploaded_at': uploadedAt,
+      'upload_error': uploadError,
+      'inventoryid': inventoryid,
+      'ipdid': ipdid,
+      'clientid': clientid,
+      'companyid': companyid,
+      'branchid': branchid,
+      'servicepointid': servicepointid,
+      'salespersonid': salespersonid,
     };
   }
 
@@ -200,6 +240,16 @@ class SaleTransaction {
       packaging: map['packaging'] as String,
       complimentaryid: map['complimentaryid'] as int,
       salesId: map['salesId'] as String,
+      uploadStatus: map['upload_status'] as String?,
+      uploadedAt: map['uploaded_at'] as int?,
+      uploadError: map['upload_error'] as String?,
+      inventoryid: map['inventoryid'] as String?,
+      ipdid: map['ipdid'] as String?,
+      clientid: map['clientid'] as String?,
+      companyid: map['companyid'] as String?,
+      branchid: map['branchid'] as String?,
+      servicepointid: map['servicepointid'] as String?,
+      salespersonid: map['salespersonid'] as String?,
     );
   }
 }
