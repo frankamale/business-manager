@@ -129,9 +129,14 @@ class _DailySummaryState extends State<DailySummary> {
               rows: data.asMap().entries.map((entry) {
                 final index = entry.key;
                 final row = entry.value;
+                final isTotal = row['isTotal'] as bool? ?? false;
+
                 return DataRow(
                   color: WidgetStateProperty.resolveWith<Color?>(
                     (Set<WidgetState> states) {
+                      if (isTotal) {
+                        return Colors.blue[50];
+                      }
                       if (index.isEven) {
                         return Colors.grey[50];
                       }
@@ -158,9 +163,9 @@ class _DailySummaryState extends State<DailySummary> {
                           Flexible(
                             child: Text(
                               row['label'] as String,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                              style: TextStyle(
+                                fontSize: isTotal ? 15 : 14,
+                                fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
                                 color: Colors.black87,
                               ),
                             ),
@@ -173,10 +178,10 @@ class _DailySummaryState extends State<DailySummary> {
                         alignment: Alignment.centerRight,
                         child: Text(
                           row['amount'] as String,
-                          style: const TextStyle(
-                            fontSize: 15,
+                          style: TextStyle(
+                            fontSize: isTotal ? 16 : 15,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: isTotal ? Colors.blue.shade900 : Colors.black,
                           ),
                         ),
                       ),
@@ -228,9 +233,13 @@ class _DailySummaryState extends State<DailySummary> {
 
     // Build payment method list
     final paymentData = <Map<String, dynamic>>[];
+    double totalPaidAmount = 0.0;
+
     for (var payment in paymentSummary) {
       final type = payment['paymenttype'] as String? ?? 'Unknown';
+      if (type.toLowerCase() == 'pending') continue;
       final amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
+      totalPaidAmount += amount;
 
       IconData icon;
       Color color;
@@ -240,12 +249,12 @@ class _DailySummaryState extends State<DailySummary> {
         case 'cash':
           icon = Icons.payments_outlined;
           color = Colors.green;
-          label = 'Total Cash Amount';
+          label = 'Cash';
           break;
         case 'card':
           icon = Icons.credit_card;
           color = Colors.blue;
-          label = 'Card Amount';
+          label = 'Card';
           break;
         case 'mobile':
           icon = Icons.phone_android;
@@ -264,7 +273,34 @@ class _DailySummaryState extends State<DailySummary> {
         'amount': 'UGX ${currencyFormat.format(amount)}',
         'color': color,
       });
+
+      // Add Partial Payment row under Cash
+      if (type.toLowerCase() == 'cash') {
+        paymentData.add({
+          'icon': Icons.money_off,
+          'label': 'Partial Payment',
+          'amount': 'UGX ${currencyFormat.format(partialPaymentAmount)}',
+          'color': Colors.amber,
+        });
+      }
     }
+
+    // Add Pending row
+    paymentData.add({
+      'icon': Icons.pending_actions,
+      'label': 'Pending',
+      'amount': 'UGX ${currencyFormat.format(pendingAmount)}',
+      'color': Colors.red,
+    });
+
+    // Add Total row
+    paymentData.add({
+      'icon': Icons.account_balance,
+      'label': 'TOTAL',
+      'amount': 'UGX ${currencyFormat.format(totalSales)}',
+      'color': Colors.blue.shade700,
+      'isTotal': true,
+    });
 
     // Build category data
     final categoryData = <Map<String, dynamic>>[];
@@ -435,40 +471,6 @@ class _DailySummaryState extends State<DailySummary> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Payment Status Cards
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatusCard(
-                            'Fully Paid',
-                            fullyPaidAmount,
-                            fullyPaidTransactions,
-                            Colors.green,
-                            Icons.check_circle,
-                          ),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: _buildStatusCard(
-                            'Partial',
-                            partialPaymentAmount,
-                            partialPaymentTransactions,
-                            Colors.orange,
-                            Icons.timelapse,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    _buildStatusCard(
-                      'Pending Amount',
-                      pendingAmount,
-                      unpaidTransactions,
-                      Colors.red,
-                      Icons.pending_actions,
-                    ),
-                    const SizedBox(height: 24),
-
                     // Payment Methods Table
                     if (paymentData.isNotEmpty)
                       _buildSummaryTable(
