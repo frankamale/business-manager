@@ -234,56 +234,55 @@ class _DailySummaryState extends State<DailySummary> {
     // Build payment method list
     final paymentData = <Map<String, dynamic>>[];
     double totalPaidAmount = 0.0;
+    
+for (var payment in paymentSummary) {
+  final type = payment['paymenttype'] as String? ?? 'Unknown';
+  if (type.toLowerCase() == 'pending') continue;
 
-    for (var payment in paymentSummary) {
-      final type = payment['paymenttype'] as String? ?? 'Unknown';
-      if (type.toLowerCase() == 'pending') continue;
-      final amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
-      totalPaidAmount += amount;
+  double amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
 
-      IconData icon;
-      Color color;
-      String label;
+  // Add partial payments into the Cash figure
+  if (type.toLowerCase() == 'cash') {
+    amount += partialPaymentAmount;
+  }
 
-      switch (type.toLowerCase()) {
-        case 'cash':
-          icon = Icons.payments_outlined;
-          color = Colors.green;
-          label = 'Cash';
-          break;
-        case 'card':
-          icon = Icons.credit_card;
-          color = Colors.blue;
-          label = 'Card';
-          break;
-        case 'mobile':
-          icon = Icons.phone_android;
-          color = Colors.orange;
-          label = 'Mobile Money';
-          break;
-        default:
-          icon = Icons.account_balance_wallet;
-          color = Colors.purple;
-          label = type;
-      }
+  totalPaidAmount += amount;
 
-      paymentData.add({
-        'icon': icon,
-        'label': label,
-        'amount': 'UGX ${currencyFormat.format(amount)}',
-        'color': color,
-      });
+  IconData icon;
+  Color color;
+  String label;
 
-      // Add Partial Payment row under Cash
-      if (type.toLowerCase() == 'cash') {
-        paymentData.add({
-          'icon': Icons.money_off,
-          'label': 'Partial Payment',
-          'amount': 'UGX ${currencyFormat.format(partialPaymentAmount)}',
-          'color': Colors.amber,
-        });
-      }
-    }
+  switch (type.toLowerCase()) {
+    case 'cash':
+      icon = Icons.payments_outlined;
+      color = Colors.green;
+      label = 'Cash';
+      break;
+    case 'card':
+      icon = Icons.credit_card;
+      color = Colors.blue;
+      label = 'Card';
+      break;
+    case 'mobile':
+      icon = Icons.phone_android;
+      color = Colors.orange;
+      label = 'Mobile Money';
+      break;
+    default:
+      icon = Icons.account_balance_wallet;
+      color = Colors.purple;
+      label = type;
+  }
+
+  // Add only CASH, CARD, MOBILE rows — no partial row
+  paymentData.add({
+    'icon': icon,
+    'label': label,
+    'amount': 'UGX ${currencyFormat.format(amount)}',
+    'color': color,
+  });
+}
+
 
     // Add Pending row
     paymentData.add({
