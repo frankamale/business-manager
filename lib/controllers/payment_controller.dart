@@ -203,6 +203,7 @@ class PaymentController extends GetxController {
     required String? reference,
     required String? notes,
     required String? salespersonId,
+    String? servicePointId,
   }) async {
     if (cartItems.isEmpty) {
       throw Exception('No items in cart');
@@ -226,7 +227,7 @@ class PaymentController extends GetxController {
         userId;
       final branchId = companyInfo['branchId'] ?? '';
       final companyId = companyInfo['companyId'] ?? '';
-      final servicePointId = "009fbafc-585f-471b-b469-53e1da9438ed";
+      final actualServicePointId = servicePointId ?? companyInfo['servicePointId'] ?? branchId;
 
       // Generate receipt number and sale ID
       final receiptnumber = await generateReceiptNumber();
@@ -237,13 +238,13 @@ class PaymentController extends GetxController {
       final salePayload = createSalePayload(
         saleId: saleId,
         cartItems: cartItems,
-        receiptnumber: receiptnumber, 
+        receiptnumber: receiptnumber,
         customerId: customerId,
         salespersonId: actualSalespersonId,
         remarks: notes ?? "",
         branchId: branchId,
         companyId: companyId,
-        servicePointId: servicePointId,
+        servicePointId: actualServicePointId,
       );
 
       // Create sale
@@ -292,7 +293,7 @@ class PaymentController extends GetxController {
           saleId: saleId,
           paymentAmount: paymentAmount,
           paymentTimestamp: paymentTimestamp,
-          servicePointId: servicePointId,
+          servicePointId: actualServicePointId,
           customerId: customerId,
           companyId: companyId,
         );

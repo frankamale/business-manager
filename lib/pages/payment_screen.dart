@@ -9,6 +9,7 @@ class PaymentScreen extends StatefulWidget {
    final String? reference;
    final String? notes;
    final String? salespersonId;
+   final String? servicePointId;
 
    const PaymentScreen({
      super.key,
@@ -17,6 +18,7 @@ class PaymentScreen extends StatefulWidget {
      this.reference,
      this.notes,
      this.salespersonId,
+     this.servicePointId,
    });
 
   @override
@@ -76,6 +78,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         reference: widget.reference,
         notes: widget.notes,
         salespersonId: widget.salespersonId,
+        servicePointId: widget.servicePointId,
       );
 
       // Handle success

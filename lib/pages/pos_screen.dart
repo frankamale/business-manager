@@ -240,6 +240,7 @@ class _PosScreenState extends State<PosScreen> {
         reference: refController.text,
         notes: notesController.text,
         salespersonId: selectedSalespersonId,
+        servicePointId: widget.servicePoint?.id,
       ),
     );
 
