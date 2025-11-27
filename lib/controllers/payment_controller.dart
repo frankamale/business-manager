@@ -238,7 +238,7 @@ class PaymentController extends GetxController {
         'paymentmode': paymentAmount > 0 ? 'Cash' : 'Pending',
         'sourcefacility': branchId,
         'genno': reference ?? '',
-        'paymenttype': paymentAmount >= totalAmount ? 'Cash' : (paymentAmount > 0 ? 'Partial' : 'Pending'),
+        'paymenttype': paymentAmount > 0 ? 'Cash' : 'Pending',
         'validtill': transactionTimestamp,
         'currency': 'Uganda Shillings',
         'quantity': quantity,

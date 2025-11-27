@@ -545,8 +545,9 @@ class _PosScreenState extends State<PosScreen> {
                               value: customer.id,
                               child: Text(
                                 customer.fullnames,
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
+                                softWrap: true,
                               ),
                             );
                           }).toList(),

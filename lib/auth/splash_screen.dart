@@ -122,14 +122,13 @@ class _SplashScreenState extends State<SplashScreen>
 
       Get.snackbar(
         'Error',
-        'Failed to initialize app: $e',
+        'Network Error, please check your internet connection and try again.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade900,
         duration: const Duration(seconds: 4),
       );
 
-      // Don't retry automatically - let user control it
     }
   }
 

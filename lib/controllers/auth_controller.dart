@@ -103,7 +103,7 @@ class AuthController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Error',
-          'Failed to refresh users: $e',
+          'Failed to refresh users',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
