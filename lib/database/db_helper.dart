@@ -886,13 +886,18 @@ class DatabaseHelper {
       WHERE transactiondate BETWEEN ? AND ? AND complimentaryid > 0
     ''', [startMillis, endMillis]);
 
-    // Get overall totals
+    // Get overall totals with proper categorization
     final overallTotal = await db.rawQuery('''
       SELECT
         SUM(amount) as totalSales,
         SUM(amountpaid) as totalPaid,
         SUM(balance) as totalBalance,
-        COUNT(DISTINCT salesId) as totalTransactions
+        SUM(CASE WHEN balance = 0 AND amountpaid > 0 THEN amountpaid ELSE 0 END) as fullyPaidAmount,
+        SUM(CASE WHEN balance > 0 AND amountpaid > 0 THEN amountpaid ELSE 0 END) as partialPaymentAmount,
+        COUNT(DISTINCT salesId) as totalTransactions,
+        COUNT(DISTINCT CASE WHEN balance = 0 AND amountpaid > 0 THEN salesId END) as fullyPaidTransactions,
+        COUNT(DISTINCT CASE WHEN balance > 0 AND amountpaid > 0 THEN salesId END) as partialPaymentTransactions,
+        COUNT(DISTINCT CASE WHEN balance > 0 THEN salesId END) as unpaidTransactions
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
     ''', [startMillis, endMillis]);

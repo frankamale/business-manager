@@ -3,8 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/inventory_controller.dart';
-import '../controllers/customer_controller.dart';
-import '../controllers/auth_controller.dart';
+import '../models/inventory_item.dart';
+import '../services/print_service.dart';
 import 'pos_screen.dart';
 
 class SalesListing extends StatefulWidget {
@@ -501,15 +501,170 @@ class _SalesListingState extends State<SalesListing> {
     );
   }
 
-  void _handlePrint(Map<String, dynamic> sale) {
+  Future<void> _handlePrint(Map<String, dynamic> sale) async {
+    final salesController = Get.find<SalesController>();
+
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
-    Get.snackbar(
-      'Print',
-      'Printing receipt $receiptNumber...',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Colors.blue.shade700,
-      colorText: Colors.white,
-    );
+    final salesId = sale['salesId'] as String?;
+
+    if (salesId == null) {
+      Get.snackbar(
+        'Error',
+        'Cannot print: Invalid sale ID',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      // Show loading indicator
+      Get.dialog(
+        Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Preparing receipt...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+        barrierDismissible: false,
+      );
+
+      // Fetch sale transactions
+      final saleTransactions = await salesController.getSaleTransactionsBySalesId(salesId);
+
+      // Close loading dialog
+      Get.back();
+
+      if (saleTransactions.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'No items found for this receipt',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.shade700,
+          colorText: Colors.white,
+        );
+        return;
+      }
+
+      // Get sale details
+      final firstTransaction = saleTransactions.first;
+      final customerName = firstTransaction.destinationbp;
+      final date = DateTime.fromMillisecondsSinceEpoch(firstTransaction.transactiondate);
+      final issuedBy = firstTransaction.issuedby;
+      final notes = firstTransaction.remarks;
+      final paymentMode = firstTransaction.paymentmode;
+
+      // Calculate totals
+      double totalAmount = 0;
+      double amountPaid = 0;
+      for (var transaction in saleTransactions) {
+        totalAmount += transaction.amount;
+        amountPaid += transaction.amountpaid;
+      }
+      final balance = totalAmount - amountPaid;
+
+      // Show print options dialog
+      await Get.dialog(
+        AlertDialog(
+          title: Text('Print Options'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.print, color: Colors.blue),
+                title: Text('Print Receipt'),
+                subtitle: Text('Print to connected printer'),
+                onTap: () async {
+                  Get.back();
+                  try {
+                    await PrintService.printReceipt(
+                      receiptNumber: receiptNumber,
+                      customerName: customerName,
+                      date: date,
+                      items: saleTransactions,
+                      totalAmount: totalAmount,
+                      amountPaid: amountPaid,
+                      balance: balance,
+                      paymentMode: paymentMode,
+                      issuedBy: issuedBy.isNotEmpty ? issuedBy : null,
+                      notes: notes.isNotEmpty ? notes : null,
+                    );
+                  } catch (e) {
+                    Get.snackbar(
+                      'Print Error',
+                      'Failed to print: $e',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red.shade700,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.share, color: Colors.green),
+                title: Text('Share PDF'),
+                subtitle: Text('Share receipt as PDF file'),
+                onTap: () async {
+                  Get.back();
+                  try {
+                    await PrintService.shareReceipt(
+                      receiptNumber: receiptNumber,
+                      customerName: customerName,
+                      date: date,
+                      items: saleTransactions,
+                      totalAmount: totalAmount,
+                      amountPaid: amountPaid,
+                      balance: balance,
+                      paymentMode: paymentMode,
+                      issuedBy: issuedBy.isNotEmpty ? issuedBy : null,
+                      notes: notes.isNotEmpty ? notes : null,
+                    );
+                  } catch (e) {
+                    Get.snackbar(
+                      'Share Error',
+                      'Failed to share: $e',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red.shade700,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: Text('Cancel'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Close loading dialog if still open
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+
+      Get.snackbar(
+        'Error',
+        'Failed to prepare receipt: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    }
   }
 
   Future<void> _handleAction(String action, Map<String, dynamic> sale) async {
@@ -621,7 +776,6 @@ class _SalesListingState extends State<SalesListing> {
   Future<void> _handleEdit(Map<String, dynamic> sale) async {
     final salesController = Get.find<SalesController>();
     final inventoryController = Get.find<InventoryController>();
-    final customerController = Get.find<CustomerController>();
 
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
     final salesId = sale['salesId'] as String?;
@@ -677,62 +831,72 @@ class _SalesListingState extends State<SalesListing> {
         return;
       }
 
-      // Get customer from first transaction (all have same customer)
+      // Get customer ID directly from first transaction (more reliable than name matching)
       final firstTransaction = saleTransactions.first;
-      final customerName = firstTransaction.destinationbp;
+      final customerId = firstTransaction.clientid;
 
-      // Try exact match first, then try with/without trailing space
-      var customer = customerController.getCustomerByFullnames(customerName);
-      if (customer == null) {
-        customer = customerController.getCustomerByFullnames(customerName.trim());
-      }
-      if (customer == null && !customerName.endsWith(' ')) {
-        customer = customerController.getCustomerByFullnames('$customerName ');
-      }
-
-      final customerId = customer?.id;
-
-      // Get salesperson from first transaction
-      final salespersonName = firstTransaction.issuedby.trim();
-
-      // Try to find salesperson by username or name
-      final authController = Get.find<AuthController>();
-      final salespeople = await authController.getSalespeople();
-
-      String? salespersonId;
-      if (salespersonName.isNotEmpty && salespersonName != '  ') {
-        final salesperson = salespeople.firstWhereOrNull(
-          (user) => user.username.toLowerCase() == salespersonName.toLowerCase() ||
-                    user.name.toLowerCase() == salespersonName.toLowerCase(),
-        );
-        salespersonId = salesperson?.salespersonid;
-      }
+      // Get salesperson ID directly from first transaction
+      final salespersonId = firstTransaction.salespersonid;
 
       // Transform sale transactions to cart items format
       final cartItems = <Map<String, dynamic>>[];
       for (var transaction in saleTransactions) {
-        // Try to find the inventory item by name (search inventory)
+        // Try to find the inventory item by name or ID
         final inventoryItems = inventoryController.inventoryItems;
-        final inventoryItem = inventoryItems.firstWhereOrNull(
-          (item) => item.name.toLowerCase() == transaction.inventoryname.toLowerCase(),
+
+        // First try to find by inventoryid
+        var inventoryItem = inventoryItems.firstWhereOrNull(
+          (item) => item.id == transaction.inventoryid,
         );
 
-        // Use inventory item ID if found, otherwise use transaction ID
-        final itemId = inventoryItem?.id ?? transaction.id;
+        // If not found, try by name
+        if (inventoryItem == null) {
+          inventoryItem = inventoryItems.firstWhereOrNull(
+            (item) => item.name.toLowerCase() == transaction.inventoryname.toLowerCase(),
+          );
+        }
+
+        // If still not found, create a minimal inventory item object with all required fields
+        if (inventoryItem == null) {
+          inventoryItem = InventoryItem(
+            id: transaction.inventoryid ?? transaction.id,
+            ipdid: transaction.ipdid ?? '',
+            name: transaction.inventoryname,
+            code: '',
+            externalserial: '',
+            category: transaction.category,
+            price: transaction.sellingprice.toDouble(),
+            costprice: transaction.costprice,
+            packsize: transaction.packsize.toDouble(),
+            packaging: transaction.packaging,
+            packagingid: '',
+            soldfrom: '',
+            shortform: '',
+            packagingcode: '',
+            efris: false,
+            efrisid: '',
+            measurmentunitidefris: '',
+            measurmentunit: '',
+            measurmentunitid: '',
+            vatcategoryid: '',
+            branchid: transaction.branchid ?? '',
+            companyid: transaction.companyid ?? '',
+          );
+        }
 
         cartItems.add({
-          'id': itemId,
+          'id': inventoryItem.id,
           'name': transaction.inventoryname,
           'quantity': transaction.quantity.toInt(),
           'price': transaction.sellingprice,
           'amount': transaction.amount,
-          'item': inventoryItem, // Include full inventory item if found
+          'item': inventoryItem, // Always include full inventory item
         });
       }
 
-      // Extract other sale details
-      final reference = sale['reference'] as String? ?? '';
-      final notes = firstTransaction.remarks;
+      // Extract other sale details from transaction (not from grouped sale)
+      final reference = firstTransaction.purchaseordernumber ?? '';
+      final notes = firstTransaction.remarks ?? '';
 
       // Navigate to POS screen with existing sale data
       await Get.to(

@@ -26,7 +26,6 @@ class InventoryController extends GetxController {
   // Load inventory from database (cache)
   Future<void> loadInventoryFromCache() async {
     try {
-      print('📦 Loading inventory from cache...');
       isLoadingInventory.value = true;
 
       final items = await _dbHelper.getInventoryItems();
@@ -37,32 +36,24 @@ class InventoryController extends GetxController {
       categories.value = cats;
 
       isLoadingInventory.value = false;
-
-      print('✅ Loaded ${items.length} inventory items from cache');
-      print('📂 Categories found: ${cats.length}');
     } catch (e) {
       isLoadingInventory.value = false;
-      print('❌ Error loading inventory from cache: $e');
     }
   }
 
   // Sync inventory from API to local database
   Future<void> syncInventoryFromAPI({bool showMessage = false}) async {
     try {
-      print('📦 Syncing inventory from API...');
       isSyncingInventory.value = true;
 
       // Fetch inventory from API
       final items = await _apiService.fetchInventory();
 
       // Save inventory to database
-      print('💾 Saving ${items.length} inventory items to local database...');
       await _dbHelper.insertInventoryItems(items);
 
       // Update sync metadata
       await _dbHelper.updateSyncMetadata('inventory', 'success', items.length);
-
-      print('✅ Successfully synced ${items.length} inventory items to database');
 
       // Reload inventory after sync
       await loadInventoryFromCache();
@@ -79,7 +70,6 @@ class InventoryController extends GetxController {
     } catch (e) {
       isSyncingInventory.value = false;
       await _dbHelper.updateSyncMetadata('inventory', 'failed', 0, e.toString());
-      print('❌ Error syncing inventory from API: $e');
 
       if (showMessage) {
         Get.snackbar(
@@ -118,11 +108,8 @@ class InventoryController extends GetxController {
       final results = await _dbHelper.searchInventoryItems(query);
       filteredItems.value = results;
       isLoadingInventory.value = false;
-
-      print('🔍 Search for "$query" returned ${results.length} results');
     } catch (e) {
       isLoadingInventory.value = false;
-      print('❌ Error searching inventory: $e');
     }
   }
 
@@ -139,10 +126,8 @@ class InventoryController extends GetxController {
       }
 
       isLoadingInventory.value = false;
-      print('🏷️ Filtered by category "$category": ${filteredItems.length} items');
     } catch (e) {
       isLoadingInventory.value = false;
-      print('❌ Error filtering by category: $e');
     }
   }
 
@@ -160,7 +145,6 @@ class InventoryController extends GetxController {
     try {
       return await _dbHelper.getInventoryCount();
     } catch (e) {
-      print('❌ Error getting inventory count: $e');
       return 0;
     }
   }
@@ -174,10 +158,8 @@ class InventoryController extends GetxController {
       filteredItems.value = results;
 
       isLoadingInventory.value = false;
-      print('🏷️ Filtered by service point type "$servicePointType": ${filteredItems.length} items');
     } catch (e) {
       isLoadingInventory.value = false;
-      print('❌ Error filtering by service point type: $e');
     }
   }
 }

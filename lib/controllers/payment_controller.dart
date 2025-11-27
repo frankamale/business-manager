@@ -29,13 +29,9 @@ class PaymentController extends GetxController {
         if (numericPart.isNotEmpty) {
           final latestNumber = int.tryParse(numericPart) ?? 0;
           receiptCounter.value = latestNumber + 1;
-          print('📊 Receipt counter initialized to: ${receiptCounter.value}');
         }
-      } else {
-        print('📊 No existing receipts found, starting from 1');
       }
     } catch (e) {
-      print('⚠️ Error initializing receipt counter: $e');
       // Default to 1 if there's an error
       receiptCounter.value = 1;
     }
@@ -46,7 +42,6 @@ class PaymentController extends GetxController {
     try {
       final db = await _dbHelper.database;
       if (db == null) {
-        print('⚠️ Database is null, cannot fetch latest receipt number');
         return null;
       }
 
@@ -59,7 +54,6 @@ class PaymentController extends GetxController {
       }
       return null;
     } catch (e) {
-      print('⚠️ Error fetching latest receipt number: $e');
       return null;
     }
   }
@@ -73,7 +67,6 @@ class PaymentController extends GetxController {
 
     // If it exists, keep incrementing until we find a unique one
     while (exists) {
-      print('⚠️ Receipt number $number already exists, incrementing...');
       receiptCounter.value++;
       number = 'REC-${receiptCounter.value.toString().padLeft(4, '0')}';
       exists = await _receiptNumberExists(number);
@@ -82,7 +75,6 @@ class PaymentController extends GetxController {
     // Increment counter for next receipt
     receiptCounter.value++;
 
-    print('✅ Generated unique receipt number: $number');
     return number;
   }
 
@@ -91,7 +83,6 @@ class PaymentController extends GetxController {
     try {
       final db = await _dbHelper.database;
       if (db == null) {
-        print('⚠️ Database is null, cannot check receipt number existence');
         return false;
       }
 
@@ -103,7 +94,6 @@ class PaymentController extends GetxController {
       final count = result.first['count'] as int;
       return count > 0;
     } catch (e) {
-      print('⚠️ Error checking receipt number existence: $e');
       return false; // Assume doesn't exist on error
     }
   }
@@ -353,7 +343,7 @@ class PaymentController extends GetxController {
             customerName = customer.fullnames;
           }
         } catch (e) {
-          print('⚠️ Could not fetch customer name: $e');
+          // Use default customer name on error
         }
       }
 

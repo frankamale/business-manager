@@ -200,17 +200,21 @@ class _PosScreenState extends State<PosScreen> {
       }
     });
 
-    // Show mode indicator
-    Get.snackbar(
-      widget.isViewOnly ? 'View Mode' : 'Edit Mode',
-      widget.isViewOnly ? 'Viewing existing sale' : 'Editing existing sale',
-      snackPosition: SnackPosition.TOP,
-      duration: const Duration(seconds: 2),
-      backgroundColor: widget.isViewOnly ? Colors.blue[100] : Colors.orange[100],
-      colorText: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900],
-      icon: Icon(widget.isViewOnly ? Icons.visibility : Icons.edit, color: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900]),
-      margin: const EdgeInsets.all(8),
-    );
+    // Show mode indicator after build completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Get.snackbar(
+          widget.isViewOnly ? 'View Mode' : 'Edit Mode',
+          widget.isViewOnly ? 'Viewing existing sale' : 'Editing existing sale',
+          snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 2),
+          backgroundColor: widget.isViewOnly ? Colors.blue[100] : Colors.orange[100],
+          colorText: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900],
+          icon: Icon(widget.isViewOnly ? Icons.visibility : Icons.edit, color: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900]),
+          margin: const EdgeInsets.all(8),
+        );
+      }
+    });
   }
 
   @override
@@ -244,6 +248,9 @@ class _PosScreenState extends State<PosScreen> {
         notes: notesController.text,
         salespersonId: selectedSalespersonId,
         servicePointId: widget.servicePoint?.id,
+        isUpdateMode: widget.existingSalesId != null,
+        existingSalesId: widget.existingSalesId,
+        existingReceiptNumber: widget.existingReceiptNumber,
       ),
     );
 
@@ -507,18 +514,17 @@ class _PosScreenState extends State<PosScreen> {
                       if (widget.isViewOnly) {
                         final customer = customerController.customers.firstWhereOrNull((c) => c.id == selectedCustomerId);
                         final customerName = customer?.fullnames ?? '';
-                        return TextField(
-                          controller: TextEditingController(text: customerName),
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            isDense: true,
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            customerName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 16),
                           ),
                         );
                       } else {
@@ -537,7 +543,11 @@ class _PosScreenState extends State<PosScreen> {
                           items: customerController.customers.map((customer) {
                             return DropdownMenuItem<String>(
                               value: customer.id,
-                              child: Text(customer.fullnames),
+                              child: Text(
+                                customer.fullnames,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             );
                           }).toList(),
                           onChanged: (String? newValue) {
@@ -568,18 +578,17 @@ class _PosScreenState extends State<PosScreen> {
                       child: widget.isViewOnly ? (() {
                         final salesperson = salespeople.firstWhereOrNull((u) => u.salespersonid == selectedSalespersonId);
                         final salespersonName = salesperson?.staff ?? '';
-                        return TextField(
-                          controller: TextEditingController(text: salespersonName),
-                          readOnly: true,
-                          decoration: InputDecoration(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            isDense: true,
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            salespersonName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 16),
                           ),
                         );
                       })() : DropdownButtonFormField<String>(
@@ -597,7 +606,11 @@ class _PosScreenState extends State<PosScreen> {
                         items: salespeople.map((user) {
                           return DropdownMenuItem<String>(
                             value: user.salespersonid,
-                            child: Text(user.staff),
+                            child: Text(
+                              user.staff,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           );
                         }).toList(),
                         onChanged: (String? newValue) {
@@ -909,52 +922,14 @@ class _PosScreenState extends State<PosScreen> {
           // Action Buttons (outside scrollview)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
-            child: widget.existingSalesId != null
-                ? // Edit/View mode - show Cancel and Update/Close buttons
+            child: widget.existingSalesId != null && widget.isViewOnly
+                ? // View-only mode - show only Close button
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Colors.grey[700],
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text("Cancel"),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton(
-                          onPressed: widget.isViewOnly ? () => Navigator.of(context).pop() : _updateSale,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: widget.isViewOnly ? Colors.blue[700] : Colors.orange[700],
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(widget.isViewOnly ? "Close" : "Update Sale"),
-                        ),
-                      ),
-                    ],
-                  )
-                : // New sale mode - show PAY and New buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _navigateToPayment,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             backgroundColor: Colors.blue[700],
@@ -964,41 +939,68 @@ class _PosScreenState extends State<PosScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: const Text("PAY"),
+                          child: const Text("Close"),
                         ),
                       ),
-                      const SizedBox(width: 3),
+                    ],
+                  )
+                : // New sale or Edit mode - show PAY, Cancel, and Add Item buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              // Dispose all price controllers
-                              for (var controller in _priceControllers.values) {
-                                controller.dispose();
-                              }
-                              _priceControllers.clear();
-                              selectedItems.clear();
-                              refController.clear();
-                              notesController.clear();
-                              final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
-                              selectedCustomerId = cashCustomer?.id;
-                              // Reset salesperson to logged-in user
-                              final currentUser = authController.currentUser.value;
-                              if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
-                                selectedSalespersonId = currentUser.salespersonid;
-                              }
-                            });
-                          },
+                          onPressed: widget.existingSalesId != null ? _updateSale : _navigateToPayment,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Colors.green[700],
+                            backgroundColor: widget.existingSalesId != null ? Colors.orange[700] : Colors.blue[700],
                             foregroundColor: Colors.white,
                             elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: const Text("New"),
+                          child: Text(widget.existingSalesId != null ? "PAY" : "PAY"),
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (widget.existingSalesId != null) {
+                              // Edit mode - cancel and go back
+                              Navigator.of(context).pop();
+                            } else {
+                              // New sale mode - clear and start fresh
+                              setState(() {
+                                // Dispose all price controllers
+                                for (var controller in _priceControllers.values) {
+                                  controller.dispose();
+                                }
+                                _priceControllers.clear();
+                                selectedItems.clear();
+                                refController.clear();
+                                notesController.clear();
+                                final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+                                selectedCustomerId = cashCustomer?.id;
+                                // Reset salesperson to logged-in user
+                                final currentUser = authController.currentUser.value;
+                                if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+                                  selectedSalespersonId = currentUser.salespersonid;
+                                }
+                              });
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            backgroundColor: widget.existingSalesId != null ? Colors.grey[700] : Colors.green[700],
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(widget.existingSalesId != null ? "Cancel" : "New"),
                         ),
                       ),
                   const SizedBox(width: 3),

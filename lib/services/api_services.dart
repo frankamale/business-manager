@@ -35,7 +35,6 @@ class ApiService extends GetxService {
   // Sign in with credentials
   Future<AuthResponse> signIn(String username, String password) async {
     try {
-
       final requestBody = json.encode({
         'username': username,
         'password': password,
@@ -46,25 +45,15 @@ class ApiService extends GetxService {
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
-      print('📊 Status Code: ${response.statusCode}');
-      print('📄 Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        print('Authentication successful!');
         final authResponse = AuthResponse.fromJson(json.decode(response.body));
-
         await _saveAuthData(authResponse);
-        print(' Auth data stored successfully');
-
         return authResponse;
       } else {
-        print('Status Code: ${response.statusCode}');
-        print('Response: ${response.body}');
         throw Exception("Failed to sign in: ${response.statusCode}");
       }
-    } catch (e, stackTrace) {
-      print(' Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
+    } catch (e) {
       rethrow;
     }
   }
@@ -148,8 +137,6 @@ class ApiService extends GetxService {
   // Fetch company info from API and store it
   Future<Map<String, dynamic>> fetchAndStoreCompanyInfo() async {
     try {
-      print('FETCHING COMPANY INFO REQUEST STARTED');
-
       final token = await getAccessToken();
 
       final headers = <String, String>{
@@ -165,28 +152,21 @@ class ApiService extends GetxService {
         headers: headers,
       );
 
-      print('Status Code: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         await saveCompanyInfo(data);
-        print('Company info stored successfully');
         return data;
       } else {
         throw Exception("Failed to fetch company info: ${response.statusCode}");
       }
     } catch (e) {
-      print('Error fetching company info: $e');
       rethrow;
     }
   }
 
   Future<List<User>> fetchUsers() async {
     try {
-      print('FETCHING USERS REQUEST STARTED');
-
       final token = await getAccessToken();
-      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
 
       final headers = <String, String>{
         'Content-Type': 'application/json',
@@ -194,9 +174,6 @@ class ApiService extends GetxService {
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
-        print(' Authorization header added');
-      } else {
-        print(' No authorization token available');
       }
 
       final response = await http.get(
@@ -204,48 +181,21 @@ class ApiService extends GetxService {
         headers: headers,
       );
 
-      print(' Status Code: ${response.statusCode}');
-      print(' Response Body Length: ${response.body.length} characters');
-
-
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        print('✅ Successfully parsed ${data.length} users from API endpoint');
-
         final users = data.map((json) => User.fromMap(json)).toList();
-
-        print('📋 Users received from endpoint:');
-        for (var i = 0; i < users.length; i++) {
-          print('   ${i + 1}. ${users[i].name}');
-          print('      - Username: ${users[i].username}');
-          print('      - Role: ${users[i].role}');
-          print('      - Branch: ${users[i].branchname}');
-          print('      - Company: ${users[i].companyName}');
-          print('      ---');
-        }
-
         return users;
       } else {
-        print(' Status Code: ${response.statusCode}');
-        print(' Response: ${response.body}');
         throw Exception("Failed to load user");
       }
-    } catch (e, stackTrace) {
-      print('═══════════════════════════════════════════════════');
-      print(' Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
-      print('Stack Trace:');
-      print(stackTrace);
+    } catch (e) {
       rethrow;
     }
   }
 
   Future<List<ServicePoint>> fetchServicePoints() async {
     try {
-      print('FETCHING SERVICE POINTS REQUEST STARTED');
-
       final token = await getAccessToken();
-      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
 
       final headers = <String, String>{
         'Content-Type': 'application/json',
@@ -253,9 +203,6 @@ class ApiService extends GetxService {
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
-        print(' Authorization header added');
-      } else {
-        print(' No authorization token available');
       }
 
       final response = await http.get(
@@ -263,47 +210,21 @@ class ApiService extends GetxService {
         headers: headers,
       );
 
-      print(' Status Code: ${response.statusCode}');
-      print(' Response Body Length: ${response.body.length} characters');
-
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        print('Successfully parsed ${data.length} service points from API endpoint');
-
         final servicePoints = data.map((json) => ServicePoint.fromMap(json)).toList();
-
-        print('Service points received from endpoint:');
-        for (var i = 0; i < servicePoints.length; i++) {
-          print('   ${i + 1}. ${servicePoints[i].name}');
-          print('      - Code: ${servicePoints[i].code}');
-          print('      - Type: ${servicePoints[i].servicepointtype}');
-          print('      - Full Name: ${servicePoints[i].fullName}');
-          print('      - Sales: ${servicePoints[i].sales}');
-          print('      ---');
-        }
-
         return servicePoints;
       } else {
-        print(' Status Code: ${response.statusCode}');
-        print(' Response: ${response.body}');
         throw Exception("Failed to load service points");
       }
-    } catch (e, stackTrace) {
-      print('═══════════════════════════════════════════════════');
-      print(' Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
-      print('Stack Trace:');
-      print(stackTrace);
+    } catch (e) {
       rethrow;
     }
   }
 
   Future<List<InventoryItem>> fetchInventory() async {
     try {
-      print('FETCHING INVENTORY REQUEST STARTED');
-
       final token = await getAccessToken();
-      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
 
       final headers = <String, String>{
         'Content-Type': 'application/json',
@@ -311,9 +232,6 @@ class ApiService extends GetxService {
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
-        print(' Authorization header added');
-      } else {
-        print(' No authorization token available');
       }
 
       final response = await http.get(
@@ -321,57 +239,21 @@ class ApiService extends GetxService {
         headers: headers,
       );
 
-      print(' Status Code: ${response.statusCode}');
-      print(' Response Body Length: ${response.body.length} characters');
-
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        print('✅ Successfully parsed ${data.length} inventory items from API endpoint');
-
-        // Debug: Print first item's raw JSON to see field names
-        if (data.isNotEmpty) {
-          print('🔍 DEBUG: First inventory item raw JSON:');
-          print(json.encode(data[0]));
-        }
-
         final inventoryItems = data.map((json) => InventoryItem.fromMap(json)).toList();
-
-        print('📦 Inventory items received from endpoint: ${inventoryItems.length} items');
-        if (inventoryItems.isNotEmpty) {
-          print('   Sample items:');
-          for (var i = 0; i < (inventoryItems.length < 5 ? inventoryItems.length : 5); i++) {
-            print('   ${i + 1}. ${inventoryItems[i].name}');
-            print('      - ID: ${inventoryItems[i].id} (type: ${inventoryItems[i].id.runtimeType})');
-            print('      - IPDID: ${inventoryItems[i].ipdid}');
-            print('      - Code: ${inventoryItems[i].code}');
-            print('      - Category: ${inventoryItems[i].category}');
-            print('      - Price: UGX ${inventoryItems[i].price}');
-            print('      ---');
-          }
-        }
-
         return inventoryItems;
       } else {
-        print(' Status Code: ${response.statusCode}');
-        print(' Response: ${response.body}');
         throw Exception("Failed to load inventory");
       }
-    } catch (e, stackTrace) {
-      print('═══════════════════════════════════════════════════');
-      print(' Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
-      print('Stack Trace:');
-      print(stackTrace);
+    } catch (e) {
       rethrow;
     }
   }
 
   Future<List<Customer>> fetchCustomers() async {
     try {
-      print('FETCHING CUSTOMERS REQUEST STARTED');
-
       final token = await getAccessToken();
-      print(' Token retrieved: ${token != null ? "${token.substring(0, 20)}..." : "No token"}');
 
       final headers = <String, String>{
         'Content-Type': 'application/json',
@@ -379,9 +261,6 @@ class ApiService extends GetxService {
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
-        print(' Authorization header added');
-      } else {
-        print(' No authorization token available');
       }
 
       final response = await http.get(
@@ -389,46 +268,20 @@ class ApiService extends GetxService {
         headers: headers,
       );
 
-      print(' Status Code: ${response.statusCode}');
-      print(' Response Body Length: ${response.body.length} characters');
-
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        print('✅ Successfully parsed ${data.length} customers from API endpoint');
-
         final customers = data.map((json) => Customer.fromMap(json)).toList();
-
-        print('👥 Customers received from endpoint:');
-        for (var i = 0; i < customers.length; i++) {
-          print('   ${i + 1}. ${customers[i].fullnames}');
-          print('      - ID: ${customers[i].id}');
-          print('      - Code: ${customers[i].code}');
-          print('      - Phone: ${customers[i].phone1}');
-          print('      ---');
-        }
-
         return customers;
       } else {
-        print(' Status Code: ${response.statusCode}');
-        print(' Response: ${response.body}');
         throw Exception("Failed to load customers");
       }
-    } catch (e, stackTrace) {
-      print('═══════════════════════════════════════════════════');
-      print(' Error Type: ${e.runtimeType}');
-      print('Error Message: $e');
-      print('Stack Trace:');
-      print(stackTrace);
+    } catch (e) {
       rethrow;
     }
   }
 
   Future<Map<String, dynamic>> createSale(Map<String, dynamic> saleData) async {
     try {
-      print('═══════════════════════════════════════════════════');
-      print('CREATING SALE REQUEST STARTED');
-      print('═══════════════════════════════════════════════════');
-
       final token = await getAccessToken();
 
       final headers = <String, String>{
@@ -439,60 +292,7 @@ class ApiService extends GetxService {
         headers['Authorization'] = 'Bearer $token';
       }
 
-      print('📤 REQUEST URL: $baseurl/sales/');
-      print('📋 REQUEST HEADERS:');
-      headers.forEach((key, value) {
-        if (key == 'Authorization') {
-          print('   $key: Bearer ${value.substring(7, 27)}...');
-        } else {
-          print('   $key: $value');
-        }
-      });
-
-      print('\n📦 SALE PAYLOAD (Main Fields):');
-      print('   id: ${saleData['id']} ${_validateField(saleData['id'], 'UUID')}');
-      print('   transactionDate: ${saleData['transactionDate']} ${_validateField(saleData['transactionDate'], 'number')}');
-      print('   clientid: ${saleData['clientid']} ${_validateField(saleData['clientid'], 'UUID')}');
-      print('   transactionstatusid: ${saleData['transactionstatusid']} ${_validateField(saleData['transactionstatusid'], 'number')}');
-      print('   salespersonid: ${saleData['salespersonid']} ${_validateField(saleData['salespersonid'], 'UUID')}');
-      print('   servicepointid: ${saleData['servicepointid']} ${_validateField(saleData['servicepointid'], 'UUID')}');
-      print('   modeid: ${saleData['modeid']} ${_validateField(saleData['modeid'], 'number')}');
-      print('   remarks: "${saleData['remarks']}" ${_validateField(saleData['remarks'], 'string')}');
-      print('   otherRemarks: "${saleData['otherRemarks']}" ${_validateField(saleData['otherRemarks'], 'string')}');
-      print('   branchId: ${saleData['branchId']} ${_validateField(saleData['branchId'], 'UUID')}');
-      print('   companyId: ${saleData['companyId']} ${_validateField(saleData['companyId'], 'UUID')}');
-      print('   glproxySubCategoryId: ${saleData['glproxySubCategoryId']} ${_validateField(saleData['glproxySubCategoryId'], 'UUID')}');
-      print('   receiptnumber: ${saleData['receiptnumber']} ${_validateField(saleData['receiptnumber'], 'string')}');
-      print('   saleActionId: ${saleData['saleActionId']} ${_validateField(saleData['saleActionId'], 'number')}');
-
-      final lineItems = saleData['lineItems'] as List<dynamic>? ?? [];
-      print('\n📋 LINE ITEMS (${lineItems.length} items):');
-      for (var i = 0; i < lineItems.length; i++) {
-        final item = lineItems[i] as Map<String, dynamic>;
-        print('   Item ${i + 1}:');
-        print('      id: ${item['id']}');
-        print('      itemName: ${item['itemName']}');
-        print('      category: ${item['category']}');
-        print('      quantity: ${item['quantity']}');
-        print('      sellingprice: ${item['sellingprice']}');
-        print('      sellingprice_original: ${item['sellingprice_original']}');
-        print('      costprice: ${item['costprice']}');
-        print('      packsize: ${item['packsize']}');
-        print('      inventoryid: ${item['inventoryid']}');
-        print('      packagingid: ${item['packagingid']}');
-        print('      salesid: ${item['salesid']}');
-        print('      transactionstatusid: ${item['transactionstatusid']}');
-        print('      servicepointid: ${item['servicepointid']}');
-        print('      ordernumber: ${item['ordernumber']}');
-        print('      complimentaryid: ${item['complimentaryid']}');
-        print('      ipdid: ${item['ipdid']}');
-        print('      remarks: ${item['remarks']}');
-        print('      notes: ${item['notes']}');
-      }
-
-      print('\n📤 FULL JSON PAYLOAD:');
       final jsonPayload = json.encode(saleData);
-      print(jsonPayload);
 
       final response = await http.post(
         Uri.parse("$baseurl/sales/"),
@@ -500,32 +300,18 @@ class ApiService extends GetxService {
         body: jsonPayload,
       );
 
-      print('\n📥 RESPONSE:');
-      print('   Status Code: ${response.statusCode}');
-      print('   Response Body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ SALE CREATED SUCCESSFULLY');
-        print('═══════════════════════════════════════════════════');
         return json.decode(response.body);
       } else {
-        print('❌ SALE CREATION FAILED');
-        print('   Status: ${response.statusCode}');
-        print('   Error: ${response.body}');
-        print('═══════════════════════════════════════════════════');
         throw Exception("Failed to create sale: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print('❌ ERROR CREATING SALE: $e');
-      print('═══════════════════════════════════════════════════');
       rethrow;
     }
   }
 
   Future<Map<String, dynamic>> fetchSingleTransaction(String saleId) async {
     try {
-      print('FETCHING SINGLE TRANSACTION REQUEST STARTED');
-
       final token = await getAccessToken();
 
       final headers = <String, String>{
@@ -541,24 +327,18 @@ class ApiService extends GetxService {
         headers: headers,
       );
 
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
         throw Exception("Failed to fetch transaction: ${response.statusCode}");
       }
     } catch (e) {
-      print('Error fetching transaction: $e');
       rethrow;
     }
   }
 
   Future<Map<String, dynamic>> createPayment(Map<String, dynamic> paymentData) async {
     try {
-      print('CREATING PAYMENT REQUEST STARTED');
-
       final token = await getAccessToken();
 
       final headers = <String, String>{
@@ -575,26 +355,18 @@ class ApiService extends GetxService {
         body: json.encode(paymentData),
       );
 
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
         throw Exception("Failed to create payment: ${response.statusCode}");
       }
     } catch (e) {
-      print('Error creating payment: $e');
       rethrow;
     }
   }
 
   Future<Map<String, dynamic>> postSale(Map<String, dynamic> saleData) async {
     try {
-      print('═══════════════════════════════════════════════════');
-      print('POSTING SALE TO /rest/payment/');
-      print('═══════════════════════════════════════════════════');
-
       final token = await getAccessToken();
 
       final headers = <String, String>{
@@ -605,19 +377,7 @@ class ApiService extends GetxService {
         headers['Authorization'] = 'Bearer $token';
       }
 
-      print('📤 REQUEST URL: $baseurl/payment/');
-      print('📋 REQUEST HEADERS:');
-      headers.forEach((key, value) {
-        if (key == 'Authorization') {
-          print('   $key: Bearer ${value.substring(7, 27)}...');
-        } else {
-          print('   $key: $value');
-        }
-      });
-
-      print('\n📦 SALE PAYLOAD:');
       final jsonPayload = json.encode(saleData);
-      print(jsonPayload);
 
       final response = await http.post(
         Uri.parse("$baseurl/payment/"),
@@ -625,45 +385,13 @@ class ApiService extends GetxService {
         body: jsonPayload,
       );
 
-      print('\n📥 RESPONSE:');
-      print('   Status Code: ${response.statusCode}');
-      print('   Response Body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ SALE POSTED SUCCESSFULLY');
-        print('═══════════════════════════════════════════════════');
         return json.decode(response.body);
       } else {
-        print('❌ SALE POST FAILED');
-        print('   Status: ${response.statusCode}');
-        print('   Error: ${response.body}');
-        print('═══════════════════════════════════════════════════');
         throw Exception("Failed to post sale: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
-      print('❌ ERROR POSTING SALE: $e');
-      print('═══════════════════════════════════════════════════');
       rethrow;
     }
-  }
-
-  // Helper method to validate fields in logging
-  String _validateField(dynamic value, String expectedType) {
-    if (value == null) {
-      return '⚠️ NULL';
-    }
-    if (value is String && value.isEmpty) {
-      return '⚠️ EMPTY';
-    }
-    if (expectedType == 'UUID') {
-      final uuidRegex = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
-      if (value is String && !uuidRegex.hasMatch(value)) {
-        return '❌ INVALID UUID';
-      }
-    }
-    if (expectedType == 'number' && value is! int && value is! double) {
-      return '❌ NOT A NUMBER';
-    }
-    return '✓';
   }
 }

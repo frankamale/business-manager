@@ -25,7 +25,6 @@ class ServicePointController extends GetxController {
   // Load service points from database (cache)
   Future<void> loadServicePointsFromCache() async {
     try {
-      print('📍 Loading service points from cache...');
       isLoadingServicePoints.value = true;
 
       final points = await _dbHelper.getServicePoints();
@@ -35,32 +34,24 @@ class ServicePointController extends GetxController {
       salesServicePoints.value = salesPoints;
 
       isLoadingServicePoints.value = false;
-
-      print('✅ Loaded ${points.length} service points from cache');
-      print('   Sales service points: ${salesPoints.length}');
     } catch (e) {
       isLoadingServicePoints.value = false;
-      print('❌ Error loading service points from cache: $e');
     }
   }
 
   // Sync service points from API to local database
   Future<void> syncServicePointsFromAPI({bool showMessage = false}) async {
     try {
-      print('📍 Syncing service points from API...');
       isSyncingServicePoints.value = true;
 
       // Fetch service points from API
       final points = await _apiService.fetchServicePoints();
 
       // Save service points to database
-      print('Saving ${points.length} service points to local database...');
       await _dbHelper.insertServicePoints(points);
 
       // Update sync metadata
       await _dbHelper.updateSyncMetadata('service_points', 'success', points.length);
-
-      print('✅ Successfully synced ${points.length} service points to database');
 
       // Reload service points after sync
       await loadServicePointsFromCache();
@@ -77,7 +68,6 @@ class ServicePointController extends GetxController {
     } catch (e) {
       isSyncingServicePoints.value = false;
       await _dbHelper.updateSyncMetadata('service_points', 'failed', 0, e.toString());
-      print('❌ Error syncing service points from API: $e');
 
       if (showMessage) {
         Get.snackbar(

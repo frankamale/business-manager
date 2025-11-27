@@ -23,19 +23,16 @@ class CustomerController extends GetxController {
   // Load customers from cache (database)
   Future<void> loadCustomersFromCache() async {
     try {
-      print('👥 Loading customers from cache...');
       final cachedCustomers = await _dbHelper.getCustomers();
       customers.value = cachedCustomers;
-      print('✅ Loaded ${cachedCustomers.length} customers from cache');
     } catch (e) {
-      print('❌ Error loading customers from cache: $e');
+      // Handle error silently
     }
   }
 
   // Sync customers from API and save to database
   Future<void> syncCustomersFromAPI({bool showMessage = false}) async {
     try {
-      print('👥 Syncing customers from API...');
       isLoadingCustomers.value = true;
 
       final fetchedCustomers = await _apiService.fetchCustomers();
@@ -52,8 +49,6 @@ class CustomerController extends GetxController {
 
       isLoadingCustomers.value = false;
 
-      print('✅ Successfully synced ${fetchedCustomers.length} customers from API');
-
       if (showMessage) {
         Get.snackbar(
           'Success',
@@ -64,7 +59,6 @@ class CustomerController extends GetxController {
     } catch (e) {
       isLoadingCustomers.value = false;
       await _dbHelper.updateSyncMetadata('customers', 'failed', 0, e.toString());
-      print('❌ Error syncing customers from API: $e');
 
       if (showMessage) {
         Get.snackbar(

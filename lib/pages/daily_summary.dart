@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
+import '../services/print_service.dart';
 
 class DailySummary extends StatefulWidget {
   const DailySummary({super.key});
@@ -213,9 +214,13 @@ class _DailySummaryState extends State<DailySummary> {
 
     final overallTotal = summaryData?['overallTotal'] as Map<String, dynamic>? ?? {};
     final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
-    final totalPaid = (overallTotal['totalPaid'] as num?)?.toDouble() ?? 0.0;
-    final totalBalance = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
+    final fullyPaidAmount = (overallTotal['fullyPaidAmount'] as num?)?.toDouble() ?? 0.0;
+    final partialPaymentAmount = (overallTotal['partialPaymentAmount'] as num?)?.toDouble() ?? 0.0;
+    final pendingAmount = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
     final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
+    final fullyPaidTransactions = overallTotal['fullyPaidTransactions'] as int? ?? 0;
+    final partialPaymentTransactions = overallTotal['partialPaymentTransactions'] as int? ?? 0;
+    final unpaidTransactions = overallTotal['unpaidTransactions'] as int? ?? 0;
 
     final paymentSummary = summaryData?['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
     final categorySummary = summaryData?['categorySummary'] as List<Map<String, dynamic>>? ?? [];
@@ -430,6 +435,40 @@ class _DailySummaryState extends State<DailySummary> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Payment Status Cards
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatusCard(
+                            'Fully Paid',
+                            fullyPaidAmount,
+                            fullyPaidTransactions,
+                            Colors.green,
+                            Icons.check_circle,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatusCard(
+                            'Partial',
+                            partialPaymentAmount,
+                            partialPaymentTransactions,
+                            Colors.orange,
+                            Icons.timelapse,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    _buildStatusCard(
+                      'Pending Amount',
+                      pendingAmount,
+                      unpaidTransactions,
+                      Colors.red,
+                      Icons.pending_actions,
+                    ),
+                    const SizedBox(height: 24),
+
                     // Payment Methods Table
                     if (paymentData.isNotEmpty)
                       _buildSummaryTable(
@@ -488,7 +527,7 @@ class _DailySummaryState extends State<DailySummary> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => _showPrintOptions(),
                       icon: const Icon(Icons.print),
                       label: const Text("Print"),
                       style: OutlinedButton.styleFrom(
@@ -539,6 +578,151 @@ class _DailySummaryState extends State<DailySummary> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(
+    String title,
+    double amount,
+    int transactions,
+    Color color,
+    IconData icon,
+  ) {
+    final currencyFormat = NumberFormat('#,###', 'en_US');
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: color, size: 24),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '$transactions',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'UGX ${currencyFormat.format(amount)}',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showPrintOptions() async {
+    if (summaryData == null) {
+      Get.snackbar(
+        'Error',
+        'No data available to print',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    await Get.dialog(
+      AlertDialog(
+        title: Text('Print Options'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.print, color: Colors.blue),
+              title: Text('Print Summary'),
+              subtitle: Text('Print daily summary report'),
+              onTap: () async {
+                Get.back();
+                try {
+                  await PrintService.printDailySummary(
+                    date: selectedDate,
+                    summaryData: summaryData!,
+                  );
+                } catch (e) {
+                  Get.snackbar(
+                    'Print Error',
+                    'Failed to print: $e',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red.shade700,
+                    colorText: Colors.white,
+                  );
+                }
+              },
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.share, color: Colors.green),
+              title: Text('Share PDF'),
+              subtitle: Text('Share summary as PDF file'),
+              onTap: () async {
+                Get.back();
+                try {
+                  await PrintService.shareDailySummary(
+                    date: selectedDate,
+                    summaryData: summaryData!,
+                  );
+                } catch (e) {
+                  Get.snackbar(
+                    'Share Error',
+                    'Failed to share: $e',
+                    snackPosition: SnackPosition.BOTTOM,
+                    backgroundColor: Colors.red.shade700,
+                    colorText: Colors.white,
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Cancel'),
+          ),
+        ],
       ),
     );
   }

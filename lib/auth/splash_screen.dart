@@ -62,8 +62,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _authenticateApp() async {
     try {
-      print(' Starting app initialization...');
-
       setState(() {
         _statusMessage = 'Checking authentication...';
       });
@@ -80,7 +78,6 @@ class _SplashScreenState extends State<SplashScreen>
             _isOfflineMode = true;
             _statusMessage = 'No internet connection';
           });
-          print('❌ No network connection on first launch');
           return; // Show retry button, don't loop
         }
 
@@ -115,12 +112,9 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
-        print('✅ App initialization completed successfully');
         Get.off(() => const Login());
       }
     } catch (e) {
-      print('❌ Error during initialization: $e');
-
       setState(() {
         _hasError = true;
         _statusMessage = 'Error loading app';
@@ -140,19 +134,16 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _initializeControllers() {
-    print('📱 Initializing controllers...');
     Get.put(AuthController());
     Get.put(ServicePointController());
     Get.put(InventoryController());
     Get.put(SalesController());
     Get.put(PaymentController());
     Get.put(CustomerController());
-    print('✅ Controllers initialized');
   }
 
   Future<void> _loadDataWithSmartSync() async {
     final hasNetwork = await NetworkHelper.hasConnection();
-    print('🌐 Network available: $hasNetwork');
 
     // Get controllers
     final authController = Get.find<AuthController>();
@@ -213,7 +204,6 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Check if we have minimum required data
     _hasCachedData = hasUsers && hasServicePoints;
-    print('📊 Cached data available: $_hasCachedData');
   }
 
   @override
