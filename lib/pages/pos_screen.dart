@@ -203,16 +203,16 @@ class _PosScreenState extends State<PosScreen> {
     // Show mode indicator after build completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        Get.snackbar(
-          widget.isViewOnly ? 'View Mode' : 'Edit Mode',
-          widget.isViewOnly ? 'Viewing existing sale' : 'Editing existing sale',
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 2),
-          backgroundColor: widget.isViewOnly ? Colors.blue[100] : Colors.orange[100],
-          colorText: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900],
-          icon: Icon(widget.isViewOnly ? Icons.visibility : Icons.edit, color: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900]),
-          margin: const EdgeInsets.all(8),
-        );
+        // Get.snackbar(
+        //   widget.isViewOnly ? 'View Mode' : 'Edit Mode',
+        //   widget.isViewOnly ? 'Viewing existing sale' : 'Editing existing sale',
+        //   snackPosition: SnackPosition.TOP,
+        //   duration: const Duration(seconds: 2),
+        //   backgroundColor: widget.isViewOnly ? Colors.blue[100] : Colors.orange[100],
+        //   colorText: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900],
+        //   icon: Icon(widget.isViewOnly ? Icons.visibility : Icons.edit, color: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900]),
+        //   margin: const EdgeInsets.all(8),
+        // );
       }
     });
   }
