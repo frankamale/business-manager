@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'inventory_items_screen.dart';
 import 'payment_screen.dart';
 import '../models/inventory_item.dart';
 import '../models/service_point.dart';
@@ -19,6 +18,7 @@ class PosScreen extends StatefulWidget {
   final String? existingNotes;
   final String? existingSalespersonId;
   final ServicePoint? servicePoint;
+  final bool isViewOnly;
 
   const PosScreen({
     super.key,
@@ -30,6 +30,7 @@ class PosScreen extends StatefulWidget {
     this.existingNotes,
     this.existingSalespersonId,
     this.servicePoint,
+    this.isViewOnly = false,
   });
 
   @override
@@ -199,15 +200,15 @@ class _PosScreenState extends State<PosScreen> {
       }
     });
 
-    // Show edit mode indicator
+    // Show mode indicator
     Get.snackbar(
-      'Edit Mode',
-      'Editing existing sale',
+      widget.isViewOnly ? 'View Mode' : 'Edit Mode',
+      widget.isViewOnly ? 'Viewing existing sale' : 'Editing existing sale',
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 2),
-      backgroundColor: Colors.orange[100],
-      colorText: Colors.orange[900],
-      icon: Icon(Icons.edit, color: Colors.orange[900]),
+      backgroundColor: widget.isViewOnly ? Colors.blue[100] : Colors.orange[100],
+      colorText: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900],
+      icon: Icon(widget.isViewOnly ? Icons.visibility : Icons.edit, color: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900]),
       margin: const EdgeInsets.all(8),
     );
   }
@@ -301,7 +302,7 @@ class _PosScreenState extends State<PosScreen> {
 
     // If update was successful, go back to sales listing
     if (result == true) {
-      Get.back(result: true);
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -503,30 +504,49 @@ class _PosScreenState extends State<PosScreen> {
                           child: Center(child: CircularProgressIndicator()),
                         );
                       }
-                      return DropdownButtonFormField<String>(
-                        value: selectedCustomerId,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                      if (widget.isViewOnly) {
+                        final customer = customerController.customers.firstWhereOrNull((c) => c.id == selectedCustomerId);
+                        final customerName = customer?.fullnames ?? '';
+                        return TextField(
+                          controller: TextEditingController(text: customerName),
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            isDense: true,
                           ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                        );
+                      } else {
+                        return DropdownButtonFormField<String>(
+                          value: selectedCustomerId,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            isDense: true,
                           ),
-                          isDense: true,
-                        ),
-                        items: customerController.customers.map((customer) {
-                          return DropdownMenuItem<String>(
-                            value: customer.id,
-                            child: Text(customer.fullnames),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            selectedCustomerId = newValue;
-                          });
-                        },
-                      );
+                          items: customerController.customers.map((customer) {
+                            return DropdownMenuItem<String>(
+                              value: customer.id,
+                              child: Text(customer.fullnames),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedCustomerId = newValue;
+                            });
+                          },
+                        );
+                      }
                     }),
                   ),
                 ],
@@ -545,7 +565,24 @@ class _PosScreenState extends State<PosScreen> {
                       ),
                     ),
                     Expanded(
-                      child: DropdownButtonFormField<String>(
+                      child: widget.isViewOnly ? (() {
+                        final salesperson = salespeople.firstWhereOrNull((u) => u.salespersonid == selectedSalespersonId);
+                        final salespersonName = salesperson?.staff ?? '';
+                        return TextField(
+                          controller: TextEditingController(text: salespersonName),
+                          readOnly: true,
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            isDense: true,
+                          ),
+                        );
+                      })() : DropdownButtonFormField<String>(
                         value: selectedSalespersonId,
                         decoration: InputDecoration(
                           contentPadding: const EdgeInsets.symmetric(
@@ -588,6 +625,7 @@ class _PosScreenState extends State<PosScreen> {
                   Expanded(
                     child: TextField(
                       controller: refController,
+                      readOnly: widget.isViewOnly,
                       decoration: InputDecoration(
                         hintText: "Reference number",
                         contentPadding: const EdgeInsets.symmetric(
@@ -618,6 +656,7 @@ class _PosScreenState extends State<PosScreen> {
                   Expanded(
                     child: TextField(
                       controller: notesController,
+                      readOnly: widget.isViewOnly,
                       decoration: InputDecoration(
                         hintText: "Add notes",
                         contentPadding: const EdgeInsets.symmetric(
@@ -747,6 +786,7 @@ class _PosScreenState extends State<PosScreen> {
                                                     width: 80,
                                                     child: TextField(
                                                       keyboardType: TextInputType.number,
+                                                      readOnly: widget.isViewOnly,
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w600,
@@ -767,7 +807,7 @@ class _PosScreenState extends State<PosScreen> {
                                                         ),
                                                       ),
                                                       controller: _priceControllers[item['id']],
-                                                      onChanged: (value) {
+                                                      onChanged: widget.isViewOnly ? null : (value) {
                                                         if (value.isEmpty) {
                                                           _updatePrice(index, 0);
                                                         } else {
@@ -794,7 +834,7 @@ class _PosScreenState extends State<PosScreen> {
                                         Row(
                                           children: [
                                             InkWell(
-                                              onTap: () => _updateQuantity(
+                                              onTap: widget.isViewOnly ? null : () => _updateQuantity(
                                                 index,
                                                 item['quantity'] - 1,
                                               ),
@@ -822,7 +862,7 @@ class _PosScreenState extends State<PosScreen> {
                                               ),
                                             ),
                                             InkWell(
-                                              onTap: () => _updateQuantity(
+                                              onTap: widget.isViewOnly ? null : () => _updateQuantity(
                                                 index,
                                                 item['quantity'] + 1,
                                               ),
@@ -870,13 +910,13 @@ class _PosScreenState extends State<PosScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12),
             child: widget.existingSalesId != null
-                ? // Edit mode - show Cancel and Update buttons
+                ? // Edit/View mode - show Cancel and Update/Close buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => Get.back(),
+                          onPressed: () => Navigator.of(context).pop(),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             backgroundColor: Colors.grey[700],
@@ -893,17 +933,17 @@ class _PosScreenState extends State<PosScreen> {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: _updateSale,
+                          onPressed: widget.isViewOnly ? () => Navigator.of(context).pop() : _updateSale,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Colors.orange[700],
+                            backgroundColor: widget.isViewOnly ? Colors.blue[700] : Colors.orange[700],
                             foregroundColor: Colors.white,
                             elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: const Text("Update Sale"),
+                          child: Text(widget.isViewOnly ? "Close" : "Update Sale"),
                         ),
                       ),
                     ],
@@ -964,7 +1004,7 @@ class _PosScreenState extends State<PosScreen> {
                   const SizedBox(width: 3),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: widget.isViewOnly ? null : () {
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,

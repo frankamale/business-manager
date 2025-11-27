@@ -221,15 +221,11 @@ class _SalesListingState extends State<SalesListing> {
                       tooltip: 'Print',
                     ),
                     IconButton(
-                      onPressed: uploadStatus == 'uploaded'
-                          ? null
-                          : () => _handleEdit(sale),
+                      onPressed: () => _handleEdit(sale),
                       icon: Icon(Icons.edit_note_outlined),
-                      color: uploadStatus == 'uploaded'
-                          ? Colors.grey.shade400
-                          : Colors.green.shade600,
+                      color: Colors.green.shade600,
                       tooltip: uploadStatus == 'uploaded'
-                          ? 'Cannot edit uploaded sale'
+                          ? 'View'
                           : 'Edit',
                       padding: EdgeInsets.all(8),
                     ),
@@ -272,19 +268,19 @@ class _SalesListingState extends State<SalesListing> {
                             ],
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'synchronise',
-                          child: Row(
-                            children: [
-                              Icon(Icons.sync, size: 18, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'Synchronise',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // PopupMenuItem(
+                        //   value: 'synchronise',
+                        //   child: Row(
+                        //     children: [
+                        //       Icon(Icons.sync, size: 18, color: Colors.white),
+                        //       SizedBox(width: 8),
+                        //       Text(
+                        //         'Synchronise',
+                        //         style: TextStyle(color: Colors.white),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                       icon: Icon(Icons.more_vert),
                       color: Colors.blue.shade600,
@@ -642,18 +638,6 @@ class _SalesListingState extends State<SalesListing> {
       return;
     }
 
-    // Prevent editing uploaded sales
-    if (uploadStatus == 'uploaded') {
-      Get.snackbar(
-        'Cannot Edit',
-        'This sale has been uploaded to the server and cannot be edited.\nReceipt: $receiptNumber',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.shade700,
-        colorText: Colors.white,
-        duration: Duration(seconds: 4),
-      );
-      return;
-    }
 
     try {
       // Show loading indicator
@@ -760,6 +744,7 @@ class _SalesListingState extends State<SalesListing> {
           existingReference: reference,
           existingNotes: notes,
           existingSalespersonId: salespersonId,
+          isViewOnly: uploadStatus == 'uploaded',
         ),
         transition: Transition.rightToLeft,
       );
