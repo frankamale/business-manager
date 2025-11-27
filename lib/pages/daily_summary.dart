@@ -265,7 +265,7 @@ for (var payment in paymentSummary) {
       break;
     case 'mobile':
       icon = Icons.phone_android;
-      color = Colors.orange; 
+      color = Colors.orange;
       label = 'Mobile Money';
       break;
     default:
