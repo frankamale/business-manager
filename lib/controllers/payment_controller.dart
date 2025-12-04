@@ -4,6 +4,8 @@ import 'package:sqflite/sqflite.dart';
 import '../services/api_services.dart';
 import '../models/inventory_item.dart';
 import '../database/db_helper.dart';
+import '../utils/network_helper.dart';
+import 'sales_controller.dart';
 
 class PaymentController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
@@ -32,7 +34,6 @@ class PaymentController extends GetxController {
         }
       }
     } catch (e) {
-      // Default to 1 if there's an error
       receiptCounter.value = 1;
     }
   }
@@ -369,6 +370,8 @@ class PaymentController extends GetxController {
         customerName: customerName,
       );
 
+      await _attemptUploadAfterSave(saleId);
+
       return result;
     } catch (e) {
       rethrow;
@@ -451,6 +454,9 @@ class PaymentController extends GetxController {
         customerName: customerName,
       );
 
+      // Attempt to upload updated sale to server automatically
+      await _attemptUploadAfterSave(existingSalesId);
+
       return result;
     } catch (e) {
       rethrow;
@@ -472,6 +478,31 @@ class PaymentController extends GetxController {
   // Validate payment
   bool validatePayment(double amountTendered, double totalAmount) {
     return amountTendered >= totalAmount;
+  }
+
+  // Attempt to upload sale to server after saving locally
+  Future<void> _attemptUploadAfterSave(String saleId) async {
+    try {
+      // Check network connectivity first
+      final hasConnection = await NetworkHelper.hasConnection();
+      
+      if (!hasConnection) {
+        print('No network connection - sale will be uploaded later when connection is available');
+        return;
+      }
+
+      print('Attempting to upload sale $saleId to server...');
+      
+      // Get the SalesController and upload the sale
+      final salesController = Get.find<SalesController>();
+      await salesController.uploadSaleToServer(saleId);
+      
+      print('Sale $saleId uploaded successfully');
+    } catch (e) {
+      // Upload failed - sale remains with 'pending' status for later retry
+      print('Failed to upload sale $saleId: $e');
+      print('Sale will be uploaded later when retrying from sales listing');
+    }
   }
 }
 
