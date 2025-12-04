@@ -10,7 +10,6 @@ import '../controllers/auth_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../services/print_service.dart';
 import '../database/db_helper.dart';
-import '../models/users.dart';
 import '../models/sale_transaction.dart';
 
 class PosScreen extends StatefulWidget {
@@ -48,7 +47,6 @@ class _PosScreenState extends State<PosScreen> {
    final AuthController authController = Get.find();
    String selectedCategory = 'All';
    final TextEditingController searchController = TextEditingController();
-   List<User> salespeople = [];
    String? selectedSalespersonId;
 
    String formatMoney(double amount) {
@@ -136,11 +134,6 @@ class _PosScreenState extends State<PosScreen> {
     inventoryController.searchInventory(searchController.text);
   }
 
-  Future<void> _loadSalespeople() async {
-    salespeople = await authController.getSalespeople();
-    setState(() {});
-  }
-
   @override
   void initState() {
     super.initState();
@@ -161,7 +154,6 @@ class _PosScreenState extends State<PosScreen> {
       }
     }
 
-    _loadSalespeople();
     searchController.addListener(_onSearchChanged);
 
     // Filter items by service point type if provided
@@ -313,9 +305,9 @@ class _PosScreenState extends State<PosScreen> {
 
         // Get salesperson name
         String issuedBy = '';
-        if (selectedSalespersonId != null) {
-          final salesperson = salespeople.firstWhereOrNull((u) => u.salespersonid == selectedSalespersonId);
-          issuedBy = salesperson?.staff ?? '';
+        final currentUser = authController.currentUser.value;
+        if (currentUser != null) {
+          issuedBy = currentUser.staff;
         }
 
         // Print the bill
@@ -654,7 +646,7 @@ class _PosScreenState extends State<PosScreen> {
               ),
               SizedBox(height: isKeyboardVisible ? 4 : 8),
 
-              // Salesperson Dropdown
+              // Salesperson Display
               if (!isKeyboardVisible) ...[
                 Row(
                   children: [
@@ -666,50 +658,24 @@ class _PosScreenState extends State<PosScreen> {
                       ),
                     ),
                     Expanded(
-                      child: widget.isViewOnly ? (() {
-                        final salesperson = salespeople.firstWhereOrNull((u) => u.salespersonid == selectedSalespersonId);
-                        final salespersonName = salesperson?.staff ?? '';
+                      child: Obx(() {
+                        final currentUser = authController.currentUser.value;
+                        final salespersonName = currentUser?.staff ?? 'Unknown User';
                         return Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.grey),
                             borderRadius: BorderRadius.circular(8),
+                            color: Colors.grey.shade50,
                           ),
                           child: Text(
                             salespersonName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 16),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                           ),
                         );
-                      })() : DropdownButtonFormField<String>(
-                        value: selectedSalespersonId,
-                        decoration: InputDecoration(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          isDense: true,
-                        ),
-                        items: salespeople.map((user) {
-                          return DropdownMenuItem<String>(
-                            value: user.salespersonid,
-                            child: Text(
-                              user.staff,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            selectedSalespersonId = newValue;
-                          });
-                        },
-                      ),
+                      }),
                     ),
                   ],
                 ),
