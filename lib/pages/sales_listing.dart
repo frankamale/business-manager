@@ -206,7 +206,13 @@ class _SalesListingState extends State<SalesListing> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: cancelled > 0 ? Colors.red.shade700 : Colors.blue.shade700,
+                    color: cancelled > 0 
+                        ? Colors.red.shade700 
+                        : uploadStatus == 'uploaded' 
+                            ? Colors.green.shade700
+                            : uploadStatus == 'failed'
+                                ? Colors.red.shade700
+                                : Colors.orange.shade700,
                   ),
                 ),
                 Text(
@@ -370,75 +376,23 @@ class _SalesListingState extends State<SalesListing> {
 
             // Status indicators
             SizedBox(height: 6),
-            Row(
-              children: [
-                // Upload status badge
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: uploadStatus == 'uploaded'
-                        ? Colors.green.shade100
-                        : uploadStatus == 'failed'
-                            ? Colors.red.shade100
-                            : Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        uploadStatus == 'uploaded'
-                            ? Icons.cloud_done
-                            : uploadStatus == 'failed'
-                                ? Icons.cloud_off
-                                : Icons.cloud_upload,
-                        size: 12,
-                        color: uploadStatus == 'uploaded'
-                            ? Colors.green.shade700
-                            : uploadStatus == 'failed'
-                                ? Colors.red.shade700
-                                : Colors.orange.shade700,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        uploadStatus == 'uploaded'
-                            ? "UPLOADED"
-                            : uploadStatus == 'failed'
-                                ? "UPLOAD FAILED"
-                                : "PENDING UPLOAD",
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: uploadStatus == 'uploaded'
-                              ? Colors.green.shade700
-                              : uploadStatus == 'failed'
-                                  ? Colors.red.shade700
-                                  : Colors.orange.shade700,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+            if (cancelled > 0) ...[
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  "CANCELLED",
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.red.shade700,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (cancelled > 0) ...[
-                  SizedBox(width: 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade100,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      "CANCELLED",
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+            ],
 
             // Show upload error if present
             if (uploadError != null && uploadError.isNotEmpty) ...[
