@@ -7,7 +7,11 @@ import '../models/service_point.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/payment_controller.dart';
+import '../services/print_service.dart';
+import '../database/db_helper.dart';
 import '../models/users.dart';
+import '../models/sale_transaction.dart';
 
 class PosScreen extends StatefulWidget {
   final String? existingSalesId;
@@ -203,16 +207,7 @@ class _PosScreenState extends State<PosScreen> {
     // Show mode indicator after build completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Get.snackbar(
-        //   widget.isViewOnly ? 'View Mode' : 'Edit Mode',
-        //   widget.isViewOnly ? 'Viewing existing sale' : 'Editing existing sale',
-        //   snackPosition: SnackPosition.TOP,
-        //   duration: const Duration(seconds: 2),
-        //   backgroundColor: widget.isViewOnly ? Colors.blue[100] : Colors.orange[100],
-        //   colorText: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900],
-        //   icon: Icon(widget.isViewOnly ? Icons.visibility : Icons.edit, color: widget.isViewOnly ? Colors.blue[900] : Colors.orange[900]),
-        //   margin: const EdgeInsets.all(8),
-        // );
+
       }
     });
   }
@@ -276,7 +271,102 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-  Future<void> _updateSale() async {
+  Future<void> _saveBill() async {
+    if (selectedItems.isEmpty) {
+      Get.snackbar('Error', 'No items in cart',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900]);
+      return;
+    }
+
+    try {
+      final paymentController = Get.find<PaymentController>();
+      final result = await paymentController.processSaleAndPayment(
+        cartItems: selectedItems,
+        customerId: selectedCustomerId,
+        reference: refController.text,
+        notes: notesController.text,
+        salespersonId: selectedSalespersonId,
+        servicePointId: widget.servicePoint?.id,
+        amountTendered: 0,
+      );
+
+      if (result['success'] == true) {
+        // Get the sale transactions for printing
+        final db = await DatabaseHelper().database;
+        final maps = await db!.query(
+          'sales_transactions',
+          where: 'receiptnumber = ?',
+          whereArgs: [result['receiptnumber']],
+        );
+        final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
+
+        // Get customer name
+        String customerName = 'Cash Customer';
+        if (selectedCustomerId != null) {
+          final customer = customerController.getCustomerById(selectedCustomerId!);
+          if (customer != null) {
+            customerName = customer.fullnames;
+          }
+        }
+
+        // Get salesperson name
+        String issuedBy = '';
+        if (selectedSalespersonId != null) {
+          final salesperson = salespeople.firstWhereOrNull((u) => u.salespersonid == selectedSalespersonId);
+          issuedBy = salesperson?.staff ?? '';
+        }
+
+        // Print the bill
+        await PrintService.printBill(
+          receiptNumber: result['receiptnumber'],
+          customerName: customerName,
+          date: DateTime.now(),
+          items: items,
+          totalAmount: totalAmount,
+          issuedBy: issuedBy,
+          notes: notesController.text,
+        );
+
+        // Clear the cart
+        setState(() {
+          // Dispose all price controllers
+          for (var controller in _priceControllers.values) {
+            controller.dispose();
+          }
+          _priceControllers.clear();
+          selectedItems.clear();
+          refController.clear();
+          notesController.clear();
+          final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+          selectedCustomerId = cashCustomer?.id;
+          // Reset salesperson to logged-in user
+          final currentUser = authController.currentUser.value;
+          if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+            selectedSalespersonId = currentUser.salespersonid;
+          }
+        });
+
+        Get.snackbar('Success', 'Bill saved and printed successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green[100],
+            colorText: Colors.green[900]);
+      } else {
+        Get.snackbar('Error', 'Failed to save bill',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red[100],
+            colorText: Colors.red[900]);
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'An error occurred: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900]);
+    }
+  }
+
+   Future<void> _updateSale() async {
     if (selectedItems.isEmpty) {
       Get.snackbar('Error', 'No items in cart',
           snackPosition: SnackPosition.BOTTOM,
@@ -951,17 +1041,32 @@ class _PosScreenState extends State<PosScreen> {
                     children: [
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: widget.existingSalesId != null ? _updateSale : _navigateToPayment,
+                          onPressed: () {
+                            final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+                            final bool isNewSale = widget.existingSalesId == null;
+                            
+                            if (isNewSale && isWaiter) {
+                              _saveBill();
+                            } else if (isNewSale) {
+                              _navigateToPayment();
+                            } else {
+                              _updateSale();
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: widget.existingSalesId != null ? Colors.orange[700] : Colors.blue[700],
+                            backgroundColor: Colors.purple[700],
                             foregroundColor: Colors.white,
                             elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          child: Text(widget.existingSalesId != null ? "PAY" : "PAY"),
+                          child: Text(() {
+                            final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+                            final bool isNewSale = widget.existingSalesId == null;
+                            return (isNewSale && isWaiter) ? "SAVE" : "PAY";
+                          }()),
                         ),
                       ),
                       const SizedBox(width: 3),
@@ -1066,47 +1171,6 @@ class _PosScreenState extends State<PosScreen> {
                                     ),
                                   ),
 
-                                  // Category Filter
-                                  // Obx(() {
-                                  //   if (inventoryController.categories.isEmpty) {
-                                  //     return const SizedBox.shrink();
-                                  //   }
-                                  //
-                                  //   return Container(
-                                  //     height: 50,
-                                  //     color: Colors.white,
-                                  //     child: ListView.builder(
-                                  //       scrollDirection: Axis.horizontal,
-                                  //       padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  //       itemCount: inventoryController.categories.length + 1,
-                                  //       itemBuilder: (context, index) {
-                                  //         final category = index == 0 ? 'All' : inventoryController.categories[index - 1];
-                                  //         final isSelected = selectedCategory == category;
-                                  //
-                                  //         return Padding(
-                                  //           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                  //           child: ChoiceChip(
-                                  //             label: Text(category),
-                                  //             selected: isSelected,
-                                  //             onSelected: (selected) {
-                                  //               setState(() {
-                                  //                 selectedCategory = category;
-                                  //               });
-                                  //               inventoryController.filterByCategory(category);
-                                  //               searchController.clear();
-                                  //             },
-                                  //             selectedColor: Colors.blue[700],
-                                  //             labelStyle: TextStyle(
-                                  //               color: isSelected ? Colors.white : Colors.black87,
-                                  //               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  //             ),
-                                  //             backgroundColor: Colors.grey[200],
-                                  //           ),
-                                  //         );
-                                  //       },
-                                  //     ),
-                                  //   );
-                                  // }),
 
                                   const Divider(height: 1),
 
@@ -1185,7 +1249,7 @@ class _PosScreenState extends State<PosScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text("Close"),
+                      child: const Text("Close"), 
                     ),
                   ),
                 ],

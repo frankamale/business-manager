@@ -261,6 +261,290 @@ class PrintService {
     return pdf.save();
   }
 
+  // Generate bill PDF
+  static Future<Uint8List> generateBillPdf({
+    required String receiptNumber,
+    required String customerName,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    required double totalAmount,
+    String? issuedBy,
+    String? notes,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.roll80,
+        margin: pw.EdgeInsets.all(8),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Company Header
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      AppConfig.companyName,
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      AppConfig.appName,
+                      style: pw.TextStyle(fontSize: 12),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'BILL',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 1),
+
+              // Bill Info
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Bill No:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text(receiptNumber,
+                      style: pw.TextStyle(
+                          fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Date:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text(_dateFormat.format(date),
+                      style: pw.TextStyle(fontSize: 10)),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Customer:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text(customerName, style: pw.TextStyle(fontSize: 10)),
+                ],
+              ),
+              if (issuedBy != null && issuedBy.isNotEmpty) ...[
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Served By:', style: pw.TextStyle(fontSize: 10)),
+                    pw.Text(issuedBy, style: pw.TextStyle(fontSize: 10)),
+                  ],
+                ),
+              ],
+              pw.SizedBox(height: 4),
+              pw.Divider(thickness: 1),
+
+              // Items Header
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    flex: 3,
+                    child: pw.Text('Item',
+                        style: pw.TextStyle(
+                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  ),
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text('Qty',
+                        textAlign: pw.TextAlign.center,
+                        style: pw.TextStyle(
+                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  ),
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text('Price',
+                        textAlign: pw.TextAlign.right,
+                        style: pw.TextStyle(
+                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  ),
+                  pw.Expanded(
+                    flex: 2,
+                    child: pw.Text('Amount',
+                        textAlign: pw.TextAlign.right,
+                        style: pw.TextStyle(
+                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+              ),
+              pw.Divider(thickness: 0.5),
+
+              // Items List
+              ...items.map((item) => pw.Column(
+                    children: [
+                      pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Expanded(
+                            flex: 3,
+                            child: pw.Text(
+                              item.inventoryname,
+                              style: pw.TextStyle(fontSize: 8),
+                              maxLines: 2,
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 1,
+                            child: pw.Text(
+                              item.quantity.toStringAsFixed(0),
+                              textAlign: pw.TextAlign.center,
+                              style: pw.TextStyle(fontSize: 8),
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 2,
+                            child: pw.Text(
+                              _currencyFormat.format(item.sellingprice),
+                              textAlign: pw.TextAlign.right,
+                              style: pw.TextStyle(fontSize: 8),
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 2,
+                            child: pw.Text(
+                              _currencyFormat.format(item.amount),
+                              textAlign: pw.TextAlign.right,
+                              style: pw.TextStyle(fontSize: 8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      pw.SizedBox(height: 2),
+                    ],
+                  )),
+
+              pw.Divider(thickness: 1),
+
+              // Total
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('TOTAL DUE:',
+                      style: pw.TextStyle(
+                          fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                  pw.Text('UGX ${_currencyFormat.format(totalAmount)}',
+                      style: pw.TextStyle(
+                          fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+              pw.SizedBox(height: 8),
+              
+              // Note about pending payment
+              pw.Center(
+                child: pw.Text(
+                  'PENDING PAYMENT',
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.red600,
+                  ),
+                ),
+              ),
+
+              if (notes != null && notes.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                pw.Divider(thickness: 0.5),
+                pw.Text('Notes:', style: pw.TextStyle(fontSize: 9)),
+                pw.Text(notes, style: pw.TextStyle(fontSize: 8)),
+              ],
+
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 1),
+
+              // Footer
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text('Thank you for your business!',
+                        style: pw.TextStyle(fontSize: 10)),
+                    pw.SizedBox(height: 2),
+                    pw.Text('Goods sold are not returnable',
+                        style: pw.TextStyle(fontSize: 8)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      AppConfig.copyright,
+                      style: pw.TextStyle(fontSize: 7),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 8),
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  // Print bill (works on smartphones and tablets)
+  static Future<void> printBill({
+    required String receiptNumber,
+    required String customerName,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    required double totalAmount,
+    String? issuedBy,
+    String? notes,
+  }) async {
+    final pdfBytes = await generateBillPdf(
+      receiptNumber: receiptNumber,
+      customerName: customerName,
+      date: date,
+      items: items,
+      totalAmount: totalAmount,
+      issuedBy: issuedBy,
+      notes: notes,
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+    );
+  }
+
+  // Share bill as PDF
+  static Future<void> shareBill({
+    required String receiptNumber,
+    required String customerName,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    required double totalAmount,
+    String? issuedBy,
+    String? notes,
+  }) async {
+    final pdfBytes = await generateBillPdf(
+      receiptNumber: receiptNumber,
+      customerName: customerName,
+      date: date,
+      items: items,
+      totalAmount: totalAmount,
+      issuedBy: issuedBy,
+      notes: notes,
+    );
+
+    await Printing.sharePdf(
+      bytes: pdfBytes,
+      filename: 'bill_$receiptNumber.pdf',
+    );
+  }
+
   // Print receipt (works on smartphones and tablets)
   static Future<void> printReceipt({
     required String receiptNumber,
