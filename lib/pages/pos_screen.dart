@@ -1249,7 +1249,7 @@ class _PosScreenState extends State<PosScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: const Text("Close"), 
+                      child: const Text("Close"),
                     ),
                   ),
                 ],

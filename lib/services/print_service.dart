@@ -444,18 +444,6 @@ class PrintService {
                 ],
               ),
               pw.SizedBox(height: 8),
-              
-              // Note about pending payment
-              pw.Center(
-                child: pw.Text(
-                  'PENDING PAYMENT',
-                  style: pw.TextStyle(
-                    fontSize: 10,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.red600,
-                  ),
-                ),
-              ),
 
               if (notes != null && notes.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
