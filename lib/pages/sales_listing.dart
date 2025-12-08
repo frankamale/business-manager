@@ -880,15 +880,13 @@ class _SalesListingState extends State<SalesListing> {
           'quantity': transaction.quantity.toInt(),
           'price': transaction.sellingprice,
           'amount': transaction.amount,
-          'item': inventoryItem, // Always include full inventory item
+          'item': inventoryItem,
         });
       }
 
-      // Extract other sale details from transaction (not from grouped sale)
       final reference = firstTransaction.purchaseordernumber ?? '';
       final notes = firstTransaction.remarks ?? '';
 
-      // Navigate to POS screen with existing sale data
       await Get.to(
         () => PosScreen(
           existingSalesId: salesId,
@@ -903,10 +901,8 @@ class _SalesListingState extends State<SalesListing> {
         transition: Transition.rightToLeft,
       );
 
-      // Refresh sales list after returning from POS screen
       await salesController.loadSalesFromCache();
     } catch (e) {
-      // Close loading dialog if still open
       if (Get.isDialogOpen ?? false) {
         Get.back();
       }
