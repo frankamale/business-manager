@@ -120,7 +120,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
         // Get staff name to show as customer on receipt
         String customerName = 'Staff';
-        final authController = Get.find();
+        final authController = Get.find<AuthController>();
         final currentUser = authController.currentUser.value;
         if (currentUser != null) {
           customerName = currentUser.staff ?? currentUser.name ?? 'Staff';

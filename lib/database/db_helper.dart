@@ -1310,6 +1310,7 @@ class DatabaseHelper {
       if (serverSale != null) {
         final serverAmountPaid = (serverSale['amountpaid'] as num?)?.toDouble() ?? 0.0;
         final serverBalance = (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
+        final serverPaymentMode = serverSale['paymentmode'] as String? ?? 'Cash';
 
         // Update all transactions for this salesId
         await db.update(
@@ -1317,6 +1318,8 @@ class DatabaseHelper {
           {
             'amountpaid': serverAmountPaid,
             'balance': serverBalance,
+            'paymentmode': serverPaymentMode,
+            'paymenttype': serverPaymentMode, 
           },
           where: 'salesId = ?',
           whereArgs: [salesId],
