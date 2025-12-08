@@ -65,11 +65,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _saveBillAndPayment() async {
-    print(widget.isUpdateMode ? "updateSale called" : "saveBill called");
-
     // Validation
     if (widget.cartItems.isEmpty) {
-      print("validation failed - no items in cart");
       Get.snackbar(
         'Error',
         'No items in cart',
@@ -159,8 +156,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       } else {
         if (hasPayment) {
           Get.snackbar(
-            'Success',
-            'Bill saved and payment processed successfully!\nReceipt: $receiptnumber',
+            'Payment Successful',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900],
@@ -168,8 +164,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           );
         } else {
           Get.snackbar(
-            'Success',
-            'Bill saved successfully!\nReceipt: $receiptnumber',
+            'Payment Successful',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900],

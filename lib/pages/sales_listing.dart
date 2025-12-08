@@ -533,7 +533,7 @@ class _SalesListingState extends State<SalesListing> {
                     } catch (e) {
                       Get.snackbar(
                         'Print Error',
-                        'Failed to print: $e',
+                        'Failed to print',
                         snackPosition: SnackPosition.BOTTOM,
                         backgroundColor: Colors.red.shade700,
                         colorText: Colors.white,
@@ -561,7 +561,7 @@ class _SalesListingState extends State<SalesListing> {
                     } catch (e) {
                       Get.snackbar(
                         'Share Error',
-                        'Failed to share: $e',
+                        'Failed to share',
                         snackPosition: SnackPosition.BOTTOM,
                         backgroundColor: Colors.red.shade700,
                         colorText: Colors.white,
@@ -592,7 +592,7 @@ class _SalesListingState extends State<SalesListing> {
                     } catch (e) {
                       Get.snackbar(
                         'Print Error',
-                        'Failed to print: $e',
+                        'Failed to print',
                         snackPosition: SnackPosition.BOTTOM,
                         backgroundColor: Colors.red.shade700,
                         colorText: Colors.white,
@@ -623,7 +623,7 @@ class _SalesListingState extends State<SalesListing> {
                     } catch (e) {
                       Get.snackbar(
                         'Share Error',
-                        'Failed to share: $e',
+                        'Failed to share',
                         snackPosition: SnackPosition.BOTTOM,
                         backgroundColor: Colors.red.shade700,
                         colorText: Colors.white,
@@ -684,6 +684,7 @@ class _SalesListingState extends State<SalesListing> {
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.blue.shade700,
             colorText: Colors.white,
+            duration: Duration(seconds: 2),
           );
           return;
         }
@@ -718,7 +719,6 @@ class _SalesListingState extends State<SalesListing> {
           // Show success message
           Get.snackbar(
             'Success',
-            'Sale $receiptNumber uploaded successfully',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green.shade700,
             colorText: Colors.white,
@@ -744,8 +744,7 @@ class _SalesListingState extends State<SalesListing> {
 
       case 'fiscalise':
         Get.snackbar(
-          'Fiscalise',
-          'Fiscalising $receiptNumber...',
+          'Not available for the moment ...',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.orange.shade700,
           colorText: Colors.white,
@@ -914,7 +913,7 @@ class _SalesListingState extends State<SalesListing> {
 
       Get.snackbar(
         'Error',
-        'Failed to load sale details: $e',
+        'Failed to load sale details',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade700,
         colorText: Colors.white,

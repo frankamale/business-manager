@@ -5,6 +5,7 @@ class AppConfig {
   static const String defaultUsername = 'test.account123@qc.com';
   static const String defaultPassword = 'Ba@123456';
   static const String baseUrl = "http://52.30.142.12:8080/rest";
+  static const String description = "We serve with pride";
 
   static const String appName = 'BAC POS';
 

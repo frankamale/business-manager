@@ -44,7 +44,6 @@ class SalesController extends GetxController {
     await loadSalesFromCache();
     Get.snackbar(
       'Refreshed',
-      'Sales list refreshed from local database',
       snackPosition: SnackPosition.BOTTOM,
       duration: Duration(seconds: 2),
     );

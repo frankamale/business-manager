@@ -92,7 +92,6 @@ class AuthController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Success',
-          '${users.length} users refreshed',
           snackPosition: SnackPosition.BOTTOM,
         );
       }

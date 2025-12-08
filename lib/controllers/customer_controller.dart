@@ -52,7 +52,6 @@ class CustomerController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Success',
-          '${fetchedCustomers.length} customers refreshed',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
@@ -63,7 +62,7 @@ class CustomerController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Error',
-          'Failed to refresh customers: $e',
+          'Failed to refresh customers',
           snackPosition: SnackPosition.BOTTOM,
         );
       }

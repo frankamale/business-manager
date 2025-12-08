@@ -216,6 +216,7 @@ class _PosScreenState extends State<PosScreen> {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red[100],
           colorText: Colors.red[900]);
+          duration: const Duration(seconds: 1);
       return;
     }
 
@@ -261,6 +262,7 @@ class _PosScreenState extends State<PosScreen> {
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red[100],
           colorText: Colors.red[900]);
+          duration: const Duration(seconds: 1);
       return;
     }
 
@@ -332,7 +334,7 @@ class _PosScreenState extends State<PosScreen> {
           }
         });
 
-        Get.snackbar('Success', 'Bill saved and printed successfully',
+        Get.snackbar('Success',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900]);
@@ -343,7 +345,7 @@ class _PosScreenState extends State<PosScreen> {
             colorText: Colors.red[900]);
       }
     } catch (e) {
-      Get.snackbar('Error', 'An error occurred: $e',
+      Get.snackbar('Error', 'An error occurred',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red[100],
           colorText: Colors.red[900]);

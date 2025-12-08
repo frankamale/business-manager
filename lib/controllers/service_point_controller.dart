@@ -61,7 +61,6 @@ class ServicePointController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Success',
-          '${points.length} service points refreshed',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
@@ -72,7 +71,7 @@ class ServicePointController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Error',
-          'Failed to refresh service points: $e',
+          'Failed to refresh service points',
           snackPosition: SnackPosition.BOTTOM,
         );
       }

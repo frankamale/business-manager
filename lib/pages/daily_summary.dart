@@ -685,7 +685,7 @@ for (var payment in paymentSummary) {
                 } catch (e) {
                   Get.snackbar(
                     'Print Error',
-                    'Failed to print: $e',
+                    'Failed to print',
                     snackPosition: SnackPosition.BOTTOM,
                     backgroundColor: Colors.red.shade700,
                     colorText: Colors.white,
@@ -708,7 +708,7 @@ for (var payment in paymentSummary) {
                 } catch (e) {
                   Get.snackbar(
                     'Share Error',
-                    'Failed to share: $e',
+                    'Failed to share PDF',
                     snackPosition: SnackPosition.BOTTOM,
                     backgroundColor: Colors.red.shade700,
                     colorText: Colors.white,

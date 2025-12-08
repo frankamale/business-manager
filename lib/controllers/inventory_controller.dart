@@ -63,7 +63,6 @@ class InventoryController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Success',
-          '${items.length} inventory items refreshed',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
@@ -74,7 +73,7 @@ class InventoryController extends GetxController {
       if (showMessage) {
         Get.snackbar(
           'Error',
-          'Failed to refresh inventory: $e',
+          'Failed to refresh inventory',
           snackPosition: SnackPosition.BOTTOM,
         );
       }
