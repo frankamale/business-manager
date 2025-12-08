@@ -237,6 +237,71 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN servicepointid TEXT');
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN salespersonid TEXT');
     }
+
+    if (oldVersion < 11) {
+      // Add server_sales table for storing fetched sales data from server
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS server_sales (
+          id TEXT PRIMARY KEY,
+          transactiontypeid INTEGER NOT NULL,
+          patrontype TEXT,
+          purchaseorderno TEXT,
+          internalrefno INTEGER NOT NULL,
+          issuedby TEXT,
+          receiptnumber TEXT,
+          receivedby TEXT,
+          remarks TEXT NOT NULL,
+          transactiondate INTEGER NOT NULL,
+          entrytimestamp INTEGER NOT NULL,
+          destinationbp TEXT NOT NULL,
+          paymentmode TEXT NOT NULL,
+          sellingpoint TEXT NOT NULL,
+          genno TEXT NOT NULL,
+          paymentterms TEXT NOT NULL,
+          validtill INTEGER NOT NULL,
+          currency TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          unitquantity REAL NOT NULL,
+          amount REAL NOT NULL,
+          costamount REAL NOT NULL,
+          amountpaid REAL NOT NULL,
+          balance REAL NOT NULL,
+          cnt INTEGER NOT NULL,
+          inventoryname TEXT,
+          category TEXT,
+          subcategory TEXT,
+          salesperson TEXT NOT NULL,
+          locationid TEXT NOT NULL,
+          location TEXT NOT NULL,
+          tillid TEXT NOT NULL,
+          till TEXT NOT NULL,
+          service INTEGER NOT NULL,
+          payments INTEGER NOT NULL,
+          committed INTEGER NOT NULL,
+          ready INTEGER NOT NULL,
+          transactionstatus TEXT NOT NULL,
+          products REAL NOT NULL,
+          services REAL NOT NULL,
+          reportingcurrencyrate REAL NOT NULL,
+          efris INTEGER NOT NULL,
+          efrisstatus INTEGER NOT NULL,
+          efrismessage TEXT,
+          salesId TEXT NOT NULL,
+          stageid TEXT,
+          returnid TEXT
+        )
+      ''');
+
+      // Create index on salesId for faster queries
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_server_sales_salesId ON server_sales(salesId)
+      ''');
+
+      // Create index on transactiondate for faster queries
+      await db.execute('''
+        CREATE INDEX IF NOT EXISTS idx_server_sales_transactiondate ON server_sales(transactiondate)
+      ''');
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -427,6 +492,68 @@ class DatabaseHelper {
 
     await db.execute('''
       CREATE INDEX idx_customer_phone ON customers(phone1)
+    ''');
+
+    // Create server_sales table for storing fetched sales data from server
+    await db.execute('''
+      CREATE TABLE server_sales (
+        id TEXT PRIMARY KEY,
+        transactiontypeid INTEGER NOT NULL,
+        patrontype TEXT,
+        purchaseorderno TEXT,
+        internalrefno INTEGER NOT NULL,
+        issuedby TEXT,
+        receiptnumber TEXT,
+        receivedby TEXT,
+        remarks TEXT NOT NULL,
+        transactiondate INTEGER NOT NULL,
+        entrytimestamp INTEGER NOT NULL,
+        destinationbp TEXT NOT NULL,
+        paymentmode TEXT NOT NULL,
+        sellingpoint TEXT NOT NULL,
+        genno TEXT NOT NULL,
+        paymentterms TEXT NOT NULL,
+        validtill INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unitquantity REAL NOT NULL,
+        amount REAL NOT NULL,
+        costamount REAL NOT NULL,
+        amountpaid REAL NOT NULL,
+        balance REAL NOT NULL,
+        cnt INTEGER NOT NULL,
+        inventoryname TEXT,
+        category TEXT,
+        subcategory TEXT,
+        salesperson TEXT NOT NULL,
+        locationid TEXT NOT NULL,
+        location TEXT NOT NULL,
+        tillid TEXT NOT NULL,
+        till TEXT NOT NULL,
+        service INTEGER NOT NULL,
+        payments INTEGER NOT NULL,
+        committed INTEGER NOT NULL,
+        ready INTEGER NOT NULL,
+        transactionstatus TEXT NOT NULL,
+        products REAL NOT NULL,
+        services REAL NOT NULL,
+        reportingcurrencyrate REAL NOT NULL,
+        efris INTEGER NOT NULL,
+        efrisstatus INTEGER NOT NULL,
+        efrismessage TEXT,
+        salesId TEXT NOT NULL,
+        stageid TEXT,
+        returnid TEXT
+      )
+    ''');
+
+    // Create indexes for server_sales table
+    await db.execute('''
+      CREATE INDEX idx_server_sales_salesId ON server_sales(salesId)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_server_sales_transactiondate ON server_sales(transactiondate)
     ''');
   }
 
@@ -1128,5 +1255,88 @@ class DatabaseHelper {
       await db!.rawQuery('SELECT COUNT(*) FROM customers'),
     );
     return count ?? 0;
+  }
+
+  // SERVER SALES METHODS
+
+  // Insert server sales data (replace existing data)
+  Future<void> insertServerSales(List<Map<String, dynamic>> salesData) async {
+    final db = await database;
+    final batch = db!.batch();
+
+    // Clear existing data first
+    await db.delete('server_sales');
+
+    // Insert new data
+    for (var sale in salesData) {
+      batch.insert(
+        'server_sales',
+        sale,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  // Get server sales by salesId
+  Future<Map<String, dynamic>?> getServerSaleBySalesId(String salesId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db!.query(
+      'server_sales',
+      where: 'salesId = ?',
+      whereArgs: [salesId],
+      limit: 1,
+    );
+
+    return maps.isNotEmpty ? maps.first : null;
+  }
+
+  // Update local sales_transactions with server payment data
+  Future<void> syncLocalSalesWithServerData() async {
+    final db = await database;
+
+    // Get all unique salesIds from local sales_transactions
+    final localSalesIds = await db!.rawQuery('''
+      SELECT DISTINCT salesId FROM sales_transactions
+    ''');
+
+    for (var row in localSalesIds) {
+      final salesId = row['salesId'] as String;
+
+      // Get server data for this salesId
+      final serverSale = await getServerSaleBySalesId(salesId);
+
+      if (serverSale != null) {
+        final serverAmountPaid = (serverSale['amountpaid'] as num?)?.toDouble() ?? 0.0;
+        final serverBalance = (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
+
+        // Update all transactions for this salesId
+        await db.update(
+          'sales_transactions',
+          {
+            'amountpaid': serverAmountPaid,
+            'balance': serverBalance,
+          },
+          where: 'salesId = ?',
+          whereArgs: [salesId],
+        );
+      }
+    }
+  }
+
+  // Get server sales count
+  Future<int> getServerSalesCount() async {
+    final db = await database;
+    final count = Sqflite.firstIntValue(
+      await db!.rawQuery('SELECT COUNT(*) FROM server_sales'),
+    );
+    return count ?? 0;
+  }
+
+  // Delete all server sales
+  Future<void> deleteAllServerSales() async {
+    final db = await database;
+    await db!.delete('server_sales');
   }
 }

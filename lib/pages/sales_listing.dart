@@ -6,6 +6,7 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../models/inventory_item.dart';
 import '../services/print_service.dart';
+import '../services/sales_sync_service.dart';
 import 'pos_screen.dart';
 
 class SalesListing extends StatefulWidget {
@@ -98,8 +99,12 @@ class _SalesListingState extends State<SalesListing> {
           if (!isSearching) ...[
             IconButton(
               icon: Icon(Icons.refresh),
-              onPressed: () => salesController.refreshSales(),
-              tooltip: 'Reload from Local Database',
+              onPressed: () async {
+                final salesSyncService = Get.find<SalesSyncService>();
+                await salesSyncService.manualSync();
+                await salesController.refreshSales();
+              },
+              tooltip: 'Sync with Server & Reload',
             ),
             IconButton(
               icon: Icon(Icons.search),

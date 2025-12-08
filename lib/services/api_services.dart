@@ -394,4 +394,48 @@ class ApiService extends GetxService {
       rethrow;
     }
   }
+
+  // Fetch sales data for sync
+  Future<List<Map<String, dynamic>>> fetchSalesForSync({
+    required String startDate,
+    required String endDate,
+    int pageCount = 0,
+    int pageSize = 20,
+  }) async {
+    try {
+      final token = await getAccessToken();
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final queryParams = {
+        'pagecount': pageCount.toString(),
+        'pagesize': pageSize.toString(),
+        'querry': '',
+        'startdate': startDate,
+        'enddate': endDate,
+      };
+
+      final uri = Uri.parse("$baseurl/sales/").replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        return data.map((item) => item as Map<String, dynamic>).toList();
+      } else {
+        throw Exception("Failed to fetch sales: ${response.statusCode}");
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

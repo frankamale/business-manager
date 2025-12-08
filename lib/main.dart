@@ -1,11 +1,13 @@
 import 'package:bac_pos/auth/splash_screen.dart';
 import 'package:bac_pos/services/api_services.dart';
+import 'package:bac_pos/services/sales_sync_service.dart';
 import 'package:bac_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 void main() {
   Get.put(ApiService());
+  Get.put(SalesSyncService());
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
