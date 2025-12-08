@@ -334,7 +334,8 @@ class _PosScreenState extends State<PosScreen> {
           }
         });
 
-        Get.snackbar('Success',
+        Get.snackbar(
+            'Success', 'Bill saved successfully',
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900]);

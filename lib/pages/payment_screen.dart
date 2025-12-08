@@ -156,7 +156,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       } else {
         if (hasPayment) {
           Get.snackbar(
-            'Payment Successful',
+            'Success', "Payment successful",
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900],
@@ -164,7 +164,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           );
         } else {
           Get.snackbar(
-            'Payment Successful',
+            'Success', "Payment successful",
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900],

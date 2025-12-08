@@ -718,7 +718,7 @@ class _SalesListingState extends State<SalesListing> {
 
           // Show success message
           Get.snackbar(
-            'Success',
+            'Success', "Payment successful",
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green.shade700,
             colorText: Colors.white,
@@ -744,7 +744,7 @@ class _SalesListingState extends State<SalesListing> {
 
       case 'fiscalise':
         Get.snackbar(
-          'Not available for the moment ...',
+          'Not available for the moment ...', "Coming soon ",
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.orange.shade700,
           colorText: Colors.white,

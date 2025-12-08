@@ -91,7 +91,7 @@ class AuthController extends GetxController {
 
       if (showMessage) {
         Get.snackbar(
-          'Success',
+          'Success', "Operation successful",
           snackPosition: SnackPosition.BOTTOM,
         );
       }

@@ -43,7 +43,7 @@ class SalesController extends GetxController {
   Future<void> refreshSales() async {
     await loadSalesFromCache();
     Get.snackbar(
-      'Refreshed',
+      'Success', "Refreshed successfully",
       snackPosition: SnackPosition.BOTTOM,
       duration: Duration(seconds: 2),
     );
