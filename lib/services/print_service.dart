@@ -335,7 +335,7 @@ class PrintService {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
-                  pw.Text(customerName, style: pw.TextStyle(fontSize: 1120)),
+                  pw.Text(customerName, style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
               if (issuedBy != null && issuedBy.isNotEmpty) ...[
