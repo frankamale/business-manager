@@ -9,7 +9,7 @@ class SalesSyncService extends GetxService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Timer? _syncTimer;
-  static const Duration _syncInterval = Duration(minutes: 5); 
+  static const Duration _syncInterval = Duration(minutes: 3);
 
   var isSyncing = false.obs;
   var lastSyncTime = Rx<DateTime?>(null);

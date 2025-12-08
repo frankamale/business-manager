@@ -234,7 +234,6 @@ class _PosScreenState extends State<PosScreen> {
       ),
     );
 
-    // If payment was successful, clear the cart
     if (result == true) {
       setState(() {
         // Dispose all price controllers
@@ -247,7 +246,6 @@ class _PosScreenState extends State<PosScreen> {
         notesController.clear();
         final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
         selectedCustomerId = cashCustomer?.id;
-        // Reset salesperson to logged-in user
         final currentUser = authController.currentUser.value;
         if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
           selectedSalespersonId = currentUser.salespersonid;
