@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/payment_controller.dart';
-import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../services/print_service.dart';
 import '../database/db_helper.dart';

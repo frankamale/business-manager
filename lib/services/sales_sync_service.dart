@@ -101,7 +101,7 @@ class SalesSyncService extends GetxService {
       // Update sync metadata with error
       await _dbHelper.updateSyncMetadata(
         'server_sales',
-        'error', 
+        'error',
         0,
         e.toString(),
       );
