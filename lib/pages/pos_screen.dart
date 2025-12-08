@@ -545,7 +545,7 @@ class _PosScreenState extends State<PosScreen> {
                 width: double.infinity,
                 height: isKeyboardVisible ? 50 : 65,
                 decoration: BoxDecoration(
-                  color: Colors.black,
+                  color: Colors.black, 
                   borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.centerRight,

@@ -172,6 +172,14 @@ class SalesController extends GetxController {
         "saleActionId": 1,
       };
 
+      // Log the sale payload being sent to server
+      print('=== SALE PAYLOAD BEING SENT TO SERVER ===');
+      print('Sale ID: $salesId');
+      print('Receipt Number: ${firstTransaction.receiptnumber}');
+      print('Sale Payload JSON:');
+      print(salePayload);
+      print('=== END SALE PAYLOAD ===');
+
       // Create sale via API
       await _apiService.createSale(salePayload);
 
@@ -180,6 +188,11 @@ class SalesController extends GetxController {
         0.0,
         (sum, transaction) => sum + transaction.amountpaid,
       );
+
+      print('=== PAYMENT INFO ===');
+      print('Sale ID: $salesId');
+      print('Total Paid in Local Transactions: $totalPaid');
+      print('=== END PAYMENT INFO ===');
 
       if (totalPaid > 0) {
         // Fetch transaction details from server to get proper data
@@ -234,8 +247,26 @@ class SalesController extends GetxController {
             "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
           };
 
+          // Log the payment payload being sent to server
+          print('=== PAYMENT PAYLOAD BEING SENT TO SERVER ===');
+          print('Sale ID: $salesId');
+          print('Payment Amount: $paymentAmount');
+          print('Payment Payload JSON:');
+          print(paymentPayload);
+          print('=== END PAYMENT PAYLOAD ===');
+
           await _apiService.postSale(paymentPayload);
+        } else {
+          print('=== NO PAYMENT SENT ===');
+          print('Sale ID: $salesId');
+          print('Reason: Payment amount is 0 or no outstanding balance');
+          print('=== END NO PAYMENT ===');
         }
+      } else {
+        print('=== NO PAYMENT TO PROCESS ===');
+        print('Sale ID: $salesId');
+        print('Reason: No payment recorded in local transactions');
+        print('=== END NO PAYMENT ===');
       }
 
       // Update upload status to 'uploaded'
