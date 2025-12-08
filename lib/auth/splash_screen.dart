@@ -28,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen>
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   String _statusMessage = 'Initializing...';
-  bool _hasError = false;
+  bool _hasError = false; 
   bool _isOfflineMode = false;
   bool _hasCachedData = false;
 
