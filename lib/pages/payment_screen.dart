@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/payment_controller.dart';
+import '../controllers/customer_controller.dart';
+import '../controllers/auth_controller.dart';
+import '../services/print_service.dart';
+import '../database/db_helper.dart';
+import '../models/sale_transaction.dart';
 
 class PaymentScreen extends StatefulWidget {
    final List<Map<String, dynamic>> cartItems;
@@ -107,6 +112,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
       // Handle success
       final hasPayment = result['hasPayment'] as bool;
       final receiptnumber = result['receiptnumber'] as String;
+      try {
+        final db = await DatabaseHelper().database;
+        final maps = await db!.query(
+          'sales_transactions',
+          where: 'receiptnumber = ?',
+          whereArgs: [receiptnumber],
+        );
+        final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
+
+        // Get staff name to show as customer on receipt
+        String customerName = 'Staff';
+        final authController = Get.find();
+        final currentUser = authController.currentUser.value;
+        if (currentUser != null) {
+          customerName = currentUser.staff ?? currentUser.name ?? 'Staff';
+        }
+
+        await PrintService.printReceipt(
+          receiptNumber: receiptnumber,
+          customerName: customerName,
+          date: DateTime.now(),
+          items: items,
+          totalAmount: totalAmount,
+          amountPaid: amountTendered,
+          balance: balance,
+          paymentMode: 'Cash',
+          issuedBy: null, 
+          notes: widget.notes,
+        );
+      } catch (printError) {
+        print('Failed to print receipt: $printError');
+      }
 
       Get.back(result: true);
 

@@ -46,7 +46,7 @@ class PrintService {
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text(
-                      AppConfig.appName,
+                      AppConfig.description,
                       style: pw.TextStyle(fontSize: 12),
                     ),
                     pw.SizedBox(height: 2),
@@ -67,27 +67,27 @@ class PrintService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Receipt No:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Receipt No:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text(receiptNumber,
                       style: pw.TextStyle(
-                          fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Date:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Date:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text(_dateFormat.format(date),
-                      style: pw.TextStyle(fontSize: 10)),
+                      style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
               pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Customer:', style: pw.TextStyle(fontSize: 10)),
-                  pw.Text(customerName, style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(customerName, style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
               if (issuedBy != null && issuedBy.isNotEmpty) ...[
@@ -95,8 +95,8 @@ class PrintService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Served By:', style: pw.TextStyle(fontSize: 10)),
-                    pw.Text(issuedBy, style: pw.TextStyle(fontSize: 10)),
+                    pw.Text('Served By:', style: pw.TextStyle(fontSize: 12)),
+                    pw.Text(issuedBy, style: pw.TextStyle(fontSize: 12)),
                   ],
                 ),
               ],
@@ -110,28 +110,28 @@ class PrintService {
                     flex: 3,
                     child: pw.Text('Item',
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 13, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 1,
                     child: pw.Text('Qty',
                         textAlign: pw.TextAlign.center,
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Price',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Amount',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   ),
                 ],
               ),
@@ -147,7 +147,7 @@ class PrintService {
                             flex: 3,
                             child: pw.Text(
                               item.inventoryname,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                               maxLines: 2,
                             ),
                           ),
@@ -156,7 +156,7 @@ class PrintService {
                             child: pw.Text(
                               item.quantity.toStringAsFixed(0),
                               textAlign: pw.TextAlign.center,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                             ),
                           ),
                           pw.Expanded(
@@ -164,7 +164,7 @@ class PrintService {
                             child: pw.Text(
                               _currencyFormat.format(item.sellingprice),
                               textAlign: pw.TextAlign.right,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                             ),
                           ),
                           pw.Expanded(
@@ -172,7 +172,7 @@ class PrintService {
                             child: pw.Text(
                               _currencyFormat.format(item.amount),
                               textAlign: pw.TextAlign.right,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                             ),
                           ),
                         ],
@@ -189,19 +189,19 @@ class PrintService {
                 children: [
                   pw.Text('TOTAL:',
                       style: pw.TextStyle(
-                          fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                          fontSize: 13, fontWeight: pw.FontWeight.bold)),
                   pw.Text('UGX ${_currencyFormat.format(totalAmount)}',
                       style: pw.TextStyle(
-                          fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                          fontSize: 13, fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Paid:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Paid:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text('UGX ${_currencyFormat.format(amountPaid)}',
-                      style: pw.TextStyle(fontSize: 10)),
+                      style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
               if (balance > 0) ...[
@@ -209,9 +209,9 @@ class PrintService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Balance:', style: pw.TextStyle(fontSize: 10)),
+                    pw.Text('Balance:', style: pw.TextStyle(fontSize: 12)),
                     pw.Text('UGX ${_currencyFormat.format(balance)}',
-                        style: pw.TextStyle(fontSize: 10)),
+                        style: pw.TextStyle(fontSize: 12)),
                   ],
                 ),
               ],
@@ -219,16 +219,16 @@ class PrintService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Payment:', style: pw.TextStyle(fontSize: 10)),
-                  pw.Text(paymentMode, style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Payment:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(paymentMode, style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
 
               if (notes != null && notes.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
                 pw.Divider(thickness: 0.5),
-                pw.Text('Notes:', style: pw.TextStyle(fontSize: 9)),
-                pw.Text(notes, style: pw.TextStyle(fontSize: 8)),
+                pw.Text('Notes:', style: pw.TextStyle(fontSize: 11)),
+                pw.Text(notes, style: pw.TextStyle(fontSize: 10)),
               ],
 
               pw.SizedBox(height: 8),
@@ -239,14 +239,14 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text('Thank you for your business!',
-                        style: pw.TextStyle(fontSize: 10)),
+                        style: pw.TextStyle(fontSize: 12)),
                     pw.SizedBox(height: 2),
                     pw.Text('Goods sold are not returnable',
-                        style: pw.TextStyle(fontSize: 8)),
+                        style: pw.TextStyle(fontSize: 10)),
                     pw.SizedBox(height: 4),
                     pw.Text(
                       AppConfig.copyright,
-                      style: pw.TextStyle(fontSize: 7),
+                      style: pw.TextStyle(fontSize: 9),
                     ),
                   ],
                 ),
@@ -294,7 +294,7 @@ class PrintService {
                     ),
                     pw.SizedBox(height: 4),
                     pw.Text(
-                      AppConfig.appName,
+                      AppConfig.description,
                       style: pw.TextStyle(fontSize: 12),
                     ),
                     pw.SizedBox(height: 2),
@@ -315,27 +315,27 @@ class PrintService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Bill No:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Bill No:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text(receiptNumber,
                       style: pw.TextStyle(
-                          fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Date:', style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Date:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text(_dateFormat.format(date),
-                      style: pw.TextStyle(fontSize: 10)),
+                      style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
               pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Customer:', style: pw.TextStyle(fontSize: 10)),
-                  pw.Text(customerName, style: pw.TextStyle(fontSize: 10)),
+                  pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(customerName, style: pw.TextStyle(fontSize: 1120)),
                 ],
               ),
               if (issuedBy != null && issuedBy.isNotEmpty) ...[
@@ -343,8 +343,8 @@ class PrintService {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Served By:', style: pw.TextStyle(fontSize: 10)),
-                    pw.Text(issuedBy, style: pw.TextStyle(fontSize: 10)),
+                    pw.Text('Served By:', style: pw.TextStyle(fontSize: 12)),
+                    pw.Text(issuedBy, style: pw.TextStyle(fontSize: 12)),
                   ],
                 ),
               ],
@@ -358,28 +358,28 @@ class PrintService {
                     flex: 3,
                     child: pw.Text('Item',
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 1,
                     child: pw.Text('Qty',
                         textAlign: pw.TextAlign.center,
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Price',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Amount',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 9, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
                   ),
                 ],
               ),
@@ -395,7 +395,7 @@ class PrintService {
                             flex: 3,
                             child: pw.Text(
                               item.inventoryname,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                               maxLines: 2,
                             ),
                           ),
@@ -404,7 +404,7 @@ class PrintService {
                             child: pw.Text(
                               item.quantity.toStringAsFixed(0),
                               textAlign: pw.TextAlign.center,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                             ),
                           ),
                           pw.Expanded(
@@ -412,7 +412,7 @@ class PrintService {
                             child: pw.Text(
                               _currencyFormat.format(item.sellingprice),
                               textAlign: pw.TextAlign.right,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                             ),
                           ),
                           pw.Expanded(
@@ -420,7 +420,7 @@ class PrintService {
                             child: pw.Text(
                               _currencyFormat.format(item.amount),
                               textAlign: pw.TextAlign.right,
-                              style: pw.TextStyle(fontSize: 8),
+                              style: pw.TextStyle(fontSize: 10),
                             ),
                           ),
                         ],
@@ -437,10 +437,10 @@ class PrintService {
                 children: [
                   pw.Text('TOTAL DUE:',
                       style: pw.TextStyle(
-                          fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                          fontSize: 13, fontWeight: pw.FontWeight.bold)),
                   pw.Text('UGX ${_currencyFormat.format(totalAmount)}',
                       style: pw.TextStyle(
-                          fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                          fontSize: 13, fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               pw.SizedBox(height: 8),
@@ -448,8 +448,8 @@ class PrintService {
               if (notes != null && notes.isNotEmpty) ...[
                 pw.SizedBox(height: 4),
                 pw.Divider(thickness: 0.5),
-                pw.Text('Notes:', style: pw.TextStyle(fontSize: 9)),
-                pw.Text(notes, style: pw.TextStyle(fontSize: 8)),
+                pw.Text('Notes:', style: pw.TextStyle(fontSize: 11)),
+                pw.Text(notes, style: pw.TextStyle(fontSize: 10)),
               ],
 
               pw.SizedBox(height: 8),
@@ -460,14 +460,14 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text('Thank you for your business!',
-                        style: pw.TextStyle(fontSize: 10)),
+                        style: pw.TextStyle(fontSize: 12)),
                     pw.SizedBox(height: 2),
                     pw.Text('Goods sold are not returnable',
-                        style: pw.TextStyle(fontSize: 8)),
+                        style: pw.TextStyle(fontSize: 10)),
                     pw.SizedBox(height: 4),
                     pw.Text(
                       AppConfig.copyright,
-                      style: pw.TextStyle(fontSize: 7),
+                      style: pw.TextStyle(fontSize: 9),
                     ),
                   ],
                 ),
@@ -482,7 +482,6 @@ class PrintService {
     return pdf.save();
   }
 
-  // Print bill (works on smartphones and tablets)
   static Future<void> printBill({
     required String receiptNumber,
     required String customerName,
@@ -932,13 +931,13 @@ class PrintService {
             pw.Center(
               child: pw.Text(
                 'Generated on ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
+                style: pw.TextStyle(fontSize: 16, color: PdfColors.grey600),
               ),
             ),
             pw.Center(
               child: pw.Text(
                 AppConfig.copyright,
-                style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                style: pw.TextStyle(fontSize: 15, color: PdfColors.grey600),
               ),
             ),
           ];

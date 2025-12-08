@@ -57,10 +57,8 @@ class _PosScreenState extends State<PosScreen> {
    final TextEditingController refController = TextEditingController();
    final TextEditingController notesController = TextEditingController();
 
-   // Selected items
    final List<Map<String, dynamic>> selectedItems = [];
 
-   // Price controllers for each cart item
    final Map<String, TextEditingController> _priceControllers = {};
 
   double get totalAmount {
@@ -69,13 +67,11 @@ class _PosScreenState extends State<PosScreen> {
 
   void _addItemToCart(InventoryItem item) {
     setState(() {
-      // Check if item already exists in cart
       final existingItemIndex = selectedItems.indexWhere(
         (cartItem) => cartItem['id'] == item.id,
       );
 
       if (existingItemIndex != -1) {
-        // Item exists, increase quantity
         selectedItems[existingItemIndex]['quantity'] += 1;
         selectedItems[existingItemIndex]['amount'] =
             selectedItems[existingItemIndex]['quantity'] * item.price;
@@ -138,16 +134,13 @@ class _PosScreenState extends State<PosScreen> {
   void initState() {
     super.initState();
 
-    // If editing existing sale, load the data
     if (widget.existingItems != null && widget.existingItems!.isNotEmpty) {
       _loadExistingSale();
     } else {
-      // Set default customer to "Cash Customer"
       final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
       if (cashCustomer != null) {
         selectedCustomerId = cashCustomer.id;
       }
-      // Set default salesperson to logged-in user
       final currentUser = authController.currentUser.value;
       if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
         selectedSalespersonId = currentUser.salespersonid;
@@ -156,7 +149,6 @@ class _PosScreenState extends State<PosScreen> {
 
     searchController.addListener(_onSearchChanged);
 
-    // Filter items by service point type if provided
     if (widget.servicePoint != null) {
       inventoryController.filterByServicePointType(widget.servicePoint!.servicepointtype);
     }
