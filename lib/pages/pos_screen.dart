@@ -1024,7 +1024,8 @@ class _PosScreenState extends State<PosScreen> {
                           child: Text(() {
                             final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
                             final bool isNewSale = widget.existingSalesId == null;
-                            return (isNewSale && isWaiter) ? "SAVE" : "PAY";
+                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+                            return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "PAY";
                           }()),
                         ),
                       ),
