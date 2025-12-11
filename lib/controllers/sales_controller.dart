@@ -144,47 +144,47 @@ class SalesController extends GetxController {
         saleExistsOnServer = false;
       }
 
-      // Only create sale if it doesn't exist on server
-      if (!saleExistsOnServer) {
-        // Reconstruct line items from transactions
-        const uuid = Uuid();
-        final lineItems = saleTransactions.asMap().entries.map((entry) {
-          final index = entry.key;
-          final transaction = entry.value;
+      // Reconstruct line items from transactions
+      const uuid = Uuid();
+      final lineItems = saleTransactions.asMap().entries.map((entry) {
+        final index = entry.key;
+        final transaction = entry.value;
 
-          return {
-            "id": uuid.v4(),
-            "salesid": salesId,
-            "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
-            "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
-            "quantity": transaction.quantity.toInt(),
-            "sellingprice": transaction.sellingprice.toInt(),
-            "ordernumber": index,
-            "remarks": "",
-            "transactionstatusid": 1,
-            "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
-          };
-        }).toList();
-
-        // Create sale payload
-        final salePayload = {
-          "id": salesId,
-          "transactionDate": firstTransaction.transactiondate,
+        return {
+          "id": uuid.v4(),
+          "salesid": salesId,
+          "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
+          "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
+          "quantity": transaction.quantity.toInt(),
+          "sellingprice": transaction.sellingprice.toInt(),
+          "ordernumber": index,
+          "remarks": "",
           "transactionstatusid": 1,
-          "receiptnumber": firstTransaction.receiptnumber,
-          "clientid": customerId,
-          "remarks": firstTransaction.remarks,
-          "otherRemarks": "",
-          "companyId": companyId,
-          "branchId": branchId,
-          "servicepointid": servicePointId,
-          "salespersonid": salespersonId,
-          "modeid": 2,
-          "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
-          "lineItems": lineItems,
-          "saleActionId": 1,
+          "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
         };
+      }).toList();
 
+      // Create sale payload
+      final salePayload = {
+        "id": salesId,
+        "transactionDate": firstTransaction.transactiondate,
+        "transactionstatusid": 1,
+        "receiptnumber": firstTransaction.receiptnumber,
+        "clientid": customerId,
+        "remarks": firstTransaction.remarks,
+        "otherRemarks": "",
+        "companyId": companyId,
+        "branchId": branchId,
+        "servicepointid": servicePointId,
+        "salespersonid": salespersonId,
+        "modeid": 2,
+        "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+        "lineItems": lineItems,
+        "saleActionId": 1,
+      };
+
+      // Create or update sale on server
+      if (!saleExistsOnServer) {
         // Log the sale payload being sent to server
         print('=== SALE PAYLOAD BEING SENT TO SERVER ===');
         print('Sale ID: $salesId');
@@ -196,13 +196,17 @@ class SalesController extends GetxController {
         // Create sale via API
         await _apiService.createSale(salePayload);
       } else {
-        print('=== SKIPPING SALE CREATION ===');
-        print('Sale $salesId already exists on server, proceeding with payment only');
-        print('=== END SKIPPING SALE CREATION ===');
-      }
+        // Log the update payload being sent to server
+        print('=== SALE UPDATE PAYLOAD BEING SENT TO SERVER ===');
+        print('Sale ID: $salesId');
+        print('Receipt Number: ${firstTransaction.receiptnumber}');
+        print('Update Payload JSON:');
+        print(salePayload);
+        print('=== END SALE UPDATE PAYLOAD ===');
 
-      // Define uuid for payment processing
-      const uuid = Uuid();
+        // Update sale via API
+        await _apiService.updateSale(salesId, salePayload);
+      }
 
       // If payment was made, create and post payment
       final totalPaid = saleTransactions.fold<double>(

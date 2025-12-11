@@ -310,6 +310,36 @@ class ApiService extends GetxService {
     }
   }
 
+  Future<Map<String, dynamic>> updateSale(String saleId, Map<String, dynamic> saleData) async {
+    try {
+      final token = await getAccessToken();
+
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final jsonPayload = json.encode(saleData);
+
+      final response = await http.put(
+        Uri.parse("$baseurl/sales/$saleId"),
+        headers: headers,
+        body: jsonPayload,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        throw Exception("Failed to update sale: ${response.statusCode} - ${response.body}");
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> fetchSingleTransaction(String saleId) async {
     try {
       final token = await getAccessToken();
