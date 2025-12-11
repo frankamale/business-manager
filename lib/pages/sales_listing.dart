@@ -4,7 +4,9 @@ import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/service_point_controller.dart';
 import '../models/inventory_item.dart';
+import '../models/service_point.dart';
 import '../services/print_service.dart';
 import '../services/sales_sync_service.dart';
 import 'pos_screen.dart';
@@ -973,6 +975,12 @@ class _SalesListingState extends State<SalesListing> {
       // Get salesperson ID directly from first transaction
       final salespersonId = firstTransaction.salespersonid;
 
+      final servicePointController = Get.find<ServicePointController>();
+      ServicePoint? servicePoint;
+      if (firstTransaction.servicepointid != null) {
+        servicePoint = servicePointController.getServicePointById(firstTransaction.servicepointid!);
+      }
+
       // Transform sale transactions to cart items format
       final cartItems = <Map<String, dynamic>>[];
       for (var transaction in saleTransactions) {
@@ -1040,6 +1048,7 @@ class _SalesListingState extends State<SalesListing> {
           existingReference: reference,
           existingNotes: notes,
           existingSalespersonId: salespersonId,
+          servicePoint: servicePoint,
           isViewOnly: uploadStatus == 'uploaded',
         ),
         transition: Transition.rightToLeft,

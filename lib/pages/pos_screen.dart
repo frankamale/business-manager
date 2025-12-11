@@ -8,6 +8,7 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/payment_controller.dart';
+import '../controllers/settings_controller.dart';
 import '../services/print_service.dart';
 import '../database/db_helper.dart';
 import '../models/sale_transaction.dart';
@@ -44,6 +45,9 @@ class _PosScreenState extends State<PosScreen> {
    final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
    final InventoryController inventoryController = Get.find();
    final CustomerController customerController = Get.find();
+   final SettingsController settingsController = Get.find();
+
+
    final AuthController authController = Get.find();
    String selectedCategory = 'All';
    final TextEditingController searchController = TextEditingController();
@@ -60,6 +64,8 @@ class _PosScreenState extends State<PosScreen> {
    final List<Map<String, dynamic>> selectedItems = [];
 
    final Map<String, TextEditingController> _priceControllers = {};
+
+   bool _isPriceEditingEnabled = false;
 
   double get totalAmount {
     return selectedItems.fold(0, (sum, item) => sum + (item['amount'] as num));
@@ -351,42 +357,7 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-   Future<void> _updateSale() async {
-    if (selectedItems.isEmpty) {
-      Get.snackbar('Error', 'No items in cart',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900]);
-      return;
-    }
-
-    if (widget.existingSalesId == null || widget.existingReceiptNumber == null) {
-      Get.snackbar('Error', 'Invalid sale data',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900]);
-      return;
-    }
-
-    final result = await Get.to(
-      () => PaymentScreen(
-        cartItems: selectedItems,
-        customer: selectedCustomerId,
-        reference: refController.text,
-        notes: notesController.text,
-        salespersonId: selectedSalespersonId,
-        servicePointId: widget.servicePoint?.id,
-        isUpdateMode: true,
-        existingSalesId: widget.existingSalesId,
-        existingReceiptNumber: widget.existingReceiptNumber,
-      ),
-    );
-
-    // If update was successful, go back to sales listing
-    if (result == true) {
-      Navigator.of(context).pop(true);
-    }
-  }
+  Future<void> _updateSale() async {
     if (selectedItems.isEmpty) {
       Get.snackbar('Error', 'No items in cart',
           snackPosition: SnackPosition.BOTTOM,
@@ -596,6 +567,33 @@ class _PosScreenState extends State<PosScreen> {
               ),
             ),
             SizedBox(height: isKeyboardVisible ? 4 : 8),
+
+            // Price Editing Toggle
+            if (!isKeyboardVisible) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Text(
+                      "Edit Prices",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(width: 8),
+                    Switch(
+                      value: _isPriceEditingEnabled,
+                      onChanged: widget.isViewOnly ? null : (bool value) {
+                        setState(() {
+                          _isPriceEditingEnabled = value;
+                        });
+                      },
+                      activeColor: Colors.blue,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Scrollable Content
             Expanded(
@@ -884,7 +882,7 @@ class _PosScreenState extends State<PosScreen> {
                                                     width: 80,
                                                     child: TextField(
                                                       keyboardType: TextInputType.number,
-                                                      readOnly: widget.isViewOnly,
+                                                      readOnly: widget.isViewOnly || !_isPriceEditingEnabled,
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w600,
@@ -903,9 +901,15 @@ class _PosScreenState extends State<PosScreen> {
                                                           borderRadius: BorderRadius.circular(4),
                                                           borderSide: BorderSide(color: Colors.grey.shade300),
                                                         ),
+                                                        disabledBorder: OutlineInputBorder(
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          borderSide: BorderSide(color: Colors.grey.shade200),
+                                                        ),
+                                                        fillColor: (widget.isViewOnly || !_isPriceEditingEnabled) ? Colors.grey.shade50 : Colors.white,
+                                                        filled: true,
                                                       ),
                                                       controller: _priceControllers[item['id']],
-                                                      onChanged: widget.isViewOnly ? null : (value) {
+                                                      onChanged: (widget.isViewOnly || !_isPriceEditingEnabled) ? null : (value) {
                                                         if (value.isEmpty) {
                                                           _updatePrice(index, 0);
                                                         } else {
@@ -1058,11 +1062,8 @@ class _PosScreenState extends State<PosScreen> {
                           ),
                           child: Text(() {
                             final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
-                            final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
                             final bool isNewSale = widget.existingSalesId == null;
-                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
-                            return (isNewSale && isWaiter && !allowAllUsersPayment) ? "SAVE" : "PAY";
-                            return (isNewSale && isWaiter) ? "SAVE" : "PAY";
+                            return (isNewSale && isWaiter) ? "SAVE" : "SAVE";
                           }()),
                         ),
                       ),
@@ -1071,12 +1072,9 @@ class _PosScreenState extends State<PosScreen> {
                         child: ElevatedButton(
                           onPressed: () {
                             if (widget.existingSalesId != null) {
-                              // Edit mode - cancel and go back
                               Navigator.of(context).pop();
-                            } else {
-                              // New sale mode - clear and start fresh
+                            } else { 
                               setState(() {
-                                // Dispose all price controllers
                                 for (var controller in _priceControllers.values) {
                                   controller.dispose();
                                 }
