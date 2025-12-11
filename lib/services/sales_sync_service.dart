@@ -12,7 +12,7 @@ class SalesSyncService extends GetxService {
   static const Duration _syncInterval = Duration(minutes: 3);
 
   var isSyncing = false.obs;
-  var lastSyncTime = Rx<DateTime?>(null);
+  var lastSyncTime = Rx<DateTime?>(null); 
   var lastSyncError = Rx<String?>(null);
 
   @override
@@ -82,6 +82,18 @@ class SalesSyncService extends GetxService {
 
       await _dbHelper.insertServerSales(salesData);
 
+      // Log partial payments found in server data
+      int partialPaymentCount = 0;
+      for (var sale in salesData) {
+        final balance = (sale['balance'] as num?)?.toDouble() ?? 0.0;
+        final amountPaid = (sale['amountpaid'] as num?)?.toDouble() ?? 0.0;
+        if (balance > 0 && amountPaid > 0) {
+          partialPaymentCount++;
+          print('Found partial payment in server data: salesId ${sale['salesId']}, Amount Paid: $amountPaid, Balance: $balance');
+        }
+      }
+      print('Total partial payments found in server data: $partialPaymentCount');
+
       await _dbHelper.syncLocalSalesWithServerData();
 
       // Update sync metadata
@@ -92,7 +104,7 @@ class SalesSyncService extends GetxService {
       );
 
       lastSyncTime.value = DateTime.now();
-      print('Sales sync completed successfully');
+      print('Sales sync completed successfully - processed ${salesData.length} sales including $partialPaymentCount partial payments');
 
     } catch (e) {
       lastSyncError.value = e.toString();

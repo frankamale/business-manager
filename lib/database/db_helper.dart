@@ -1312,6 +1312,14 @@ class DatabaseHelper {
         final serverBalance = (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
         final serverPaymentMode = serverSale['paymentmode'] as String? ?? 'Cash';
 
+        // Check if this is a partial payment (balance > 0 and amountpaid > 0)
+        final isPartialPayment = serverBalance > 0 && serverAmountPaid > 0;
+
+        // Log partial payment sync
+        if (isPartialPayment) {
+          print('Syncing partial payment for salesId: $salesId, Amount Paid: $serverAmountPaid, Balance: $serverBalance');
+        }
+
         // Update all transactions for this salesId
         await db.update(
           'sales_transactions',
@@ -1319,11 +1327,13 @@ class DatabaseHelper {
             'amountpaid': serverAmountPaid,
             'balance': serverBalance,
             'paymentmode': serverPaymentMode,
-            'paymenttype': serverPaymentMode, 
+            'paymenttype': serverPaymentMode,
           },
           where: 'salesId = ?',
           whereArgs: [salesId],
         );
+
+        print('Synced salesId: $salesId with server data - Amount Paid: $serverAmountPaid, Balance: $serverBalance');
       }
     }
   }
