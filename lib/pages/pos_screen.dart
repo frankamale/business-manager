@@ -387,6 +387,41 @@ class _PosScreenState extends State<PosScreen> {
       Navigator.of(context).pop(true);
     }
   }
+    if (selectedItems.isEmpty) {
+      Get.snackbar('Error', 'No items in cart',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900]);
+      return;
+    }
+
+    if (widget.existingSalesId == null || widget.existingReceiptNumber == null) {
+      Get.snackbar('Error', 'Invalid sale data',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900]);
+      return;
+    }
+
+    final result = await Get.to(
+      () => PaymentScreen(
+        cartItems: selectedItems,
+        customer: selectedCustomerId,
+        reference: refController.text,
+        notes: notesController.text,
+        salespersonId: selectedSalespersonId,
+        servicePointId: widget.servicePoint?.id,
+        isUpdateMode: true,
+        existingSalesId: widget.existingSalesId,
+        existingReceiptNumber: widget.existingReceiptNumber,
+      ),
+    );
+
+    // If update was successful, go back to sales listing
+    if (result == true) {
+      Navigator.of(context).pop(true);
+    }
+  }
 
   Widget _buildItemCard(InventoryItem item) {
     return Card(
@@ -1023,9 +1058,11 @@ class _PosScreenState extends State<PosScreen> {
                           ),
                           child: Text(() {
                             final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+                            final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
                             final bool isNewSale = widget.existingSalesId == null;
                             final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
-                            return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "PAY";
+                            return (isNewSale && isWaiter && !allowAllUsersPayment) ? "SAVE" : "PAY";
+                            return (isNewSale && isWaiter) ? "SAVE" : "PAY";
                           }()),
                         ),
                       ),
