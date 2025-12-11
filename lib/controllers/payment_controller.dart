@@ -415,7 +415,21 @@ class PaymentController extends GetxController {
         userId;
       final branchId = companyInfo['branchId'] ?? '';
       final companyId = companyInfo['companyId'] ?? '';
-      final actualServicePointId = servicePointId ?? companyInfo['servicePointId'] ?? branchId;
+
+      // Get original service point ID from existing sale to preserve it
+      String actualServicePointId = servicePointId ?? '';
+      if (actualServicePointId.isEmpty) {
+        try {
+          final existingTransactions = await _dbHelper.getSaleTransactionsBySalesId(existingSalesId);
+          if (existingTransactions.isNotEmpty) {
+            actualServicePointId = existingTransactions.first.servicepointid ?? '';
+          }
+        } catch (e) {
+          // If can't get existing, fall back to current
+          actualServicePointId = companyInfo['servicePointId'] ?? branchId;
+        }
+      }
+
       final issuedByName = userData['staff'] ?? userData['name'] ?? '';
 
       // Get customer name

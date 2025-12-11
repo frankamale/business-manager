@@ -664,33 +664,6 @@ class _PosScreenState extends State<PosScreen> {
             ),
             SizedBox(height: isKeyboardVisible ? 4 : 8),
 
-            // Price Editing Toggle
-            if (!isKeyboardVisible) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    const Text(
-                      "Edit Prices",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(width: 8),
-                    Switch(
-                      value: _isPriceEditingEnabled,
-                      onChanged: widget.isViewOnly ? null : (bool value) {
-                        setState(() {
-                          _isPriceEditingEnabled = value;
-                        });
-                      },
-                      activeColor: Colors.blue,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-
             // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
