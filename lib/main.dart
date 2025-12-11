@@ -9,7 +9,7 @@ import 'package:get_storage/get_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await GetStorage.init();
+  await GetStorage.init(); 
   Get.put(ApiService());
   Get.put(SalesSyncService());
   Get.put(SettingsController());

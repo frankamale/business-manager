@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/service_point_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../models/inventory_item.dart';
 import '../models/service_point.dart';
@@ -992,7 +993,6 @@ class _SalesListingState extends State<SalesListing> {
         // Try to find the inventory item by name or ID
         final inventoryItems = inventoryController.inventoryItems;
 
-        // First try to find by inventoryid
         var inventoryItem = inventoryItems.firstWhereOrNull(
           (item) => item.id == transaction.inventoryid,
         );
