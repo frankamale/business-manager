@@ -495,9 +495,14 @@ class _SalesListingState extends State<SalesListing> {
       final firstTransaction = saleTransactions.first;
       final customerName = firstTransaction.destinationbp;
       final date = DateTime.fromMillisecondsSinceEpoch(firstTransaction.transactiondate);
-      final issuedBy = firstTransaction.issuedby;
       final notes = firstTransaction.remarks;
       final paymentMode = firstTransaction.paymentmode;
+
+      String cashierName = 'Cashier';
+      final currentUser = authController.currentUser.value;
+      if (currentUser != null) {
+        cashierName = currentUser.staff ?? currentUser.name ?? 'Cashier';
+      }
 
       // Calculate totals
       double totalAmount = 0;
@@ -532,7 +537,7 @@ class _SalesListingState extends State<SalesListing> {
                         date: date,
                         items: saleTransactions,
                         totalAmount: totalAmount,
-                        issuedBy: issuedBy.isNotEmpty ? issuedBy : null,
+                        issuedBy: cashierName,
                         notes: notes.isNotEmpty ? notes : null,
                       );
                     } catch (e) {
@@ -560,7 +565,7 @@ class _SalesListingState extends State<SalesListing> {
                         date: date,
                         items: saleTransactions,
                         totalAmount: totalAmount,
-                        issuedBy: issuedBy.isNotEmpty ? issuedBy : null,
+                        issuedBy: cashierName,
                         notes: notes.isNotEmpty ? notes : null,
                       );
                     } catch (e) {
@@ -591,7 +596,7 @@ class _SalesListingState extends State<SalesListing> {
                         amountPaid: amountPaid,
                         balance: balance,
                         paymentMode: paymentMode,
-                        issuedBy: issuedBy.isNotEmpty ? issuedBy : null,
+                        issuedBy: cashierName,
                         notes: notes.isNotEmpty ? notes : null,
                       );
                     } catch (e) {
@@ -622,7 +627,7 @@ class _SalesListingState extends State<SalesListing> {
                         amountPaid: amountPaid,
                         balance: balance,
                         paymentMode: paymentMode,
-                        issuedBy: issuedBy.isNotEmpty ? issuedBy : null,
+                        issuedBy: cashierName,
                         notes: notes.isNotEmpty ? notes : null,
                       );
                     } catch (e) {

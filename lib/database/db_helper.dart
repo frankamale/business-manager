@@ -101,7 +101,7 @@ class DatabaseHelper {
           costcentre TEXT,
           destinationbp TEXT NOT NULL,
           paymentmode TEXT NOT NULL,
-          sourcefacility TEXT NOT NULL,
+          sourcefacility TEXT NOT NULL, 
           genno TEXT NOT NULL,
           paymenttype TEXT NOT NULL,
           validtill INTEGER NOT NULL,

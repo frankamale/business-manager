@@ -117,28 +117,42 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
 
-        // Get staff name to show as customer on receipt
-        String customerName = 'Staff';
+        String customerName = widget.customer ?? 'Cash Customer';
+        
+        // Get current user (cashier) for issuedBy field
+        String cashierName = 'Cashier';
         final authController = Get.find<AuthController>();
         final currentUser = authController.currentUser.value;
         if (currentUser != null) {
-          customerName = currentUser.staff ?? currentUser.name ?? 'Staff';
+          cashierName = currentUser.staff ?? currentUser.name ?? 'Cashier';
         }
 
-        await PrintService.printReceipt(
-          receiptNumber: receiptnumber,
-          customerName: customerName,
-          date: DateTime.now(),
-          items: items,
-          totalAmount: totalAmount,
-          amountPaid: amountTendered,
-          balance: balance,
-          paymentMode: 'Cash',
-          issuedBy: null, 
-          notes: widget.notes,
-        );
+        if (hasPayment) {
+          await PrintService.printReceipt(
+            receiptNumber: receiptnumber,
+            customerName: customerName,
+            date: DateTime.now(),
+            items: items,
+            totalAmount: totalAmount,
+            amountPaid: amountTendered,
+            balance: balance,
+            paymentMode: 'Cash',
+            issuedBy: cashierName,
+            notes: widget.notes,
+          );
+        } else {
+          await PrintService.printBill(
+            receiptNumber: receiptnumber,
+            customerName: customerName,
+            date: DateTime.now(),
+            items: items,
+            totalAmount: totalAmount,
+            issuedBy: cashierName,
+            notes: widget.notes,
+          );
+        }
       } catch (printError) {
-        print('Failed to print receipt: $printError');
+        print('Failed to print document: $printError');
       }
 
       Get.back(result: true);

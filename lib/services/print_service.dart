@@ -86,20 +86,19 @@ class PrintService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
+                  pw.Text('Issued By:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(issuedBy ?? 'Cashier', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
                   pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text(customerName, style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
-              if (issuedBy != null && issuedBy.isNotEmpty) ...[
-                pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Served By:', style: pw.TextStyle(fontSize: 12)),
-                    pw.Text(issuedBy, style: pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ],
               pw.SizedBox(height: 4),
               pw.Divider(thickness: 1),
 
@@ -219,7 +218,7 @@ class PrintService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Payment:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text('Payment Mode:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text(paymentMode, style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
@@ -334,20 +333,19 @@ class PrintService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
+                  pw.Text('Issued By:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(issuedBy ?? 'Cashier', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
                   pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
                   pw.Text(customerName, style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
-              if (issuedBy != null && issuedBy.isNotEmpty) ...[
-                pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Served By:', style: pw.TextStyle(fontSize: 12)),
-                    pw.Text(issuedBy, style: pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ],
               pw.SizedBox(height: 4),
               pw.Divider(thickness: 1),
 
