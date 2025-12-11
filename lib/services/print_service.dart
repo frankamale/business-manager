@@ -337,8 +337,8 @@ class PrintService {
                   pw.Text(issuedBy ?? 'Cashier', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 ],
               ),
-              pw.SizedBox(height: 2), 
-              
+              pw.SizedBox(height: 2),
+
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [

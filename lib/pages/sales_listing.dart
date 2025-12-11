@@ -8,6 +8,7 @@ import '../models/inventory_item.dart';
 import '../services/print_service.dart';
 import '../services/sales_sync_service.dart';
 import 'pos_screen.dart';
+import 'payment_screen.dart';
 
 class SalesListing extends StatefulWidget {
   const SalesListing({super.key});
@@ -19,6 +20,7 @@ class SalesListing extends StatefulWidget {
 class _SalesListingState extends State<SalesListing> {
   final SalesController salesController = Get.find<SalesController>();
   final AuthController authController = Get.find<AuthController>();
+  final InventoryController inventoryController = Get.find<InventoryController>();
   final TextEditingController searchController = TextEditingController();
   final RxList<Map<String, dynamic>> filteredSales = <Map<String, dynamic>>[].obs;
   bool isSearching = false;
@@ -281,19 +283,19 @@ class _SalesListingState extends State<SalesListing> {
                             ],
                           ),
                         ),
-                        // PopupMenuItem(
-                        //   value: 'synchronise',
-                        //   child: Row(
-                        //     children: [
-                        //       Icon(Icons.sync, size: 18, color: Colors.white),
-                        //       SizedBox(width: 8),
-                        //       Text(
-                        //         'Synchronise',
-                        //         style: TextStyle(color: Colors.white),
-                        //       ),
-                        //     ],
-                        //   ),
-                        // ),
+                        PopupMenuItem(
+                          value: 'settleBill',
+                          child: Row(
+                            children: [
+                              Icon(Icons.sync, size: 18, color: Colors.white),
+                              SizedBox(width: 8),
+                              Text(
+                                'Settle bill',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                       icon: Icon(Icons.more_vert),
                       color: Colors.blue.shade600,
@@ -725,6 +727,163 @@ class _SalesListingState extends State<SalesListing> {
           backgroundColor: Colors.orange.shade700,
           colorText: Colors.white,
         );
+        break;
+
+      case 'settleBill':
+        if (salesId == null) {
+          Get.snackbar(
+            'Error',
+            'Cannot settle bill: Invalid sale ID',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        // Check if sale has balance > 0
+        final totalBalance = sale['totalBalance'] as double? ?? 0.0;
+        if (totalBalance <= 0) {
+          Get.snackbar(
+            'No Balance',
+            'This sale has no outstanding balance to settle',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.blue.shade700,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        try {
+          // Show loading indicator
+          Get.dialog(
+            Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Loading sale details...'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            barrierDismissible: false,
+          );
+
+          // Fetch all items for this sale from database
+          final saleTransactions = await salesController.getSaleTransactionsBySalesId(salesId);
+
+          // Close loading dialog
+          Get.back();
+
+          if (saleTransactions.isEmpty) {
+            Get.snackbar(
+              'Error',
+              'No items found for this sale',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.red.shade700,
+              colorText: Colors.white,
+            );
+            return;
+          }
+
+          final firstTransaction = saleTransactions.first;
+          final customerId = firstTransaction.clientid;
+
+          final salespersonId = firstTransaction.salespersonid;
+
+          // Transform sale transactions to cart items format
+          final cartItems = <Map<String, dynamic>>[];
+          for (var transaction in saleTransactions) {
+            // Try to find the inventory item by name or ID
+            final inventoryItems = inventoryController.inventoryItems;
+
+            // First try to find by inventoryid
+            var inventoryItem = inventoryItems.firstWhereOrNull(
+              (item) => item.id == transaction.inventoryid,
+            );
+
+            // If not found, try by name
+            if (inventoryItem == null) {
+              inventoryItem = inventoryItems.firstWhereOrNull(
+                (item) => item.name.toLowerCase() == transaction.inventoryname.toLowerCase(),
+              );
+            }
+
+            // If still not found, create a minimal inventory item object with all required fields
+            if (inventoryItem == null) {
+              inventoryItem = InventoryItem(
+                id: transaction.inventoryid ?? transaction.id,
+                ipdid: transaction.ipdid ?? '',
+                name: transaction.inventoryname,
+                code: '',
+                externalserial: '',
+                category: transaction.category,
+                price: transaction.sellingprice.toDouble(),
+                costprice: transaction.costprice,
+                packsize: transaction.packsize.toDouble(),
+                packaging: transaction.packaging,
+                packagingid: '',
+                soldfrom: '',
+                shortform: '',
+                packagingcode: '',
+                efris: false,
+                efrisid: '',
+                measurmentunitidefris: '',
+                measurmentunit: '',
+                measurmentunitid: '',
+                vatcategoryid: '',
+                branchid: transaction.branchid ?? '',
+                companyid: transaction.companyid ?? '',
+              );
+            }
+
+            cartItems.add({
+              'id': inventoryItem.id,
+              'name': transaction.inventoryname,
+              'quantity': transaction.quantity.toInt(),
+              'price': transaction.sellingprice,
+              'amount': transaction.amount,
+              'item': inventoryItem,
+            });
+          }
+
+          final reference = firstTransaction.purchaseordernumber ?? '';
+          final notes = firstTransaction.remarks ?? '';
+
+          await Get.to(
+            () => PaymentScreen(
+              cartItems: cartItems,
+              customer: customerId,
+              reference: reference,
+              notes: notes,
+              salespersonId: salespersonId,
+              isUpdateMode: true,
+              existingSalesId: salesId,
+              existingReceiptNumber: receiptNumber,
+            ),
+            transition: Transition.rightToLeft,
+          );
+
+          await salesController.loadSalesFromCache();
+        } catch (e) {
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+
+          Get.snackbar(
+            'Error',
+            'Failed to load sale details for settlement',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+          );
+        }
         break;
 
       case 'synchronise':

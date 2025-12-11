@@ -12,7 +12,7 @@ class SalesController extends GetxController {
 
   // Reactive list of sale transactions
   var salesTransactions = <SaleTransaction>[].obs;
-  var groupedSales = <Map<String, dynamic>>[].obs;
+  var groupedSales = <Map<String, dynamic>>[].obs; 
 
   // Loading state
   var isLoadingSales = false.obs;
@@ -133,55 +133,76 @@ class SalesController extends GetxController {
       final customerId = firstTransaction.clientid;
       final salespersonId = firstTransaction.salespersonid ?? "00000000-0000-0000-0000-000000000000";
 
-      // Reconstruct line items from transactions
-      const uuid = Uuid();
-      final lineItems = saleTransactions.asMap().entries.map((entry) {
-        final index = entry.key;
-        final transaction = entry.value;
+      // Check if sale already exists on server
+      bool saleExistsOnServer = false;
+      try {
+        final existingSale = await _apiService.fetchSingleTransaction(salesId);
+        saleExistsOnServer = existingSale != null && existingSale.isNotEmpty;
+        print('Sale $salesId already exists on server: $saleExistsOnServer');
+      } catch (e) {
+        print('Error checking if sale exists on server: $e');
+        saleExistsOnServer = false;
+      }
 
-        return {
-          "id": uuid.v4(),
-          "salesid": salesId,
-          "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
-          "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
-          "quantity": transaction.quantity.toInt(),
-          "sellingprice": transaction.sellingprice.toInt(),
-          "ordernumber": index,
-          "remarks": "",
+      // Only create sale if it doesn't exist on server
+      if (!saleExistsOnServer) {
+        // Reconstruct line items from transactions
+        const uuid = Uuid();
+        final lineItems = saleTransactions.asMap().entries.map((entry) {
+          final index = entry.key;
+          final transaction = entry.value;
+
+          return {
+            "id": uuid.v4(),
+            "salesid": salesId,
+            "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
+            "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
+            "quantity": transaction.quantity.toInt(),
+            "sellingprice": transaction.sellingprice.toInt(),
+            "ordernumber": index,
+            "remarks": "",
+            "transactionstatusid": 1,
+            "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
+          };
+        }).toList();
+
+        // Create sale payload
+        final salePayload = {
+          "id": salesId,
+          "transactionDate": firstTransaction.transactiondate,
           "transactionstatusid": 1,
-          "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
+          "receiptnumber": firstTransaction.receiptnumber,
+          "clientid": customerId,
+          "remarks": firstTransaction.remarks,
+          "otherRemarks": "",
+          "companyId": companyId,
+          "branchId": branchId,
+          "servicepointid": servicePointId,
+          "salespersonid": salespersonId,
+          "modeid": 2,
+          "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+          "lineItems": lineItems,
+          "saleActionId": 1,
         };
-      }).toList();
 
-      // Create sale payload
-      final salePayload = {
-        "id": salesId,
-        "transactionDate": firstTransaction.transactiondate,
-        "transactionstatusid": 1,
-        "receiptnumber": firstTransaction.receiptnumber,
-        "clientid": customerId,
-        "remarks": firstTransaction.remarks,
-        "otherRemarks": "",
-        "companyId": companyId,
-        "branchId": branchId,
-        "servicepointid": servicePointId,
-        "salespersonid": salespersonId,
-        "modeid": 2,
-        "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
-        "lineItems": lineItems,
-        "saleActionId": 1,
-      };
+        // Log the sale payload being sent to server
+        print('=== SALE PAYLOAD BEING SENT TO SERVER ===');
+        print('Sale ID: $salesId');
+        print('Receipt Number: ${firstTransaction.receiptnumber}');
+        print('Sale Payload JSON:');
+        print(salePayload);
+        print('=== END SALE PAYLOAD ===');
 
-      // Log the sale payload being sent to server
-      print('=== SALE PAYLOAD BEING SENT TO SERVER ===');
-      print('Sale ID: $salesId');
-      print('Receipt Number: ${firstTransaction.receiptnumber}');
-      print('Sale Payload JSON:');
-      print(salePayload);
-      print('=== END SALE PAYLOAD ===');
+        // Create sale via API
+        await _apiService.createSale(salePayload);
+      } else {
+        print('=== SKIPPING SALE CREATION ===');
+        print('Sale $salesId already exists on server, proceeding with payment only');
+        print('=== END SKIPPING SALE CREATION ===');
+      }
 
-      // Create sale via API
-      await _apiService.createSale(salePayload);
+      // Define uuid for payment processing
+      const uuid = Uuid();
 
       // If payment was made, create and post payment
       final totalPaid = saleTransactions.fold<double>(
