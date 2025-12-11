@@ -75,6 +75,13 @@ class _SalesListingState extends State<SalesListing> {
       searchController.clear();
     });
   }
+  bool _isCashierRole() {
+    final currentUser = authController.currentUser.value;
+    if (currentUser == null) return false;
+
+    final role = currentUser.role.toLowerCase();
+    return role == 'cashier' || role.contains('cashier');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -283,19 +290,22 @@ class _SalesListingState extends State<SalesListing> {
                             ],
                           ),
                         ),
-                        PopupMenuItem(
-                          value: 'settleBill',
-                          child: Row(
-                            children: [
-                              Icon(Icons.sync, size: 18, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                'Settle bill',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
+                        // Only show settle bill option for cashier roles
+                        if (_isCashierRole()) ...[
+                          PopupMenuItem(
+                            value: 'settleBill',
+                            child: Row(
+                              children: [
+                                Icon(Icons.sync, size: 18, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Settle bill',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                       icon: Icon(Icons.more_vert),
                       color: Colors.blue.shade600,
