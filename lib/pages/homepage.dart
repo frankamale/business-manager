@@ -1,4 +1,5 @@
 import 'package:bac_pos/pages/sales_point_details.dart';
+import 'settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/service_point_controller.dart';
@@ -17,7 +18,8 @@ class _HomepageState extends State<Homepage>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  final ServicePointController _servicePointController = Get.find<ServicePointController>();
+  final ServicePointController _servicePointController =
+      Get.find<ServicePointController>();
   final AuthController authController = Get.find();
 
   @override
@@ -44,7 +46,8 @@ class _HomepageState extends State<Homepage>
     final lowerType = type.toLowerCase();
     if (lowerType.contains('restaurant')) return Icons.restaurant_rounded;
     if (lowerType.contains('bar')) return Icons.local_bar_rounded;
-    if (lowerType.contains('cafe') || lowerType.contains('cafeteria')) return Icons.local_cafe_rounded;
+    if (lowerType.contains('cafe') || lowerType.contains('cafeteria'))
+      return Icons.local_cafe_rounded;
     if (lowerType.contains('pharmacy')) return Icons.local_pharmacy_rounded;
     if (lowerType.contains('hardware')) return Icons.hardware_rounded;
     if (lowerType.contains('shop')) return Icons.shopping_bag_rounded;
@@ -53,12 +56,18 @@ class _HomepageState extends State<Homepage>
 
   List<Color> _getGradientForServicePoint(String type) {
     final lowerType = type.toLowerCase();
-    if (lowerType.contains('restaurant')) return [Colors.red.shade400, Colors.red.shade700];
-    if (lowerType.contains('bar')) return [Colors.purple.shade400, Colors.purple.shade700];
-    if (lowerType.contains('cafe') || lowerType.contains('cafeteria')) return [Colors.brown.shade400, Colors.brown.shade700];
-    if (lowerType.contains('pharmacy')) return [Colors.green.shade400, Colors.green.shade700];
-    if (lowerType.contains('hardware')) return [Colors.orange.shade400, Colors.orange.shade700];
-    if (lowerType.contains('shop')) return [Colors.blue.shade400, Colors.blue.shade700];
+    if (lowerType.contains('restaurant'))
+      return [Colors.red.shade400, Colors.red.shade700];
+    if (lowerType.contains('bar'))
+      return [Colors.purple.shade400, Colors.purple.shade700];
+    if (lowerType.contains('cafe') || lowerType.contains('cafeteria'))
+      return [Colors.brown.shade400, Colors.brown.shade700];
+    if (lowerType.contains('pharmacy'))
+      return [Colors.green.shade400, Colors.green.shade700];
+    if (lowerType.contains('hardware'))
+      return [Colors.orange.shade400, Colors.orange.shade700];
+    if (lowerType.contains('shop'))
+      return [Colors.blue.shade400, Colors.blue.shade700];
     return [Colors.teal.shade400, Colors.teal.shade700];
   }
 
@@ -84,10 +93,10 @@ class _HomepageState extends State<Homepage>
           children: [
             Container(
               width: 30,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.all(Radius.circular(100))
-                ),
-                child: Image.asset("assets/images/logo.png")
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(100)),
+              ),
+              child: Image.asset("assets/images/logo.png"),
             ),
             const SizedBox(width: 12),
             const Text(
@@ -97,18 +106,12 @@ class _HomepageState extends State<Homepage>
           ],
         ),
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.notifications_outlined),
-          //   onPressed: () {},
-          //   tooltip: 'Notifications',
-          // ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.settings),
             onPressed: () {
-              authController.logout();
-              Get.offAll(() => const Login());
+              Get.to(() => const SettingsPage());
             },
-            tooltip: 'Logout',
+            tooltip: 'Settings',
           ),
         ],
       ),
@@ -139,60 +142,67 @@ class _HomepageState extends State<Homepage>
                       ),
                     ],
                   ),
-                const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-                Obx(() {
-                  if (_servicePointController.isLoadingServicePoints.value) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-
-                  final servicePoints = _servicePointController.servicePoints;
-
-                  if (servicePoints.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(40.0),
-                        child: Column(
-                          children: [
-                            Icon(Icons.store_rounded, size: 64, color: Colors.grey),
-                            SizedBox(height: 14),
-                            Text(
-                              'No service points available',
-                              style: TextStyle(color: Colors.grey, fontSize: 16),
-                            ),
-                          ],
+                  Obx(() {
+                    if (_servicePointController.isLoadingServicePoints.value) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                          child: CircularProgressIndicator(),
                         ),
-                      ),
-                    );
-                  }
+                      );
+                    }
 
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 5,
-                      childAspectRatio: 3,
-                    ),
-                    itemCount: servicePoints.length,
-                    itemBuilder: (context, index) {
-                      final point = servicePoints[index];
-                      return _buildServicePointCard(point, index);
-                    },
-                  );
-                }),
-              ],
+                    final servicePoints = _servicePointController.servicePoints;
+
+                    if (servicePoints.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(40.0),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.store_rounded,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 14),
+                              Text(
+                                'No service points available',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 5,
+                        childAspectRatio: 3,
+                      ),
+                      itemCount: servicePoints.length,
+                      itemBuilder: (context, index) {
+                        final point = servicePoints[index];
+                        return _buildServicePointCard(point, index);
+                      },
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -268,7 +278,6 @@ class _HomepageState extends State<Homepage>
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-
                         ],
                       ),
                     ],
