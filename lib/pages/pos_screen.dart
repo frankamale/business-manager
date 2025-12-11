@@ -67,6 +67,18 @@ class _PosScreenState extends State<PosScreen> {
     return selectedItems.fold(0, (sum, item) => sum + (item['amount'] as num));
   }
 
+  bool _isCashierRole() {
+    final currentUser = authController.currentUser.value;
+    if (currentUser == null) return false;
+
+    final role = currentUser.role.toLowerCase();
+    final allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+
+    // Allow cashiers or if setting is enabled, also allow waiters
+    return role == 'cashier' || role.contains('cashier') ||
+           (allowAllUsersPayment && role == 'waiter');
+  }
+
   void _addItemToCart(InventoryItem item) {
     setState(() {
       final existingItemIndex = selectedItems.indexWhere(
@@ -354,41 +366,127 @@ class _PosScreenState extends State<PosScreen> {
   }
 
    Future<void> _updateSale() async {
-    if (selectedItems.isEmpty) {
-      Get.snackbar('Error', 'No items in cart',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900]);
-      return;
-    }
-
-    if (widget.existingSalesId == null || widget.existingReceiptNumber == null) {
-      Get.snackbar('Error', 'Invalid sale data',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900]);
-      return;
-    }
-
-    final result = await Get.to(
-      () => PaymentScreen(
-        cartItems: selectedItems,
-        customer: selectedCustomerId,
-        reference: refController.text,
-        notes: notesController.text,
-        salespersonId: selectedSalespersonId,
-        servicePointId: widget.servicePoint?.id,
-        isUpdateMode: true,
-        existingSalesId: widget.existingSalesId,
-        existingReceiptNumber: widget.existingReceiptNumber,
-      ),
-    );
-
-    // If update was successful, go back to sales listing
-    if (result == true) {
-      Navigator.of(context).pop(true);
-    }
-  }
+     if (selectedItems.isEmpty) {
+       Get.snackbar('Error', 'No items in cart',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.red[100],
+           colorText: Colors.red[900]);
+       return;
+     }
+ 
+     if (widget.existingSalesId == null || widget.existingReceiptNumber == null) {
+       Get.snackbar('Error', 'Invalid sale data',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.red[100],
+           colorText: Colors.red[900]);
+       return;
+     }
+ 
+     final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+     final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+ 
+     // For waiters, update bill without payment if setting doesn't allow all users payment
+     if (isWaiter && !allowAllUsersPayment) {
+       await _updateBillWithoutPayment();
+       return;
+     }
+ 
+     final result = await Get.to(
+       () => PaymentScreen(
+         cartItems: selectedItems,
+         customer: selectedCustomerId,
+         reference: refController.text,
+         notes: notesController.text,
+         salespersonId: selectedSalespersonId,
+         servicePointId: widget.servicePoint?.id,
+         isUpdateMode: true,
+         existingSalesId: widget.existingSalesId,
+         existingReceiptNumber: widget.existingReceiptNumber,
+       ),
+     );
+ 
+     // If update was successful, go back to sales listing
+     if (result == true) {
+       Navigator.of(context).pop(true);
+     }
+   }
+ 
+   Future<void> _updateBillWithoutPayment() async {
+     try {
+       final paymentController = Get.find<PaymentController>();
+       final result = await paymentController.updateSale(
+         existingSalesId: widget.existingSalesId!,
+         existingReceiptNumber: widget.existingReceiptNumber!,
+         cartItems: selectedItems,
+         amountTendered: 0, // No payment for waiters
+         customerId: selectedCustomerId,
+         reference: refController.text,
+         notes: notesController.text,
+         salespersonId: selectedSalespersonId,
+         servicePointId: widget.servicePoint?.id,
+       );
+ 
+       if (result['success'] == true) {
+         // Get the sale transactions for printing
+         final db = await DatabaseHelper().database;
+         final maps = await db!.query(
+           'sales_transactions',
+           where: 'receiptnumber = ?',
+           whereArgs: [result['receiptnumber']],
+         );
+         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
+ 
+         // Get customer name
+         String customerName = 'Cash Customer';
+         if (selectedCustomerId != null) {
+           final customer = customerController.getCustomerById(selectedCustomerId!);
+           if (customer != null) {
+             customerName = customer.fullnames;
+           }
+         }
+ 
+         // Get salesperson name
+         String issuedBy = '';
+         final currentUser = authController.currentUser.value;
+         if (currentUser != null) {
+           issuedBy = currentUser.staff;
+         }
+ 
+         // Print the updated bill
+         await PrintService.printBill(
+           receiptNumber: result['receiptnumber'],
+           customerName: customerName,
+           date: DateTime.now(),
+           items: items,
+           totalAmount: totalAmount,
+           issuedBy: issuedBy,
+           notes: notesController.text,
+         );
+ 
+         Get.snackbar(
+           'Success',
+           'Bill updated successfully!\nReceipt: ${result['receiptnumber']}',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.green[100],
+           colorText: Colors.green[900],
+           duration: const Duration(seconds: 3),
+         );
+ 
+         // Go back to sales listing
+         Navigator.of(context).pop(true);
+       } else {
+         Get.snackbar('Error', 'Failed to update bill',
+             snackPosition: SnackPosition.BOTTOM,
+             backgroundColor: Colors.red[100],
+             colorText: Colors.red[900]);
+       }
+     } catch (e) {
+       Get.snackbar('Error', 'Failed to update bill: $e',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.red[100],
+           colorText: Colors.red[900]);
+     }
+   }
 
   Widget _buildItemCard(InventoryItem item) {
     return Card(
@@ -1025,10 +1123,10 @@ class _PosScreenState extends State<PosScreen> {
                             ),
                           ),
                           child: Text(() {
-                            final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+                            final bool isCashier = _isCashierRole();
                             final bool isNewSale = widget.existingSalesId == null;
                             final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
-                            return (isNewSale && isWaiter && !allowAllUsersPayment) ? "SAVE" : "PAY";
+                            return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "PAY";
                           }()),
                         ),
                       ),
