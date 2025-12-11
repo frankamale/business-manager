@@ -42,18 +42,16 @@ class PosScreen extends StatefulWidget {
 }
 
 class _PosScreenState extends State<PosScreen> {
-   final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
-   final InventoryController inventoryController = Get.find();
-   final CustomerController customerController = Get.find();
-   final SettingsController settingsController = Get.find();
+    final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
+    final InventoryController inventoryController = Get.find();
+    final CustomerController customerController = Get.find();
+    final AuthController authController = Get.find();
+    final SettingsController settingsController = Get.find();
+    String selectedCategory = 'All';
+    final TextEditingController searchController = TextEditingController();
+    String? selectedSalespersonId;
 
-
-   final AuthController authController = Get.find();
-   String selectedCategory = 'All';
-   final TextEditingController searchController = TextEditingController();
-   String? selectedSalespersonId;
-
-   String formatMoney(double amount) {
+   String formatMoney(double amount) { 
      return _numberFormat.format(amount.toInt());
    }
 
@@ -69,6 +67,18 @@ class _PosScreenState extends State<PosScreen> {
 
   double get totalAmount {
     return selectedItems.fold(0, (sum, item) => sum + (item['amount'] as num));
+  }
+
+  bool _isCashierRole() {
+    final currentUser = authController.currentUser.value;
+    if (currentUser == null) return false;
+
+    final role = currentUser.role.toLowerCase();
+    final allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+
+    // Allow cashiers or if setting is enabled, also allow waiters
+    return role == 'cashier' || role.contains('cashier') ||
+           (allowAllUsersPayment && role == 'waiter');
   }
 
   void _addItemToCart(InventoryItem item) {
@@ -357,42 +367,128 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-  Future<void> _updateSale() async {
-    if (selectedItems.isEmpty) {
-      Get.snackbar('Error', 'No items in cart',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900]);
-      return;
-    }
-
-    if (widget.existingSalesId == null || widget.existingReceiptNumber == null) {
-      Get.snackbar('Error', 'Invalid sale data',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[900]);
-      return;
-    }
-
-    final result = await Get.to(
-      () => PaymentScreen(
-        cartItems: selectedItems,
-        customer: selectedCustomerId,
-        reference: refController.text,
-        notes: notesController.text,
-        salespersonId: selectedSalespersonId,
-        servicePointId: widget.servicePoint?.id,
-        isUpdateMode: true,
-        existingSalesId: widget.existingSalesId,
-        existingReceiptNumber: widget.existingReceiptNumber,
-      ),
-    );
-
-    // If update was successful, go back to sales listing
-    if (result == true) {
-      Navigator.of(context).pop(true);
-    }
-  }
+   Future<void> _updateSale() async {
+     if (selectedItems.isEmpty) {
+       Get.snackbar('Error', 'No items in cart',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.red[100],
+           colorText: Colors.red[900]);
+       return;
+     }
+ 
+     if (widget.existingSalesId == null || widget.existingReceiptNumber == null) {
+       Get.snackbar('Error', 'Invalid sale data',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.red[100],
+           colorText: Colors.red[900]);
+       return;
+     }
+ 
+     final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+     final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+ 
+     // For waiters, update bill without payment if setting doesn't allow all users payment
+     if (isWaiter && !allowAllUsersPayment) {
+       await _updateBillWithoutPayment();
+       return;
+     }
+ 
+     final result = await Get.to(
+       () => PaymentScreen(
+         cartItems: selectedItems,
+         customer: selectedCustomerId,
+         reference: refController.text,
+         notes: notesController.text,
+         salespersonId: selectedSalespersonId,
+         servicePointId: widget.servicePoint?.id,
+         isUpdateMode: true,
+         existingSalesId: widget.existingSalesId,
+         existingReceiptNumber: widget.existingReceiptNumber,
+       ),
+     );
+ 
+     // If update was successful, go back to sales listing
+     if (result == true) {
+       Navigator.of(context).pop(true);
+     }
+   }
+ 
+   Future<void> _updateBillWithoutPayment() async {
+     try {
+       final paymentController = Get.find<PaymentController>();
+       final result = await paymentController.updateSale(
+         existingSalesId: widget.existingSalesId!,
+         existingReceiptNumber: widget.existingReceiptNumber!,
+         cartItems: selectedItems,
+         amountTendered: 0, // No payment for waiters
+         customerId: selectedCustomerId,
+         reference: refController.text,
+         notes: notesController.text,
+         salespersonId: selectedSalespersonId,
+         servicePointId: widget.servicePoint?.id,
+       );
+ 
+       if (result['success'] == true) {
+         // Get the sale transactions for printing
+         final db = await DatabaseHelper().database;
+         final maps = await db!.query(
+           'sales_transactions',
+           where: 'receiptnumber = ?',
+           whereArgs: [result['receiptnumber']],
+         );
+         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
+ 
+         // Get customer name
+         String customerName = 'Cash Customer';
+         if (selectedCustomerId != null) {
+           final customer = customerController.getCustomerById(selectedCustomerId!);
+           if (customer != null) {
+             customerName = customer.fullnames;
+           }
+         }
+ 
+         // Get salesperson name
+         String issuedBy = '';
+         final currentUser = authController.currentUser.value;
+         if (currentUser != null) {
+           issuedBy = currentUser.staff;
+         }
+ 
+         // Print the updated bill
+         await PrintService.printBill(
+           receiptNumber: result['receiptnumber'],
+           customerName: customerName,
+           date: DateTime.now(),
+           items: items,
+           totalAmount: totalAmount,
+           issuedBy: issuedBy,
+           notes: notesController.text,
+         );
+ 
+         Get.snackbar(
+           'Success',
+           'Bill updated successfully!\nReceipt: ${result['receiptnumber']}',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.green[100],
+           colorText: Colors.green[900],
+           duration: const Duration(seconds: 3),
+         );
+ 
+         // Go back to sales listing
+         Navigator.of(context).pop(true);
+       } else {
+         Get.snackbar('Error', 'Failed to update bill',
+             snackPosition: SnackPosition.BOTTOM,
+             backgroundColor: Colors.red[100],
+             colorText: Colors.red[900]);
+       }
+     } catch (e) {
+       Get.snackbar('Error', 'Failed to update bill: $e',
+           snackPosition: SnackPosition.BOTTOM,
+           backgroundColor: Colors.red[100],
+           colorText: Colors.red[900]);
+     }
+   }
 
   Widget _buildItemCard(InventoryItem item) {
     return Card(
@@ -882,7 +978,7 @@ class _PosScreenState extends State<PosScreen> {
                                                     width: 80,
                                                     child: TextField(
                                                       keyboardType: TextInputType.number,
-                                                      readOnly: widget.isViewOnly || !_isPriceEditingEnabled,
+                                                      readOnly: widget.isViewOnly || !settingsController.priceEditingEnabled.value,
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w600,
@@ -909,7 +1005,7 @@ class _PosScreenState extends State<PosScreen> {
                                                         filled: true,
                                                       ),
                                                       controller: _priceControllers[item['id']],
-                                                      onChanged: (widget.isViewOnly || !_isPriceEditingEnabled) ? null : (value) {
+                                                      onChanged: (widget.isViewOnly || !settingsController.priceEditingEnabled.value) ? null : (value) {
                                                         if (value.isEmpty) {
                                                           _updatePrice(index, 0);
                                                         } else {
@@ -1042,8 +1138,9 @@ class _PosScreenState extends State<PosScreen> {
                           onPressed: () {
                             final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
                             final bool isNewSale = widget.existingSalesId == null;
-                            
-                            if (isNewSale && isWaiter) {
+                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+
+                            if (isNewSale && isWaiter && !allowAllUsersPayment) {
                               _saveBill();
                             } else if (isNewSale) {
                               _navigateToPayment();
@@ -1061,9 +1158,10 @@ class _PosScreenState extends State<PosScreen> {
                             ),
                           ),
                           child: Text(() {
-                            final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+                            final bool isCashier = _isCashierRole();
                             final bool isNewSale = widget.existingSalesId == null;
-                            return (isNewSale && isWaiter) ? "SAVE" : "SAVE";
+                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+                            return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "PAY";
                           }()),
                         ),
                       ),

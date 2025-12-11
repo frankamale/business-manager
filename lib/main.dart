@@ -13,6 +13,7 @@ void main() async {
   Get.put(ApiService());
   Get.put(SalesSyncService());
   Get.put(SettingsController());
+
   runApp(const MyApp());
 }
 
