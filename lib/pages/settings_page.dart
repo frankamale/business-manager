@@ -67,6 +67,14 @@ class SettingsPage extends StatelessWidget {
                     onChanged: (value) => settingsController.toggleAutoUpload(value),
                   )),
                 ),
+                ListTile(
+                  leading: const Icon(Icons.payment),
+                  title: const Text('Allow Access to Payment'),
+                  trailing: Obx(() => Switch(
+                    value: settingsController.paymentAccessForAllUsers.value,
+                    onChanged: (value) => settingsController.togglePaymentAccessForAllUsers(value),
+                  )),
+                ),
                 const ListTile(
                   leading: Icon(Icons.notifications),
                   title: Text('Notifications'),

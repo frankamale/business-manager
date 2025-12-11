@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/settings_controller.dart';
 import '../models/inventory_item.dart';
 import '../services/print_service.dart';
 import '../services/sales_sync_service.dart';
@@ -80,7 +81,12 @@ class _SalesListingState extends State<SalesListing> {
     if (currentUser == null) return false;
 
     final role = currentUser.role.toLowerCase();
-    return role == 'cashier' || role.contains('cashier');
+    final settingsController = Get.find<SettingsController>();
+    final allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+
+    // Allow cashiers or if setting is enabled, also allow waiters
+    return role == 'cashier' || role.contains('cashier') ||
+           (allowAllUsersPayment && role == 'waiter');
   }
 
   @override

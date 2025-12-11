@@ -8,6 +8,7 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/payment_controller.dart';
+import '../controllers/settings_controller.dart';
 import '../services/print_service.dart';
 import '../database/db_helper.dart';
 import '../models/sale_transaction.dart';
@@ -41,15 +42,16 @@ class PosScreen extends StatefulWidget {
 }
 
 class _PosScreenState extends State<PosScreen> {
-   final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
-   final InventoryController inventoryController = Get.find();
-   final CustomerController customerController = Get.find();
-   final AuthController authController = Get.find();
-   String selectedCategory = 'All';
-   final TextEditingController searchController = TextEditingController();
-   String? selectedSalespersonId;
+    final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
+    final InventoryController inventoryController = Get.find();
+    final CustomerController customerController = Get.find();
+    final AuthController authController = Get.find();
+    final SettingsController settingsController = Get.find();
+    String selectedCategory = 'All';
+    final TextEditingController searchController = TextEditingController();
+    String? selectedSalespersonId;
 
-   String formatMoney(double amount) {
+   String formatMoney(double amount) { 
      return _numberFormat.format(amount.toInt());
    }
 
@@ -1003,8 +1005,9 @@ class _PosScreenState extends State<PosScreen> {
                           onPressed: () {
                             final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
                             final bool isNewSale = widget.existingSalesId == null;
-                            
-                            if (isNewSale && isWaiter) {
+                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+
+                            if (isNewSale && isWaiter && !allowAllUsersPayment) {
                               _saveBill();
                             } else if (isNewSale) {
                               _navigateToPayment();
@@ -1024,7 +1027,8 @@ class _PosScreenState extends State<PosScreen> {
                           child: Text(() {
                             final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
                             final bool isNewSale = widget.existingSalesId == null;
-                            return (isNewSale && isWaiter) ? "SAVE" : "PAY";
+                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+                            return (isNewSale && isWaiter && !allowAllUsersPayment) ? "SAVE" : "PAY";
                           }()),
                         ),
                       ),

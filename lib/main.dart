@@ -1,4 +1,5 @@
 import 'package:bac_pos/auth/splash_screen.dart';
+import 'package:bac_pos/controllers/settings_controller.dart';
 import 'package:bac_pos/services/api_services.dart';
 import 'package:bac_pos/services/sales_sync_service.dart';
 import 'package:bac_pos/config.dart';
@@ -11,6 +12,8 @@ void main() async {
   await GetStorage.init();
   Get.put(ApiService());
   Get.put(SalesSyncService());
+  Get.put(SettingsController());
+
   runApp(const MyApp());
 }
 
