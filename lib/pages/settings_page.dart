@@ -2,20 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../auth/login.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/settings_controller.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) { 
+  Widget build(BuildContext context) {
     final AuthController authController = Get.find<AuthController>();
+    final SettingsController settingsController = Get.put(SettingsController());
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
 
-        title: const Text('Settings', style: TextStyle(color: Colors.white),),
+        title: const Text('Settings', style: TextStyle(color: Colors.white)), 
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -33,20 +35,21 @@ class SettingsPage extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Obx(() => Text(
-                      authController.currentUser.value?.name ?? 'Unknown',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    Obx(
+                      () => Text(
+                        authController.currentUser.value?.name ?? 'Unknown',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    )),
-                    Obx(() => Text(
-                      authController.currentUser.value?.username ?? 'Unknown',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
+                    ),
+                    Obx(
+                      () => Text(
+                        authController.currentUser.value?.username ?? 'Unknown',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
-                    )),
+                    ),
                   ],
                 ),
               ],
@@ -55,28 +58,36 @@ class SettingsPage extends StatelessWidget {
           // Settings list
           Expanded(
             child: ListView(
-              children: const [
-                ListTile(
+              children: [
+                 ListTile(
+                  leading: const Icon(Icons.cloud_upload),
+                  title: const Text('Auto Upload Sales'),
+                  trailing: Obx(() => Switch(
+                    value: settingsController.autoUploadEnabled.value,
+                    onChanged: settingsController.toggleAutoUpload,
+                  )),
+                ),
+                const ListTile(
                   leading: Icon(Icons.notifications),
                   title: Text('Notifications'),
                   trailing: Icon(Icons.arrow_forward_ios),
                 ),
-                ListTile(
+                const ListTile(
                   leading: Icon(Icons.palette),
                   title: Text('Theme'),
                   trailing: Icon(Icons.arrow_forward_ios),
                 ),
-                ListTile(
+                const ListTile(
                   leading: Icon(Icons.language),
                   title: Text('Language'),
                   trailing: Icon(Icons.arrow_forward_ios),
                 ),
-                ListTile(
+                const ListTile(
                   leading: Icon(Icons.help),
                   title: Text('Help & Support'),
                   trailing: Icon(Icons.arrow_forward_ios),
                 ),
-              ],
+                             ],
             ),
           ),
           // Logout button
@@ -91,6 +102,7 @@ class SettingsPage extends StatelessWidget {
                       title: const Text('Confirm Logout'),
                       content: const Text('Are you sure you want to logout?'),
                       actions: [
+                        
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: const Text('Cancel'),

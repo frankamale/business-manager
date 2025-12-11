@@ -4,11 +4,13 @@ import 'package:bac_pos/services/sales_sync_service.dart';
 import 'package:bac_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await GetStorage.init();
   Get.put(ApiService());
   Get.put(SalesSyncService());
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 

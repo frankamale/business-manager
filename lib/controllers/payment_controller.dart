@@ -6,9 +6,11 @@ import '../models/inventory_item.dart';
 import '../database/db_helper.dart';
 import '../utils/network_helper.dart';
 import 'sales_controller.dart';
+import '../services/settings_service.dart';
 
 class PaymentController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
+  final SettingsService _settingsService = SettingsService();
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   // Reactive state
@@ -131,7 +133,7 @@ class PaymentController extends GetxController {
         "ordernumber": index,
         "remarks": item['notes'] ?? "",
         "transactionstatusid": 1,
-        "sellingprice_original": (inventoryItem.price ?? 0.0).toInt(),
+        "sellingprice_original": inventoryItem.price.toInt(),
       };
     }).toList();
 
@@ -209,7 +211,6 @@ class PaymentController extends GetxController {
     // Calculate totals
     final totalAmount = calculateTotalAmount(cartItems);
     final paymentAmount = amountTendered;
-    final balance = totalAmount - paymentAmount;
 
     // Create sale transaction for each line item
     final List<Map<String, dynamic>> saleTransactions = [];
@@ -483,20 +484,23 @@ class PaymentController extends GetxController {
   // Attempt to upload sale to server after saving locally
   Future<void> _attemptUploadAfterSave(String saleId) async {
     try {
-      // Check network connectivity first
+      if (!_settingsService.getAutoUploadEnabled()) {
+        print('Auto upload is disabled - sale will be uploaded manually');
+        return;
+      }
+
       final hasConnection = await NetworkHelper.hasConnection();
-      
+
       if (!hasConnection) {
         print('No network connection - sale will be uploaded later when connection is available');
         return;
       }
 
       print('Attempting to upload sale $saleId to server...');
-      
       // Get the SalesController and upload the sale
       final salesController = Get.find<SalesController>();
       await salesController.uploadSaleToServer(saleId);
-      
+
       print('Sale $saleId uploaded successfully');
     } catch (e) {
       // Upload failed - sale remains with 'pending' status for later retry
