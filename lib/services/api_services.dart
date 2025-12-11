@@ -58,6 +58,33 @@ class ApiService extends GetxService {
     }
   }
 
+  // Admin sign in with credentials
+  Future<AuthResponse> adminSignIn(String username, String password) async {
+    try {
+      final requestBody = json.encode({
+        'username': username,
+        'password': password,
+      });
+
+      final response = await http.post(
+        Uri.parse("$baseurl/auth/signin"),
+        headers: {'Content-Type': 'application/json'},
+        body: requestBody,
+      );
+      print(requestBody);
+
+      if (response.statusCode == 200) {
+        final authResponse = AuthResponse.fromJson(json.decode(response.body));
+        await _saveAuthData(authResponse);
+        return authResponse;
+      } else {
+        throw Exception("Failed to admin sign in: ${response.statusCode}");
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Save authentication data to secure storage
   Future<void> _saveAuthData(AuthResponse authResponse) async {
     await _secureStorage.write(key: _tokenKey, value: authResponse.accessToken);

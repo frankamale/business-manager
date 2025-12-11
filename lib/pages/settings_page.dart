@@ -64,7 +64,7 @@ class SettingsPage extends StatelessWidget {
                   title: const Text('Auto Upload Sales'),
                   trailing: Obx(() => Switch(
                     value: settingsController.autoUploadEnabled.value,
-                    onChanged: settingsController.toggleAutoUpload,
+                    onChanged: (value) => settingsController.toggleAutoUpload(value),
                   )),
                 ),
                 const ListTile(
