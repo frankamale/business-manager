@@ -513,8 +513,8 @@ class _SalesListingState extends State<SalesListing> {
       }
       final balance = totalAmount - amountPaid;
 
-      // Check user role for appropriate printing options
-      final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+      // Check if amount paid is 0 or null to determine print type
+      final bool isUnpaid = amountPaid == 0 || amountPaid.isNaN;
       
       // Show print options dialog
       await Get.dialog(
@@ -523,14 +523,14 @@ class _SalesListingState extends State<SalesListing> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (isWaiter) ...[
-                ListTile(
-                  leading: Icon(Icons.print, color: Colors.blue),
-                  title: Text('Print Bill'),
-                  subtitle: Text('Print bill to connected printer'),
-                  onTap: () async {
-                    Get.back();
-                    try {
+              ListTile(
+                leading: Icon(Icons.print, color: Colors.blue),
+                title: Text(isUnpaid ? 'Print Bill' : 'Print Receipt'),
+                subtitle: Text('Print to connected printer'),
+                onTap: () async {
+                  Get.back();
+                  try {
+                    if (isUnpaid) {
                       await PrintService.printBill(
                         receiptNumber: receiptNumber,
                         customerName: customerName,
@@ -540,53 +540,7 @@ class _SalesListingState extends State<SalesListing> {
                         issuedBy: cashierName,
                         notes: notes.isNotEmpty ? notes : null,
                       );
-                    } catch (e) {
-                      Get.snackbar(
-                        'Print Error',
-                        'Failed to print',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red.shade700,
-                        colorText: Colors.white,
-                      );
-                    }
-                  },
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.share, color: Colors.green),
-                  title: Text('Share Bill PDF'),
-                  subtitle: Text('Share bill as PDF file'),
-                  onTap: () async {
-                    Get.back();
-                    try {
-                      await PrintService.shareBill(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    } catch (e) {
-                      Get.snackbar(
-                        'Share Error',
-                        'Failed to share',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red.shade700,
-                        colorText: Colors.white,
-                      );
-                    }
-                  },
-                ),
-              ] else ...[
-                ListTile(
-                  leading: Icon(Icons.print, color: Colors.blue),
-                  title: Text('Print Receipt'),
-                  subtitle: Text('Print to connected printer'),
-                  onTap: () async {
-                    Get.back();
-                    try {
+                    } else {
                       await PrintService.printReceipt(
                         receiptNumber: receiptNumber,
                         customerName: customerName,
@@ -599,25 +553,37 @@ class _SalesListingState extends State<SalesListing> {
                         issuedBy: cashierName,
                         notes: notes.isNotEmpty ? notes : null,
                       );
-                    } catch (e) {
-                      Get.snackbar(
-                        'Print Error',
-                        'Failed to print',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red.shade700,
-                        colorText: Colors.white,
-                      );
                     }
-                  },
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.share, color: Colors.green),
-                  title: Text('Share Receipt PDF'),
-                  subtitle: Text('Share receipt as PDF file'),
-                  onTap: () async {
-                    Get.back();
-                    try {
+                  } catch (e) {
+                    Get.snackbar(
+                      'Print Error',
+                      'Failed to print',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red.shade700,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+              ),
+              Divider(),
+              ListTile(
+                leading: Icon(Icons.share, color: Colors.green),
+                title: Text(isUnpaid ? 'Share Bill PDF' : 'Share Receipt PDF'),
+                subtitle: Text('Share as PDF file'),
+                onTap: () async {
+                  Get.back();
+                  try {
+                    if (isUnpaid) {
+                      await PrintService.shareBill(
+                        receiptNumber: receiptNumber,
+                        customerName: customerName,
+                        date: date,
+                        items: saleTransactions,
+                        totalAmount: totalAmount,
+                        issuedBy: cashierName,
+                        notes: notes.isNotEmpty ? notes : null,
+                      );
+                    } else {
                       await PrintService.shareReceipt(
                         receiptNumber: receiptNumber,
                         customerName: customerName,
@@ -630,18 +596,18 @@ class _SalesListingState extends State<SalesListing> {
                         issuedBy: cashierName,
                         notes: notes.isNotEmpty ? notes : null,
                       );
-                    } catch (e) {
-                      Get.snackbar(
-                        'Share Error',
-                        'Failed to share',
-                        snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: Colors.red.shade700,
-                        colorText: Colors.white,
-                      );
                     }
-                  },
-                ),
-              ],
+                  } catch (e) {
+                    Get.snackbar(
+                      'Share Error',
+                      'Failed to share',
+                      snackPosition: SnackPosition.BOTTOM,
+                      backgroundColor: Colors.red.shade700,
+                      colorText: Colors.white,
+                    );
+                  }
+                },
+              ),
             ],
           ),
           actions: [
