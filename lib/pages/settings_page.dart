@@ -62,6 +62,7 @@ class SettingsPage extends StatelessWidget {
                  ListTile(
                   leading: const Icon(Icons.cloud_upload),
                   title: const Text('Auto Upload Sales'),
+                  subtitle: const Text('Automatically sync sales data to server'),
                   trailing: Obx(() => Switch(
                     value: settingsController.autoUploadEnabled.value,
                     onChanged: (value) => settingsController.toggleAutoUpload(value),
@@ -70,9 +71,19 @@ class SettingsPage extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.payment),
                   title: const Text('Allow Access to Payment'),
+                  subtitle: const Text('Enable payment access for all user roles (cashiers, waiters, etc.)'),
                   trailing: Obx(() => Switch(
                     value: settingsController.paymentAccessForAllUsers.value,
                     onChanged: (value) => settingsController.togglePaymentAccessForAllUsers(value),
+                  )),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit),
+                  title: const Text('Allow Price Editing'),
+                  subtitle: const Text('Enable editing of item prices in POS screen'),
+                  trailing: Obx(() => Switch(
+                    value: settingsController.priceEditingEnabled.value,
+                    onChanged: (value) => settingsController.togglePriceEditing(value),
                   )),
                 ),
                 const ListTile(

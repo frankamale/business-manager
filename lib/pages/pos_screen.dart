@@ -851,7 +851,7 @@ class _PosScreenState extends State<PosScreen> {
                                                     width: 80,
                                                     child: TextField(
                                                       keyboardType: TextInputType.number,
-                                                      readOnly: widget.isViewOnly,
+                                                      readOnly: widget.isViewOnly || !settingsController.priceEditingEnabled.value,
                                                       style: const TextStyle(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w600,
@@ -872,7 +872,7 @@ class _PosScreenState extends State<PosScreen> {
                                                         ),
                                                       ),
                                                       controller: _priceControllers[item['id']],
-                                                      onChanged: widget.isViewOnly ? null : (value) {
+                                                      onChanged: (widget.isViewOnly || !settingsController.priceEditingEnabled.value) ? null : (value) {
                                                         if (value.isEmpty) {
                                                           _updatePrice(index, 0);
                                                         } else {

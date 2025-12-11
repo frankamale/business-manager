@@ -8,6 +8,7 @@ class SettingsController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();
   RxBool autoUploadEnabled = false.obs;
   RxBool paymentAccessForAllUsers = false.obs;
+  RxBool priceEditingEnabled = false.obs;
 
   // Text controllers for authentication
   TextEditingController usernameController = TextEditingController();
@@ -18,6 +19,7 @@ class SettingsController extends GetxController {
     super.onInit();
     autoUploadEnabled.value = _settingsService.getAutoUploadEnabled();
     paymentAccessForAllUsers.value = _settingsService.getPaymentAccessForAllUsers();
+    priceEditingEnabled.value = _settingsService.getPriceEditingEnabled();
   }
 
   @override
@@ -97,6 +99,15 @@ class SettingsController extends GetxController {
       paymentAccessForAllUsers.value = value;
       _settingsService.setPaymentAccessForAllUsers(value);
       Get.snackbar('Settings', 'Payment access for all users ${value ? 'enabled' : 'disabled'}');
+    }
+  }
+
+  Future<void> togglePriceEditing(bool value) async {
+    bool authenticated = await showAuthDialog();
+    if (authenticated) {
+      priceEditingEnabled.value = value;
+      _settingsService.setPriceEditingEnabled(value);
+      Get.snackbar('Settings', 'Price editing ${value ? 'enabled' : 'disabled'}');
     }
   }
 }
