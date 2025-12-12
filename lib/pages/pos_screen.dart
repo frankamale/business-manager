@@ -279,7 +279,6 @@ class _PosScreenState extends State<PosScreen> {
           duration: const Duration(seconds: 1);
       return;
     }
-
     try {
       final paymentController = Get.find<PaymentController>();
       final result = await paymentController.processSaleAndPayment(
@@ -291,9 +290,7 @@ class _PosScreenState extends State<PosScreen> {
         servicePointId: widget.servicePoint?.id,
         amountTendered: 0,
       );
-
       if (result['success'] == true) {
-        // Get the sale transactions for printing
         final db = await DatabaseHelper().database;
         final maps = await db!.query(
           'sales_transactions',
@@ -329,7 +326,6 @@ class _PosScreenState extends State<PosScreen> {
           notes: notesController.text,
         );
 
-        // Clear the cart
         setState(() {
           // Dispose all price controllers
           for (var controller in _priceControllers.values) {
@@ -670,7 +666,6 @@ class _PosScreenState extends State<PosScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Column(
                   children: [
-              // Customer Dropdown
               Row(
                 children: [
                   const SizedBox(
@@ -1102,7 +1097,7 @@ class _PosScreenState extends State<PosScreen> {
                       ),
                     ],
                   )
-                : // New sale or Edit mode - show PAY, Cancel, and Add Item buttons
+                :
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1134,7 +1129,7 @@ class _PosScreenState extends State<PosScreen> {
                             final bool isCashier = _isCashierRole();
                             final bool isNewSale = widget.existingSalesId == null;
                             final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
-                            return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "PAY";
+                            return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "SAVE";
                           }()),
                         ),
                       ),
