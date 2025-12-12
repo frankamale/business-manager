@@ -1,11 +1,12 @@
-import 'package:bac_pos/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
+
 import '../controllers/payment_controller.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/sales_controller.dart';
 import '../services/print_service.dart';
-import '../database/db_helper.dart';
 import '../models/sale_transaction.dart';
 
 class SettleBillScreen extends StatefulWidget {
@@ -26,8 +27,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
   final PaymentController _paymentController = Get.find<PaymentController>();
   final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
   final TextEditingController amountTenderedController = TextEditingController();
-  final ApiService _apiService = ApiService();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final FocusNode _amountFocus = FocusNode();
 
   double totalAmount = 0.0;
   double currentPaid = 0.0;
@@ -41,12 +41,18 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSaleData();
+    // Load existing sale data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSaleData();
+      // ensure keyboard opens on the amount field when screen opens
+      _amountFocus.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     amountTenderedController.dispose();
+    _amountFocus.dispose();
     super.dispose();
   }
 
@@ -54,40 +60,35 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
     try {
       setState(() => isLoading = true);
 
-      // Fetch sale data from server
-      final transactionData = await _paymentController._apiService.fetchSingleTransaction(widget.salesId);
+      final transactionData = await _paymentController.fetchTransactionData(widget.salesId);
 
-      // Calculate totals from server data
       final lineItemsList = transactionData['lineItems'] as List<dynamic>? ?? [];
       totalAmount = lineItemsList.fold<double>(
         0.0,
-        (sum, item) => sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
+            (sum, item) => sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
       );
+
       currentPaid = double.tryParse(
-        transactionData['amountpaid']?.toString() ??
-        transactionData['amountPaid']?.toString() ?? '0'
-      ) ?? 0.0;
+        transactionData['amountpaid']?.toString() ?? transactionData['amountPaid']?.toString() ?? '0',
+      ) ??
+          0.0;
+
       outstandingBalance = totalAmount - currentPaid;
 
-      // Get customer name from local DB if available
       final clientId = transactionData['clientid'];
       if (clientId != null) {
         try {
-          final customer = await _paymentController._dbHelper.getCustomerById(clientId);
+          final customer = await _paymentController.getCustomerById(clientId);
           if (customer != null) {
             customerName = customer.fullnames;
           }
-        } catch (e) {
-          // Use default
-        }
+        } catch (_) {}
       }
 
       notes = transactionData['remarks'] ?? '';
 
-      // Also fetch local transactions for printing
-      final salesController = Get.find();
+      final salesController = Get.find<SalesController>();
       saleTransactions = await salesController.getSaleTransactionsBySalesId(widget.salesId);
-
     } catch (e) {
       Get.snackbar(
         'Error',
@@ -102,19 +103,21 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
   }
 
   String formatMoney(double amount) {
-    return _numberFormat.format(amount.toInt());
+    // show integers with separators
+    return _numberFormat.format(amount.round());
   }
 
   double get amountTendered {
-    final text = amountTenderedController.text.trim();
+    final text = amountTenderedController.text.replaceAll(',', '').trim();
     return text.isNotEmpty ? double.tryParse(text) ?? 0.0 : 0.0;
   }
 
-  double get balance {
-    return amountTendered - outstandingBalance;
+  double get remainingBalanceAfterPayment {
+    return (outstandingBalance - amountTendered).clamp(double.negativeInfinity, double.infinity);
   }
 
   Future<void> _settleBill() async {
+    // Basic validations
     if (amountTendered <= 0) {
       Get.snackbar(
         'Error',
@@ -138,10 +141,8 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
     }
 
     try {
-      // Call the settle function
       await _paymentController.settleUploadedSale(widget.salesId, amountTendered);
 
-      // Print receipt
       if (saleTransactions.isNotEmpty) {
         final firstTransaction = saleTransactions.first;
         final date = DateTime.fromMillisecondsSinceEpoch(firstTransaction.transactiondate);
@@ -166,7 +167,8 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
             notes: notes.isNotEmpty ? notes : null,
           );
         } catch (printError) {
-          print('Failed to print receipt: $printError');
+          // Print failures shouldn't block user
+          debugPrint('Failed to print receipt: $printError');
         }
       }
 
@@ -194,295 +196,225 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-
-    if (isLoading) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text("Settle Bill", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          centerTitle: true,
-          backgroundColor: Colors.blue,
-          iconTheme: const IconThemeData(color: Colors.white),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text(
-          "Settle Bill",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Settle Bill', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.blue,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(12.0),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Receipt Number
-                    if (!isKeyboardVisible) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue[200]!),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              "Receipt: ",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              widget.receiptNumber,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Total Amount
-                    _buildAmountRow(
-                      "Total Amount",
-                      totalAmount,
-                      Colors.black87,
-                      fontSize: isKeyboardVisible ? 20 : 24,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Current Paid
-                    _buildAmountRow(
-                      "Amount Paid",
-                      currentPaid,
-                      Colors.green[700]!,
-                      fontSize: isKeyboardVisible ? 18 : 20,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Outstanding Balance
-                    _buildAmountRow(
-                      "Outstanding Balance",
-                      outstandingBalance,
-                      Colors.red[700]!,
-                      fontSize: isKeyboardVisible ? 20 : 24,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Amount Tendered Input
-                    TextField(
-                      controller: amountTenderedController,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(
-                        fontSize: isKeyboardVisible ? 18 : 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: "Amount Tendered",
-                        labelStyle: const TextStyle(fontSize: 14),
-                        prefixText: "UGX ",
-                        prefixStyle: TextStyle(
-                          fontSize: isKeyboardVisible ? 16 : 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blue[300]!, width: 2),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blue[200]!, width: 2),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.blue, width: 2),
-                        ),
-                        filled: true,
-                        fillColor: Colors.white,
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: isKeyboardVisible ? 10 : 12,
-                        ),
-                        isDense: true,
-                      ),
-                      onChanged: (value) {
-                        setState(() {});
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Balance/Change
-                    _buildAmountRow(
-                      "Change",
-                      balance,
-                      balance >= 0 ? Colors.green[700]! : Colors.red[700]!,
-                      fontSize: isKeyboardVisible ? 20 : 24,
-                    ),
-
-                    if (balance < 0)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          "Insufficient payment",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    // Customer and Notes
-                    if (!isKeyboardVisible) ...[
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                    // Header card (receipt + customer)
+                    Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "Customer: $customerName",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Receipt', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                    const SizedBox(height: 4),
+                                    Text(widget.receiptNumber, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    const Text('Customer', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                    const SizedBox(height: 4),
+                                    Text(customerName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
+                              ],
                             ),
                             if (notes.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                "Notes: $notes",
-                                style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                              ),
+                              const SizedBox(height: 12),
+                              Text('Notes: $notes', style: const TextStyle(fontSize: 12, color: Colors.black54)),
                             ],
                           ],
                         ),
                       ),
-                    ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Summary amounts
+                    _SummaryRow(label: 'Total Amount', amount: totalAmount, color: Colors.black87),
+                    const SizedBox(height: 10),
+                    _SummaryRow(label: 'Amount Paid', amount: currentPaid, color: Colors.green[700]!),
+                    const SizedBox(height: 10),
+                    _SummaryRow(label: 'Outstanding Balance', amount: outstandingBalance, color: Colors.red[700]!),
+
+                    const SizedBox(height: 18),
+
+                    // Payment card
+                    Card(
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text('Enter Payment', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                            const SizedBox(height: 10),
+
+                            // Amount input with input formatter and grouped separators
+                            TextFormField(
+                              controller: amountTenderedController,
+                              focusNode: _amountFocus,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: false),
+                              textInputAction: TextInputAction.done,
+                              autofocus: true,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                ThousandsSeparatorInputFormatter(),
+                              ],
+                              decoration: InputDecoration(
+                                prefixText: 'UGX ',
+                                prefixStyle: const TextStyle(fontWeight: FontWeight.w600),
+                                hintText: '0',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              ),
+                              onChanged: (_) => setState(() {}),
+                              onFieldSubmitted: (_) async {
+                                // Try to settle when user presses done
+                                await _settleBill();
+                              },
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // Change / remaining balance
+                            _SummaryRow(
+                              label: 'Remaining Balance',
+                              amount: remainingBalanceAfterPayment,
+                              color: remainingBalanceAfterPayment >= 0 ? Colors.red[700]! : Colors.green[700]!,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Action buttons bottom
+                    Padding(
+                      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 8 : 12, top: 12),
+                      child: Obx(() => Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: _paymentController.isProcessing.value ? null : () => Get.back(),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                backgroundColor: Colors.grey[600],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('Cancel', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton(
+                              onPressed: _paymentController.isProcessing.value ? null : _settleBill,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                backgroundColor: Colors.green[700],
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: _paymentController.isProcessing.value
+                                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Text('Settle Bill', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      )),
+                    ),
                   ],
                 ),
               ),
             ),
-
-            // Action Buttons
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Obx(() => Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _paymentController.isProcessing.value
-                        ? null
-                        : () => Get.back(),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: Colors.grey[600],
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        "Cancel",
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _paymentController.isProcessing.value
-                        ? null
-                        : _settleBill,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: Colors.green[700],
-                        foregroundColor: Colors.white,
-                        elevation: 2,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: _paymentController.isProcessing.value
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              "Settle Bill",
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                ],
-              )),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildAmountRow(String label, double amount, Color color, {double fontSize = 20}) {
+// --- Small reusable widgets & helpers ---
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final double amount;
+  final Color color;
+
+  const _SummaryRow({required this.label, required this.amount, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final NumberFormat fmt = NumberFormat('#,###', 'en_US');
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: color.withAlpha((255 * 0.1).round()),
+        color: color.withOpacity(0.06),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withAlpha((255 * 0.3).round())),
+        border: Border.all(color: color.withOpacity(0.18)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: fontSize * 0.6,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-          Text(
-            "UGX ${formatMoney(amount.abs())}",
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 14 * 0.85, fontWeight: FontWeight.w600, color: color)),
+          Text('UGX ${fmt.format(amount.abs().round())}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
         ],
       ),
+    );
+  }
+}
+
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  final NumberFormat _fmt = NumberFormat('#,###');
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    String onlyDigits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (onlyDigits.isEmpty) return const TextEditingValue(text: '');
+
+    final formatted = _fmt.format(int.parse(onlyDigits));
+
+    // Maintain cursor position
+    int selectionIndex = formatted.length - (onlyDigits.length - newValue.selection.end);
+    if (selectionIndex < 0) selectionIndex = 0;
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: selectionIndex.clamp(0, formatted.length)),
     );
   }
 }

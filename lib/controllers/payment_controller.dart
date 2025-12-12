@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:sqflite/sqflite.dart';
+import '../models/customer.dart';
 import '../services/api_services.dart';
 import '../models/inventory_item.dart';
 import '../database/db_helper.dart';
@@ -620,5 +621,12 @@ class PaymentController extends GetxController {
       print('Sale will be uploaded later when retrying from sales listing');
     }
   }
+  // Public method to fetch transaction data
+  Future<Map<String, dynamic>> fetchTransactionData(String salesId) async {
+    return await _apiService.fetchSingleTransaction(salesId);
+  }
+  // Public method to get customer by ID
+  Future<Customer?> getCustomerById(String clientId) async {
+    return await _dbHelper.getCustomerById(clientId);
+  }
 }
-
