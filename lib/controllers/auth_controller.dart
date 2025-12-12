@@ -183,4 +183,28 @@ class AuthController extends GetxController {
   void logout() {
     currentUser.value = null;
   }
+
+  // Server login with credential storage
+  Future<bool> serverLogin(String username, String password) async {
+    try {
+      isLoggingIn.value = true;
+
+      // Authenticate with server
+      await _apiService.adminSignIn(username, password);
+
+      // Store server credentials
+      await _apiService.saveServerCredentials(username, password);
+
+      isLoggingIn.value = false;
+      return true;
+    } catch (e) {
+      Get.snackbar(
+        'Server Login Failed',
+        'Invalid server credentials',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      isLoggingIn.value = false;
+      return false;
+    }
+  }
 }

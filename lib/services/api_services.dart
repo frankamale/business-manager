@@ -31,6 +31,8 @@ class ApiService extends GetxService {
   static const String _branchIdKey = 'branch_id';
   static const String _companyIdKey = 'company_id';
   static const String _servicePointIdKey = 'service_point_id';
+  static const String _serverUsernameKey = 'server_username';
+  static const String _serverPasswordKey = 'server_password';
 
   // Sign in with credentials
   Future<AuthResponse> signIn(String username, String password) async {
@@ -139,6 +141,34 @@ class ApiService extends GetxService {
     await _secureStorage.delete(key: _branchIdKey);
     await _secureStorage.delete(key: _companyIdKey);
     await _secureStorage.delete(key: _servicePointIdKey);
+  }
+
+  // Save server credentials
+  Future<void> saveServerCredentials(String username, String password) async {
+    await _secureStorage.write(key: _serverUsernameKey, value: username);
+    await _secureStorage.write(key: _serverPasswordKey, value: password);
+  }
+
+  // Get stored server credentials
+  Future<Map<String, String?>> getServerCredentials() async {
+    final username = await _secureStorage.read(key: _serverUsernameKey);
+    final password = await _secureStorage.read(key: _serverPasswordKey);
+    return {
+      'username': username,
+      'password': password,
+    };
+  }
+
+  // Check if server credentials are stored
+  Future<bool> hasServerCredentials() async {
+    final username = await _secureStorage.read(key: _serverUsernameKey);
+    return username != null && username.isNotEmpty;
+  }
+
+  // Clear server credentials
+  Future<void> clearServerCredentials() async {
+    await _secureStorage.delete(key: _serverUsernameKey);
+    await _secureStorage.delete(key: _serverPasswordKey);
   }
 
   // Save company info

@@ -1,9 +1,9 @@
+import 'package:bac_pos/auth/server_login.dart';
 import 'package:bac_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../config.dart';
-
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -157,55 +157,59 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             const SizedBox(height: 40),
 
                             // Account Selection Dropdown
-                            Obx(() => DropdownButtonFormField<String>(
-                              value: selectedItem,
-                              decoration: InputDecoration(
-                                labelText: 'Select Account',
-                                prefixIcon: Icon(
-                                  Icons.account_circle_outlined,
-                                  color: Colors.blue.shade700,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
+                            Obx(
+                              () => DropdownButtonFormField<String>(
+                                value: selectedItem,
+                                decoration: InputDecoration(
+                                  labelText: 'Select Account',
+                                  prefixIcon: Icon(
+                                    Icons.account_circle_outlined,
                                     color: Colors.blue.shade700,
-                                    width: 2,
                                   ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                      color: Colors.blue.shade700,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
                                 ),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
+                                hint: const Text('Select your account'),
+                                items: _authController.userRoles.map((
+                                  String item,
+                                ) {
+                                  return DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  );
+                                }).toList(),
+                                onChanged: (String? value) {
+                                  setState(() {
+                                    selectedItem = value;
+                                  });
+                                },
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please select an account';
+                                  }
+                                  return null;
+                                },
                               ),
-                              hint: const Text('Select your account'),
-                              items: _authController.userRoles.map((String item) {
-                                return DropdownMenuItem<String>(
-                                  value: item,
-                                  child: Text(item),
-                                );
-                              }).toList(),
-                              onChanged: (String? value) {
-                                setState(() {
-                                  selectedItem = value;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select an account';
-                                }
-                                return null;
-                              },
-                            )),
+                            ),
                             const SizedBox(height: 20),
 
                             // Password Field
@@ -266,7 +270,6 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 12),
 
-
                             // Sign In Button
                             SizedBox(
                               width: double.infinity,
@@ -281,8 +284,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  disabledBackgroundColor:
-                                      Colors.grey.shade300,
+                                  disabledBackgroundColor: Colors.grey.shade300,
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(
@@ -292,8 +294,8 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                           strokeWidth: 2.5,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                            Colors.white,
-                                          ),
+                                                Colors.white,
+                                              ),
                                         ),
                                       )
                                     : const Text(
@@ -304,6 +306,15 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                           letterSpacing: 0.5,
                                         ),
                                       ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            GestureDetector(
+                              onTap: () => {Get.to(ServerLogin())},
+
+                              child: Text(
+                                "Login with server credentials",
+                                style: TextStyle(color: Colors.blue),
                               ),
                             ),
                             const SizedBox(height: 24),

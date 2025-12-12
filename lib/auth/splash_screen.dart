@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'login.dart';
+import 'server_login.dart';
 import '../services/api_services.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/service_point_controller.dart';
@@ -13,7 +14,9 @@ import '../utils/network_helper.dart';
 import '../config.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final Widget? nextScreen;
+
+  const SplashScreen({super.key, this.nextScreen});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -63,6 +66,46 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _authenticateApp() async {
     try {
       setState(() {
+        _statusMessage = 'Checking server credentials...';
+      });
+
+      // Check if server credentials are stored
+      final hasServerCredentials = await _apiService.hasServerCredentials();
+
+      if (!hasServerCredentials) {
+        // First time - navigate to server login
+        setState(() {
+          _statusMessage = 'Redirecting to server login...';
+        });
+
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) {
+          Get.off(() => const ServerLogin());
+        }
+        return;
+      }
+
+      // Get stored credentials
+      final credentials = await _apiService.getServerCredentials();
+      final storedUsername = credentials['username'];
+      final storedPassword = credentials['password'];
+
+      if (storedUsername == null || storedPassword == null) {
+        // Credentials corrupted - redirect to server login
+        setState(() {
+          _statusMessage = 'Credentials missing, redirecting to server login...';
+        });
+
+        await Future.delayed(const Duration(milliseconds: 500));
+
+        if (mounted) {
+          Get.off(() => const ServerLogin());
+        }
+        return;
+      }
+
+      setState(() {
         _statusMessage = 'Checking authentication...';
       });
 
@@ -70,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen>
       final isAuthenticated = await _apiService.isAuthenticated();
 
       if (!isAuthenticated) {
-        // First launch - check network
+        // Check network
         final hasNetwork = await NetworkHelper.hasConnection();
         if (!hasNetwork) {
           setState(() {
@@ -81,15 +124,12 @@ class _SplashScreenState extends State<SplashScreen>
           return; // Show retry button, don't loop
         }
 
-        // Authenticate
+        // Authenticate with stored credentials
         setState(() {
           _statusMessage = 'Connecting to server...';
         });
 
-        await _apiService.signIn(
-          AppConfig.defaultUsername,
-          AppConfig.defaultPassword,
-        );
+        await _apiService.signIn(storedUsername, storedPassword);
 
         setState(() {
           _statusMessage = 'Loading company info...';
@@ -98,13 +138,12 @@ class _SplashScreenState extends State<SplashScreen>
         await _apiService.fetchAndStoreCompanyInfo();
       }
 
-      // Initialize all controllers
       _initializeControllers();
 
       // Smart data loading
       await _loadDataWithSmartSync();
 
-      // Navigate to login
+      // Navigate to next screen or login
       setState(() {
         _statusMessage = 'Finishing setup...';
       });
@@ -112,7 +151,11 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
-        Get.off(() => const Login());
+        if (widget.nextScreen != null) {
+          Get.off(() => widget.nextScreen!);
+        } else {
+          Get.off(() => const Login());
+        }
       }
     } catch (e) {
       setState(() {
@@ -353,7 +396,13 @@ class _SplashScreenState extends State<SplashScreen>
                   if (_isOfflineMode && _hasCachedData) ...[
                     const SizedBox(height: 12),
                     TextButton.icon(
-                      onPressed: () => Get.off(() => const Login()),
+                      onPressed: () {
+                        if (widget.nextScreen != null) {
+                          Get.off(() => widget.nextScreen!);
+                        } else {
+                          Get.off(() => const Login());
+                        }
+                      },
                       icon: const Icon(Icons.offline_bolt, color: Colors.white),
                       label: const Text('Continue Offline'),
                       style: TextButton.styleFrom(
