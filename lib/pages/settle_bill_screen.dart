@@ -129,17 +129,6 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
       return;
     }
 
-    if (amountTendered > outstandingBalance) {
-      Get.snackbar(
-        'Error',
-        'Amount tendered cannot exceed outstanding balance',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red[100],
-        colorText: Colors.red[900],
-      );
-      return;
-    }
-
     try {
       await _paymentController.settleUploadedSale(widget.salesId, amountTendered);
 
