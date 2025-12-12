@@ -12,6 +12,7 @@ import '../services/print_service.dart';
 import '../services/sales_sync_service.dart';
 import 'pos_screen.dart';
 import 'payment_screen.dart';
+import 'settle_bill_screen.dart';
 
 class SalesListing extends StatefulWidget {
   const SalesListing({super.key});
@@ -772,136 +773,151 @@ class _SalesListingState extends State<SalesListing> {
           return;
         }
 
-        try {
-          // Show loading indicator
-          Get.dialog(
-            Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('Loading sale details...'),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            barrierDismissible: false,
-          );
+        final uploadStatus = sale['upload_status'] as String? ?? 'pending';
 
-          // Fetch all items for this sale from database
-          final saleTransactions = await salesController.getSaleTransactionsBySalesId(salesId);
+         if (uploadStatus == 'uploaded') {
+           await Get.to(
+             () => SettleBillScreen(
+               salesId: salesId,
+               receiptNumber: receiptNumber,
+             ),
+             transition: Transition.rightToLeft,
+           );
 
-          // Close loading dialog
-          Get.back();
+           await salesController.loadSalesFromCache();
+         } else {
+           // For non-uploaded sales, use the old flow
+           try {
+             // Show loading indicator
+             Get.dialog(
+               Center(
+                 child: Card(
+                   child: Padding(
+                     padding: EdgeInsets.all(20),
+                     child: Column(
+                       mainAxisSize: MainAxisSize.min,
+                       children: [
+                         CircularProgressIndicator(),
+                         SizedBox(height: 16),
+                         Text('Loading sale details...'),
+                       ],
+                     ),
+                   ),
+                 ),
+               ),
+               barrierDismissible: false,
+             );
 
-          if (saleTransactions.isEmpty) {
-            Get.snackbar(
-              'Error',
-              'No items found for this sale',
-              snackPosition: SnackPosition.BOTTOM,
-              backgroundColor: Colors.red.shade700,
-              colorText: Colors.white,
-            );
-            return;
-          }
+             // Fetch all items for this sale from database
+             final saleTransactions = await salesController.getSaleTransactionsBySalesId(salesId);
 
-          final firstTransaction = saleTransactions.first;
-          final customerId = firstTransaction.clientid;
+             // Close loading dialog
+             Get.back();
 
-          final salespersonId = firstTransaction.salespersonid;
+             if (saleTransactions.isEmpty) {
+               Get.snackbar(
+                 'Error',
+                 'No items found for this sale',
+                 snackPosition: SnackPosition.BOTTOM,
+                 backgroundColor: Colors.red.shade700,
+                 colorText: Colors.white,
+               );
+               return;
+             }
 
-          // Transform sale transactions to cart items format
-          final cartItems = <Map<String, dynamic>>[];
-          for (var transaction in saleTransactions) {
-            // Try to find the inventory item by name or ID
-            final inventoryItems = inventoryController.inventoryItems;
+             final firstTransaction = saleTransactions.first;
+             final customerId = firstTransaction.clientid;
 
-            // First try to find by inventoryid
-            var inventoryItem = inventoryItems.firstWhereOrNull(
-              (item) => item.id == transaction.inventoryid,
-            );
+             final salespersonId = firstTransaction.salespersonid;
 
-            // If not found, try by name
-            if (inventoryItem == null) {
-              inventoryItem = inventoryItems.firstWhereOrNull(
-                (item) => item.name.toLowerCase() == transaction.inventoryname.toLowerCase(),
-              );
-            }
+             // Transform sale transactions to cart items format
+             final cartItems = <Map<String, dynamic>>[];
+             for (var transaction in saleTransactions) {
+               // Try to find the inventory item by name or ID
+               final inventoryItems = inventoryController.inventoryItems;
 
-            // If still not found, create a minimal inventory item object with all required fields
-            if (inventoryItem == null) {
-              inventoryItem = InventoryItem(
-                id: transaction.inventoryid ?? transaction.id,
-                ipdid: transaction.ipdid ?? '',
-                name: transaction.inventoryname,
-                code: '',
-                externalserial: '',
-                category: transaction.category,
-                price: transaction.sellingprice.toDouble(),
-                costprice: transaction.costprice,
-                packsize: transaction.packsize.toDouble(),
-                packaging: transaction.packaging,
-                packagingid: '',
-                soldfrom: '',
-                shortform: '',
-                packagingcode: '',
-                efris: false,
-                efrisid: '',
-                measurmentunitidefris: '',
-                measurmentunit: '',
-                measurmentunitid: '',
-                vatcategoryid: '',
-                branchid: transaction.branchid ?? '',
-                companyid: transaction.companyid ?? '',
-              );
-            }
+               // First try to find by inventoryid
+               var inventoryItem = inventoryItems.firstWhereOrNull(
+                 (item) => item.id == transaction.inventoryid,
+               );
 
-            cartItems.add({
-              'id': inventoryItem.id,
-              'name': transaction.inventoryname,
-              'quantity': transaction.quantity.toInt(),
-              'price': transaction.sellingprice,
-              'amount': transaction.amount,
-              'item': inventoryItem,
-            });
-          }
+               // If not found, try by name
+               if (inventoryItem == null) {
+                 inventoryItem = inventoryItems.firstWhereOrNull(
+                   (item) => item.name.toLowerCase() == transaction.inventoryname.toLowerCase(),
+                 );
+               }
 
-          final reference = firstTransaction.purchaseordernumber ?? '';
-          final notes = firstTransaction.remarks ?? '';
+               // If still not found, create a minimal inventory item object with all required fields
+               if (inventoryItem == null) {
+                 inventoryItem = InventoryItem(
+                   id: transaction.inventoryid ?? transaction.id,
+                   ipdid: transaction.ipdid ?? '',
+                   name: transaction.inventoryname,
+                   code: '',
+                   externalserial: '',
+                   category: transaction.category,
+                   price: transaction.sellingprice.toDouble(),
+                   costprice: transaction.costprice,
+                   packsize: transaction.packsize.toDouble(),
+                   packaging: transaction.packaging,
+                   packagingid: '',
+                   soldfrom: '',
+                   shortform: '',
+                   packagingcode: '',
+                   efris: false,
+                   efrisid: '',
+                   measurmentunitidefris: '',
+                   measurmentunit: '',
+                   measurmentunitid: '',
+                   vatcategoryid: '',
+                   branchid: transaction.branchid ?? '',
+                   companyid: transaction.companyid ?? '',
+                 );
+               }
 
-          await Get.to(
-            () => PaymentScreen(
-              cartItems: cartItems,
-              customer: customerId,
-              reference: reference,
-              notes: notes,
-              salespersonId: salespersonId,
-              isUpdateMode: true,
-              existingSalesId: salesId,
-              existingReceiptNumber: receiptNumber,
-            ),
-            transition: Transition.rightToLeft,
-          );
+               cartItems.add({
+                 'id': inventoryItem.id,
+                 'name': transaction.inventoryname,
+                 'quantity': transaction.quantity.toInt(),
+                 'price': transaction.sellingprice,
+                 'amount': transaction.amount,
+                 'item': inventoryItem,
+               });
+             }
 
-          await salesController.loadSalesFromCache();
-        } catch (e) {
-          if (Get.isDialogOpen ?? false) {
-            Get.back();
-          }
+             final reference = firstTransaction.purchaseordernumber ?? '';
+             final notes = firstTransaction.remarks ?? '';
 
-          Get.snackbar(
-            'Error',
-            'Failed to load sale details for settlement',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red.shade700,
-            colorText: Colors.white,
-          );
-        }
+             await Get.to(
+               () => PaymentScreen(
+                 cartItems: cartItems,
+                 customer: customerId,
+                 reference: reference,
+                 notes: notes,
+                 salespersonId: salespersonId,
+                 isUpdateMode: true,
+                 existingSalesId: salesId,
+                 existingReceiptNumber: receiptNumber,
+               ),
+               transition: Transition.rightToLeft,
+             );
+
+             await salesController.loadSalesFromCache();
+           } catch (e) {
+             if (Get.isDialogOpen ?? false) {
+               Get.back();
+             }
+
+             Get.snackbar(
+               'Error',
+               'Failed to load sale details for settlement',
+               snackPosition: SnackPosition.BOTTOM,
+               backgroundColor: Colors.red.shade700,
+               colorText: Colors.white,
+             );
+           }
+         }
         break;
 
       case 'synchronise':

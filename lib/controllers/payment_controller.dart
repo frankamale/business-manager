@@ -495,6 +495,104 @@ class PaymentController extends GetxController {
     return amountTendered >= totalAmount;
   }
 
+  // Settle an uploaded sale by posting payment directly
+  Future<void> settleUploadedSale(String salesId, double amountTendered) async {
+    try {
+      isProcessing.value = true;
+
+      // Fetch transaction details from server to get proper data
+      final transactionData = await _apiService.fetchSingleTransaction(salesId);
+
+      // Calculate outstanding balance from server data
+      final lineItemsList = transactionData['lineItems'] as List<dynamic>? ?? [];
+      final totalAmount = lineItemsList.fold<double>(
+        0.0,
+        (sum, item) => sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
+      );
+      final currentPaid = double.tryParse(
+        transactionData['amountpaid']?.toString() ??
+        transactionData['amountPaid']?.toString() ?? '0'
+      ) ?? 0.0;
+      final outstandingBalance = totalAmount - currentPaid;
+
+      // Only pay up to the outstanding balance
+      final paymentAmount = amountTendered < outstandingBalance
+        ? amountTendered
+        : outstandingBalance;
+
+      if (paymentAmount <= 0) {
+        throw Exception('No payment amount to process');
+      }
+
+      // Get service point ID from transaction data
+      final servicePointId = transactionData['servicepointid'] ?? '';
+      final customerId = transactionData['clientid'];
+
+      // Get current timestamp for payment
+      final paymentTimestamp = DateTime.now().millisecondsSinceEpoch;
+
+      // Create payment payload
+      final paymentPayload = createPaymentPayload(
+        saleId: salesId,
+        paymentAmount: paymentAmount,
+        paymentTimestamp: paymentTimestamp,
+        servicePointId: servicePointId,
+        customerId: customerId,
+        companyId: transactionData['companyId'],
+      );
+
+      // Log the payment payload being sent to server
+      print('=== SETTLE BILL PAYMENT PAYLOAD BEING SENT TO SERVER ===');
+      print('Sale ID: $salesId');
+      print('Payment Amount: $paymentAmount');
+      print('Payment Payload JSON:');
+      print(paymentPayload);
+      print('=== END SETTLE BILL PAYMENT PAYLOAD ===');
+
+      // Post payment to server
+      await _apiService.postSale(paymentPayload);
+
+      // Update local database with new payment amount
+      final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(salesId);
+      if (saleTransactions.isNotEmpty) {
+        final db = await _dbHelper.database;
+        final batch = db!.batch();
+
+        for (var transaction in saleTransactions) {
+          // Calculate the share of this payment for this item
+          final itemAmount = transaction.amount;
+          final totalAmountLocal = saleTransactions.fold<double>(0, (sum, t) => sum + t.amount);
+          final currentPaidLocal = saleTransactions.fold<double>(0, (sum, t) => sum + t.amountpaid);
+          final itemShare = totalAmountLocal > 0 ? (itemAmount / totalAmountLocal) * paymentAmount : 0.0;
+
+          final newAmountPaid = transaction.amountpaid + itemShare;
+          final newBalance = transaction.amount - newAmountPaid;
+
+          batch.update(
+            'sales_transactions',
+            {
+              'amountpaid': newAmountPaid,
+              'balance': newBalance,
+              'paymentmode': 'Cash',
+              'paymenttype': 'Cash',
+            },
+            where: 'id = ?',
+            whereArgs: [transaction.id],
+          );
+        }
+
+        await batch.commit(noResult: true);
+      }
+
+      print('Payment posted successfully for sale $salesId');
+    } catch (e) {
+      print('Failed to settle bill for sale $salesId: $e');
+      rethrow;
+    } finally {
+      isProcessing.value = false;
+    }
+  }
+
   // Attempt to upload sale to server after saving locally
   Future<void> _attemptUploadAfterSave(String saleId) async {
     try {
