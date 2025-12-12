@@ -8,16 +8,28 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'controllers/customer_controller.dart';
+import 'controllers/inventory_controller.dart';
+import 'controllers/payment_controller.dart';
+import 'controllers/sales_controller.dart';
+import 'controllers/user_controller.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init(); 
   Get.put(ApiService());
   Get.put(SalesSyncService());
   Get.put(AuthController());
+  Get.put(CustomerController());
+  Get.put(InventoryController());
+  Get.put(PaymentController());
+  Get.put(SalesController());
+  Get.put(UserController());
   Get.put(SettingsController());
 
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
