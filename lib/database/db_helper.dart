@@ -577,7 +577,6 @@ class DatabaseHelper {
   Future<void> insertUsers(List<User> users) async {
     final db = await database;
     final batch = db!.batch();
-
     for (var user in users) {
       batch.insert(
         'user',
@@ -602,7 +601,6 @@ class DatabaseHelper {
     return result.map((map) => map['role'] as String).toList();
   }
 
-  // Get all usernames for login display (only users with salespersonid)
   Future<List<String>> getAllRoles() async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db!.query(

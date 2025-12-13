@@ -1,5 +1,6 @@
 import 'package:bac_pos/auth/splash_screen.dart';
 import 'package:bac_pos/controllers/auth_controller.dart';
+import 'package:bac_pos/controllers/service_point_controller.dart';
 import 'package:bac_pos/controllers/settings_controller.dart';
 import 'package:bac_pos/services/api_services.dart';
 import 'package:bac_pos/services/sales_sync_service.dart';
@@ -26,6 +27,7 @@ void main() async {
   Get.put(SalesController());
   Get.put(UserController());
   Get.put(SettingsController());
+  Get.put(ServicePointController());
 
   runApp(const MyApp());
 }
