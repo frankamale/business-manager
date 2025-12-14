@@ -37,8 +37,8 @@ class SalesPointDetails extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () {
-              authController.logout();
+            onPressed: () async {
+              await authController.logout();
               Get.offAll(() => const Login());
             },
             tooltip: 'Logout',

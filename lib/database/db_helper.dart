@@ -6,28 +6,56 @@ import 'package:bac_pos/models/customer.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+/// DatabaseHelper implements a per-company database approach where each company has its own isolated SQLite database file.
+/// This design prevents data leakage between companies by ensuring complete separation of data storage.
+/// Example usage: During login, call openForCompany(companyId) to switch to the company's database.
+/// During logout, call close() to release the database connection.
 class DatabaseHelper {
+  // Singleton pattern ensures only one instance of DatabaseHelper exists,
+  // preventing multiple database connections and ensuring consistent state.
   static final DatabaseHelper _instance = DatabaseHelper._internal();
 
+  static DatabaseHelper get instance => _instance;
+
   factory DatabaseHelper() => _instance;
+
+  // Private database instance, null when no database is open.
   static Database? _database;
 
   DatabaseHelper._internal();
 
-  Future<Database?> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database;
-  }
-
-  Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), "my_database.db");
-    return await openDatabase(
+  /// Opens a database for the specified company. Closes any existing database to prevent data leakage between companies.
+  /// Each company has its own database file (e.g., 'app_db_company_123.db'), ensuring complete isolation of data.
+  /// This design prevents accidental mixing of data from different companies, maintaining data integrity and security.
+  Future<void> openForCompany(String companyId) async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+    String path = join(await getDatabasesPath(), 'app_db_company_${companyId}.db');
+    _database = await openDatabase(
       path,
-      version: 10,
+      version: 1,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+  }
+
+  /// Synchronous getter for the database instance. Assumes database is already opened via openForCompany.
+  /// Throws an exception if no database is open, enforcing proper initialization.
+  Database get database {
+    if (_database == null) {
+      throw Exception('Database not opened. Call openForCompany first.');
+    }
+    return _database!;
+  }
+
+  /// Closes the current database and sets it to null, preparing for a new company database if needed.
+  Future<void> close() async {
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -558,8 +586,8 @@ class DatabaseHelper {
   }
 
   Future<int> insertUser(User user) async {
-    final db = await database;
-    return await db!.insert(
+    final db = database;
+    return await db.insert(
       'user',
       user.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -567,16 +595,16 @@ class DatabaseHelper {
   }
 
   Future<List<User>> get users async {
-    Database? db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query('user');
+    Database db = database;
+    final List<Map<String, dynamic>> maps = await db.query('user');
     return List.generate(maps.length, (i) {
       return User.fromMap(maps[i]);
     });
   }
 
   Future<void> insertUsers(List<User> users) async {
-    final db = await database;
-    final batch = db!.batch();
+    final db = database;
+    final batch = db.batch();
     for (var user in users) {
       batch.insert(
         'user',
@@ -590,8 +618,8 @@ class DatabaseHelper {
 
   // Get unique roles from users
   Future<List<String>> getUniqueRoles() async {
-    final db = await database;
-    final List<Map<String, dynamic>> result = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> result = await db.query(
       'user',
       columns: ['role'],
       distinct: true,
@@ -602,8 +630,8 @@ class DatabaseHelper {
   }
 
   Future<List<String>> getAllRoles() async {
-    final db = await database;
-    final List<Map<String, dynamic>> result = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> result = await db.query(
       'user',
       columns: ['username'],
       where: 'salespersonid IS NOT NULL AND salespersonid != ?',
@@ -616,8 +644,8 @@ class DatabaseHelper {
 
   // Get users by role
   Future<List<User>> getUsersByRole(String role) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'user',
       where: 'role = ?',
       whereArgs: [role],
@@ -630,8 +658,8 @@ class DatabaseHelper {
 
   // Get users with salespersonid (not null or empty)
   Future<List<User>> getUsersWithSalespersonId() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'user',
       where: 'salespersonid IS NOT NULL AND salespersonid != ?',
       whereArgs: [''],
@@ -645,10 +673,10 @@ class DatabaseHelper {
   // Authenticate user by role and password
   Future<User?> authenticateUser(String role, int password) async {
     try {
-      final db = await database;
+      final db = database;
       print('Authenticating user with role: $role and password: $password');
 
-      final List<Map<String, dynamic>> maps = await db!.query(
+      final List<Map<String, dynamic>> maps = await db.query(
         'user',
         where: 'role = ? AND pospassword = ?',
         whereArgs: [role, password],
@@ -672,10 +700,10 @@ class DatabaseHelper {
   // Authenticate user by username and password
   Future<User?> authenticateUserByUsername(String username, int password) async {
     try {
-      final db = await database;
+      final db = database;
       print('Authenticating user with username: $username and password: $password');
 
-      final List<Map<String, dynamic>> maps = await db!.query(
+      final List<Map<String, dynamic>> maps = await db.query(
         'user',
         where: 'username = ? AND pospassword = ?',
         whereArgs: [username, password],
@@ -698,16 +726,16 @@ class DatabaseHelper {
 
   // Delete all users (useful for re-syncing)
   Future<void> deleteAllUsers() async {
-    final db = await database;
-    await db!.delete('user');
+    final db = database;
+    await db.delete('user');
   }
 
   // SERVICE POINT METHODS
 
   // Insert a service point
   Future<int> insertServicePoint(ServicePoint servicePoint) async {
-    final db = await database;
-    return await db!.insert(
+    final db = database;
+    return await db.insert(
       'service_point',
       servicePoint.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -716,8 +744,8 @@ class DatabaseHelper {
 
   // Insert multiple service points
   Future<void> insertServicePoints(List<ServicePoint> servicePoints) async {
-    final db = await database;
-    final batch = db!.batch();
+    final db = database;
+    final batch = db.batch();
 
     for (var servicePoint in servicePoints) {
       batch.insert(
@@ -732,8 +760,8 @@ class DatabaseHelper {
 
   // Get all service points
   Future<List<ServicePoint>> getServicePoints() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query('service_point');
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query('service_point');
 
     return List.generate(maps.length, (i) {
       return ServicePoint.fromMap(maps[i]);
@@ -742,8 +770,8 @@ class DatabaseHelper {
 
   // Get service points with sales enabled
   Future<List<ServicePoint>> getSalesServicePoints() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'service_point',
       where: 'sales = ?',
       whereArgs: [1],
@@ -756,16 +784,16 @@ class DatabaseHelper {
 
   // Delete all service points
   Future<void> deleteAllServicePoints() async {
-    final db = await database;
-    await db!.delete('service_point');
+    final db = database;
+    await db.delete('service_point');
   }
 
   // INVENTORY METHODS
 
   // Insert a single inventory item
   Future<int> insertInventoryItem(InventoryItem item) async {
-    final db = await database;
-    return await db!.insert(
+    final db = database;
+    return await db.insert(
       'inventory',
       item.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -774,8 +802,8 @@ class DatabaseHelper {
 
   // Insert multiple inventory items
   Future<void> insertInventoryItems(List<InventoryItem> items) async {
-    final db = await database;
-    final batch = db!.batch();
+    final db = database;
+    final batch = db.batch();
 
     for (var item in items) {
       batch.insert(
@@ -790,8 +818,8 @@ class DatabaseHelper {
 
   // Get all inventory items
   Future<List<InventoryItem>> getInventoryItems() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query('inventory');
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query('inventory');
 
     return List.generate(maps.length, (i) {
       return InventoryItem.fromMap(maps[i]);
@@ -800,8 +828,8 @@ class DatabaseHelper {
 
   // Search inventory items by name, code, or category
   Future<List<InventoryItem>> searchInventoryItems(String query) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'inventory',
       where: 'name LIKE ? OR code LIKE ? OR category LIKE ?',
       whereArgs: ['%$query%', '%$query%', '%$query%'],
@@ -815,8 +843,8 @@ class DatabaseHelper {
 
   // Get inventory items by category
   Future<List<InventoryItem>> getInventoryItemsByCategory(String category) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'inventory',
       where: 'category = ?',
       whereArgs: [category],
@@ -830,8 +858,8 @@ class DatabaseHelper {
 
   // Get unique categories
   Future<List<String>> getInventoryCategories() async {
-    final db = await database;
-    final List<Map<String, dynamic>> result = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> result = await db.query(
       'inventory',
       columns: ['category'],
       distinct: true,
@@ -843,8 +871,8 @@ class DatabaseHelper {
 
   // Get inventory items by soldfrom (service point type)
   Future<List<InventoryItem>> getInventoryItemsBySoldFrom(String soldFrom) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'inventory',
       where: 'soldfrom = ?',
       whereArgs: [soldFrom],
@@ -858,15 +886,15 @@ class DatabaseHelper {
 
   // Delete all inventory items
   Future<void> deleteAllInventoryItems() async {
-    final db = await database;
-    await db!.delete('inventory');
+    final db = database;
+    await db.delete('inventory');
   }
 
   // Get inventory count
   Future<int> getInventoryCount() async {
-    final db = await database;
+    final db = database;
     final count = Sqflite.firstIntValue(
-      await db!.rawQuery('SELECT COUNT(*) FROM inventory'),
+      await db.rawQuery('SELECT COUNT(*) FROM inventory'),
     );
     return count ?? 0;
   }
@@ -875,8 +903,8 @@ class DatabaseHelper {
 
   // Insert a single sale transaction
   Future<int> insertSaleTransaction(SaleTransaction transaction) async {
-    final db = await database;
-    return await db!.insert(
+    final db = database;
+    return await db.insert(
       'sales_transactions',
       transaction.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -885,8 +913,8 @@ class DatabaseHelper {
 
   // Insert multiple sale transactions
   Future<void> insertSaleTransactions(List<SaleTransaction> transactions) async {
-    final db = await database;
-    final batch = db!.batch();
+    final db = database;
+    final batch = db.batch();
 
     for (var transaction in transactions) {
       batch.insert(
@@ -901,8 +929,8 @@ class DatabaseHelper {
 
   // Get all sale transactions
   Future<List<SaleTransaction>> getSaleTransactions() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'sales_transactions',
       orderBy: 'transactiondate DESC',
     );
@@ -914,8 +942,8 @@ class DatabaseHelper {
 
   // Get sale transactions by salesId (items from same sale)
   Future<List<SaleTransaction>> getSaleTransactionsBySalesId(String salesId) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'sales_transactions',
       where: 'salesId = ?',
       whereArgs: [salesId],
@@ -928,8 +956,8 @@ class DatabaseHelper {
 
   // Get grouped sales (one entry per sale/receipt)
   Future<List<Map<String, dynamic>>> getGroupedSales() async {
-    final db = await database;
-    final List<Map<String, dynamic>> result = await db!.rawQuery('''
+    final db = database;
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
       SELECT
         salesId,
         receiptnumber,
@@ -961,8 +989,8 @@ class DatabaseHelper {
     int startDate,
     int endDate,
   ) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'sales_transactions',
       where: 'transactiondate BETWEEN ? AND ?',
       whereArgs: [startDate, endDate],
@@ -976,7 +1004,7 @@ class DatabaseHelper {
 
   // Get daily summary statistics
   Future<Map<String, dynamic>> getDailySummary(int date) async {
-    final db = await database;
+    final db = database;
 
     // Start and end of day in milliseconds
     final startOfDay = DateTime.fromMillisecondsSinceEpoch(date);
@@ -984,7 +1012,7 @@ class DatabaseHelper {
     final endMillis = DateTime(startOfDay.year, startOfDay.month, startOfDay.day, 23, 59, 59).millisecondsSinceEpoch;
 
     // Get payment method totals
-    final paymentSummary = await db!.rawQuery('''
+    final paymentSummary = await db.rawQuery('''
       SELECT
         paymenttype,
         SUM(amountpaid) as totalPaid
@@ -1037,15 +1065,15 @@ class DatabaseHelper {
 
   // Delete all sale transactions
   Future<void> deleteAllSaleTransactions() async {
-    final db = await database;
-    await db!.delete('sales_transactions');
+    final db = database;
+    await db.delete('sales_transactions');
   }
 
   // Get sales count
   Future<int> getSalesCount() async {
-    final db = await database;
+    final db = database;
     final count = Sqflite.firstIntValue(
-      await db!.rawQuery('SELECT COUNT(DISTINCT salesId) FROM sales_transactions'),
+      await db.rawQuery('SELECT COUNT(DISTINCT salesId) FROM sales_transactions'),
     );
     return count ?? 0;
   }
@@ -1056,14 +1084,14 @@ class DatabaseHelper {
     String status, {
     String? errorMessage,
   }) async {
-    final db = await database;
+    final db = database;
     final updateData = {
       'upload_status': status,
       'uploaded_at': status == 'uploaded' ? DateTime.now().millisecondsSinceEpoch : null,
       'upload_error': errorMessage,
     };
 
-    await db!.update(
+    await db.update(
       'sales_transactions',
       updateData,
       where: 'salesId = ?',
@@ -1073,8 +1101,8 @@ class DatabaseHelper {
 
   // Get sales by upload status
   Future<List<Map<String, dynamic>>> getSalesByUploadStatus(String status) async {
-    final db = await database;
-    final List<Map<String, dynamic>> result = await db!.rawQuery('''
+    final db = database;
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
       SELECT
         salesId,
         receiptnumber,
@@ -1111,8 +1139,8 @@ class DatabaseHelper {
     int recordCount, [
     String? errorMessage,
   ]) async {
-    final db = await database;
-    await db!.insert(
+    final db = database;
+    await db.insert(
       'sync_metadata',
       {
         'data_type': dataType,
@@ -1127,8 +1155,8 @@ class DatabaseHelper {
 
   // Get sync metadata for a specific data type
   Future<Map<String, dynamic>?> getSyncMetadata(String dataType) async {
-    final db = await database;
-    final List<Map<String, dynamic>> result = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> result = await db.query(
       'sync_metadata',
       where: 'data_type = ?',
       whereArgs: [dataType],
@@ -1140,18 +1168,18 @@ class DatabaseHelper {
 
   // Check if cached data exists for a data type
   Future<bool> hasCachedData(String dataType) async {
-    final db = await database;
+    final db = database;
     int count = 0;
 
     switch (dataType) {
       case 'users':
         count = Sqflite.firstIntValue(
-          await db!.rawQuery('SELECT COUNT(*) FROM user'),
+          await db.rawQuery('SELECT COUNT(*) FROM user'),
         ) ?? 0;
         break;
       case 'service_points':
         count = Sqflite.firstIntValue(
-          await db!.rawQuery('SELECT COUNT(*) FROM service_point'),
+          await db.rawQuery('SELECT COUNT(*) FROM service_point'),
         ) ?? 0;
         break;
       case 'inventory':
@@ -1162,7 +1190,7 @@ class DatabaseHelper {
         break;
       case 'customers':
         count = Sqflite.firstIntValue(
-          await db!.rawQuery('SELECT COUNT(*) FROM customers'),
+          await db.rawQuery('SELECT COUNT(*) FROM customers'),
         ) ?? 0;
         break;
     }
@@ -1174,8 +1202,8 @@ class DatabaseHelper {
 
   // Insert a single customer
   Future<int> insertCustomer(Customer customer) async {
-    final db = await database;
-    return await db!.insert(
+    final db = database;
+    return await db.insert(
       'customers',
       customer.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -1184,8 +1212,8 @@ class DatabaseHelper {
 
   // Insert multiple customers
   Future<void> insertCustomers(List<Customer> customers) async {
-    final db = await database;
-    final batch = db!.batch();
+    final db = database;
+    final batch = db.batch();
 
     for (var customer in customers) {
       batch.insert(
@@ -1200,8 +1228,8 @@ class DatabaseHelper {
 
   // Get all customers
   Future<List<Customer>> getCustomers() async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'customers',
       orderBy: 'fullnames ASC',
     );
@@ -1213,8 +1241,8 @@ class DatabaseHelper {
 
   // Search customers by fullnames or phone
   Future<List<Customer>> searchCustomers(String query) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'customers',
       where: 'fullnames LIKE ? OR phone1 LIKE ?',
       whereArgs: ['%$query%', '%$query%'],
@@ -1228,8 +1256,8 @@ class DatabaseHelper {
 
   // Get customer by ID
   Future<Customer?> getCustomerById(String id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'customers',
       where: 'id = ?',
       whereArgs: [id],
@@ -1241,16 +1269,16 @@ class DatabaseHelper {
 
   // Delete all customers
   Future<void> deleteAllCustomers() async {
-    final db = await database;
-    await db!.delete('customers');
+    final db = database;
+    await db.delete('customers');
     print('All customers deleted from database');
   }
 
   // Get customer count
   Future<int> getCustomerCount() async {
-    final db = await database;
+    final db = database;
     final count = Sqflite.firstIntValue(
-      await db!.rawQuery('SELECT COUNT(*) FROM customers'),
+      await db.rawQuery('SELECT COUNT(*) FROM customers'),
     );
     return count ?? 0;
   }
@@ -1259,8 +1287,8 @@ class DatabaseHelper {
 
   // Insert server sales data (replace existing data)
   Future<void> insertServerSales(List<Map<String, dynamic>> salesData) async {
-    final db = await database;
-    final batch = db!.batch();
+    final db = database;
+    final batch = db.batch();
 
     // Clear existing data first
     await db.delete('server_sales');
@@ -1279,8 +1307,8 @@ class DatabaseHelper {
 
   // Get server sales by salesId
   Future<Map<String, dynamic>?> getServerSaleBySalesId(String salesId) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db!.query(
+    final db = database;
+    final List<Map<String, dynamic>> maps = await db.query(
       'server_sales',
       where: 'salesId = ?',
       whereArgs: [salesId],
@@ -1292,10 +1320,10 @@ class DatabaseHelper {
 
   // Update local sales_transactions with server payment data
   Future<void> syncLocalSalesWithServerData() async {
-    final db = await database;
+    final db = database;
 
     // Get all unique salesIds from local sales_transactions
-    final localSalesIds = await db!.rawQuery('''
+    final localSalesIds = await db.rawQuery('''
       SELECT DISTINCT salesId FROM sales_transactions
     ''');
 
@@ -1338,16 +1366,16 @@ class DatabaseHelper {
 
   // Get server sales count
   Future<int> getServerSalesCount() async {
-    final db = await database;
+    final db = database;
     final count = Sqflite.firstIntValue(
-      await db!.rawQuery('SELECT COUNT(*) FROM server_sales'),
+      await db.rawQuery('SELECT COUNT(*) FROM server_sales'),
     );
     return count ?? 0;
   }
 
   // Delete all server sales
   Future<void> deleteAllServerSales() async {
-    final db = await database;
-    await db!.delete('server_sales');
+    final db = database;
+    await db.delete('server_sales');
   }
 }

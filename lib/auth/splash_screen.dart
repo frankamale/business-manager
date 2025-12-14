@@ -92,7 +92,6 @@ class _SplashScreenState extends State<SplashScreen>
       final storedPassword = credentials['password'];
 
       if (storedUsername == null || storedPassword == null) {
-        // Credentials corrupted - redirect to server login
         setState(() {
           _statusMessage = 'Credentials missing, redirecting to server login...';
         });

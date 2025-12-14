@@ -179,12 +179,16 @@ class AuthController extends GetxController {
     }
   }
 
-  // Logout user
-  void logout() {
+  /// Logout closes the current company's database and clears the user session.
+  /// This prevents access to the previous company's data and prepares for a new login.
+  Future<void> logout() async {
+    await DatabaseHelper.instance.close();
     currentUser.value = null;
   }
 
-  // Server login with credential storage
+  /// Server login authenticates with the server, fetches company info, and opens the per-company database.
+  /// This sets the database context for the logged-in company, ensuring all operations use the correct isolated database.
+  /// Example: After successful server authentication, the company's database is opened, preventing data leakage between companies.
   Future<bool> serverLogin(String username, String password) async {
     try {
       isLoggingIn.value = true;
@@ -194,6 +198,16 @@ class AuthController extends GetxController {
 
       // Store server credentials
       await _apiService.saveServerCredentials(username, password);
+
+      // Fetch and store company info
+      await _apiService.fetchAndStoreCompanyInfo();
+
+      // Get company info
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId']!;
+
+      // Open database for company
+      await _dbHelper.openForCompany(companyId);
 
       isLoggingIn.value = false;
       return true;
