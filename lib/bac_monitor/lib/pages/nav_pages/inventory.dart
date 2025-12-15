@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:bac_monitor/additions/colors.dart';
-import 'package:bac_monitor/widgets/inventory/floating_search_bar.dart';
+
+import '../../additions/colors.dart';
 import '../../db/db_helper.dart';
 import '../../models/inventory_data.dart';
 import '../../models/service_points.dart';
 import '../../widgets/inventory/data_table.dart';
+import '../../widgets/inventory/floating_search_bar.dart';
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({super.key});

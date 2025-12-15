@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'package:bac_monitor/controllers/operator_controller.dart';
-import 'package:bac_monitor/controllers/sync_controller.dart'; // ADDED
-import 'package:connectivity_plus/connectivity_plus.dart';
+
 import 'package:flutter/material.dart';
-import 'package:bac_monitor/additions/colors.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import '../../../../back_pos/utils/network_helper.dart';
+import '../../additions/colors.dart';
+import '../../controllers/operator_controller.dart';
+import '../../controllers/sync_controller.dart';
 import '../../services/api_services.dart';
 import '../bottom_nav.dart';
 import 'Login.dart';
@@ -52,7 +53,7 @@ class _SplashPageState extends State<SplashPage> {
     }
 
     try {
-      final isOnline = await _checkConnectivity();
+      final isOnline = await NetworkHelper.hasConnection();
       if (isOnline) {
         debugPrint("SplashPage: Device is online. Syncing recent sales...");
         await apiService.syncRecentSales();
@@ -70,14 +71,14 @@ class _SplashPageState extends State<SplashPage> {
     Get.offAll(() => const BottomNav());
   }
 
-  Future<bool> _checkConnectivity() async {
-    try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      return connectivityResult != ConnectivityResult.none;
-    } catch (e) {
-      return false;
-    }
-  }
+  // Future<bool> _checkConnectivity() async {
+  //   try {
+  //     final connectivityResult = await Connectivity().checkConnectivity();
+  //     return connectivityResult != ConnectivityResult.none;
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -125,3 +126,5 @@ class _SplashPageState extends State<SplashPage> {
     );
   }
 }
+
+

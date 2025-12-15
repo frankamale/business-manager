@@ -1,11 +1,11 @@
-import 'package:bac_monitor/additions/colors.dart';
-import 'package:bac_monitor/components/dashboard/kpi_overview.dart';
-import 'package:bac_monitor/controllers/kpi_overview_controller.dart';
-import 'package:bac_monitor/widgets/finance/date_range.dart';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../../additions/colors.dart';
+import '../../components/dashboard/kpi_overview.dart';
 import '../../components/dashboard/sales_trends.dart';
+import '../../controllers/kpi_overview_controller.dart';
 import '../../controllers/operator_controller.dart';
 import '../../controllers/salestrends_controller.dart';
 import '../../controllers/gross_profit_controller.dart';
@@ -14,6 +14,7 @@ import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
 import '../../widgets/dashboard/outstanding_payments.dart';
 import '../../widgets/dashboard/expenses_card.dart';
+import '../../widgets/finance/date_range.dart';
 import '../notification.dart';
 import '../expenses_detail_page.dart';
 import '../../controllers/dashboard_controller.dart';

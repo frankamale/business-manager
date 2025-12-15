@@ -1,6 +1,6 @@
-import 'package:bac_monitor/additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../additions/colors.dart';
 import '../../models/dashboard.dart';
 
 class PaymentMethodHorizontalBarChart extends StatelessWidget {

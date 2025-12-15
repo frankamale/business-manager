@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bac_monitor/additions/colors.dart';
+
+import '../../additions/colors.dart';
 
 class CustomAuthTextField extends StatelessWidget {
   final TextEditingController controller;

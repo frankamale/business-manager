@@ -1,8 +1,9 @@
-import 'package:bac_monitor/additions/colors.dart';
-import 'package:bac_monitor/components/store/storeOverview.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../additions/colors.dart';
+import '../../components/store/storeOverview.dart';
 import '../../controllers/store_controller.dart';
 import '../../models/store.dart';
 import '../../widgets/finance/date_range.dart';

@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:bac_monitor/additions/colors.dart';
 import '../../models/dashboard.dart';
 
 class TopStoresBarChart extends StatelessWidget {

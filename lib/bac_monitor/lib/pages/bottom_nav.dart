@@ -1,13 +1,13 @@
-import 'package:bac_monitor/additions/colors.dart';
-import 'package:bac_monitor/pages/nav_pages/finance.dart';
-import 'package:bac_monitor/pages/nav_pages/more.dart';
-import 'package:bac_monitor/pages/nav_pages/stores.dart';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../additions/colors.dart';
 import '../controllers/dashboard_controller.dart';
 import 'nav_pages/dashboard.dart';
 import 'nav_pages/inventory.dart';
+import 'nav_pages/more.dart';
+import 'nav_pages/stores.dart';
 
 class BottomNav extends StatefulWidget {
   const BottomNav({super.key});

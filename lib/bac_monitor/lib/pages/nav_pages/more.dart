@@ -1,17 +1,19 @@
-import 'package:bac_monitor/controllers/kpi_overview_controller.dart';
-import 'package:bac_monitor/controllers/operator_controller.dart';
-import 'package:bac_monitor/pages/auth/Login.dart';
+
 import 'package:flutter/material.dart';
-import 'package:bac_monitor/additions/colors.dart';
-import 'package:bac_monitor/widgets/more/section_header.dart';
+
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../../additions/colors.dart';
+import '../../controllers/kpi_overview_controller.dart';
+import '../../controllers/operator_controller.dart';
 import '../../controllers/salestrends_controller.dart';
 import '../../controllers/sync_controller.dart';
 import '../../widgets/more/more_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/more/profile_page.dart';
+import '../../widgets/more/section_header.dart';
+import '../auth/Login.dart';
 
 class More extends StatelessWidget {
    More({super.key});

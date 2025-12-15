@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:bac_monitor/additions/colors.dart';
-import 'package:bac_monitor/widgets/auth/auth_button.dart';
+
 import 'package:flutter/services.dart';
 
+import '../../additions/colors.dart';
+import '../../widgets/auth/auth_button.dart';
 import '../../widgets/auth/auth_textfield.dart';
 
 class SignUpPage extends StatefulWidget {

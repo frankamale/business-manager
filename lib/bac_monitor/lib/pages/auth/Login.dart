@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:bac_monitor/additions/colors.dart';
+import '../../additions/colors.dart';
 import '../../controllers/auth_controller.dart';
 
 class LoginPage extends StatelessWidget {

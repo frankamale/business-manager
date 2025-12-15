@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bac_monitor/additions/colors.dart';
-import 'package:bac_monitor/models/notification_data.dart';
-
+import '../additions/colors.dart';
+import '../models/notification_data.dart';
 import '../widgets/notification/notification_list.dart';
 
 class NotificationsPage extends StatefulWidget {

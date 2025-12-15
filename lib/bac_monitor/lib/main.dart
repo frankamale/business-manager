@@ -1,13 +1,14 @@
-import 'package:bac_monitor/controllers/operator_controller.dart';
-import 'package:bac_monitor/controllers/store_kpi_controller.dart';
-import 'package:bac_monitor/pages/auth/splash_page.dart';
-import 'package:bac_monitor/services/api_services.dart';
-import 'package:bac_monitor/services/translations_service.dart';
+
+import 'package:bac_pos/bac_monitor/lib/pages/auth/splash_page.dart';
+import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'package:bac_pos/bac_monitor/lib/services/translations_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'controllers/operator_controller.dart';
 import 'controllers/store_controller.dart';
+import 'controllers/store_kpi_controller.dart';
 import 'controllers/sync_controller.dart';
 import 'db/db_helper.dart';
 
