@@ -1,4 +1,4 @@
-class InventoryItem {
+class MonitorInventoryItem {
   final String id;
   final String name;
   final String sku;
@@ -13,7 +13,7 @@ class InventoryItem {
   final String? expiryDate;
   final String packaging;
 
-  InventoryItem({
+  MonitorInventoryItem({
     required this.id,
     required this.name,
     required this.sku,
@@ -30,9 +30,9 @@ class InventoryItem {
   });
 
   /// Factory constructor to create from JSON (useful for API response)
-  factory InventoryItem.fromJson(Map<String, dynamic> json) {
+  factory MonitorInventoryItem.fromJson(Map<String, dynamic> json) {
     final quantityOnHand = (json['quantityOnHand'] ?? 0).toInt();
-    return InventoryItem(
+    return MonitorInventoryItem(
       id: json['id'] ?? '',
       name: json['name'] ?? '',
       sku: json['code'] ?? '',

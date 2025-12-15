@@ -5,7 +5,7 @@ import '../../additions/colors.dart';
 import '../../models/inventory_data.dart';
 
 class ItemDetailsDialog extends StatelessWidget {
-  final InventoryItem item;
+  final MonitorInventoryItem item;
 
   const ItemDetailsDialog({super.key, required this.item});
 

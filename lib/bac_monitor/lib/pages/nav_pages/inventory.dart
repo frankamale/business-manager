@@ -19,8 +19,8 @@ class _InventoryPageState extends State<InventoryPage>
     with SingleTickerProviderStateMixin {
   final _dbHelper = DatabaseHelper();
 
-  List<InventoryItem> _allItems = [];
-  List<InventoryItem> _filteredItems = [];
+  List<MonitorInventoryItem> _allItems = [];
+  List<MonitorInventoryItem> _filteredItems = [];
   List<String> _servicePoints = ["All"];
   String _selectedServicePoint = "All";
   Map<String, String> _facilityToType = {};
@@ -88,7 +88,7 @@ class _InventoryPageState extends State<InventoryPage>
     try {
       final db = await _dbHelper.database;
       final List<Map<String, dynamic>> maps = await db.query('inventory');
-      _allItems = maps.map((map) => InventoryItem.fromJson(map)).toList();
+      _allItems = maps.map((map) => MonitorInventoryItem.fromJson(map)).toList();
       setState(() {
         _filteredItems = _getFilteredItems();
         _isLoading = false;
@@ -119,8 +119,8 @@ class _InventoryPageState extends State<InventoryPage>
     });
   }
 
-  List<InventoryItem> _getFilteredItems() {
-    List<InventoryItem> currentItems = _allItems;
+  List<MonitorInventoryItem> _getFilteredItems() {
+    List<MonitorInventoryItem> currentItems = _allItems;
 
     if (_selectedServicePoint != "All") {
       final type = _facilityToType[_selectedServicePoint];

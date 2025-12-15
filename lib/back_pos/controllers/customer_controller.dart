@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import '../services/api_services.dart';
-import '../models/customer.dart';
-import '../database/db_helper.dart';
-import '../utils/network_helper.dart';
+import 'package:bac_pos/back_pos/services/api_services.dart';
+import 'package:bac_pos/back_pos/models/customer.dart';
+import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class CustomerController extends GetxController {
   final _apiService = ApiService();

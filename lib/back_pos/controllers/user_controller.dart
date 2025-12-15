@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
-import '../database/db_helper.dart';
-import '../models/users.dart';
+import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/back_pos/models/users.dart';
 
 
 class UserController extends GetxController {

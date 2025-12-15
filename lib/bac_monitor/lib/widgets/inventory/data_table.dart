@@ -5,7 +5,7 @@ import '../../models/inventory_data.dart';
 import 'item_details_dialog.dart';
 
 class InventoryDataTable extends StatelessWidget {
-  final List<InventoryItem> items;
+  final List<MonitorInventoryItem> items;
   final bool isServicesView;
 
   const InventoryDataTable({super.key, required this.items, required this.isServicesView});
@@ -44,7 +44,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  DataRow _createDataRow(BuildContext context, InventoryItem item) {
+  DataRow _createDataRow(BuildContext context, MonitorInventoryItem item) {
     return DataRow(
       onSelectChanged: (_) => _showItemDetailsDialog(context, item),
       cells: isServicesView
@@ -59,7 +59,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildProductCell(InventoryItem item) {
+  Widget _buildProductCell(MonitorInventoryItem item) {
     final currencyFormatter = NumberFormat.currency(
       locale: 'en_UG',
       symbol: 'UGX ',
@@ -169,7 +169,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildQuantityCell(InventoryItem item) {
+  Widget _buildQuantityCell(MonitorInventoryItem item) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -206,7 +206,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildServiceCell(InventoryItem item) {
+  Widget _buildServiceCell(MonitorInventoryItem item) {
     return Row(
       children: [
         const SizedBox(width: 4),
@@ -254,7 +254,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceCell(InventoryItem item) {
+  Widget _buildPriceCell(MonitorInventoryItem item) {
     return Text(
       currencyFormatter.format(item.sellingPrice),
       style: const TextStyle(
@@ -264,7 +264,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildStockStatusIndicator(InventoryItem item) {
+  Widget _buildStockStatusIndicator(MonitorInventoryItem item) {
     final bool isLowStock = item.quantityOnHand < 40;
     final bool isOverstocked = item.quantityOnHand > 100;
 
@@ -298,7 +298,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  void _showItemDetailsDialog(BuildContext context, InventoryItem item) {
+  void _showItemDetailsDialog(BuildContext context, MonitorInventoryItem item) {
     showDialog(
       context: context,
       builder: (BuildContext context) => ItemDetailsDialog(item: item),

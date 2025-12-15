@@ -19,7 +19,7 @@ class InventoryController extends GetxController {
       isLoading.value = true;
       final items = await _dbHelper.getAllInventoryItems();
       inventoryItems.assignAll(
-        items.map((e) => InventoryItem.fromJson(e)).toList(),
+        items.map((e) => MonitorInventoryItem.fromJson(e)).toList(),
       );
     } catch (e) {
       print('Error loading inventory: $e');
