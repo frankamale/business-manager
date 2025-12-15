@@ -6,7 +6,7 @@ import '../utils/network_helper.dart';
 
 class AuthController extends GetxController {
   final _dbHelper = DatabaseHelper();
-  final _apiService = ApiService();
+  final _apiService = ApiServiceMonitor();
 
   // Reactive list of user roles
   var userRoles = <String>[].obs;

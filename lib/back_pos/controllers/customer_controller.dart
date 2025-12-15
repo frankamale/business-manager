@@ -5,7 +5,7 @@ import '../database/db_helper.dart';
 import '../utils/network_helper.dart';
 
 class CustomerController extends GetxController {
-  final _apiService = ApiService();
+  final _apiService = ApiServiceMonitor();
   final _dbHelper = DatabaseHelper();
 
   // Reactive list of customers

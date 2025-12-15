@@ -13,7 +13,7 @@ import '../models/sale_transaction.dart';
 import '../database/db_helper.dart';
 import '../config.dart';
 
-class ApiService extends GetxService {
+class ApiServiceMonitor extends GetxService {
   final String baseurl = AppConfig.baseUrl;
 
   // Initialize secure storage

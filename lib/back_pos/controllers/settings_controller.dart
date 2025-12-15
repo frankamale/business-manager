@@ -5,7 +5,7 @@ import '../services/api_services.dart';
 
 class SettingsController extends GetxController {
   final SettingsService _settingsService = SettingsService();
-  final ApiService _apiService = Get.find<ApiService>();
+  final ApiServiceMonitor _apiService = Get.find<ApiServiceMonitor>();
   RxBool autoUploadEnabled = false.obs;
   RxBool paymentAccessForAllUsers = false.obs;
   RxBool priceEditingEnabled = false.obs;

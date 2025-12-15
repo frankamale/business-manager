@@ -20,7 +20,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
-  Get.put(ApiService());
+  Get.put(ApiServiceMonitor());
   Get.put(SalesSyncService());
   Get.put(AuthController());
   Get.put(CustomerController());
