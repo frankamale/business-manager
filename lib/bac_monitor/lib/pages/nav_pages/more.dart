@@ -5,10 +5,10 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../../additions/colors.dart';
-import '../../controllers/kpi_overview_controller.dart';
-import '../../controllers/operator_controller.dart';
-import '../../controllers/salestrends_controller.dart';
-import '../../controllers/sync_controller.dart';
+import '../../controllers/mon_kpi_overview_controller.dart';
+import '../../controllers/mon_operator_controller.dart';
+import '../../controllers/mon_salestrends_controller.dart';
+import '../../controllers/mon_sync_controller.dart';
 import '../../widgets/more/more_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/more/profile_page.dart';
@@ -21,7 +21,7 @@ class More extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Get.lazyPut(()=>SyncController());
+    Get.lazyPut(()=>MonSyncController());
 
     final String userName = _storage.read('userData')['username'];
     final String userEmail = _storage.read('userData')['email'];
@@ -161,14 +161,14 @@ class More extends StatelessWidget {
       final apiService = Get.find<ApiServiceMonitor>();
       await apiService.fetchAndCacheAllData();
 
-      if (Get.isRegistered<KpiOverviewController>()) {
-        await Get.find<KpiOverviewController>().fetchKpiData();
+      if (Get.isRegistered<MonKpiOverviewController>()) {
+        await Get.find<MonKpiOverviewController>().fetchKpiData();
       }
-      if (Get.isRegistered<SalesTrendsController>()) {
-        await Get.find<SalesTrendsController>().fetchAllData();
+      if (Get.isRegistered<MonSalesTrendsController>()) {
+        await Get.find<MonSalesTrendsController>().fetchAllData();
       }
-      if (Get.isRegistered<OperatorController>()) {
-        await Get.find<OperatorController>().loadCompanyDetailsFromDb();
+      if (Get.isRegistered<MonOperatorController>()) {
+        await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
       }
 
       if (Get.isDialogOpen ?? false) Get.back();

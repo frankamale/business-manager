@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/kpi_overview_controller.dart';
+import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../widgets/dashboard/kpi_card.dart';
 
 class KpiOverviewSection extends StatelessWidget {
@@ -8,7 +8,7 @@ class KpiOverviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final KpiOverviewController controller = Get.find<KpiOverviewController>();
+    final MonKpiOverviewController controller = Get.find<MonKpiOverviewController>();
 
     return Obx(() {
       if (controller.isLoading.value) {

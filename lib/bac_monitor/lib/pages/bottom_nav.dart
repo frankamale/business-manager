@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../additions/colors.dart';
-import '../controllers/dashboard_controller.dart';
+import '../controllers/mon_dashboard_controller.dart';
 import 'nav_pages/dashboard.dart';
 import 'nav_pages/inventory.dart';
 import 'nav_pages/more.dart';
@@ -17,7 +17,7 @@ class BottomNav extends StatefulWidget {
 }
 
 class _BottomNavState extends State<BottomNav> {
-  final DashboardController controller = Get.put(DashboardController());
+  final MonDashboardController controller = Get.put(MonDashboardController());
 
   final List<Widget> screens = [
     Dashboard(),

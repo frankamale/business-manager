@@ -5,11 +5,12 @@ import 'package:intl/intl.dart';
 import '../../additions/colors.dart';
 import '../../components/dashboard/kpi_overview.dart';
 import '../../components/dashboard/sales_trends.dart';
-import '../../controllers/kpi_overview_controller.dart';
-import '../../controllers/operator_controller.dart';
-import '../../controllers/salestrends_controller.dart';
-import '../../controllers/gross_profit_controller.dart';
-import '../../controllers/outstanding_payments_controller.dart';
+import '../../controllers/mon_dashboard_controller.dart';
+import '../../controllers/mon_gross_profit_controller.dart';
+import '../../controllers/mon_kpi_overview_controller.dart';
+import '../../controllers/mon_operator_controller.dart';
+import '../../controllers/mon_outstanding_payments_controller.dart';
+import '../../controllers/mon_salestrends_controller.dart';
 import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
 import '../../widgets/dashboard/outstanding_payments.dart';
@@ -17,7 +18,6 @@ import '../../widgets/dashboard/expenses_card.dart';
 import '../../widgets/finance/date_range.dart';
 import '../notification.dart';
 import '../expenses_detail_page.dart';
-import '../../controllers/dashboard_controller.dart';
 import '../../models/trend_direction.dart';
 
 class Dashboard extends StatefulWidget {
@@ -65,38 +65,38 @@ class _DashboardState extends State<Dashboard> {
     super.initState();
     // Initialize controllers in proper order
     // DashboardController must be initialized first as other controllers depend on it
-    Get.put(DashboardController());
-    Get.put(OperatorController());
-    Get.put(GrossProfitController());
-    Get.put(OutstandingPaymentsController());
-    Get.put(SalesTrendsController());
-    Get.put(KpiOverviewController());
+    Get.put(MonDashboardController());
+    Get.put(MonOperatorController());
+    Get.put(MonOutstandingPaymentsController());
+    Get.put(MonGrossProfitController());
+    Get.put(MonSalesTrendsController());
+    Get.put(MonKpiOverviewController());
   }
 
   Future<void> _handleRefresh() async {
     final apiService = Get.find<ApiServiceMonitor>();
     await apiService.syncRecentSales();
 
-    if (Get.isRegistered<KpiOverviewController>()) {
-      await Get.find<KpiOverviewController>().fetchKpiData();
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      await Get.find<MonKpiOverviewController>().fetchKpiData();
     }
-    if (Get.isRegistered<GrossProfitController>()) {
-      await Get.find<GrossProfitController>();
+    if (Get.isRegistered<MonGrossProfitController>()) {
+      await Get.find<MonGrossProfitController>();
     }
-    if (Get.isRegistered<OutstandingPaymentsController>()) {
-      await Get.find<OutstandingPaymentsController>().fetchOutstandingPaymentsData();
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
     }
-    if (Get.isRegistered<SalesTrendsController>()) {
-      await Get.find<SalesTrendsController>().fetchAllData();
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      await Get.find<MonSalesTrendsController>().fetchAllData();
     }
-    if (Get.isRegistered<GrossProfitController>()) {
-      await Get.find<GrossProfitController>().fetchGrossProfitData();
+    if (Get.isRegistered<MonGrossProfitController>()) {
+      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final operatorController = Get.find<OperatorController>();
+    final operatorController = Get.find<MonOperatorController>();
 
     return Scaffold(
       backgroundColor: PrimaryColors.darkBlue,
@@ -177,7 +177,7 @@ class _DashboardState extends State<Dashboard> {
                       KpiOverviewSection(),
                       SizedBox(height: 24),
                       Obx(() {
-                        final controller = Get.find<GrossProfitController>();
+                        final controller = Get.find<MonGrossProfitController>();
                         // Then in the Obx block:
                         final grossProfitValue = _parseCompactNumber(controller.grossProfit.value);
                         final totalSalesValue = _parseCompactNumber(controller.totalSales.value);
@@ -210,8 +210,8 @@ class _DashboardState extends State<Dashboard> {
                       }),
                       const SizedBox(height: 24),
                       Obx(() {
-                        final controller = Get.find<OutstandingPaymentsController>();
-                        final dashboardController = Get.find<DashboardController>();
+                        final controller = Get.find<MonOutstandingPaymentsController>();
+                        final dashboardController = Get.find<MonDashboardController>();
                         final periodLabel = _getPeriodLabel(
                           dashboardController.selectedRange.value,
                           dashboardController.customRange.value,
@@ -228,7 +228,7 @@ class _DashboardState extends State<Dashboard> {
                       const SizedBox(height: 24),
                       // Expenses Card
                       Obx(() {
-                        final dashboardController = Get.find<DashboardController>();
+                        final dashboardController = Get.find<MonDashboardController>();
                         final periodLabel = _getPeriodLabel(
                           dashboardController.selectedRange.value,
                           dashboardController.customRange.value,
@@ -266,7 +266,7 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) {
-    final controller = Get.find<DashboardController>();
+    final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
   }
 }

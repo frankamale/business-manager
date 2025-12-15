@@ -2,12 +2,12 @@ import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/dashboard_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/operator_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/store_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/inventory_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
 
+import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
+import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
+import '../bac_monitor/lib/controllers/mon_store_controller.dart';
 import 'app_roots.dart';
 
 class UnifiedLoginScreen extends StatefulWidget {
@@ -62,14 +62,14 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           print(roles);
           if (roles != null &&
               roles.any((role) => role.toString().toLowerCase() == 'admin')) {
-            if (!Get.isRegistered<DashboardController>()) {
-              Get.put(DashboardController());
+            if (!Get.isRegistered<MonDashboardController>()) {
+              Get.put(MonDashboardController());
             }
-            if (!Get.isRegistered<OperatorController>()) {
-              Get.put(OperatorController());
+            if (!Get.isRegistered<MonOperatorController>()) {
+              Get.put(MonOperatorController());
             }
-            if (!Get.isRegistered<StoresController>()) {
-              Get.put(StoresController());
+            if (!Get.isRegistered<MonStoresController>()) {
+              Get.put(MonStoresController());
             }
             if (!Get.isRegistered<InventoryController>()) {
               Get.put(InventoryController());

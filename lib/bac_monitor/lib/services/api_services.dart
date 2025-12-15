@@ -4,8 +4,8 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
-import '../controllers/operator_controller.dart';
-import '../controllers/sync_controller.dart';
+import '../controllers/mon_operator_controller.dart';
+import '../controllers/mon_sync_controller.dart';
 import '../db/db_helper.dart';
 import '../pages/auth/Login.dart';
 import '../pages/bottom_nav.dart';
@@ -151,8 +151,8 @@ class ApiServiceMonitor extends GetxService {
       
       await fetchAndCacheAllData();
 
-      if (!Get.isRegistered<SyncController>()) {
-        Get.put(SyncController());
+      if (!Get.isRegistered<MonSyncController>()) {
+        Get.put(MonSyncController());
       }
 
       Get.offAll(() => const BottomNav());
@@ -180,8 +180,8 @@ class ApiServiceMonitor extends GetxService {
   }
 
   Future<void> logout() async {
-    Get.find<SyncController>().onClose();
-    await Get.delete<SyncController>(force: true);
+    Get.find<MonSyncController>().onClose();
+    await Get.delete<MonSyncController>(force: true);
     
     // Close all database instances on logout
     await _dbHelper.closeAllDatabases();
@@ -410,8 +410,8 @@ class ApiServiceMonitor extends GetxService {
         "ApiService: All data fetched successfully, and local DB updated.",
       );
 
-      if (Get.isRegistered<OperatorController>()) {
-        await Get.find<OperatorController>().loadCompanyDetailsFromDb();
+      if (Get.isRegistered<MonOperatorController>()) {
+        await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
       }
     } catch (e) {
       debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");

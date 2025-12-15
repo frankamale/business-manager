@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../additions/colors.dart';
-import '../../controllers/store_controller.dart';
-import '../../controllers/store_kpi_controller.dart';
+import '../../controllers/mon_store_controller.dart';
+import '../../controllers/mon_store_kpi_controller.dart';
 import '../../models/trend_direction.dart';
 import '../../widgets/dashboard/line_graph.dart';
 import '../../widgets/store/hourly_traffic.dart';
@@ -13,8 +13,8 @@ class StoreOverview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final StoresController controller = Get.find();
-    final kpiTrendController = Get.find<StoreKpiTrendController>();
+    final MonStoresController controller = Get.find();
+    final kpiTrendController = Get.find<MonStoreKpiTrendController>();
 
     return Obx(() {
       if (controller.isFetchingKpisAndCharts.value) {

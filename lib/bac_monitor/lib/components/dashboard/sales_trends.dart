@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../additions/colors.dart';
-import '../../controllers/dashboard_controller.dart';
-import '../../controllers/salestrends_controller.dart';
+import '../../controllers/mon_dashboard_controller.dart';
+import '../../controllers/mon_salestrends_controller.dart';
 import '../../widgets/dashboard/cashiers.dart';
 import '../../widgets/dashboard/expiries_card.dart';
 import '../../widgets/dashboard/line_graph.dart';
@@ -15,8 +15,8 @@ class SalesTrendsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SalesTrendsController controller = Get.find<SalesTrendsController>();
-    final DashboardController dateController = Get.find<DashboardController>();
+    final MonSalesTrendsController controller = Get.find<MonSalesTrendsController>();
+    final MonDashboardController dateController = Get.find<MonDashboardController>();
 
     return Container(
       color: PrimaryColors.darkBlue,
@@ -66,7 +66,7 @@ class SalesTrendsSection extends StatelessWidget {
                   aggregationType: controller.aggregationType.value,
                 ),
               ),
-            );
+            );w
           }),
           const SizedBox(height: 24),
 

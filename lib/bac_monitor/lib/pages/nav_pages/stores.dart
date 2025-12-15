@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../additions/colors.dart';
 import '../../components/store/storeOverview.dart';
-import '../../controllers/store_controller.dart';
+import '../../controllers/mon_store_controller.dart';
 import '../../models/store.dart';
 import '../../widgets/finance/date_range.dart';
 
@@ -13,7 +13,7 @@ class Stores extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final StoresController controller = Get.put(StoresController());
+    final MonStoresController controller = Get.put(MonStoresController());
 
     return Scaffold(
       backgroundColor: PrimaryColors.darkBlue,
@@ -78,7 +78,7 @@ class Stores extends StatelessWidget {
     );
   }
 
-  Widget _buildStoreSelector(StoresController ctrl) {
+  Widget _buildStoreSelector(MonStoresController ctrl) {
     return Obx(
       () => DropdownButtonHideUnderline(
         child: Padding(

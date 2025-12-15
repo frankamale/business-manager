@@ -5,16 +5,18 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../../back_pos/utils/network_helper.dart';
 import '../../additions/colors.dart';
-import '../../controllers/operator_controller.dart';
-import '../../controllers/sync_controller.dart';
-import '../../controllers/dashboard_controller.dart';
-import '../../controllers/gross_profit_controller.dart';
+import '../../controllers/mon_dashboard_controller.dart';
+import '../../controllers/mon_gross_profit_controller.dart';
+import '../../controllers/mon_kpi_overview_controller.dart';
+import '../../controllers/mon_operator_controller.dart';
+import '../../controllers/mon_outstanding_payments_controller.dart';
+
 import '../../controllers/inventory_controller.dart';
-import '../../controllers/kpi_overview_controller.dart';
-import '../../controllers/outstanding_payments_controller.dart';
-import '../../controllers/salestrends_controller.dart';
-import '../../controllers/store_controller.dart';
-import '../../controllers/store_kpi_controller.dart';
+
+import '../../controllers/mon_salestrends_controller.dart';
+import '../../controllers/mon_store_controller.dart';
+import '../../controllers/mon_store_kpi_controller.dart';
+import '../../controllers/mon_sync_controller.dart';
 import '../../services/api_services.dart';
 import '../../db/db_helper.dart';
 import '../bottom_nav.dart';
@@ -58,41 +60,40 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   void _initializeControllers() {
-    // Register controllers if not already registered
-    if (!Get.isRegistered<OperatorController>()) {
-      Get.put(OperatorController());
+    if (!Get.isRegistered<MonOperatorController>()) {
+      Get.put(MonOperatorController());
     }
     
-    if (!Get.isRegistered<SyncController>()) {
-      Get.put(SyncController());
+    if (!Get.isRegistered<MonSyncController>()) {
+      Get.put(MonSyncController());
     }
     
-    if (!Get.isRegistered<StoresController>()) {
-      Get.put(StoresController());
+    if (!Get.isRegistered<MonStoresController>()) {
+      Get.put(MonStoresController());
     }
     
-    if (!Get.isRegistered<StoreKpiTrendController>()) {
-      Get.put(StoreKpiTrendController());
+    if (!Get.isRegistered<MonStoreKpiTrendController>()) {
+      Get.put(MonStoreKpiTrendController());
     }
     
-    if (!Get.isRegistered<DashboardController>()) {
-      Get.put(DashboardController());
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController());
     }
     
-    if (!Get.isRegistered<KpiOverviewController>()) {
-      Get.put(KpiOverviewController());
+    if (!Get.isRegistered<MonKpiOverviewController>()) {
+      Get.put(MonKpiOverviewController());
     }
     
-    if (!Get.isRegistered<SalesTrendsController>()) {
-      Get.put(SalesTrendsController());
+    if (!Get.isRegistered<MonSalesTrendsController>()) {
+      Get.put(MonSalesTrendsController());
     }
     
-    if (!Get.isRegistered<GrossProfitController>()) {
-      Get.put(GrossProfitController());
+    if (!Get.isRegistered<MonGrossProfitController>()) {
+      Get.put(MonGrossProfitController());
     }
     
-    if (!Get.isRegistered<OutstandingPaymentsController>()) {
-      Get.put(OutstandingPaymentsController());
+    if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
+      Get.put(MonOutstandingPaymentsController());
     }
     
     if (!Get.isRegistered<InventoryController>()) {
@@ -117,7 +118,7 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('SplashPage: Network available = $hasNetwork');
 
       // Load data from database for offline use
-      final storesController = Get.find<StoresController>();
+      final storesController = Get.find<MonStoresController>();
       final inventoryController = Get.find<InventoryController>();
 
       // Load stores from database (fetchAllStores already loads from DB)
@@ -138,7 +139,7 @@ class _SplashPageState extends State<SplashPage> {
     final apiService = Get.find<ApiServiceMonitor>();
 
     // Load company details
-    await Get.find<OperatorController>().loadCompanyDetailsFromDb();
+    await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
 
     final token = apiService.getStoredToken();
     if (token == null) {
@@ -178,7 +179,7 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
-    final operatorController = Get.find<OperatorController>();
+    final operatorController = Get.find<MonOperatorController>();
 
     return Scaffold(
       appBar: AppBar(
