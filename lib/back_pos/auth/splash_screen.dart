@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:developer' as developer;
+import '../../initialise/unified_login_screen.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/customer_controller.dart';
@@ -13,7 +14,6 @@ import '../services/api_services.dart';
 import '../utils/network_helper.dart';
 import 'login.dart';
 import 'server_login.dart';
-import 'package:bac_pos/unified_login_screen.dart';
 
 
 class SplashScreen extends StatefulWidget {

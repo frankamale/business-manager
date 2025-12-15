@@ -8,14 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
-import 'back_pos/auth/splash_screen.dart';
 import 'back_pos/controllers/customer_controller.dart';
 import 'back_pos/controllers/inventory_controller.dart';
 import 'back_pos/controllers/payment_controller.dart';
 import 'back_pos/controllers/sales_controller.dart';
 import 'back_pos/controllers/user_controller.dart';
-import 'unified_login_screen.dart';
-import 'app_roots.dart';
+import 'initialise/app_roots.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

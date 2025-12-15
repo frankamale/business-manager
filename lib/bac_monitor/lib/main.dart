@@ -11,7 +11,7 @@ import 'controllers/store_controller.dart';
 import 'controllers/store_kpi_controller.dart';
 import 'controllers/sync_controller.dart';
 import 'db/db_helper.dart';
-import 'package:bac_pos/app_roots.dart';
+import 'package:bac_pos/initialise/app_roots.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
