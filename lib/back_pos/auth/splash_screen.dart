@@ -200,7 +200,7 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) {
         if (widget.nextScreen != null) {
           _log('authenticateApp: Navigating to custom next screen');
-          Get.off(() => widget.nextScreen!);
+          Get.off(() => Login());
         } else {
           _log('authenticateApp: Navigating to Unified Login screen');
           Get.off(() => const UnifiedLoginScreen());

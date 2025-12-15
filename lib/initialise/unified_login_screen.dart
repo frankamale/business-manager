@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
-import 'package:bac_pos/back_pos/pages/homepage.dart';
-import 'package:bac_pos/bac_monitor/lib/pages/bottom_nav.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/dashboard_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/operator_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/store_controller.dart';
@@ -10,7 +8,6 @@ import 'package:bac_pos/bac_monitor/lib/controllers/inventory_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
 
 import 'app_roots.dart';
-
 
 class UnifiedLoginScreen extends StatefulWidget {
   const UnifiedLoginScreen({super.key});
@@ -21,9 +18,9 @@ class UnifiedLoginScreen extends StatefulWidget {
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.find<AuthController>();
-  String? selectedItem;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -51,19 +48,16 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
       try {
         // Authenticate user
-        final success = await _authController.login(
-          selectedItem!,
+        final success = await _authController.serverLogin(
+          _usernameController.text,
           _passwordController.text,
         );
 
         if (success) {
-          // Get the current user to check their role
           final currentUser = _authController.currentUser.value;
 
           if (currentUser != null) {
-            // Check user role and redirect accordingly
             if (currentUser.role.toLowerCase() == 'admin') {
-              // Ensure Monitor app controllers are registered
               if (!Get.isRegistered<DashboardController>()) {
                 Get.put(DashboardController());
               }
@@ -79,16 +73,13 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
               // Redirect to Monitor app splash screen
               Get.offAll(() => const MonitorAppRoot());
             } else {
-              // Redirect to POS app splash screen for all other roles
               Get.offAll(() => const PosAppRoot());
             }
           } else {
-            // Fallback - redirect to POS app splash screen if user info is not available
             Get.offAll(() => const PosAppRoot());
           }
         }
       } catch (e) {
-        // Error handling is already done in the auth controller
       } finally {
         setState(() {
           _isLoading = false;
@@ -175,7 +166,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "${AppConfig.companyName} - Unified App",
+                            "${AppConfig.companyName}",
                             style: TextStyle(
                               fontSize: isSmallScreen ? 14 : 16,
                               color: Colors.blue.shade600,
@@ -185,58 +176,43 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           const SizedBox(height: 40),
 
                           // Account Selection Dropdown
-                          Obx(
-                            () => DropdownButtonFormField<String>(
-                              value: selectedItem,
-                              decoration: InputDecoration(
-                                labelText: 'Select Account',
-                                prefixIcon: Icon(
-                                  Icons.account_circle_outlined,
-                                  color: Colors.blue.shade700,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(
-                                    color: Colors.blue.shade700,
-                                    width: 2,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: Colors.grey.shade50,
+                          TextFormField(
+                            controller: _usernameController,
+                            keyboardType: TextInputType.text,
+                            decoration: InputDecoration(
+                              labelText: 'Username',
+                              prefixIcon: Icon(
+                                Icons.person_outline_rounded,
+                                color: Colors.blue.shade700,
                               ),
-                              hint: const Text('Select your account'),
-                              items: _authController.userRoles.map(
-                                (String item) {
-                                  return DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  );
-                                },
-                              ).toList(),
-                              onChanged: (String? value) {
-                                setState(() {
-                                  selectedItem = value;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select an account';
-                                }
-                                return null;
-                              },
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.blue.shade700,
+                                  width: 2,
+                                ),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
                             ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your username';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 20),
 

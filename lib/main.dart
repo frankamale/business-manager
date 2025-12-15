@@ -13,7 +13,7 @@ import 'back_pos/controllers/inventory_controller.dart';
 import 'back_pos/controllers/payment_controller.dart';
 import 'back_pos/controllers/sales_controller.dart';
 import 'back_pos/controllers/user_controller.dart';
-import 'initialise/app_roots.dart';
+import 'initialise/unified_login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,7 +47,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
 
       ),
-      home: const PosAppRoot(),
+      home: const UnifiedLoginScreen(),
     );
   }
 }
