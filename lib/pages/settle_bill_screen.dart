@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 
-import '../controllers/payment_controller.dart';
-import '../controllers/auth_controller.dart';
-import '../controllers/sales_controller.dart';
+import '../back_pos/controllers/payment_controller.dart';
+import '../back_pos/controllers/auth_controller.dart';
+import '../back_pos/controllers/sales_controller.dart';
 import '../services/print_service.dart';
-import '../models/sale_transaction.dart';
+import '../back_pos/models/sale_transaction.dart';
 
 class SettleBillScreen extends StatefulWidget {
   final String salesId;

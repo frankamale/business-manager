@@ -4,8 +4,8 @@ import 'package:bac_pos/pages/sales_listing.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../back_pos/auth/login.dart';
-import '../models/service_point.dart';
-import '../controllers/auth_controller.dart';
+import '../back_pos/models/service_point.dart';
+import '../back_pos/controllers/auth_controller.dart';
 
 class SalesPointDetails extends StatelessWidget {
   final ServicePoint servicePoint;

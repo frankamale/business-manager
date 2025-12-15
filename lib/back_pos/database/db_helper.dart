@@ -1,8 +1,8 @@
-import 'package:bac_pos/models/users.dart';
-import 'package:bac_pos/models/service_point.dart';
-import 'package:bac_pos/models/inventory_item.dart';
-import 'package:bac_pos/models/sale_transaction.dart';
-import 'package:bac_pos/models/customer.dart';
+import 'package:bac_pos/back_pos/models/users.dart';
+import 'package:bac_pos/back_pos/models/service_point.dart';
+import 'package:bac_pos/back_pos/models/inventory_item.dart';
+import 'package:bac_pos/back_pos/models/sale_transaction.dart';
+import 'package:bac_pos/back_pos/models/customer.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 

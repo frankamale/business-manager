@@ -2,9 +2,9 @@ import 'package:bac_pos/pages/sales_point_details.dart';
 import 'settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/service_point_controller.dart';
-import '../controllers/auth_controller.dart';
-import '../models/service_point.dart';
+import '../back_pos/controllers/service_point_controller.dart';
+import '../back_pos/controllers/auth_controller.dart';
+import '../back_pos/models/service_point.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});

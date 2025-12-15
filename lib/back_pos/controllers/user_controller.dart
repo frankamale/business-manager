@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../database/db_helper.dart';
 import '../models/users.dart';
 
+
 class UserController extends GetxController {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 

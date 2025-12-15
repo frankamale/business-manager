@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'payment_screen.dart';
-import '../models/inventory_item.dart';
-import '../models/service_point.dart';
-import '../controllers/inventory_controller.dart';
-import '../controllers/customer_controller.dart';
-import '../controllers/auth_controller.dart';
-import '../controllers/payment_controller.dart';
-import '../controllers/settings_controller.dart';
+import '../back_pos/models/inventory_item.dart';
+import '../back_pos/models/service_point.dart';
+import '../back_pos/controllers/inventory_controller.dart';
+import '../back_pos/controllers/customer_controller.dart';
+import '../back_pos/controllers/auth_controller.dart';
+import '../back_pos/controllers/payment_controller.dart';
+import '../back_pos/controllers/settings_controller.dart';
 import '../services/print_service.dart';
-import '../database/db_helper.dart';
-import '../models/sale_transaction.dart';
+import '../back_pos/database/db_helper.dart';
+import '../back_pos/models/sale_transaction.dart';
 
 class PosScreen extends StatefulWidget {
   final String? existingSalesId;

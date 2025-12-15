@@ -3,7 +3,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import '../models/sale_transaction.dart';
+import '../back_pos/models/sale_transaction.dart';
 import '../config.dart';
 
 class PrintService {

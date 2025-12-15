@@ -1,6 +1,6 @@
-import 'package:bac_pos/controllers/auth_controller.dart';
-import 'package:bac_pos/controllers/service_point_controller.dart';
-import 'package:bac_pos/controllers/settings_controller.dart';
+import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
+import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/controllers/settings_controller.dart';
 import 'package:bac_pos/services/api_services.dart';
 import 'package:bac_pos/services/sales_sync_service.dart';
 import 'package:bac_pos/config.dart';
@@ -9,11 +9,11 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import 'back_pos/auth/splash_screen.dart';
-import 'controllers/customer_controller.dart';
-import 'controllers/inventory_controller.dart';
-import 'controllers/payment_controller.dart';
-import 'controllers/sales_controller.dart';
-import 'controllers/user_controller.dart';
+import 'back_pos/controllers/customer_controller.dart';
+import 'back_pos/controllers/inventory_controller.dart';
+import 'back_pos/controllers/payment_controller.dart';
+import 'back_pos/controllers/sales_controller.dart';
+import 'back_pos/controllers/user_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

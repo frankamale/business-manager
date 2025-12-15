@@ -4,13 +4,13 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import '../models/users.dart';
-import '../models/auth_response.dart';
-import '../models/service_point.dart';
-import '../models/inventory_item.dart';
-import '../models/customer.dart';
-import '../models/sale_transaction.dart';
-import '../database/db_helper.dart';
+import '../back_pos/models/users.dart';
+import '../back_pos/models/auth_response.dart';
+import '../back_pos/models/service_point.dart';
+import '../back_pos/models/inventory_item.dart';
+import '../back_pos/models/customer.dart';
+import '../back_pos/models/sale_transaction.dart';
+import '../back_pos/database/db_helper.dart';
 import '../config.dart';
 
 class ApiService extends GetxService {

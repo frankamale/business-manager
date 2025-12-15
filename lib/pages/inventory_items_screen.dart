@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/inventory_controller.dart';
-import '../models/inventory_item.dart';
+import '../back_pos/controllers/inventory_controller.dart';
+import '../back_pos/models/inventory_item.dart';
 
 class InventoryItemsScreen extends StatefulWidget {
   final Function(InventoryItem)? onItemSelected;

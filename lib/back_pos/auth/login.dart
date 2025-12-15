@@ -3,7 +3,7 @@ import 'package:bac_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../config.dart';
-import '../../controllers/auth_controller.dart';
+import '../controllers/auth_controller.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
-import '../controllers/sales_controller.dart';
+import '../back_pos/controllers/sales_controller.dart';
 import '../services/print_service.dart';
 
 class DailySummary extends StatefulWidget {

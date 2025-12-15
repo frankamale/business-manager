@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../controllers/payment_controller.dart';
-import '../controllers/auth_controller.dart';
+import '../back_pos/controllers/payment_controller.dart';
+import '../back_pos/controllers/auth_controller.dart';
 import '../services/print_service.dart';
-import '../database/db_helper.dart';
-import '../models/sale_transaction.dart';
+import '../back_pos/database/db_helper.dart';
+import '../back_pos/models/sale_transaction.dart';
 
 class PaymentScreen extends StatefulWidget {
    final List<Map<String, dynamic>> cartItems;
