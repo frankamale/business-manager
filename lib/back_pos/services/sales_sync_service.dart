@@ -5,7 +5,7 @@ import '../database/db_helper.dart';
 import '../utils/network_helper.dart';
 
 class SalesSyncService extends GetxService {
-  final ApiServiceMonitor _apiService = Get.find<ApiServiceMonitor>();
+  final ApiService _apiService = Get.find<ApiService>();
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   Timer? _syncTimer;

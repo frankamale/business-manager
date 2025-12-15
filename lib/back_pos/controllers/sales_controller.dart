@@ -8,7 +8,7 @@ import '../utils/network_helper.dart';
 
 class SalesController extends GetxController {
   final _dbHelper = DatabaseHelper();
-  final _apiService = ApiServiceMonitor();
+  final _apiService = ApiService();
 
   // Reactive list of sale transactions
   var salesTransactions = <SaleTransaction>[].obs;

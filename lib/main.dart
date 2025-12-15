@@ -1,25 +1,29 @@
-import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
-import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
-import 'package:bac_pos/back_pos/controllers/settings_controller.dart';
-import 'package:bac_pos/back_pos/services/api_services.dart';
-import 'package:bac_pos/back_pos/services/sales_sync_service.dart';
-import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'back_pos/controllers/auth_controller.dart';
 import 'back_pos/controllers/customer_controller.dart';
 import 'back_pos/controllers/inventory_controller.dart';
 import 'back_pos/controllers/payment_controller.dart';
 import 'back_pos/controllers/sales_controller.dart';
+import 'back_pos/controllers/service_point_controller.dart';
+import 'back_pos/controllers/settings_controller.dart';
 import 'back_pos/controllers/user_controller.dart';
+import 'back_pos/services/api_services.dart';
+import 'back_pos/services/sales_sync_service.dart';
+import 'back_pos/config.dart';
 import 'initialise/unified_login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await GetStorage.init(); 
-  Get.put(ApiServiceMonitor());
+  await GetStorage.init();
+  
+  // Initialize services
+  Get.put(ApiService());
   Get.put(SalesSyncService());
+  
+  // Initialize controllers
   Get.put(AuthController());
   Get.put(CustomerController());
   Get.put(InventoryController());
@@ -28,7 +32,6 @@ void main() async {
   Get.put(UserController());
   Get.put(SettingsController());
   Get.put(ServicePointController());
-  Get.put(ApiServiceMonitor());
 
   runApp(const MyApp());
 }

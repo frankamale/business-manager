@@ -10,7 +10,7 @@ import 'sales_controller.dart';
 import '../services/settings_service.dart';
 
 class PaymentController extends GetxController {
-  final ApiServiceMonitor _apiService = Get.find<ApiServiceMonitor>();
+  final ApiService _apiService = Get.find<ApiService>();
   final SettingsService _settingsService = SettingsService();
   final DatabaseHelper _dbHelper = DatabaseHelper();
 

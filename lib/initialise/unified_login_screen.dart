@@ -18,7 +18,7 @@ class UnifiedLoginScreen extends StatefulWidget {
 }
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
-  ApiServiceMonitor _apiService = ApiServiceMonitor();
+  ApiService _apiService = ApiService();
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
