@@ -49,7 +49,6 @@ class MyApp extends StatelessWidget {
       ),
 
       fallbackLocale: const Locale('en', 'US_store'),
-
       home: const UnifiedLoginScreen(),
     );
   }
