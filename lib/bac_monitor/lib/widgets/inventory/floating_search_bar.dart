@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:bac_monitor/additions/colors.dart';
+
+import '../../additions/colors.dart';
 
 class FloatingSearchBar extends StatefulWidget {
   final Function(String) onSearchChanged;

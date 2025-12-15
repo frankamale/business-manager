@@ -1,4 +1,4 @@
-import 'package:bac_monitor/widgets/dashboard/stock_out.dart';
+import 'package:bac_pos/bac_monitor/lib/widgets/dashboard/stock_out.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 

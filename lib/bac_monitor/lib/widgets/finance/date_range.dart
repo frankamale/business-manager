@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import 'package:bac_monitor/additions/colors.dart';
+import '../../additions/colors.dart';
 
 enum DateRange { today, yesterday, last7Days, monthToDate, custom }
 

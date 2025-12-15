@@ -1,4 +1,4 @@
-import 'package:bac_monitor/widgets/finance/pie_chart.dart';
+import 'package:bac_pos/bac_monitor/lib/widgets/finance/pie_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../additions/colors.dart';

@@ -1,6 +1,6 @@
-import 'package:bac_monitor/additions/colors.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../additions/colors.dart';
 import '../../models/hourly_customer_traffic.dart';
 
 class HourlyTrafficChart extends StatelessWidget {

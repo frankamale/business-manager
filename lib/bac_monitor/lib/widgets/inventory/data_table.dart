@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:bac_monitor/additions/colors.dart';
+import '../../additions/colors.dart';
 import '../../models/inventory_data.dart';
 import 'item_details_dialog.dart';
 
