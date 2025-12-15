@@ -6,27 +6,19 @@ import 'package:bac_pos/models/customer.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// DatabaseHelper implements a per-company database approach where each company has its own isolated SQLite database file.
-/// This design prevents data leakage between companies by ensuring complete separation of data storage.
-/// Example usage: During login, call openForCompany(companyId) to switch to the company's database.
-/// During logout, call close() to release the database connection.
+
 class DatabaseHelper {
-  // Singleton pattern ensures only one instance of DatabaseHelper exists,
-  // preventing multiple database connections and ensuring consistent state.
+  
   static final DatabaseHelper _instance = DatabaseHelper._internal();
 
   static DatabaseHelper get instance => _instance;
 
   factory DatabaseHelper() => _instance;
 
-  // Private database instance, null when no database is open.
   static Database? _database;
 
   DatabaseHelper._internal();
 
-  /// Opens a database for the specified company. Closes any existing database to prevent data leakage between companies.
-  /// Each company has its own database file (e.g., 'app_db_company_123.db'), ensuring complete isolation of data.
-  /// This design prevents accidental mixing of data from different companies, maintaining data integrity and security.
   Future<void> openForCompany(String companyId) async {
     if (_database != null) {
       await _database!.close();

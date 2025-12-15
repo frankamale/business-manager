@@ -52,10 +52,11 @@ class _ServerLoginState extends State<ServerLogin> with SingleTickerProviderStat
       });
 
       print('ServerLogin: Calling authController.serverLogin');
-      // Authenticate user via server
+      // Authenticate user via server - close database since this is a new authentication
       final success = await _authController.serverLogin(
         _usernameController.text,
         _passwordController.text,
+        closeDatabase: true,
       );
 
       print('ServerLogin: Login result: $success');
