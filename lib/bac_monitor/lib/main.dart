@@ -11,6 +11,7 @@ import 'controllers/store_controller.dart';
 import 'controllers/store_kpi_controller.dart';
 import 'controllers/sync_controller.dart';
 import 'db/db_helper.dart';
+import 'package:bac_pos/app_roots.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,7 +62,7 @@ class MyApp extends StatelessWidget {
       translations: translationService,
       locale: initialLocale,
       fallbackLocale: const Locale('en', 'US_store'),
-      home: const SplashPage(),
+      home: const MonitorAppRoot(),
     );
   }
 }

@@ -13,6 +13,7 @@ import '../services/api_services.dart';
 import '../utils/network_helper.dart';
 import 'login.dart';
 import 'server_login.dart';
+import 'package:bac_pos/unified_login_screen.dart';
 
 
 class SplashScreen extends StatefulWidget {
@@ -201,8 +202,8 @@ class _SplashScreenState extends State<SplashScreen>
           _log('authenticateApp: Navigating to custom next screen');
           Get.off(() => widget.nextScreen!);
         } else {
-          _log('authenticateApp: Navigating to Login screen');
-          Get.off(() => const Login());
+          _log('authenticateApp: Navigating to Unified Login screen');
+          Get.off(() => const UnifiedLoginScreen());
         }
       }
 
@@ -549,8 +550,8 @@ class _SplashScreenState extends State<SplashScreen>
                           _log('Navigating to custom next screen (offline mode)');
                           Get.off(() => widget.nextScreen!);
                         } else {
-                          _log('Navigating to Login screen (offline mode)');
-                          Get.off(() => const Login());
+                          _log('Navigating to Unified Login screen (offline mode)');
+                          Get.off(() => const UnifiedLoginScreen());
                         }
                       },
                       icon: const Icon(Icons.offline_bolt, color: Colors.white),
