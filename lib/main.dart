@@ -1,9 +1,9 @@
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
 import 'package:bac_pos/back_pos/controllers/settings_controller.dart';
-import 'package:bac_pos/services/api_services.dart';
-import 'package:bac_pos/services/sales_sync_service.dart';
-import 'package:bac_pos/config.dart';
+import 'package:bac_pos/back_pos/services/api_services.dart';
+import 'package:bac_pos/back_pos/services/sales_sync_service.dart';
+import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';

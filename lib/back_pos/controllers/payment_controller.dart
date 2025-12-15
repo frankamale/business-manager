@@ -2,12 +2,12 @@ import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/customer.dart';
-import '../../services/api_services.dart';
+import '../services/api_services.dart';
 import '../models/inventory_item.dart';
 import '../database/db_helper.dart';
-import '../../utils/network_helper.dart';
+import '../utils/network_helper.dart';
 import 'sales_controller.dart';
-import '../../services/settings_service.dart';
+import '../services/settings_service.dart';
 
 class PaymentController extends GetxController {
   final ApiService _apiService = Get.find<ApiService>();

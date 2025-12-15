@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../config.dart';
+import '../config.dart';
 import '../controllers/auth_controller.dart';
 
 import 'splash_screen.dart';

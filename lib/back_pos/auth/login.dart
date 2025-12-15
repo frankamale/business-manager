@@ -2,7 +2,7 @@ import 'package:bac_pos/back_pos/auth/server_login.dart';
 import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../config.dart';
+import '../config.dart';
 import '../controllers/auth_controller.dart';
 
 class Login extends StatefulWidget {

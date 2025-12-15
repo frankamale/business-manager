@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:developer' as developer;
-import '../../config.dart';
+import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/customer_controller.dart';
 import '../controllers/inventory_controller.dart';
@@ -9,8 +9,8 @@ import '../controllers/payment_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/service_point_controller.dart';
 import '../database/db_helper.dart';
-import '../../services/api_services.dart';
-import '../../utils/network_helper.dart';
+import '../services/api_services.dart';
+import '../utils/network_helper.dart';
 import 'login.dart';
 import 'server_login.dart';
 

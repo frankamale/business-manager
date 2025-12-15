@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
-import '../../services/print_service.dart';
+import '../services/print_service.dart';
 
 class DailySummary extends StatefulWidget {
   const DailySummary({super.key});

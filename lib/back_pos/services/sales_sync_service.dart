@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import 'api_services.dart';
-import '../back_pos/database/db_helper.dart';
+import '../database/db_helper.dart';
 import '../utils/network_helper.dart';
 
 class SalesSyncService extends GetxService {

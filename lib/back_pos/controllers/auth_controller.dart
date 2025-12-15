@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
 import '../database/db_helper.dart';
-import '../../services/api_services.dart';
+import '../services/api_services.dart';
 import '../models/users.dart';
-import '../../utils/network_helper.dart';
+import '../utils/network_helper.dart';
 
 class AuthController extends GetxController {
   final _dbHelper = DatabaseHelper();

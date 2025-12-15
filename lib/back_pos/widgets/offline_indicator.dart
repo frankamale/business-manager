@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/network_helper.dart';
 
-/// A widget that displays an offline indicator when the device has no internet connection
-/// Typically used in AppBar actions to show network status
+
 class OfflineIndicator extends StatelessWidget {
   const OfflineIndicator({super.key});
 

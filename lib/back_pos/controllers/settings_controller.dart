@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../services/settings_service.dart';
-import '../../services/api_services.dart';
+import '../services/settings_service.dart';
+import '../services/api_services.dart';
 
 class SettingsController extends GetxController {
   final SettingsService _settingsService = SettingsService();
