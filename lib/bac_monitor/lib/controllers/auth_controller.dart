@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../services/api_services.dart';
-import '../../pages/bottom_nav.dart';
-import '../../db/db_helper.dart';
+
+import '../db/db_helper.dart';
+import '../pages/bottom_nav.dart';
+import '../services/api_services.dart';
 
 class LoginController extends GetxController {
   final ApiService _apiService = Get.find();

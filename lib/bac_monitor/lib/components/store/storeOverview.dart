@@ -1,4 +1,3 @@
-import 'package:bac_monitor/widgets/store/hourly_traffic.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../additions/colors.dart';
@@ -6,6 +5,7 @@ import '../../controllers/store_controller.dart';
 import '../../controllers/store_kpi_controller.dart';
 import '../../models/trend_direction.dart';
 import '../../widgets/dashboard/line_graph.dart';
+import '../../widgets/store/hourly_traffic.dart';
 import '../../widgets/store/product_list.dart';
 
 class StoreOverview extends StatelessWidget {

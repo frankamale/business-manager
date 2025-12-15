@@ -1,9 +1,10 @@
-import 'package:bac_monitor/controllers/store_kpi_controller.dart';
-import 'package:bac_monitor/models/dashboard.dart';
-import 'package:bac_monitor/models/hourly_customer_traffic.dart';
+
+import 'package:bac_pos/bac_monitor/lib/controllers/store_kpi_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../models/dashboard.dart';
+import '../models/hourly_customer_traffic.dart';
 import '../models/product.dart';
 import '../models/store.dart';
 import '../db/db_helper.dart';

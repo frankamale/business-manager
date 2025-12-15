@@ -1,4 +1,5 @@
-import 'package:bac_monitor/models/product.dart';
+
+import '../models/product.dart';
 
 final List<TopProduct> topSellingProductsData = [
   TopProduct(

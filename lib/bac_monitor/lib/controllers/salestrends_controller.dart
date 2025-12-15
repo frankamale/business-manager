@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:bac_monitor/models/dashboard.dart';
-import 'package:bac_monitor/db/db_helper.dart';
-import '../../controllers/dashboard_controller.dart';
+
+import '../db/db_helper.dart';
+import '../models/dashboard.dart';
 import '../widgets/finance/date_range.dart';
+import 'dashboard_controller.dart';
 
 class SalesTrendsController extends GetxController {
   final DashboardController dateController = Get.find();

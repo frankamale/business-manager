@@ -1,10 +1,10 @@
-import 'package:bac_monitor/controllers/store_controller.dart';
+import 'package:bac_pos/bac_monitor/lib/controllers/store_controller.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../db/db_helper.dart';
 import '../models/trend_direction.dart';
-import '../../db/db_helper.dart';
-import '../../widgets/finance/date_range.dart';
 import '../models/store.dart';
+import '../widgets/finance/date_range.dart';
 
 class StoreKpiTrendController extends GetxController {
   final StoresController storesController = Get.find();

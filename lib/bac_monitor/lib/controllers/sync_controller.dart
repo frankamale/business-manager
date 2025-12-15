@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:bac_monitor/controllers/salestrends_controller.dart';
+import 'package:bac_pos/bac_monitor/lib/controllers/salestrends_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../services/api_services.dart';
