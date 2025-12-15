@@ -10,7 +10,7 @@ class PosAppRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SplashScreen(nextScreen: Homepage());
+    return const SplashScreen();
   }
 }
 

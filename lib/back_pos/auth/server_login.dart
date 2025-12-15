@@ -69,7 +69,7 @@ class _ServerLoginState extends State<ServerLogin> with SingleTickerProviderStat
       if (success) {
         print('ServerLogin: Login successful, navigating to splash screen for initialization');
         await Future.delayed(const Duration(milliseconds: 500));
-        Get.off(() => SplashScreen(nextScreen: const Homepage()));
+        Get.off(() => SplashScreen());
       } else {
         print('ServerLogin: Login failed, showing error message');
       }

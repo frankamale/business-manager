@@ -222,7 +222,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             obscureText: _obscurePassword,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: 'Passcode',
+                              labelText: 'Password',
                               prefixIcon: Icon(
                                 Icons.lock_outline_rounded,
                                 color: Colors.blue.shade700,
@@ -265,9 +265,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your password';
-                              }
-                              if (value.length < 4) {
-                                return 'Password must be at least 4 characters';
                               }
                               return null;
                             },

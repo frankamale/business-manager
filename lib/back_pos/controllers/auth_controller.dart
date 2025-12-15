@@ -22,7 +22,6 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Don't load on init - will be handled by splash screen
   }
 
   // Load all user roles from database (including duplicates)
@@ -32,6 +31,7 @@ class AuthController extends GetxController {
       final roles = await _dbHelper.getAllRoles();
       userRoles.value = roles;
       isLoadingRoles.value = false;
+      print(userRoles);
     } catch (e) {
       isLoadingRoles.value = false;
       Get.snackbar(
