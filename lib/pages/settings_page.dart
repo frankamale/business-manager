@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../auth/login.dart';
+import '../back_pos//auth/login.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/settings_controller.dart';
 

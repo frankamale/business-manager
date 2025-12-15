@@ -1,22 +1,23 @@
-import 'package:bac_pos/auth/server_login.dart';
-import 'package:bac_pos/pages/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/auth_controller.dart';
-import '../config.dart';
+import '../../config.dart';
+import '../../controllers/auth_controller.dart';
 
-class Login extends StatefulWidget {
-  const Login({super.key});
+import 'splash_screen.dart';
+import 'package:bac_pos/pages/homepage.dart';
+
+class ServerLogin extends StatefulWidget {
+  const ServerLogin({super.key});
 
   @override
-  State<Login> createState() => _LoginState();
+  State<ServerLogin> createState() => _ServerLoginState();
 }
 
-class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
+class _ServerLoginState extends State<ServerLogin> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.put(AuthController());
-  String? selectedItem;
   bool _obscurePassword = true;
   bool _isLoading = false;
   late AnimationController _animationController;
@@ -38,31 +39,39 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _passwordController.dispose();
     _animationController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleServerLogin() async {
     if (_formKey.currentState!.validate()) {
+      print('ServerLogin: Starting server login with username: ${_usernameController.text}');
       setState(() {
         _isLoading = true;
       });
 
-      // Authenticate user
-      final success = await _authController.login(
-        selectedItem!,
+      print('ServerLogin: Calling authController.serverLogin');
+      // Authenticate user via server - close database since this is a new authentication
+      final success = await _authController.serverLogin(
+        _usernameController.text,
         _passwordController.text,
+        closeDatabase: true,
       );
 
+      print('ServerLogin: Login result: $success');
       setState(() {
         _isLoading = false;
       });
 
-      // Navigate to POS Screen if login successful
+      // Navigate to SplashScreen if login successful
       if (success) {
+        print('ServerLogin: Login successful, navigating to splash screen for initialization');
         await Future.delayed(const Duration(milliseconds: 500));
-        Get.off(() => const Homepage());
+        Get.off(() => SplashScreen(nextScreen: const Homepage()));
+      } else {
+        print('ServerLogin: Login failed, showing error message');
       }
     }
   }
@@ -113,7 +122,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                           children: [
                             // Logo
                             Hero(
-                              tag: 'logo',
+                              tag: 'server_logo',
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
@@ -126,7 +135,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                   height: isSmallScreen ? 100 : 120,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Icon(
-                                      Icons.storefront_rounded,
+                                      Icons.cloud_rounded,
                                       size: isSmallScreen ? 100 : 120,
                                       color: Colors.blue.shade700,
                                     );
@@ -135,10 +144,8 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                               ),
                             ),
                             const SizedBox(height: 24),
-
-                            // Title
                             Text(
-                              "Welcome Back",
+                              "Server Login",
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 28 : 32,
                                 fontWeight: FontWeight.bold,
@@ -147,7 +154,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "${AppConfig.companyName} - Demo",
+                              "${AppConfig.companyName} - Server",
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 14 : 16,
                                 color: Colors.blue.shade600,
@@ -156,59 +163,44 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 40),
 
-                            // Account Selection Dropdown
-                            Obx(
-                              () => DropdownButtonFormField<String>(
-                                value: selectedItem,
-                                decoration: InputDecoration(
-                                  labelText: 'Select Account',
-                                  prefixIcon: Icon(
-                                    Icons.account_circle_outlined,
-                                    color: Colors.blue.shade700,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: Colors.blue.shade700,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.grey.shade50,
+                            // Username Field
+                            TextFormField(
+                              controller: _usernameController,
+                              keyboardType: TextInputType.text,
+                              decoration: InputDecoration(
+                                labelText: 'Username',
+                                prefixIcon: Icon(
+                                  Icons.person_outline_rounded,
+                                  color: Colors.blue.shade700,
                                 ),
-                                hint: const Text('Select your account'),
-                                items: _authController.userRoles.map((
-                                  String item,
-                                ) {
-                                  return DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  );
-                                }).toList(),
-                                onChanged: (String? value) {
-                                  setState(() {
-                                    selectedItem = value;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please select an account';
-                                  }
-                                  return null;
-                                },
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Colors.blue.shade700,
+                                    width: 2,
+                                  ),
+                                ),
+                                filled: true,
+                                fillColor: Colors.grey.shade50,
                               ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your username';
+                                }
+                                return null;
+                              },
                             ),
                             const SizedBox(height: 20),
 
@@ -216,9 +208,9 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
-                              keyboardType: TextInputType.number,
+                              keyboardType: TextInputType.visiblePassword,
                               decoration: InputDecoration(
-                                labelText: 'Passcode',
+                                labelText: 'Password',
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
                                   color: Colors.blue.shade700,
@@ -262,9 +254,6 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your password';
                                 }
-                                if (value.length < 4) {
-                                  return 'Password must be at least 4 characters';
-                                }
                                 return null;
                               },
                             ),
@@ -275,7 +264,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                               width: double.infinity,
                               height: 56,
                               child: ElevatedButton(
-                                onPressed: _isLoading ? null : _handleLogin,
+                                onPressed: _isLoading ? null : _handleServerLogin,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blue.shade700,
                                   foregroundColor: Colors.white,
@@ -284,37 +273,29 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  disabledBackgroundColor: Colors.grey.shade300,
+                                  disabledBackgroundColor:
+                                  Colors.grey.shade300,
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.white,
-                                              ),
-                                        ),
-                                      )
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor:
+                                    AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
                                     : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 18),
-                            GestureDetector(
-                              onTap: () => {Get.to(ServerLogin())},
-
-                              child: Text(
-                                "Login with server credentials",
-                                style: TextStyle(color: Colors.blue),
+                                  'Sign In',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),

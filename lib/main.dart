@@ -1,4 +1,3 @@
-import 'package:bac_pos/auth/splash_screen.dart';
 import 'package:bac_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/controllers/service_point_controller.dart';
 import 'package:bac_pos/controllers/settings_controller.dart';
@@ -9,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import 'back_pos/auth/splash_screen.dart';
 import 'controllers/customer_controller.dart';
 import 'controllers/inventory_controller.dart';
 import 'controllers/payment_controller.dart';
