@@ -182,7 +182,6 @@ class AuthController extends GetxController {
   /// Logout closes the current company's database and clears the user session.
   /// This prevents access to the previous company's data and prepares for a new login.
   Future<void> logout() async {
-    await DatabaseHelper.instance.close();
     currentUser.value = null;
   }
 
@@ -191,13 +190,15 @@ class AuthController extends GetxController {
   /// Example: After successful server authentication, the company's database is opened, preventing data leakage between companies.
   Future<bool> serverLogin(String username, String password) async {
     try {
+      String usernameLower = username.toLowerCase();
       isLoggingIn.value = true;
+      await DatabaseHelper.instance.close();
 
       // Authenticate with server
-      await _apiService.adminSignIn(username, password);
+      await _apiService.adminSignIn(usernameLower, password);
 
       // Store server credentials
-      await _apiService.saveServerCredentials(username, password);
+      await _apiService.saveServerCredentials(usernameLower, password);
 
       // Fetch and store company info
       await _apiService.fetchAndStoreCompanyInfo();
