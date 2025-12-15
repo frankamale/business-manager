@@ -44,7 +44,7 @@ Widget buildStockAlertsCard(MonSalesTrendsController controller) {
                 ),
               );
             }
-            return CategorizedStockAlertsList(alerts: controller.stockAlerts);
+            return CategorizedStockAlertsList(alerts: controller.stockAlerts.toList());
           }),
         ],
       ),

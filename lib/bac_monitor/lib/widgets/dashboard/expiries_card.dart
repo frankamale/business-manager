@@ -44,7 +44,7 @@ Widget buildExpiriesCard(MonSalesTrendsController controller) {
                 ),
               );
             }
-            return CategorizedStockAlertsList(alerts: controller.expiries);
+            return CategorizedStockAlertsList(alerts: controller.expiries.toList());
           }),
         ],
       ),
