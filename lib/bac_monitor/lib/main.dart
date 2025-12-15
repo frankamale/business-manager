@@ -54,6 +54,7 @@ void main() async {
   Get.put(OutstandingPaymentsController());
   Get.put(SalesTrendsController());
   Get.put(StoresController());
+  Get.put(StoresController());
   Get.put(StoreKpiTrendController());
   Get.put(SyncController());
 
