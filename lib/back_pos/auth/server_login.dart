@@ -4,7 +4,7 @@ import '../../config.dart';
 import '../controllers/auth_controller.dart';
 
 import 'splash_screen.dart';
-import 'package:bac_pos/pages/homepage.dart';
+import 'package:bac_pos/back_pos/pages/homepage.dart';
 
 class ServerLogin extends StatefulWidget {
   const ServerLogin({super.key});

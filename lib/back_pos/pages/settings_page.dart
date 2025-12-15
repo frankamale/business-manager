@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../back_pos//auth/login.dart';
-import '../back_pos/controllers/auth_controller.dart';
-import '../back_pos/controllers/settings_controller.dart';
+import '../auth/login.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/settings_controller.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
