@@ -66,7 +66,7 @@ class SalesTrendsSection extends StatelessWidget {
                   aggregationType: controller.aggregationType.value,
                 ),
               ),
-            );w
+            );
           }),
           const SizedBox(height: 24),
 
