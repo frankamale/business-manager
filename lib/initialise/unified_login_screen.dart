@@ -1,3 +1,4 @@
+import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
@@ -17,6 +18,7 @@ class UnifiedLoginScreen extends StatefulWidget {
 }
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
+  ApiService _apiService = ApiService();
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -54,27 +56,26 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         );
 
         if (success) {
-          final currentUser = _authController.currentUser.value;
-
-          if (currentUser != null) {
-            if (currentUser.role.toLowerCase() == 'admin') {
-              if (!Get.isRegistered<DashboardController>()) {
-                Get.put(DashboardController());
-              }
-              if (!Get.isRegistered<OperatorController>()) {
-                Get.put(OperatorController());
-              }
-              if (!Get.isRegistered<StoresController>()) {
-                Get.put(StoresController());
-              }
-              if (!Get.isRegistered<InventoryController>()) {
-                Get.put(InventoryController());
-              }
-              // Redirect to Monitor app splash screen
-              Get.offAll(() => const MonitorAppRoot());
-            } else {
-              Get.offAll(() => const PosAppRoot());
+          final Map<String, dynamic>? data = await _apiService
+              .getStoredUserData();
+          final List<dynamic>? roles = data?['roles'];
+          print(roles);
+          if (roles != null &&
+              roles.any((role) => role.toString().toLowerCase() == 'admin')) {
+            if (!Get.isRegistered<DashboardController>()) {
+              Get.put(DashboardController());
             }
+            if (!Get.isRegistered<OperatorController>()) {
+              Get.put(OperatorController());
+            }
+            if (!Get.isRegistered<StoresController>()) {
+              Get.put(StoresController());
+            }
+            if (!Get.isRegistered<InventoryController>()) {
+              Get.put(InventoryController());
+            }
+            // Redirect to Monitor app splash screen
+            Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());
           }
