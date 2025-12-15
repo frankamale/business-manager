@@ -8,19 +8,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
-import '../../back_pos/controllers/customer_controller.dart';
-import '../../back_pos/controllers/payment_controller.dart';
-import '../../back_pos/controllers/sales_controller.dart';
-import '../../back_pos/controllers/user_controller.dart';
-import '../../initialise/unified_login_screen.dart';
-import 'controllers/inventory_controller.dart';
+import 'package:bac_pos/back_pos/controllers/customer_controller.dart';
+import 'package:bac_pos/back_pos/controllers/payment_controller.dart';
+import 'package:bac_pos/back_pos/controllers/sales_controller.dart';
+import 'package:bac_pos/back_pos/controllers/user_controller.dart';
+import 'package:bac_pos/initialise/unified_login_screen.dart';
+import 'package:bac_pos/bac_monitor/lib/controllers/inventory_controller.dart';
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
-  // POS core services (eager load)
   Get.put(ApiService());
   Get.put(SalesSyncService());
   Get.put(AuthController());
