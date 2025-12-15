@@ -10,7 +10,7 @@ import '../db/db_helper.dart';
 import '../pages/auth/Login.dart';
 import '../pages/bottom_nav.dart';
 
-class ApiService extends GetxService {
+class ApiServiceMonitor extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
   final _storage = GetStorage();
   final _dbHelper = DatabaseHelper();

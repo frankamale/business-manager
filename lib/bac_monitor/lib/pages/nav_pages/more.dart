@@ -158,7 +158,7 @@ class More extends StatelessWidget {
     );
 
     try {
-      final apiService = Get.find<ApiService>();
+      final apiService = Get.find<ApiServiceMonitor>();
       await apiService.fetchAndCacheAllData();
 
       if (Get.isRegistered<KpiOverviewController>()) {
@@ -223,7 +223,7 @@ class More extends StatelessWidget {
               ),
               child: const Text('Log Out'),
               onPressed: () async {
-                final apiService = Get.find<ApiService>();
+                final apiService = Get.find<ApiServiceMonitor>();
                 await apiService.logout();
                 Get.offAll(() => const LoginPage());
               },

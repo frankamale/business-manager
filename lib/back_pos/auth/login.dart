@@ -1,5 +1,5 @@
-import 'package:bac_pos/back_pos/auth/server_login.dart';
 import 'package:bac_pos/back_pos/pages/homepage.dart';
+import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../config.dart';
@@ -311,7 +311,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 18),
                             GestureDetector(
-                              onTap: () => {Get.to(ServerLogin())},
+                              onTap: () => {Get.to(UnifiedLoginScreen())},
 
                               child: Text(
                                 "Login with server credentials",

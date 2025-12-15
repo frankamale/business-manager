@@ -135,7 +135,7 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _performAuthAndNavigation() async {
-    final apiService = Get.find<ApiService>();
+    final apiService = Get.find<ApiServiceMonitor>();
 
     // Load company details
     await Get.find<OperatorController>().loadCompanyDetailsFromDb();

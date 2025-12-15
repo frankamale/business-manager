@@ -44,7 +44,7 @@ class DatabaseHelper {
 
   Future<String> _getCurrentCompanyId() async {
     try {
-      final apiService = Get.find<ApiService>();
+      final apiService = Get.find<ApiServiceMonitor>();
       return await apiService.ensureCompanyIdAvailable();
     } catch (e) {
       // If company ID is not available, use a default

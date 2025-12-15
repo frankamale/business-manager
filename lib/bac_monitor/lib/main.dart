@@ -1,68 +1,56 @@
-
-import 'package:bac_pos/bac_monitor/lib/pages/auth/splash_page.dart';
-import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
-import 'package:bac_pos/bac_monitor/lib/services/translations_service.dart';
+import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
+import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/controllers/settings_controller.dart';
+import 'package:bac_pos/back_pos/services/api_services.dart';
+import 'package:bac_pos/back_pos/services/sales_sync_service.dart';
+import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
-import 'controllers/operator_controller.dart';
-import 'controllers/store_controller.dart';
-import 'controllers/store_kpi_controller.dart';
-import 'controllers/sync_controller.dart';
-import 'db/db_helper.dart';
-import 'package:bac_pos/initialise/app_roots.dart';
+import '../../back_pos/controllers/customer_controller.dart';
+import '../../back_pos/controllers/payment_controller.dart';
+import '../../back_pos/controllers/sales_controller.dart';
+import '../../back_pos/controllers/user_controller.dart';
+import '../../initialise/unified_login_screen.dart';
+import 'controllers/inventory_controller.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
+
+  // POS core services (eager load)
   Get.put(ApiService());
-  Get.put(OperatorController());
-  Get.put(SyncController());
-  final translationService = TranslationService();
-  await translationService.loadTranslations();
-  Get.put(translationService);
+  Get.put(SalesSyncService());
+  Get.put(AuthController());
+  Get.put(CustomerController());
+  Get.put(InventoryController());
+  Get.put(PaymentController());
+  Get.put(SalesController());
+  Get.put(UserController());
+  Get.put(SettingsController());
+  Get.put(ServicePointController());
 
-  Get.put(StoresController());
-  Get.put(StoreKpiTrendController());
-  final box = GetStorage();
-  final String labelPreference = box.read('label_preference') ?? 'store';
-  final initialLocale = Locale('en', 'US_$labelPreference');
-
-  // Test the sales mapping
-  final dbHelper = DatabaseHelper();
-  await dbHelper.testSalesMapping();
-  await dbHelper.getSalesTableSchema().then((schema) {
-    print('Sales table schema:');
-    for (var column in schema) {
-      print('${column['name']}: ${column['type']}');
-    }
-  });
-
-  runApp(
-    MyApp(translationService: translationService, initialLocale: initialLocale),
-  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final TranslationService translationService;
-  final Locale initialLocale;
-
-  const MyApp({
-    super.key,
-    required this.translationService,
-    required this.initialLocale,
-  });
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'BAC Monitor',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      translations: translationService,
-      locale: initialLocale,
+      title: AppConfig.appName,
+      debugShowCheckedModeBanner: true,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+
       fallbackLocale: const Locale('en', 'US_store'),
-      home: const MonitorAppRoot(),
+
+      home: const UnifiedLoginScreen(),
     );
   }
 }

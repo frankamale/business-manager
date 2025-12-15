@@ -74,7 +74,7 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> _handleRefresh() async {
-    final apiService = Get.find<ApiService>();
+    final apiService = Get.find<ApiServiceMonitor>();
     await apiService.syncRecentSales();
 
     if (Get.isRegistered<KpiOverviewController>()) {

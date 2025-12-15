@@ -13,7 +13,6 @@ import '../database/db_helper.dart';
 import '../services/api_services.dart';
 import '../utils/network_helper.dart';
 import 'login.dart';
-import 'server_login.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -101,7 +100,7 @@ class _SplashScreenState extends State<SplashScreen>
 
         if (mounted) {
           _log('authenticateApp: Navigating to ServerLogin screen');
-          Get.off(() => const ServerLogin());
+          Get.off(() => const UnifiedLoginScreen());
         }
         return;
       }
@@ -133,7 +132,7 @@ class _SplashScreenState extends State<SplashScreen>
 
         if (mounted) {
           _log('authenticateApp: Navigating to ServerLogin screen');
-          Get.off(() => const ServerLogin());
+          Get.off(() => const UnifiedLoginScreen());
         }
         return;
       }

@@ -6,7 +6,7 @@ import '../pages/bottom_nav.dart';
 import '../services/api_services.dart';
 
 class LoginController extends GetxController {
-  final ApiService _apiService = Get.find();
+  final ApiServiceMonitor _apiService = Get.find();
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
