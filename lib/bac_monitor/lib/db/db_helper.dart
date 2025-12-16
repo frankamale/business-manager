@@ -403,6 +403,15 @@ class DatabaseHelper {
     return await db.rawQuery('PRAGMA table_info(sales)');
   }
 
+  Future<Map<String, dynamic>?> getCompanyDetails() async {
+    final db = await database;
+    final result = await db.query('company_details', limit: 1);
+    if (result.isNotEmpty) {
+      return result.first;
+    }
+    return null;
+  }
+
   Future<void> testSalesMapping() async {
     final db = await database;
     final sales = await db.query('sales', limit: 5);

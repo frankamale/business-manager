@@ -3,6 +3,7 @@ import '../../../back_pos/services/api_services.dart';
 import '../../../initialise/app_roots.dart';
 import '../services/api_services.dart';
 import '../services/account_manager.dart';
+import '../db/db_helper.dart';
 
 class ProfileController extends GetxController {
   final MonitorApiService _monitorApiService = Get.find();
@@ -16,12 +17,11 @@ class ProfileController extends GetxController {
   var userData = <String, dynamic>{}.obs;
   var companyData = <String, dynamic>{}.obs;
   var errorMessage = ''.obs;
-  var currentSystem = 'monitor'.obs; // 'monitor' or 'pos'
+  var currentSystem = 'monitor'.obs;
 
   @override
   void onInit() {
     super.onInit();
-    // Determine current system based on current account
     final currentAccount = _accountManager.currentAccount.value;
     if (currentAccount != null) {
       currentSystem.value = currentAccount.system;
@@ -40,9 +40,11 @@ class ProfileController extends GetxController {
         userData.value = user;
       }
 
-      // Load company data
-      final company = await _posApiService.fetchAndStoreCompanyInfo();
-      companyData.value = company;
+      final dbHelper = DatabaseHelper();
+      final company = await dbHelper.getCompanyDetails();
+      if (company != null) {
+        companyData.value = company;
+      }
 
     } catch (e) {
       errorMessage.value = 'Failed to load profile data: $e';
@@ -61,7 +63,6 @@ class ProfileController extends GetxController {
       await _posApiService.clearAuthData();
       await _monitorApiService.logout();
 
-      // Remove current account from account manager
       final currentAccount = _accountManager.currentAccount.value;
       if (currentAccount != null) {
         await _accountManager.setCurrentAccount(null);
@@ -182,7 +183,10 @@ class ProfileController extends GetxController {
   String get userName => userData['username'] ?? 'Unknown User';
   String get userEmail => userData['username'] ?? ''; // Using username as email for now
   String get userRole => _getUserRole();
-  String get companyName => companyData['companyName'] ?? companyData['company'] ?? 'Unknown Company';
+  String get companyName => companyData['activeBranchName'] ?? companyData['company'] ?? 'Unknown Company';
+  String get companyAddress => companyData['activeBranchAddress'] ?? '';
+  String get companyEmail => companyData['activeBranchPrimaryEmail'] ?? '';
+  String get companyCode => companyData['activeBranchCode'] ?? '';
   String get userInitial => userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
 
   String _getUserRole() {
