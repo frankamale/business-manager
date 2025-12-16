@@ -53,10 +53,22 @@ class ConnectivityController extends GetxController {
       if (hasConnection) {
         isConnected.value = true;
         isLoading.value = false;
-        // Wait 2 seconds then navigate
-        Future.delayed(const Duration(seconds: 2), () {
-          Get.offAll(() => const UnifiedLoginScreen());
-        });
+        final hasCredentials = await _hasValidCredentials();
+        if (hasCredentials) {
+          _initializeControllers();
+          await _loadDataFromDatabase();
+          final role = await _getUserRole();
+          if (role == 'admin') {
+            Get.offAll(() => const MonitorAppRoot());
+          } else {
+            Get.offAll(() => const PosAppRoot());
+          }
+        } else {
+          // Wait 2 seconds then navigate to login
+          Future.delayed(const Duration(seconds: 2), () {
+            Get.offAll(() => const UnifiedLoginScreen());
+          });
+        }
       } else {
         await _handleOfflineMode();
       }
@@ -95,7 +107,7 @@ class ConnectivityController extends GetxController {
       final credentials = await _getStoredCredentials();
       final token = await Get.find<MonitorApiService>().getStoredToken();
       final companyId = await Get.find<MonitorApiService>().getStoredCompanyId();
-      
+
       return credentials['username'] != null &&
              credentials['username']!.isNotEmpty &&
              credentials['password'] != null &&
@@ -107,6 +119,16 @@ class ConnectivityController extends GetxController {
     } catch (e) {
       debugPrint('SplashScreen: Error checking valid credentials - $e');
       return false;
+    }
+  }
+
+  Future<String?> _getUserRole() async {
+    try {
+      final role = await _secureStorage.read(key: 'user_role');
+      return role;
+    } catch (e) {
+      debugPrint('SplashScreen: Error retrieving user role - $e');
+      return null;
     }
   }
   void _initializeControllers() {
@@ -162,8 +184,12 @@ class ConnectivityController extends GetxController {
   Future<void> _performOfflineAuthAndNavigation() async {
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
-    // Since offline, assume credentials are valid, proceed to BottomNav
-    Get.offAll(() => const MonitorAppRoot());
+    final role = await _getUserRole();
+    if (role == 'admin') {
+      Get.offAll(() => const MonitorAppRoot());
+    } else {
+      Get.offAll(() => const PosAppRoot());
+    }
   }
   Future<void> _handleOfflineMode() async {
     isLoading.value = true;
