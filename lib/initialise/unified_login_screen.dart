@@ -1,8 +1,10 @@
 import 'package:bac_pos/back_pos/services/api_services.dart';
+import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
@@ -19,6 +21,7 @@ class UnifiedLoginScreen extends StatefulWidget {
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   PosApiService _apiService = PosApiService();
+  final MonitorApiService _monitorApiService = MonitorApiService();
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -26,10 +29,39 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  // Initialize secure storage for credentials
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
+
+  // Keys for secure storage
+  static const String _usernameKey = 'login_username';
+  static const String _passwordKey = 'login_password';
+
   @override
   void initState() {
     super.initState();
     _loadUserRoles();
+    _loadStoredCredentials();
+    _initializeCompanyId();
+  }
+
+  // Load stored credentials if they exist (for auto-fill or remember me functionality)
+  Future<void> _loadStoredCredentials() async {
+    try {
+      final credentials = await _getStoredCredentials();
+      if (credentials['username'] != null && credentials['username']!.isNotEmpty) {
+        // Auto-fill username if credentials are stored
+        _usernameController.text = credentials['username']!;
+        // Note: For security, we don't auto-fill password, but we could indicate
+        // that credentials are remembered
+        print('Loaded stored username: ${credentials['username']}');
+      }
+    } catch (e) {
+      print('Error loading stored credentials: $e');
+    }
   }
 
   @override
@@ -40,6 +72,17 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
   Future<void> _loadUserRoles() async {
     await _authController.loadUserRoles();
+  }
+
+  Future<void> _initializeCompanyId() async {
+    try {
+      print('Initializing company ID during app startup');
+      await _monitorApiService.initializeCompanyId();
+      print('Company ID initialized successfully during startup');
+    } catch (e) {
+      print('Warning: Failed to initialize company ID during startup: $e');
+      // Don't fail the app startup if company ID initialization fails
+    }
   }
 
   Future<void> _handleLogin() async {
@@ -56,6 +99,21 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         );
 
         if (success) {
+          // Store credentials securely after successful authentication
+          await _storeCredentialsSecurely(
+            _usernameController.text,
+            _passwordController.text,
+          );
+
+          // Initialize company ID for Monitor API service
+          try {
+            await _monitorApiService.initializeCompanyId();
+            print('Company ID initialized successfully');
+          } catch (e) {
+            print('Warning: Failed to initialize company ID: $e');
+            // Don't fail the login process if company ID initialization fails
+          }
+
           final Map<String, dynamic>? data = await _apiService
               .getStoredUserData();
           final List<dynamic>? roles = data?['roles'];
@@ -81,11 +139,78 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           }
         }
       } catch (e) {
+        // Handle login error
+        print('Login error: $e');
       } finally {
         setState(() {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // Store credentials securely using FlutterSecureStorage
+  Future<void> _storeCredentialsSecurely(String username, String password) async {
+    try {
+      // Store username and password securely
+      await _secureStorage.write(key: _usernameKey, value: username);
+      await _secureStorage.write(key: _passwordKey, value: password);
+      
+      // Verify that credentials were stored successfully
+      final storedUsername = await _secureStorage.read(key: _usernameKey);
+      final storedPassword = await _secureStorage.read(key: _passwordKey);
+      
+      if (storedUsername == username && storedPassword == password) {
+        print('Credentials stored securely successfully');
+      } else {
+        print('Warning: Credential storage verification failed');
+      }
+    } catch (e) {
+      print('Error storing credentials securely: $e');
+      // Even if secure storage fails, don't block the login process
+      // as the main authentication tokens are already stored by the API service
+    }
+  }
+
+  // Retrieve stored credentials securely (optional helper method)
+  Future<Map<String, String?>> _getStoredCredentials() async {
+    try {
+      final username = await _secureStorage.read(key: _usernameKey);
+      final password = await _secureStorage.read(key: _passwordKey);
+      return {
+        'username': username,
+        'password': password,
+      };
+    } catch (e) {
+      print('Error retrieving stored credentials: $e');
+      return {
+        'username': null,
+        'password': null,
+      };
+    }
+  }
+
+  // Clear stored credentials (for logout or security purposes)
+  Future<void> _clearStoredCredentials() async {
+    try {
+      await _secureStorage.delete(key: _usernameKey);
+      await _secureStorage.delete(key: _passwordKey);
+      print('Stored credentials cleared successfully');
+    } catch (e) {
+      print('Error clearing stored credentials: $e');
+    }
+  }
+
+  // Check if credentials are stored securely
+  Future<bool> _hasStoredCredentials() async {
+    try {
+      final username = await _secureStorage.read(key: _usernameKey);
+      final password = await _secureStorage.read(key: _passwordKey);
+      return username != null && username.isNotEmpty &&
+             password != null && password.isNotEmpty;
+    } catch (e) {
+      print('Error checking stored credentials: $e');
+      return false;
     }
   }
 

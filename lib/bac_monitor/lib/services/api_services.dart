@@ -58,6 +58,33 @@ class MonitorApiService extends GetxService {
     return await _secureStorage.read(key: 'company_id');
   }
 
+  /// Initialize company ID during app startup
+  /// This should be called early in the app initialization process
+  Future<void> initializeCompanyId() async {
+    try {
+      print('DEBUG: MonitorApiService.initializeCompanyId() - Starting company ID initialization');
+      
+      // Ensure company ID is available
+      final companyId = await ensureCompanyIdAvailable();
+      print('DEBUG: MonitorApiService.initializeCompanyId() - Company ID initialized: $companyId');
+      
+      // Switch to the company's database if we have a valid company ID
+      if (companyId != null && companyId.isNotEmpty && companyId != 'default_offline_company') {
+        try {
+          await _dbHelper.switchCompany(companyId);
+          print('DEBUG: MonitorApiService.initializeCompanyId() - Switched to company database: $companyId');
+        } catch (e) {
+          print('ERROR: MonitorApiService.initializeCompanyId() - Failed to switch company database: $e');
+          // Don't fail the entire initialization if database switch fails
+        }
+      }
+      
+    } catch (e) {
+      print('ERROR: MonitorApiService.initializeCompanyId() - Failed to initialize company ID: $e');
+      // Don't throw exception to allow app to continue in offline mode
+    }
+  }
+
   Future<String> fetchCompanyId() async {
     try {
       print('DEBUG: MonitorApiService.fetchCompanyId() - Starting company ID fetch');
@@ -69,6 +96,16 @@ class MonitorApiService extends GetxService {
         final companyId = companyDetails['company'];
         print('DEBUG: MonitorApiService.fetchCompanyId() - Found company ID: $companyId');
         await storeCompanyId(companyId.toString());
+        
+        // Verify the company ID was stored correctly
+        final storedCompanyId = await getStoredCompanyId();
+        if (storedCompanyId == companyId.toString()) {
+          print('DEBUG: MonitorApiService.fetchCompanyId() - Company ID stored successfully');
+        } else {
+          print('ERROR: MonitorApiService.fetchCompanyId() - Company ID storage verification failed');
+          throw Exception('Failed to verify company ID storage');
+        }
+        
         return companyId.toString();
       } else {
         print('ERROR: MonitorApiService.fetchCompanyId() - Company ID not found in company details');
@@ -90,10 +127,26 @@ class MonitorApiService extends GetxService {
     
     if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
       print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Using stored company ID');
-      return storedCompanyId;
+      
+      // Verify the stored company ID is still valid by checking if we can access company data
+      try {
+        final token = await getStoredToken();
+        if (token != null) {
+          // Try to fetch company details to verify the company ID is still valid
+          final response = await _getWithAuth('/company/details');
+          final companyDetails = json.decode(response.body);
+          if (companyDetails.containsKey('company') && companyDetails['company'].toString() == storedCompanyId) {
+            print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Stored company ID is still valid');
+            return storedCompanyId;
+          }
+        }
+      } catch (e) {
+        print('WARNING: MonitorApiService.ensureCompanyIdAvailable() - Failed to verify stored company ID: $e');
+        // Continue to fetch fresh company ID
+      }
     }
 
-    // If not stored, try to fetch it
+    // If not stored or verification failed, try to fetch it
     try {
       print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Attempting to fetch company ID from API');
       return await fetchCompanyId();

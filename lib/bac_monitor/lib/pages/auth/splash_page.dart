@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import '../../../../back_pos/utils/network_helper.dart';
 import '../../additions/colors.dart';
@@ -31,11 +32,83 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
     _initializeApp();
+  }
+
+  /// Retrieve stored credentials from FlutterSecureStorage
+  Future<Map<String, String?>> _getStoredCredentials() async {
+    try {
+      final username = await _secureStorage.read(key: 'login_username');
+      final password = await _secureStorage.read(key: 'login_password');
+      return {
+        'username': username,
+        'password': password,
+      };
+    } catch (e) {
+      debugPrint('SplashPage: Error retrieving stored credentials - $e');
+      return {
+        'username': null,
+        'password': null,
+      };
+    }
+  }
+
+  /// Check if we have valid stored credentials
+  Future<bool> _hasValidCredentials() async {
+    try {
+      final credentials = await _getStoredCredentials();
+      final token = await Get.find<MonitorApiService>().getStoredToken();
+      final companyId = await Get.find<MonitorApiService>().getStoredCompanyId();
+      
+      return credentials['username'] != null &&
+             credentials['username']!.isNotEmpty &&
+             credentials['password'] != null &&
+             credentials['password']!.isNotEmpty &&
+             token != null &&
+             token.isNotEmpty &&
+             companyId != null &&
+             companyId.isNotEmpty;
+    } catch (e) {
+      debugPrint('SplashPage: Error checking valid credentials - $e');
+      return false;
+    }
+  }
+
+  /// Attempt to auto-login using stored credentials
+  Future<bool> _attemptAutoLogin() async {
+    try {
+      final credentials = await _getStoredCredentials();
+      final apiService = Get.find<MonitorApiService>();
+      
+      if (credentials['username'] == null || credentials['password'] == null) {
+        debugPrint('SplashPage: No stored credentials available for auto-login');
+        return false;
+      }
+      
+      debugPrint('SplashPage: Attempting auto-login with stored credentials');
+      
+      // Check if we already have a valid token (user might already be authenticated)
+      final token = await apiService.getStoredToken();
+      if (token != null && token.isNotEmpty) {
+        debugPrint('SplashPage: Valid token found, skipping re-authentication');
+        return true;
+      }
+      
+      // If no token, try to authenticate with stored credentials
+      // Note: This would require access to the auth controller, but for now
+      // we'll rely on the existing token-based approach
+      
+    } catch (e) {
+      debugPrint('SplashPage: Auto-login failed - $e');
+      return false;
+    }
+    
+    return false;
   }
 
   Future<void> _initializeApp() async {
@@ -49,6 +122,9 @@ class _SplashPageState extends State<SplashPage> {
     // Initialize all required controllers
     _initializeControllers();
     
+    // Initialize company ID early in the process
+    await _initializeCompanyId();
+    
     // Ensure database is open
     await _ensureDatabaseIsOpen();
     
@@ -57,6 +133,23 @@ class _SplashPageState extends State<SplashPage> {
     
     // Continue with authentication and navigation
     await _performAuthAndNavigation();
+  }
+
+  /// Initialize company ID during splash screen
+  Future<void> _initializeCompanyId() async {
+    try {
+      debugPrint('SplashPage: Initializing company ID');
+      final apiService = Get.find<MonitorApiService>();
+      await apiService.initializeCompanyId();
+      
+      // Get the initialized company ID
+      final companyId = await apiService.getStoredCompanyId();
+      debugPrint('SplashPage: Company ID initialized: $companyId');
+      
+    } catch (e) {
+      debugPrint('SplashPage: Error initializing company ID - $e');
+      // Don't fail the app startup if company ID initialization fails
+    }
   }
 
   void _initializeControllers() {
@@ -136,6 +229,15 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _performAuthAndNavigation() async {
     final apiService = Get.find<MonitorApiService>();
 
+    // Check if we have valid credentials and company ID
+    final hasValidCredentials = await _hasValidCredentials();
+    
+    if (!hasValidCredentials) {
+      debugPrint('SplashPage: No valid credentials found, redirecting to login');
+      Get.offAll(() => const UnifiedLoginScreen());
+      return;
+    }
+
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
 
@@ -144,6 +246,14 @@ class _SplashPageState extends State<SplashPage> {
     
     if (token == null) {
       print('DEBUG: SplashPage._performAuthAndNavigation() - No token found, redirecting to login');
+      Get.offAll(() => const UnifiedLoginScreen());
+      return;
+    }
+
+    // Attempt auto-login if we have stored credentials but no valid session
+    final autoLoginSuccess = await _attemptAutoLogin();
+    if (!autoLoginSuccess) {
+      debugPrint('SplashPage: Auto-login failed, redirecting to login');
       Get.offAll(() => const UnifiedLoginScreen());
       return;
     }

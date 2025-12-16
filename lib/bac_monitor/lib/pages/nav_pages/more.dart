@@ -1,7 +1,6 @@
 
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:get/get.dart';
@@ -17,7 +16,6 @@ import '../../widgets/more/more_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/more/profile_page.dart';
 import '../../widgets/more/section_header.dart';
-import '../auth/Login.dart';
 
 class More extends StatefulWidget {
    const More({super.key});
