@@ -1,3 +1,4 @@
+import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../additions/colors.dart';
@@ -32,9 +33,7 @@ class ProfilePage extends StatelessWidget {
             centerTitle: true,
           ),
           body: const Center(
-            child: CircularProgressIndicator(
-              color: Colors.white,
-            ),
+            child: CircularProgressIndicator(color: Colors.white),
           ),
         );
       }
@@ -62,11 +61,7 @@ class ProfilePage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  color: Colors.red,
-                  size: 64,
-                ),
+                const Icon(Icons.error_outline, color: Colors.red, size: 64),
                 const SizedBox(height: 16),
                 Text(
                   controller.errorMessage.value,
@@ -95,10 +90,7 @@ class ProfilePage extends StatelessWidget {
           ),
           title: const Text(
             'Profile',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
         ),
@@ -151,8 +143,8 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Company & Role
 
+                    // Company & Role
                   ],
                 ),
               ),
@@ -223,7 +215,9 @@ class ProfilePage extends StatelessWidget {
                             ),
                           ),
                         ),
-                        ...accounts.map((account) => _buildAccountItem(account, controller)),
+                        ...accounts.map(
+                          (account) => _buildAccountItem(account, controller),
+                        ),
                         const SizedBox(height: 12),
                         _buildMenuItem(
                           icon: Icons.add,
@@ -272,54 +266,6 @@ class ProfilePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                      child: Text(
-                        'Account Management',
-                        style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-
-                    // Manage Account Button
-                    _buildMenuItem(
-                      icon: Icons.manage_accounts,
-                      title: 'Manage your account',
-                      subtitle: 'Edit profile information',
-                      onTap: () {
-                        // Navigate to edit profile
-                        Get.snackbar(
-                          'Info',
-                          'Navigate to edit profile',
-                          backgroundColor: PrimaryColors.lightBlue,
-                          colorText: Colors.white,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-
-                    const SizedBox(height: 24),
-
-                    // Settings Section
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                      child: Text(
-                        'Settings',
-                        style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-
                     _buildMenuItem(
                       icon: Icons.notifications_outlined,
                       title: 'Notifications',
@@ -327,36 +273,6 @@ class ProfilePage extends StatelessWidget {
                         Get.snackbar(
                           'Info',
                           'Notification settings',
-                          backgroundColor: PrimaryColors.lightBlue,
-                          colorText: Colors.white,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    _buildMenuItem(
-                      icon: Icons.lock_outline,
-                      title: 'Privacy & Security',
-                      onTap: () {
-                        Get.snackbar(
-                          'Info',
-                          'Privacy settings',
-                          backgroundColor: PrimaryColors.lightBlue,
-                          colorText: Colors.white,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    _buildMenuItem(
-                      icon: Icons.help_outline,
-                      title: 'Help & Support',
-                      onTap: () {
-                        Get.snackbar(
-                          'Info',
-                          'Help & Support',
                           backgroundColor: PrimaryColors.lightBlue,
                           colorText: Colors.white,
                         );
@@ -379,7 +295,7 @@ class ProfilePage extends StatelessWidget {
                     // App Version
                     Center(
                       child: Text(
-                        'Version 1.0.0',
+                        AppConfig.copyright,
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.4),
                           fontSize: 12,
@@ -395,48 +311,7 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
       );
-    }
-    );
-  }
-
-  Widget _buildCompanyInfoItem({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return Row(
-      children: [
-        Icon(
-          icon,
-          color: PrimaryColors.brightYellow,
-          size: 20,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+    });
   }
 
   Widget _buildMenuItem({
@@ -491,17 +366,13 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: Colors.white.withOpacity(0.4),
-              ),
+              Icon(Icons.chevron_right, color: Colors.white.withOpacity(0.4)),
             ],
           ),
         ),
       ),
     );
   }
-
 
   Widget _buildSystemOption({
     required String title,
@@ -517,10 +388,14 @@ class ProfilePage extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: isSelected ? PrimaryColors.darkBlue.withOpacity(0.3) : Colors.transparent,
+            color: isSelected
+                ? PrimaryColors.darkBlue.withOpacity(0.3)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? PrimaryColors.brightYellow : Colors.white.withOpacity(0.2),
+              color: isSelected
+                  ? PrimaryColors.brightYellow
+                  : Colors.white.withOpacity(0.2),
               width: isSelected ? 2 : 1,
             ),
           ),
@@ -552,7 +427,8 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildAccountItem(UserAccount account, ProfileController controller) {
-    final isCurrentAccount = controller.accountManager.currentAccount.value?.id == account.id;
+    final isCurrentAccount =
+        controller.accountManager.currentAccount.value?.id == account.id;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -576,7 +452,9 @@ class ProfilePage extends StatelessWidget {
                   radius: 20,
                   backgroundColor: PrimaryColors.brightYellow,
                   child: Text(
-                    account.username.isNotEmpty ? account.username[0].toUpperCase() : 'U',
+                    account.username.isNotEmpty
+                        ? account.username[0].toUpperCase()
+                        : 'U',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -598,7 +476,9 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        account.system == 'monitor' ? 'BAC Monitor' : 'POS System',
+                        account.system == 'monitor'
+                            ? 'BAC Monitor'
+                            : 'POS System',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.6),
                           fontSize: 12,
@@ -635,10 +515,7 @@ class ProfilePage extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Text(
-            'Sign Out',
-            style: TextStyle(color: Colors.white),
-          ),
+          title: const Text('Sign Out', style: TextStyle(color: Colors.white)),
           content: const Text(
             'Are you sure you want to sign out?',
             style: TextStyle(color: Colors.white70),
@@ -666,8 +543,4 @@ class ProfilePage extends StatelessWidget {
       },
     );
   }
-
-
-
 }
-
