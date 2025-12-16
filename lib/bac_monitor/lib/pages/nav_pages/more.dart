@@ -1,4 +1,5 @@
 
+import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
@@ -225,7 +226,7 @@ class More extends StatelessWidget {
               onPressed: () async {
                 final apiService = Get.find<ApiServiceMonitor>();
                 await apiService.logout();
-                Get.offAll(() => const LoginPage());
+                Get.offAll(() => const UnifiedLoginScreen());
               },
             ),
           ],

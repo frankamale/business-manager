@@ -1,3 +1,5 @@
+import 'package:bac_pos/initialise/unified_login_screen.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:get/get.dart';
@@ -13,10 +15,12 @@ import '../pages/bottom_nav.dart';
 class ApiServiceMonitor extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
   final _storage = GetStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+
   final _dbHelper = DatabaseHelper();
 
-  String? getStoredToken() {
-    return _storage.read('_tokenKey');
+  Future<String?> getStoredToken() {
+    return _secureStorage.read(key: "access_token");
   }
 
   String? getStoredCode() {
@@ -55,7 +59,7 @@ class ApiServiceMonitor extends GetxService {
     try {
       final response = await _getWithAuth('/company/details');
       final companyDetails = json.decode(response.body);
-      
+
       if (companyDetails.containsKey('company')) {
         final companyId = companyDetails['company'];
         await storeCompanyId(companyId);
@@ -75,7 +79,7 @@ class ApiServiceMonitor extends GetxService {
     if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
       return storedCompanyId;
     }
-    
+
     // If not stored, try to fetch it
     try {
       return await fetchCompanyId();
@@ -111,55 +115,54 @@ class ApiServiceMonitor extends GetxService {
     }
   }
 
-  Future<void> login(String email, String password) async {
-    print("login begin ----- ");
-
-
-    final response = await post('/auth/signin', {
-      'username': email.trim().toLowerCase(),
-      'password': password.trim(),
-    }, useToken: false);
-    print("next .....");
-    print (response);
-    if (response.containsKey('accessToken')) {
-      await _storage.write('auth_token', response['accessToken']);
-
-      final userData = {
-        'id': response['id'],
-        'username': response['username'],
-        'email': response['email'],
-        'roles': response['roles'],
-      };
-      await _storage.write("userData", userData);
-
-      print("login success ----- proceeding to fetch data");
-
-      await storeCode(DateTime.now().millisecondsSinceEpoch.toString());
-      
-      // Fetch and store company ID before fetching all data
-      try {
-        final companyId = await fetchCompanyId();
-        print("login success ----- company ID fetched: $companyId");
-        
-        // Switch to the new company's database
-        await _dbHelper.switchCompany(companyId);
-        print("login success ----- switched to company database: $companyId");
-      } catch (e) {
-        print("login warning ----- failed to fetch company ID: $e");
-        // Continue with login even if company ID fetch fails
-      }
-      
-      await fetchAndCacheAllData();
-
-      if (!Get.isRegistered<MonSyncController>()) {
-        Get.put(MonSyncController());
-      }
-
-      Get.offAll(() => const BottomNav());
-    } else {
-      throw Exception('Login failed: Token not provided in response.');
-    }
-  }
+  // Future<void> login(String email, String password) async {
+  //   print("login begin ----- ");
+  //
+  //   final response = await post('/auth/signin', {
+  //     'username': email.trim().toLowerCase(),
+  //     'password': password.trim(),
+  //   }, useToken: false);
+  //   print("next .....");
+  //   print(response);
+  //   if (response.containsKey('accessToken')) {
+  //     await _storage.write('auth_token', response['accessToken']);
+  //
+  //     final userData = {
+  //       'id': response['id'],
+  //       'username': response['username'],
+  //       'email': response['email'],
+  //       'roles': response['roles'],
+  //     };
+  //     await _storage.write("userData", userData);
+  //
+  //     print("login success ----- proceeding to fetch data");
+  //
+  //     await storeCode(DateTime.now().millisecondsSinceEpoch.toString());
+  //
+  //     // Fetch and store company ID before fetching all data
+  //     try {
+  //       final companyId = await fetchCompanyId();
+  //       print("login success ----- company ID fetched: $companyId");
+  //
+  //       // Switch to the new company's database
+  //       await _dbHelper.switchCompany(companyId);
+  //       print("login success ----- switched to company database: $companyId");
+  //     } catch (e) {
+  //       print("login warning ----- failed to fetch company ID: $e");
+  //       // Continue with login even if company ID fetch fails
+  //     }
+  //
+  //     await fetchAndCacheAllData();
+  //
+  //     if (!Get.isRegistered<MonSyncController>()) {
+  //       Get.put(MonSyncController());
+  //     }
+  //
+  //     Get.offAll(() => const BottomNav());
+  //   } else {
+  //     throw Exception('Login failed: Token not provided in response.');
+  //   }
+  // }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -171,7 +174,7 @@ class ApiServiceMonitor extends GetxService {
     } else if (response.statusCode == 401) {
       Future.delayed(Duration.zero, () {
         logout();
-        Get.offAll(() => const LoginPage());
+        Get.offAll(() => const UnifiedLoginScreen());
       });
       throw Exception('Unauthorized: Bad credentials or expired token.');
     } else {
@@ -182,10 +185,10 @@ class ApiServiceMonitor extends GetxService {
   Future<void> logout() async {
     Get.find<MonSyncController>().onClose();
     await Get.delete<MonSyncController>(force: true);
-    
+
     // Close all database instances on logout
     await _dbHelper.closeAllDatabases();
-    
+
     await _storage.remove('auth_token');
     await _storage.remove('user_data');
     await _storage.remove('persistent_code');
@@ -202,12 +205,11 @@ class ApiServiceMonitor extends GetxService {
 
       // Switch to the new company's database
       await _dbHelper.switchCompany(newCompanyId);
-      
+
       debugPrint("ApiService: Successfully switched to company: $newCompanyId");
-      
+
       // Fetch and cache data for the new company
       await fetchAndCacheAllData();
-      
     } catch (e) {
       debugPrint("ApiService: Failed to switch company: $e");
       rethrow;
@@ -356,7 +358,7 @@ class ApiServiceMonitor extends GetxService {
             "ApiService: Inserting ${inventoryData.length} inventory items",
           );
           for (final item in inventoryData) {
-            await _dbHelper.insertInventoryItem(item,  db: txn);
+            await _dbHelper.insertInventoryItem(item, db: txn);
           }
         } else {
           debugPrint(
@@ -364,10 +366,7 @@ class ApiServiceMonitor extends GetxService {
           );
         }
 
-        await _dbHelper.insertCompanyDetails(
-          companyDetailsData,
-          db: txn,
-        );
+        await _dbHelper.insertCompanyDetails(companyDetailsData, db: txn);
 
         // Only insert service points if data is available
         if (servicePointsData.isNotEmpty) {
@@ -375,7 +374,7 @@ class ApiServiceMonitor extends GetxService {
             "ApiService: Inserting ${servicePointsData.length} service points",
           );
           for (final item in servicePointsData) {
-            await _dbHelper.insertServicePoint(item,  db: txn);
+            await _dbHelper.insertServicePoint(item, db: txn);
           }
         } else {
           debugPrint(
@@ -471,8 +470,6 @@ class ApiServiceMonitor extends GetxService {
       debugPrint(
         "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting updates.",
       );
-
-
 
       await db.transaction((txn) async {
         await txn.delete(
