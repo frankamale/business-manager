@@ -248,8 +248,8 @@ class ProfilePage extends StatelessWidget {
                         ),
                         _buildMenuItem(
                           icon: Icons.add,
-                          title: 'Add Current Account',
-                          subtitle: 'Save current session for quick switching',
+                          title: 'Sign in with another account',
+                          subtitle: 'Add new account',
                           onTap: controller.saveCurrentUserAsAccount,
                         ),
                       ],
