@@ -1,5 +1,6 @@
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'package:bac_pos/bac_monitor/lib/services/account_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
@@ -22,6 +23,7 @@ class UnifiedLoginScreen extends StatefulWidget {
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   PosApiService _apiService = PosApiService();
   final MonitorApiService _monitorApiService = MonitorApiService();
+  final AccountManager _accountManager = Get.find<AccountManager>();
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -118,6 +120,24 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
               .getStoredUserData();
           final List<dynamic>? roles = data?['roles'];
           print(roles);
+
+          // Save account for current system
+          final system = (roles != null &&
+              roles.any((role) => role.toString().toLowerCase() == 'admin'))
+              ? 'monitor' : 'pos';
+
+          if (data != null) {
+            final account = UserAccount(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              username: data['username'] ?? _usernameController.text,
+              system: system,
+              userData: data,
+              lastLogin: DateTime.now(),
+            );
+            await _accountManager.addAccount(account);
+            await _accountManager.setCurrentAccount(account);
+          }
+
           if (roles != null &&
               roles.any((role) => role.toString().toLowerCase() == 'admin')) {
             if (!Get.isRegistered<MonDashboardController>()) {

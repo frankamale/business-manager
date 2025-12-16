@@ -150,7 +150,7 @@ class _DashboardState extends State<Dashboard> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: IconButton(
-                    icon: const Icon(Icons.person_2_rounded, size: 28),
+                    icon: const Icon(Icons.account_circle_outlined, size: 28),
                     color: PrimaryColors.brightYellow,
                     onPressed: () {
                       Get.to(() => ProfilePage());

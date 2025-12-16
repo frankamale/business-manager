@@ -25,6 +25,11 @@ class MonitorApiService extends GetxService {
     return token;
   }
 
+  Future<void> storeToken(String token) async {
+    await _secureStorage.write(key: 'access_token', value: token);
+    print('DEBUG: MonitorApiService.storeToken() stored token');
+  }
+
   Future<String?> getStoredCode() async {
     return await _secureStorage.read(key: 'persistent_code');
   }

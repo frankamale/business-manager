@@ -98,14 +98,27 @@ class PosApiService extends GetxService {
       key: _rolesKey,
       value: json.encode(authResponse.roles),
     );
-    
+
     // Verify the token was actually stored
     final savedToken = await _secureStorage.read(key: _tokenKey);
     print('DEBUG: Verified saved token: $savedToken');
-    
+
     if (savedToken != authResponse.accessToken) {
       print('ERROR: Token storage verification failed!');
       throw Exception('Failed to verify token storage');
+    }
+  }
+
+  // Save authentication data from map (for account switching)
+  Future<void> saveAuthDataFromMap(Map<String, dynamic> authData) async {
+    await _secureStorage.write(key: _tokenKey, value: authData['accessToken']);
+    await _secureStorage.write(key: _userIdKey, value: authData['userId']);
+    await _secureStorage.write(key: _usernameKey, value: authData['username']);
+    if (authData.containsKey('roles')) {
+      await _secureStorage.write(key: _rolesKey, value: json.encode(authData['roles']));
+    }
+    if (authData.containsKey('isAdmin')) {
+      await _secureStorage.write(key: _isAdminKey, value: authData['isAdmin'].toString());
     }
   }
 

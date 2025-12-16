@@ -7,6 +7,7 @@ import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 
 // POS Module imports
 import 'bac_monitor/lib/controllers/profile_controller.dart';
+import 'bac_monitor/lib/services/account_manager.dart';
 import 'back_pos/controllers/auth_controller.dart';
 import 'back_pos/controllers/customer_controller.dart';
 import 'back_pos/controllers/inventory_controller.dart';
@@ -45,6 +46,7 @@ void main() async {
 
   // Monitor Services
   Get.put(MonitorApiService());
+  Get.put(AccountManager());
 
   // ============================================
   // Initialize POS Controllers
