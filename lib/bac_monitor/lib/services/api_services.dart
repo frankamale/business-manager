@@ -11,7 +11,11 @@ import '../db/db_helper.dart';
 
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
 
   final _dbHelper = DatabaseHelper();
 
@@ -259,10 +263,6 @@ class MonitorApiService extends GetxService {
         return {};
       }
     } else if (response.statusCode == 401) {
-      Future.delayed(Duration.zero, () {
-        logout();
-        Get.offAll(() => const UnifiedLoginScreen());
-      });
       throw Exception('Unauthorized: Bad credentials or expired token.');
     } else {
       throw Exception('API error: ${response.statusCode} - ${response.body}');

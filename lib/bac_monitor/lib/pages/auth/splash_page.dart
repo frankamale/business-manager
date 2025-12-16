@@ -32,7 +32,11 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
 
   @override
   void initState() {
@@ -264,7 +268,7 @@ class _SplashPageState extends State<SplashPage> {
       final isOnline = await NetworkHelper.hasConnection();
       if (isOnline) {
         debugPrint("SplashPage: Device is online. Syncing recent sales...");
-        await apiService.syncRecentSales();
+        await apiService.fetchAndCacheAllData();
       } else {
         debugPrint(
           "SplashPage: Device is offline. Proceeding with local data.",
