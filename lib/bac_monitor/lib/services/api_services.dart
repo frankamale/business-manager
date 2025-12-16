@@ -3,18 +3,14 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
 import '../db/db_helper.dart';
-import '../pages/auth/Login.dart';
-import '../pages/bottom_nav.dart';
 
 class ApiServiceMonitor extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
-  final _storage = GetStorage();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   final _dbHelper = DatabaseHelper();
@@ -23,36 +19,38 @@ class ApiServiceMonitor extends GetxService {
     return _secureStorage.read(key: "access_token");
   }
 
-  String? getStoredCode() {
-    return _storage.read('persistent_code');
+  Future<String?> getStoredCode() async {
+    return await _secureStorage.read(key: 'persistent_code');
   }
 
   Future<void> storeCode(String code) async {
-    await _storage.write('persistent_code', code);
+    await _secureStorage.write(key: 'persistent_code', value: code);
   }
 
   Future<void> storeUserData(Map<String, dynamic> data) async {
-    await _storage.write('user_data', data);
+    await _secureStorage.write(key: 'user_data', value: jsonEncode(data));
   }
 
-  Map<String, dynamic>? getStoredUserData() {
-    return _storage.read('user_data');
+  Future<Map<String, dynamic>?> getStoredUserData() async {
+    final userDataString = await _secureStorage.read(key: 'user_data');
+    return userDataString != null ? jsonDecode(userDataString) : null;
   }
 
   Future<void> storeLastSyncTimestamp(int timestamp) async {
-    await _storage.write('last_sync_timestamp', timestamp);
+    await _secureStorage.write(key: 'last_sync_timestamp', value: timestamp.toString());
   }
 
-  int? getStoredLastSyncTimestamp() {
-    return _storage.read('last_sync_timestamp');
+  Future<int?> getStoredLastSyncTimestamp() async {
+    final timestampString = await _secureStorage.read(key: 'last_sync_timestamp');
+    return timestampString != null ? int.parse(timestampString) : null;
   }
 
   Future<void> storeCompanyId(String companyId) async {
-    await _storage.write('company_id', companyId);
+    await _secureStorage.write(key: 'company_id', value: companyId);
   }
 
-  String? getStoredCompanyId() {
-    return _storage.read('company_id');
+  Future<String?> getStoredCompanyId() async {
+    return await _secureStorage.read(key: 'company_id');
   }
 
   Future<String> fetchCompanyId() async {
@@ -62,8 +60,8 @@ class ApiServiceMonitor extends GetxService {
 
       if (companyDetails.containsKey('company')) {
         final companyId = companyDetails['company'];
-        await storeCompanyId(companyId);
-        return companyId;
+        await storeCompanyId(companyId.toString());
+        return companyId.toString();
       } else {
         throw Exception('Company ID not found in company details');
       }
@@ -75,7 +73,7 @@ class ApiServiceMonitor extends GetxService {
 
   Future<String> ensureCompanyIdAvailable() async {
     // Check if company ID is already stored
-    final storedCompanyId = getStoredCompanyId();
+    final storedCompanyId = await getStoredCompanyId();
     if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
       return storedCompanyId;
     }
@@ -97,7 +95,7 @@ class ApiServiceMonitor extends GetxService {
     try {
       final headers = {'Content-Type': 'application/json'};
       if (useToken) {
-        final token = getStoredToken();
+        final token = await getStoredToken();
         if (token != null) {
           headers['Authorization'] = 'Bearer $token';
         } else {
@@ -125,7 +123,7 @@ class ApiServiceMonitor extends GetxService {
   //   print("next .....");
   //   print(response);
   //   if (response.containsKey('accessToken')) {
-  //     await _storage.write('auth_token', response['accessToken']);
+  //     await _secureStorage.write(key: 'auth_token', value: response['accessToken']);
   //
   //     final userData = {
   //       'id': response['id'],
@@ -133,7 +131,7 @@ class ApiServiceMonitor extends GetxService {
   //       'email': response['email'],
   //       'roles': response['roles'],
   //     };
-  //     await _storage.write("userData", userData);
+  //     await _secureStorage.write(key: 'userData', value: jsonEncode(userData));
   //
   //     print("login success ----- proceeding to fetch data");
   //
@@ -189,11 +187,11 @@ class ApiServiceMonitor extends GetxService {
     // Close all database instances on logout
     await _dbHelper.closeAllDatabases();
 
-    await _storage.remove('auth_token');
-    await _storage.remove('user_data');
-    await _storage.remove('persistent_code');
-    await _storage.remove('last_sync_timestamp');
-    await _storage.remove('company_id');
+    await _secureStorage.delete(key: 'access_token');
+    await _secureStorage.delete(key: 'user_data');
+    await _secureStorage.delete(key: 'persistent_code');
+    await _secureStorage.delete(key: 'last_sync_timestamp');
+    await _secureStorage.delete(key: 'company_id');
   }
 
   /// Switch to a different company
@@ -424,7 +422,7 @@ class ApiServiceMonitor extends GetxService {
       final now = DateTime.now();
 
       final lastSyncTimestamp =
-          getStoredLastSyncTimestamp() ??
+          (await getStoredLastSyncTimestamp()) ??
           now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
       final lastSyncDate = DateTime.fromMillisecondsSinceEpoch(
         lastSyncTimestamp,
@@ -510,7 +508,7 @@ class ApiServiceMonitor extends GetxService {
   }
 
   Future<http.Response> _getWithAuth(String endpoint) async {
-    final token = getStoredToken();
+    final token = await getStoredToken();
     if (token == null) {
       throw Exception('Authentication token not found for GET request.');
     }

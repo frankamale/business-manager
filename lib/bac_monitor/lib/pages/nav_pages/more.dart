@@ -1,10 +1,13 @@
 
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'dart:convert';
 import '../../additions/colors.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
@@ -16,16 +19,52 @@ import '../../widgets/more/profile_page.dart';
 import '../../widgets/more/section_header.dart';
 import '../auth/Login.dart';
 
-class More extends StatelessWidget {
-   More({super.key});
-  final _storage = GetStorage();
+class More extends StatefulWidget {
+   const More({super.key});
+
+  @override
+  State<More> createState() => _MoreState();
+}
+
+class _MoreState extends State<More> {
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  String userName = 'User';
+  String userEmail = 'user@example.com';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userDataString = await _secureStorage.read(key: 'userData');
+      if (userDataString != null) {
+        final userData = jsonDecode(userDataString);
+        if (userData is Map<String, dynamic>) {
+          setState(() {
+            userName = userData['username'] ?? 'User';
+            userEmail = userData['email'] ?? 'user@example.com';
+            isLoading = false;
+          });
+          return;
+        }
+      }
+    } catch (e) {
+      // Handle error gracefully - use default values
+      debugPrint('Error loading user data: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     Get.lazyPut(()=>MonSyncController());
-
-    final String userName = _storage.read('userData')['username'];
-    final String userEmail = _storage.read('userData')['email'];
     const String avatarUrl = "https://placehold.co/100x100/3498db/white?text=A";
 
     return Scaffold(
