@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../back_pos/utils/network_helper.dart';
+import 'app_roots.dart';
 import 'unified_login_screen.dart';
 import '../../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../../bac_monitor/lib/controllers/mon_sync_controller.dart';
@@ -162,7 +163,7 @@ class ConnectivityController extends GetxController {
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
     // Since offline, assume credentials are valid, proceed to BottomNav
-    Get.offAll(() => const BottomNav());
+    Get.offAll(() => const MonitorAppRoot());
   }
   Future<void> _handleOfflineMode() async {
     isLoading.value = true;

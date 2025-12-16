@@ -41,6 +41,7 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
+    debugPrint('SplashPage: initState called');
     _initializeApp();
   }
 
@@ -65,6 +66,7 @@ class _SplashPageState extends State<SplashPage> {
   /// Check if we have valid stored credentials
   Future<bool> _hasValidCredentials() async {
     try {
+      debugPrint('SplashPage: Checking stored credentials');
       final credentials = await _getStoredCredentials();
       final token = await Get.find<MonitorApiService>().getStoredToken();
       final companyId = await Get.find<MonitorApiService>().getStoredCompanyId();
@@ -103,9 +105,7 @@ class _SplashPageState extends State<SplashPage> {
         return true;
       }
       
-      // If no token, try to authenticate with stored credentials
-      // Note: This would require access to the auth controller, but for now
-      // we'll rely on the existing token-based approach
+    
       
     } catch (e) {
       debugPrint('SplashPage: Auto-login failed - $e');
@@ -116,14 +116,14 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _initializeApp() async {
+    debugPrint('SplashPage: Before splash delay');
     await Future.wait([
       _initializeServicesAndDatabase(),
-      Future.delayed(const Duration(seconds: 2)),
+      Future.delayed(const Duration(seconds: 2)).then((_) => debugPrint('SplashPage: After splash delay')),
     ]);
   }
 
   Future<void> _initializeServicesAndDatabase() async {
-    // Initialize all required controllers
     _initializeControllers();
     
     // Initialize company ID early in the process
@@ -157,6 +157,7 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   void _initializeControllers() {
+    debugPrint('SplashPage: Initializing controllers');
     if (!Get.isRegistered<MonOperatorController>()) {
       Get.put(MonOperatorController());
     }
@@ -209,10 +210,12 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _loadDataFromDatabase() async {
     try {
+      debugPrint('SplashPage: Checking network connectivity');
       final hasNetwork = await NetworkHelper.hasConnection();
       debugPrint('SplashPage: Network available = $hasNetwork');
 
       // Load data from database for offline use
+      debugPrint('SplashPage: Loading data from database');
       final storesController = Get.find<MonStoresController>();
       final inventoryController = Get.find<MonInventoryController>();
 
@@ -237,7 +240,7 @@ class _SplashPageState extends State<SplashPage> {
     final hasValidCredentials = await _hasValidCredentials();
     
     if (!hasValidCredentials) {
-      debugPrint('SplashPage: No valid credentials found, redirecting to login');
+      debugPrint('SplashPage: No valid credentials found, showing error (redirecting to login)');
       Get.offAll(() => const UnifiedLoginScreen());
       return;
     }
@@ -280,6 +283,7 @@ class _SplashPageState extends State<SplashPage> {
       );
     }
 
+    debugPrint('SplashPage: Before navigation to BottomNav');
     Get.offAll(() => const BottomNav());
   }
 

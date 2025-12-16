@@ -327,7 +327,7 @@ class ProfilePage extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container(
+        child: Container( 
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: PrimaryColors.lightBlue,
