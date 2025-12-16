@@ -6,7 +6,7 @@ import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class InventoryController extends GetxController {
   final _dbHelper = DatabaseHelper();
-  final _apiService = ApiService();
+  final _apiService = PosApiService();
 
   // Reactive list of inventory items
   var inventoryItems = <InventoryItem>[].obs;

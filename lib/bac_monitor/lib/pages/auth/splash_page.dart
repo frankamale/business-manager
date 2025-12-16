@@ -134,13 +134,16 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _performAuthAndNavigation() async {
-    final apiService = Get.find<ApiServiceMonitor>();
+    final apiService = Get.find<MonitorApiService>();
 
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
 
-    final token = apiService.getStoredToken();
+    final token = await apiService.getStoredToken();
+    print('DEBUG: SplashPage._performAuthAndNavigation() - Retrieved token: $token');
+    
     if (token == null) {
+      print('DEBUG: SplashPage._performAuthAndNavigation() - No token found, redirecting to login');
       Get.offAll(() => const UnifiedLoginScreen());
       return;
     }

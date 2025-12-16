@@ -13,7 +13,7 @@ import '../models/sale_transaction.dart';
 import '../database/db_helper.dart';
 import '../config.dart';
 
-class ApiService extends GetxService {
+class PosApiService extends GetxService {
   final String baseurl = AppConfig.baseUrl;
 
   // Initialize secure storage
@@ -89,6 +89,7 @@ class ApiService extends GetxService {
 
   // Save authentication data to secure storage
   Future<void> _saveAuthData(AuthResponse authResponse) async {
+    print('DEBUG: _saveAuthData called with token: ${authResponse.accessToken}');
     await _secureStorage.write(key: _tokenKey, value: authResponse.accessToken);
     await _secureStorage.write(key: _userIdKey, value: authResponse.id);
     await _secureStorage.write(key: _usernameKey, value: authResponse.username);
@@ -96,11 +97,22 @@ class ApiService extends GetxService {
       key: _rolesKey,
       value: json.encode(authResponse.roles),
     );
+    
+    // Verify the token was actually stored
+    final savedToken = await _secureStorage.read(key: _tokenKey);
+    print('DEBUG: Verified saved token: $savedToken');
+    
+    if (savedToken != authResponse.accessToken) {
+      print('ERROR: Token storage verification failed!');
+      throw Exception('Failed to verify token storage');
+    }
   }
 
   // Get stored access token
   Future<String?> getAccessToken() async {
-    return await _secureStorage.read(key: _tokenKey);
+    final token = await _secureStorage.read(key: _tokenKey);
+    print('DEBUG: getAccessToken() retrieved token: $token');
+    return token;
   }
 
   // Check if user is authenticated

@@ -6,7 +6,7 @@ import 'mon_kpi_overview_controller.dart';
 import 'mon_salestrends_controller.dart';
 
 class MonSyncController extends GetxController {
-  final ApiServiceMonitor _apiService = Get.find<ApiServiceMonitor>();
+  final MonitorApiService _apiService = Get.find<MonitorApiService>();
   Timer? _syncTimer;
 
   @override

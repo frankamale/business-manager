@@ -198,7 +198,7 @@ class _MoreState extends State<More> {
     );
 
     try {
-      final apiService = Get.find<ApiServiceMonitor>();
+      final apiService = Get.find<MonitorApiService>();
       await apiService.fetchAndCacheAllData();
 
       if (Get.isRegistered<MonKpiOverviewController>()) {
@@ -263,7 +263,7 @@ class _MoreState extends State<More> {
               ),
               child: const Text('Log Out'),
               onPressed: () async {
-                final apiService = Get.find<ApiServiceMonitor>();
+                final apiService = Get.find<MonitorApiService>();
                 await apiService.logout();
                 Get.offAll(() => const UnifiedLoginScreen());
               },

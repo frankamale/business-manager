@@ -9,14 +9,16 @@ import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
 import '../db/db_helper.dart';
 
-class ApiServiceMonitor extends GetxService {
+class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   final _dbHelper = DatabaseHelper();
 
-  Future<String?> getStoredToken() {
-    return _secureStorage.read(key: "access_token");
+  Future<String?> getStoredToken() async {
+    final token = await _secureStorage.read(key: "access_token");
+    print('DEBUG: MonitorApiService.getStoredToken() retrieved token: $token');
+    return token;
   }
 
   Future<String?> getStoredCode() async {
@@ -24,7 +26,10 @@ class ApiServiceMonitor extends GetxService {
   }
 
   Future<void> storeCode(String code) async {
+    print('DEBUG: MonitorApiService.storeCode() called with code: $code');
     await _secureStorage.write(key: 'persistent_code', value: code);
+    final savedCode = await _secureStorage.read(key: 'persistent_code');
+    print('DEBUG: MonitorApiService.storeCode() verified saved code: $savedCode');
   }
 
   Future<void> storeUserData(Map<String, dynamic> data) async {
@@ -55,33 +60,58 @@ class ApiServiceMonitor extends GetxService {
 
   Future<String> fetchCompanyId() async {
     try {
+      print('DEBUG: MonitorApiService.fetchCompanyId() - Starting company ID fetch');
       final response = await _getWithAuth('/company/details');
       final companyDetails = json.decode(response.body);
+      print('DEBUG: MonitorApiService.fetchCompanyId() - Company details response: $companyDetails');
 
       if (companyDetails.containsKey('company')) {
         final companyId = companyDetails['company'];
+        print('DEBUG: MonitorApiService.fetchCompanyId() - Found company ID: $companyId');
         await storeCompanyId(companyId.toString());
         return companyId.toString();
       } else {
+        print('ERROR: MonitorApiService.fetchCompanyId() - Company ID not found in company details');
         throw Exception('Company ID not found in company details');
       }
     } catch (e) {
+      print('ERROR: MonitorApiService.fetchCompanyId() - Failed to fetch company ID: $e');
       debugPrint("ApiService: Failed to fetch company ID -> $e");
       throw Exception('Failed to fetch company ID: $e');
     }
   }
 
   Future<String> ensureCompanyIdAvailable() async {
+    print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Checking for stored company ID');
+    
     // Check if company ID is already stored
     final storedCompanyId = await getStoredCompanyId();
+    print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Stored company ID: $storedCompanyId');
+    
     if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
+      print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Using stored company ID');
       return storedCompanyId;
     }
 
     // If not stored, try to fetch it
     try {
+      print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Attempting to fetch company ID from API');
       return await fetchCompanyId();
     } catch (e) {
+      print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Failed to fetch company ID: $e');
+      
+      // Graceful fallback for offline scenarios
+      if (e.toString().contains('Authentication token not found') ||
+          e.toString().contains('Failed to load data') ||
+          e.toString().contains('Network error')) {
+        print('WARNING: MonitorApiService.ensureCompanyIdAvailable() - Offline mode detected, using default company ID');
+        
+        // Use a default company ID for offline mode
+        final defaultCompanyId = 'default_offline_company';
+        await storeCompanyId(defaultCompanyId);
+        return defaultCompanyId;
+      }
+      
       debugPrint("ApiService: Failed to ensure company ID is available -> $e");
       throw Exception('Company ID is not available: $e');
     }
@@ -93,22 +123,28 @@ class ApiServiceMonitor extends GetxService {
     bool useToken = true,
   }) async {
     try {
+      print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint, useToken: $useToken');
       final headers = {'Content-Type': 'application/json'};
       if (useToken) {
         final token = await getStoredToken();
+        print('DEBUG: MonitorApiService.post() retrieved token: $token');
         if (token != null) {
           headers['Authorization'] = 'Bearer $token';
         } else {
+          print('ERROR: MonitorApiService.post() - Authentication token not found.');
           throw Exception('Authentication token not found.');
         }
       }
+      print('DEBUG: MonitorApiService.post() - Making POST request to $_baseUrl$endpoint');
       final response = await http.post(
         Uri.parse('$_baseUrl$endpoint'),
         headers: headers,
         body: jsonEncode(data),
       );
+      print('DEBUG: MonitorApiService.post() - Received response with status: ${response.statusCode}');
       return _handleResponse(response);
     } catch (e) {
+      print('ERROR: MonitorApiService.post() - Network error: $e');
       throw Exception('Network error: $e');
     }
   }
@@ -508,10 +544,16 @@ class ApiServiceMonitor extends GetxService {
   }
 
   Future<http.Response> _getWithAuth(String endpoint) async {
+    print('DEBUG: MonitorApiService._getWithAuth() called for endpoint: $endpoint');
     final token = await getStoredToken();
+    print('DEBUG: MonitorApiService._getWithAuth() retrieved token: $token');
+    
     if (token == null) {
+      print('ERROR: MonitorApiService._getWithAuth() - Authentication token not found for GET request.');
       throw Exception('Authentication token not found for GET request.');
     }
+    
+    print('DEBUG: MonitorApiService._getWithAuth() - Making authenticated request to $_baseUrl$endpoint');
     final response = await http.get(
       Uri.parse('$_baseUrl$endpoint'),
       headers: {
@@ -520,6 +562,8 @@ class ApiServiceMonitor extends GetxService {
       },
     );
 
+    print('DEBUG: MonitorApiService._getWithAuth() - Received response with status: ${response.statusCode}');
+    
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return response;
     } else {

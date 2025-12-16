@@ -5,7 +5,7 @@ import 'package:bac_pos/back_pos/database/db_helper.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class CustomerController extends GetxController {
-  final _apiService = ApiService();
+  final _apiService = PosApiService();
   final _dbHelper = DatabaseHelper();
 
   // Reactive list of customers

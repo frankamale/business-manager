@@ -6,7 +6,7 @@ import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class AuthController extends GetxController {
   final _dbHelper = DatabaseHelper();
-  final _apiService = ApiService();
+  final _apiService = PosApiService();
 
   // Reactive list of user roles
   var userRoles = <String>[].obs;
@@ -78,7 +78,6 @@ class AuthController extends GetxController {
       // Fetch users from API
       final users = await _apiService.fetchUsers();
 
-      // Save users to database
       await _dbHelper.insertUsers(users);
 
       // Update sync metadata

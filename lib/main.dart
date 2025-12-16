@@ -39,11 +39,11 @@ void main() async {
   // ============================================
 
   // POS Services
-  Get.put(ApiService());
+  Get.put(PosApiService());
   Get.put(SalesSyncService());
 
   // Monitor Services
-  Get.put(ApiServiceMonitor());
+  Get.put(MonitorApiService());
 
   // ============================================
   // Initialize POS Controllers

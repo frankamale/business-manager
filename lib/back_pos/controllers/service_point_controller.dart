@@ -6,7 +6,7 @@ import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class ServicePointController extends GetxController {
   final _dbHelper = DatabaseHelper();
-  final _apiService = ApiService();
+  final _apiService = PosApiService();
 
   // Reactive list of service points
   var servicePoints = <ServicePoint>[].obs;
