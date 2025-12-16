@@ -10,7 +10,6 @@ class ProfileController extends GetxController {
   final PosApiService _posApiService = Get.find();
   final AccountManager _accountManager = Get.find();
 
-  // Make accountManager accessible for the UI
   AccountManager get accountManager => _accountManager;
 
   var isLoading = false.obs;
