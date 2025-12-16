@@ -5,7 +5,7 @@ class AppConfig {
   static const String baseUrl = "http://52.30.142.12:8080/rest";
   static const String description = "We serve with pride";
 
-  static const String appName = 'BAC POS';
+  static const String appName = 'Business Manager';
 
   /// Company name displayed in the splash screen
   static const String companyName = 'Komusoft Solutions';

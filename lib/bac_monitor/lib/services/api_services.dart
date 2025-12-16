@@ -1,4 +1,3 @@
-import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -113,7 +112,7 @@ class MonitorApiService extends GetxService {
   Future<String> fetchCompanyId() async {
     try {
       print('DEBUG: MonitorApiService.fetchCompanyId() - Starting company ID fetch');
-      final response = await _getWithAuth('/company/details');
+      final response = await getWithAuth('/company/details');
       final companyDetails = json.decode(response.body);
       print('DEBUG: MonitorApiService.fetchCompanyId() - Company details response: $companyDetails');
 
@@ -158,7 +157,7 @@ class MonitorApiService extends GetxService {
         final token = await getStoredToken();
         if (token != null) {
           // Try to fetch company details to verify the company ID is still valid
-          final response = await _getWithAuth('/company/details');
+          final response = await getWithAuth('/company/details');
           final companyDetails = json.decode(response.body);
           if (companyDetails.containsKey('company') && companyDetails['company'].toString() == storedCompanyId) {
             print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Stored company ID is still valid');
@@ -323,7 +322,7 @@ class MonitorApiService extends GetxService {
 
       // Service points is now OPTIONAL - don't fail if it returns 404
       try {
-        servicePointsRes = await _getWithAuth('/servicepoints');
+        servicePointsRes = await getWithAuth('/servicepoints');
         debugPrint("ApiService: Successfully fetched service points");
       } catch (e) {
         debugPrint(
@@ -333,7 +332,7 @@ class MonitorApiService extends GetxService {
       }
 
       try {
-        companyDetailsRes = await _getWithAuth('/company/details');
+        companyDetailsRes = await getWithAuth('/company/details');
         debugPrint("ApiService: Successfully fetched company details");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /company/details -> $e");
@@ -341,7 +340,7 @@ class MonitorApiService extends GetxService {
 
       try {
         final endDate = dateFormatter.format(now);
-        salesRes = await _getWithAuth(
+        salesRes = await getWithAuth(
           '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
         );
         debugPrint(
@@ -353,7 +352,7 @@ class MonitorApiService extends GetxService {
 
       try {
         // Fetch sales details with salesperson and payment info
-        salesDetailsRes = await _getWithAuth(
+        salesDetailsRes = await getWithAuth(
           '/sales/?pagecount=0&pagesize=5000',
         );
         debugPrint("ApiService: Successfully fetched sales details");
@@ -362,7 +361,7 @@ class MonitorApiService extends GetxService {
       }
 
       try {
-        inventoryRes = await _getWithAuth('/inventory/');
+        inventoryRes = await getWithAuth('/inventory/');
         debugPrint("ApiService: Successfully fetched inventory");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /inventory -> $e");
@@ -526,7 +525,7 @@ class MonitorApiService extends GetxService {
 
       debugPrint("ApiService: Syncing from $startDate to $endDate.");
 
-      final response = await _getWithAuth(
+      final response = await getWithAuth(
         '/sales/reports/transaction/detail?startDate=$startDate&endDate=$endDate',
       );
 
@@ -535,7 +534,7 @@ class MonitorApiService extends GetxService {
       // Also fetch sales details for salesperson info
       http.Response? salesDetailsRes;
       try {
-        salesDetailsRes = await _getWithAuth(
+        salesDetailsRes = await getWithAuth(
           '/sales/?pagecount=0&pagesize=5000&startdate=$startDate&enddate=$endDate',
         );
       } catch (e) {
@@ -599,7 +598,7 @@ class MonitorApiService extends GetxService {
     }
   }
 
-  Future<http.Response> _getWithAuth(String endpoint) async {
+  Future<http.Response> getWithAuth(String endpoint) async {
     print('DEBUG: MonitorApiService._getWithAuth() called for endpoint: $endpoint');
     final token = await getStoredToken();
     print('DEBUG: MonitorApiService._getWithAuth() retrieved token: $token');

@@ -13,17 +13,7 @@ import '../models/sale_transaction.dart';
 import '../database/db_helper.dart';
 import '../config.dart';
 
-class PosApiService extends GetxService {
-  final String baseurl = AppConfig.baseUrl;
 
-  // Initialize secure storage
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-  );
-
-  final DatabaseHelper _dbHelper = DatabaseHelper();
 
 class PosApiService extends GetxService {
   final String baseurl = AppConfig.baseUrl;
@@ -34,6 +24,9 @@ class PosApiService extends GetxService {
       encryptedSharedPreferences: true,
     ),
   );
+
+  DatabaseHelper _dbHelper = DatabaseHelper();
+
 
   // Keys for secure storage
   static const String _tokenKey = 'access_token';

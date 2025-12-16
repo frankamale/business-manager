@@ -116,7 +116,7 @@ class ProfileController extends GetxController {
       bool tokenValid = false;
       try {
         if (account.system == 'monitor') {
-          await _monitorApiService._getWithAuth('/company/details');
+          await _monitorApiService.getWithAuth('/company/details');
         } else {
           await _posApiService.validateToken();
         }
