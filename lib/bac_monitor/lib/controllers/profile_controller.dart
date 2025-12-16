@@ -111,6 +111,72 @@ class ProfileController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
+      // Validate token and handle re-authentication if needed
+      bool hasInternet = false;
+      bool tokenValid = false;
+      try {
+        if (account.system == 'monitor') {
+          await _monitorApiService._getWithAuth('/company/details');
+        } else {
+          await _posApiService.validateToken();
+        }
+        tokenValid = true;
+        hasInternet = true;
+      } catch (e) {
+        if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
+          tokenValid = false;
+          hasInternet = true;
+        } else {
+          hasInternet = false;
+        }
+      }
+
+      if (!tokenValid && hasInternet) {
+        // Re-authenticate using stored credentials
+        try {
+          final creds = account.system == 'monitor'
+              ? await _monitorApiService.getServerCredentials()
+              : await _posApiService.getServerCredentials();
+          if (creds['username'] != null && creds['password'] != null) {
+            if (account.system == 'monitor') {
+              await _monitorApiService.login(creds['username']!, creds['password']!);
+            } else {
+              await _posApiService.signIn(creds['username']!, creds['password']!);
+            }
+            // Update account with new userData
+            final newUserData = account.system == 'monitor'
+                ? await _monitorApiService.getStoredUserData()
+                : await _posApiService.getStoredUserData();
+            if (newUserData != null) {
+              account = UserAccount(
+                id: account.id,
+                username: account.username,
+                system: account.system,
+                userData: newUserData,
+                lastLogin: account.lastLogin,
+              );
+              await _accountManager.addAccount(account);
+            }
+          }
+        } catch (e) {
+          // Re-auth failed, proceed to offline mode
+        }
+      }
+
+      // If no internet, open DB using stored company ID
+      if (!hasInternet) {
+        if (account.system == 'monitor') {
+          if (account.userData.containsKey('companyId')) {
+            await _monitorApiService.switchCompany(account.userData['companyId']);
+          }
+        } else {
+          final companyInfo = await _posApiService.getCompanyInfo();
+          if (companyInfo['companyId']!.isNotEmpty) {
+            await _posApiService.openDatabaseForCompany(companyInfo['companyId']!);
+          }
+        }
+      }
+
       // Set the account as current
       await _accountManager.switchToAccount(account);
 

@@ -23,6 +23,18 @@ class PosApiService extends GetxService {
     ),
   );
 
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+
+class PosApiService extends GetxService {
+  final String baseurl = AppConfig.baseUrl;
+
+  // Initialize secure storage
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+  );
+
   // Keys for secure storage
   static const String _tokenKey = 'access_token';
   static const String _userIdKey = 'user_id';
@@ -218,6 +230,16 @@ class PosApiService extends GetxService {
       'companyId': await _secureStorage.read(key: _companyIdKey) ?? '',
       'servicePointId': await _secureStorage.read(key: _servicePointIdKey) ?? '',
     };
+  }
+
+  // Validate token by fetching company info
+  Future<void> validateToken() async {
+    await fetchAndStoreCompanyInfo();
+  }
+
+  // Open database for company
+  Future<void> openDatabaseForCompany(String companyId) async {
+    await _dbHelper.openForCompany(companyId);
   }
 
   // Fetch company info from API and store it

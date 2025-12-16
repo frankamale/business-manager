@@ -67,6 +67,22 @@ class MonitorApiService extends GetxService {
     return await _secureStorage.read(key: 'company_id');
   }
 
+  // Save server credentials
+  Future<void> saveServerCredentials(String username, String password) async {
+    await _secureStorage.write(key: 'server_username', value: username);
+    await _secureStorage.write(key: 'server_password', value: password);
+  }
+
+  // Get stored server credentials
+  Future<Map<String, String?>> getServerCredentials() async {
+    final username = await _secureStorage.read(key: 'server_username');
+    final password = await _secureStorage.read(key: 'server_password');
+    return {
+      'username': username,
+      'password': password,
+    };
+  }
+
   /// Initialize company ID during app startup
   /// This should be called early in the app initialization process
   Future<void> initializeCompanyId() async {
@@ -211,54 +227,36 @@ class MonitorApiService extends GetxService {
     }
   }
 
-  // Future<void> login(String email, String password) async {
-  //   print("login begin ----- ");
-  //
-  //   final response = await post('/auth/signin', {
-  //     'username': email.trim().toLowerCase(),
-  //     'password': password.trim(),
-  //   }, useToken: false);
-  //   print("next .....");
-  //   print(response);
-  //   if (response.containsKey('accessToken')) {
-  //     await _secureStorage.write(key: 'auth_token', value: response['accessToken']);
-  //
-  //     final userData = {
-  //       'id': response['id'],
-  //       'username': response['username'],
-  //       'email': response['email'],
-  //       'roles': response['roles'],
-  //     };
-  //     await _secureStorage.write(key: 'userData', value: jsonEncode(userData));
-  //
-  //     print("login success ----- proceeding to fetch data");
-  //
-  //     await storeCode(DateTime.now().millisecondsSinceEpoch.toString());
-  //
-  //     // Fetch and store company ID before fetching all data
-  //     try {
-  //       final companyId = await fetchCompanyId();
-  //       print("login success ----- company ID fetched: $companyId");
-  //
-  //       // Switch to the new company's database
-  //       await _dbHelper.switchCompany(companyId);
-  //       print("login success ----- switched to company database: $companyId");
-  //     } catch (e) {
-  //       print("login warning ----- failed to fetch company ID: $e");
-  //       // Continue with login even if company ID fetch fails
-  //     }
-  //
-  //     await fetchAndCacheAllData();
-  //
-  //     if (!Get.isRegistered<MonSyncController>()) {
-  //       Get.put(MonSyncController());
-  //     }
-  //
-  //     Get.offAll(() => const BottomNav());
-  //   } else {
-  //     throw Exception('Login failed: Token not provided in response.');
-  //   }
-  // }
+  Future<void> login(String email, String password) async {
+    print("login begin ----- ");
+
+    final response = await post('/auth/signin', {
+      'username': email.trim().toLowerCase(),
+      'password': password.trim(),
+    }, useToken: false);
+    print("next .....");
+    print(response);
+    if (response.containsKey('accessToken')) {
+      await storeToken(response['accessToken']);
+
+      final userData = {
+        'id': response['id'],
+        'username': response['username'],
+        'email': response['email'],
+        'roles': response['roles'],
+      };
+      await storeUserData(userData);
+
+      // Store server credentials for re-authentication
+      await saveServerCredentials(email, password);
+
+      print("login success ----- authentication completed");
+
+      await storeCode(DateTime.now().millisecondsSinceEpoch.toString());
+    } else {
+      throw Exception('Login failed: Token not provided in response.');
+    }
+  }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {

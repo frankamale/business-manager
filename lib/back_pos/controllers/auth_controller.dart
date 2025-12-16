@@ -3,10 +3,12 @@ import 'package:bac_pos/back_pos/database/db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
+import '../../bac_monitor/lib/services/account_manager.dart';
 
 class AuthController extends GetxController {
-  final _dbHelper = DatabaseHelper();
-  final _apiService = PosApiService();
+   final _dbHelper = DatabaseHelper();
+   final _apiService = PosApiService();
+   final AccountManager _accountManager = Get.find();
 
   // Reactive list of user roles
   var userRoles = <String>[].obs;
@@ -204,6 +206,29 @@ class AuthController extends GetxController {
       // Get company info
       final companyInfo = await _apiService.getCompanyInfo();
       final companyId = companyInfo['companyId']!;
+
+      // Save the current account in AccountManager
+      final token = await _apiService.getAccessToken();
+      final userData = await _apiService.getStoredUserData() ?? {};
+      final credentials = await _apiService.getServerCredentials();
+
+      final account = UserAccount(
+        id: companyId,
+        username: usernameLower,
+        system: 'pos',
+        userData: {
+          ...userData,
+          'token': token,
+          'credentials': {
+            'username': credentials['username'],
+            'password': credentials['password'],
+          },
+        },
+        lastLogin: DateTime.now(),
+      );
+
+      await _accountManager.addAccount(account);
+      await _accountManager.setCurrentAccount(account);
 
       // Open database for company
       await _dbHelper.openForCompany(companyId);
