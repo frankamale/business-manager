@@ -16,7 +16,7 @@ import '../../widgets/dashboard/gross_profit.dart';
 import '../../widgets/dashboard/outstanding_payments.dart';
 import '../../widgets/dashboard/expenses_card.dart';
 import '../../widgets/finance/date_range.dart';
-import '../notification.dart';
+import '../profile.dart';
 import '../expenses_detail_page.dart';
 import '../../models/trend_direction.dart';
 
@@ -150,10 +150,10 @@ class _DashboardState extends State<Dashboard> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: IconButton(
-                    icon: const Icon(Icons.notifications_outlined, size: 28),
+                    icon: const Icon(Icons.person_2_rounded, size: 28),
                     color: PrimaryColors.brightYellow,
                     onPressed: () {
-                      Get.to(() => NotificationsPage());
+                      Get.to(() => ProfilePage());
                     },
                   ),
                 ),

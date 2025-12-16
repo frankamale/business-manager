@@ -28,6 +28,7 @@ class PosApiService extends GetxService {
   static const String _userIdKey = 'user_id';
   static const String _usernameKey = 'username';
   static const String _rolesKey = 'roles';
+  static const String _isAdminKey = 'is_admin';
   static const String _branchIdKey = 'branch_id';
   static const String _companyIdKey = 'company_id';
   static const String _servicePointIdKey = 'service_point_id';
@@ -135,11 +136,14 @@ class PosApiService extends GetxService {
     if (rolesJson != null) {
       roles = List<String>.from(json.decode(rolesJson));
     }
-
+    final isAdminStr = await _secureStorage.read(key: _isAdminKey);
+    final isAdmin = isAdminStr == 'true';
+    
     return {
       'userId': userId,
       'username': username,
       'roles': roles,
+      'isAdmin': isAdmin,
       'accessToken': token,
     };
   }
