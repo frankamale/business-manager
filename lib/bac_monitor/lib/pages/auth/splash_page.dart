@@ -283,14 +283,7 @@ class _SplashPageState extends State<SplashPage> {
     Get.offAll(() => const BottomNav());
   }
 
-  // Future<bool> _checkConnectivity() async {
-  //   try {
-  //     final connectivityResult = await Connectivity().checkConnectivity();
-  //     return connectivityResult != ConnectivityResult.none;
-  //   } catch (e) {
-  //     return false;
-  //   }
-  // }
+
 
   @override
   Widget build(BuildContext context) {

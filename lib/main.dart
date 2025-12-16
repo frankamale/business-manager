@@ -20,6 +20,7 @@ import 'back_pos/services/api_services.dart';
 import 'back_pos/services/sales_sync_service.dart';
 import 'back_pos/config.dart';
 import 'initialise/unified_login_screen.dart';
+import 'initialise/splashscreen.dart';
 // Monitor Module imports
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
@@ -93,7 +94,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       fallbackLocale: const Locale('en', 'US_store'),
-      home: const UnifiedLoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }

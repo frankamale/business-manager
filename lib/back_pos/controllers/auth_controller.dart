@@ -36,11 +36,6 @@ class AuthController extends GetxController {
       print(userRoles);
     } catch (e) {
       isLoadingRoles.value = false;
-      Get.snackbar(
-        'Info',
-        'Failed to initialise, please restart the app',
-        snackPosition: SnackPosition.BOTTOM,
-      );
     }
   }
 
