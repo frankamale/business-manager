@@ -6,6 +6,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 
 // POS Module imports
+import 'bac_monitor/lib/controllers/profile_controller.dart';
 import 'back_pos/controllers/auth_controller.dart';
 import 'back_pos/controllers/customer_controller.dart';
 import 'back_pos/controllers/inventory_controller.dart';
@@ -72,6 +73,7 @@ void main() async {
   Get.put(MonStoresController());
   Get.put(MonStoreKpiTrendController());
   Get.put(MonSyncController());
+  Get.put(ProfileController());
 
   runApp(const MyApp());
 }

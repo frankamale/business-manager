@@ -1,168 +1,189 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../additions/colors.dart';
+import '../controllers/profile_controller.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Mock data - replace with actual user data from your controller
-    final currentUser = {
-      'name': 'John Doe',
-      'email': 'john.doe@example.com',
-      'company': 'Acme Corporation',
-      'role': 'Administrator',
-      'initial': 'J',
-    };
+    final ProfileController controller = Get.find();
 
-    final otherAccounts = [
-      {
-        'name': 'Jane Smith',
-        'email': 'jane.smith@example.com',
-        'initial': 'J',
-      },
-      {
-        'name': 'Bob Wilson',
-        'email': 'bob.wilson@example.com',
-        'initial': 'B',
-      },
-    ];
-
-    return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
-      appBar: AppBar(
-        backgroundColor: PrimaryColors.darkBlue,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Get.back(),
-        ),
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Current User Section
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24.0),
-              decoration: BoxDecoration(
-                color: PrimaryColors.lightBlue,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: Column(
-                children: [
-                  // Profile Avatar
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: PrimaryColors.brightYellow,
-                    child: Text(
-                      currentUser['initial']!,
-                      style: TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: PrimaryColors.darkBlue,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Name
-                  Text(
-                    currentUser['name']!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Email
-                  Text(
-                    currentUser['email']!,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Company & Role
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: PrimaryColors.darkBlue.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${currentUser['role']} • ${currentUser['company']}',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
+    return Obx(() {
+      if (controller.isLoading.value) {
+        return Scaffold(
+          backgroundColor: PrimaryColors.darkBlue,
+          appBar: AppBar(
+            backgroundColor: PrimaryColors.darkBlue,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Get.back(),
+            ),
+            title: const Text(
+              'Profile',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            centerTitle: true,
+          ),
+          body: const Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+            ),
+          ),
+        );
+      }
 
-            const SizedBox(height: 24),
+      if (controller.errorMessage.isNotEmpty) {
+        return Scaffold(
+          backgroundColor: PrimaryColors.darkBlue,
+          appBar: AppBar(
+            backgroundColor: PrimaryColors.darkBlue,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Get.back(),
+            ),
+            title: const Text(
+              'Profile',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            centerTitle: true,
+          ),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline,
+                  color: Colors.red,
+                  size: 64,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  controller.errorMessage.value,
+                  style: const TextStyle(color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: controller.loadProfileData,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
 
-            // Account Management Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                    child: Text(
-                      'Account Management',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
+      return Scaffold(
+        backgroundColor: PrimaryColors.darkBlue,
+        appBar: AppBar(
+          backgroundColor: PrimaryColors.darkBlue,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Get.back(),
+          ),
+          title: const Text(
+            'Profile',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Current User Section
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24.0),
+                decoration: BoxDecoration(
+                  color: PrimaryColors.lightBlue,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    // Profile Avatar
+                    CircleAvatar(
+                      radius: 50,
+                      backgroundColor: PrimaryColors.brightYellow,
+                      child: Text(
+                        controller.userInitial,
+                        style: TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: PrimaryColors.darkBlue,
+                        ),
                       ),
                     ),
-                  ),
-
-                  // Manage Account Button
-                  _buildMenuItem(
-                    icon: Icons.manage_accounts,
-                    title: 'Manage your account',
-                    subtitle: 'Edit profile information',
-                    onTap: () {
-                      // Navigate to edit profile
-                      Get.snackbar(
-                        'Info',
-                        'Navigate to edit profile',
-                        backgroundColor: PrimaryColors.lightBlue,
-                        colorText: Colors.white,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Switch Accounts Section
-                  if (otherAccounts.isNotEmpty) ...[
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8.0, bottom: 12, top: 12),
+                    const SizedBox(height: 16),
+                    // Name
+                    Text(
+                      controller.userName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    // Email
+                    Text(
+                      controller.userEmail,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Company & Role
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: PrimaryColors.darkBlue.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Text(
-                        'Switch Account',
+                        '${controller.userRole} • ${controller.companyName}',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Account Management Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8.0, bottom: 12),
+                      child: Text(
+                        'Account Management',
                         style: TextStyle(
                           color: Colors.white54,
                           fontSize: 12,
@@ -172,140 +193,117 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
 
-                    ...otherAccounts.map((account) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: _buildAccountItem(
-                        initial: account['initial']!,
-                        name: account['name']!,
-                        email: account['email']!,
-                        onTap: () {
-                          _showSwitchAccountDialog(
-                            context,
-                            account['name']!,
-                            account['email']!,
-                          );
-                        },
-                      ),
-                    )),
-
-                    const SizedBox(height: 8),
-
-                    // Add Account Button
+                    // Manage Account Button
                     _buildMenuItem(
-                      icon: Icons.person_add,
-                      title: 'Add another account',
+                      icon: Icons.manage_accounts,
+                      title: 'Manage your account',
+                      subtitle: 'Edit profile information',
                       onTap: () {
+                        // Navigate to edit profile
                         Get.snackbar(
                           'Info',
-                          'Add account functionality',
+                          'Navigate to edit profile',
                           backgroundColor: PrimaryColors.lightBlue,
                           colorText: Colors.white,
                         );
                       },
                     ),
+
+                    const SizedBox(height: 12),
+
+
+                    const SizedBox(height: 24),
+
+                    // Settings Section
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8.0, bottom: 12),
+                      child: Text(
+                        'Settings',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+
+                    _buildMenuItem(
+                      icon: Icons.notifications_outlined,
+                      title: 'Notifications',
+                      onTap: () {
+                        Get.snackbar(
+                          'Info',
+                          'Notification settings',
+                          backgroundColor: PrimaryColors.lightBlue,
+                          colorText: Colors.white,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    _buildMenuItem(
+                      icon: Icons.lock_outline,
+                      title: 'Privacy & Security',
+                      onTap: () {
+                        Get.snackbar(
+                          'Info',
+                          'Privacy settings',
+                          backgroundColor: PrimaryColors.lightBlue,
+                          colorText: Colors.white,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    _buildMenuItem(
+                      icon: Icons.help_outline,
+                      title: 'Help & Support',
+                      onTap: () {
+                        Get.snackbar(
+                          'Info',
+                          'Help & Support',
+                          backgroundColor: PrimaryColors.lightBlue,
+                          colorText: Colors.white,
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Sign Out Button
+                    _buildMenuItem(
+                      icon: Icons.logout,
+                      title: 'Sign out',
+                      iconColor: Colors.red,
+                      titleColor: Colors.red,
+                      onTap: () => _showSignOutDialog(context, controller),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // App Version
+                    Center(
+                      child: Text(
+                        'Version 1.0.0',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.4),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
                   ],
-
-                  const SizedBox(height: 24),
-
-                  // Settings Section
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                    child: Text(
-                      'Settings',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-
-                  _buildMenuItem(
-                    icon: Icons.notifications_outlined,
-                    title: 'Notifications',
-                    onTap: () {
-                      Get.snackbar(
-                        'Info',
-                        'Notification settings',
-                        backgroundColor: PrimaryColors.lightBlue,
-                        colorText: Colors.white,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  _buildMenuItem(
-                    icon: Icons.lock_outline,
-                    title: 'Privacy & Security',
-                    onTap: () {
-                      Get.snackbar(
-                        'Info',
-                        'Privacy settings',
-                        backgroundColor: PrimaryColors.lightBlue,
-                        colorText: Colors.white,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  _buildMenuItem(
-                    icon: Icons.help_outline,
-                    title: 'Help & Support',
-                    onTap: () {
-                      Get.snackbar(
-                        'Info',
-                        'Help & Support',
-                        backgroundColor: PrimaryColors.lightBlue,
-                        colorText: Colors.white,
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Sign Out Button
-                  _buildMenuItem(
-                    icon: Icons.logout,
-                    title: 'Sign out',
-                    iconColor: Colors.red,
-                    titleColor: Colors.red,
-                    onTap: () => _showSignOutDialog(context),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  // Sign Out All Button
-                  _buildMenuItem(
-                    icon: Icons.logout,
-                    title: 'Sign out of all accounts',
-                    iconColor: Colors.red,
-                    titleColor: Colors.red,
-                    onTap: () => _showSignOutAllDialog(context),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // App Version
-                  Center(
-                    child: Text(
-                      'Version 1.0.0',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      );
+    }
     );
   }
 
@@ -372,68 +370,8 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAccountItem({
-    required String initial,
-    required String name,
-    required String email,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: PrimaryColors.lightBlue,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: PrimaryColors.brightYellow.withOpacity(0.2),
-                child: Text(
-                  initial,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: PrimaryColors.brightYellow,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      email,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  void _showSignOutDialog(BuildContext context) {
+  void _showSignOutDialog(BuildContext context, ProfileController controller) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -461,8 +399,7 @@ class ProfilePage extends StatelessWidget {
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // Implement sign out logic here
-                Get.offAllNamed('/login'); // Navigate to login
+                controller.signOut();
               },
               child: const Text(
                 'Sign Out',
@@ -475,96 +412,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  void _showSignOutAllDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: PrimaryColors.lightBlue,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Sign Out of All Accounts',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: const Text(
-            'This will sign you out of all accounts on this device. Are you sure?',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.7)),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Implement sign out all logic here
-                Get.offAllNamed('/login');
-              },
-              child: const Text(
-                'Sign Out All',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
-  void _showSwitchAccountDialog(
-      BuildContext context,
-      String name,
-      String email,
-      ) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: PrimaryColors.lightBlue,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Switch Account',
-            style: TextStyle(color: Colors.white),
-          ),
-          content: Text(
-            'Switch to $name ($email)?',
-            style: const TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.7)),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Implement account switching logic here
-                Get.snackbar(
-                  'Switched',
-                  'Switched to $name',
-                  backgroundColor: PrimaryColors.brightYellow,
-                  colorText: PrimaryColors.darkBlue,
-                );
-              },
-              child: Text(
-                'Switch',
-                style: TextStyle(color: PrimaryColors.brightYellow),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+
 }
+
