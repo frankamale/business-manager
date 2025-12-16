@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -11,7 +12,7 @@ import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
 import '../../controllers/mon_outstanding_payments_controller.dart';
 
-import '../../controllers/inventory_controller.dart';
+import '../../controllers/mon_inventory_controller.dart';
 
 import '../../controllers/mon_salestrends_controller.dart';
 import '../../controllers/mon_store_controller.dart';
@@ -20,7 +21,6 @@ import '../../controllers/mon_sync_controller.dart';
 import '../../services/api_services.dart';
 import '../../db/db_helper.dart';
 import '../bottom_nav.dart';
-import 'Login.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -96,19 +96,17 @@ class _SplashPageState extends State<SplashPage> {
       Get.put(MonOutstandingPaymentsController());
     }
     
-    if (!Get.isRegistered<InventoryController>()) {
-      Get.put(InventoryController());
+    if (!Get.isRegistered<MonInventoryController>()) {
+      Get.put(MonInventoryController());
     }
   }
 
   Future<void> _ensureDatabaseIsOpen() async {
     try {
-      // Get the database instance - this will open it if not already open
       final db = await _dbHelper.database;
       debugPrint('SplashPage: Database opened successfully');
     } catch (e) {
       debugPrint('SplashPage: Error opening database - $e');
-      // Continue even if database fails to open
     }
   }
 
@@ -119,7 +117,7 @@ class _SplashPageState extends State<SplashPage> {
 
       // Load data from database for offline use
       final storesController = Get.find<MonStoresController>();
-      final inventoryController = Get.find<InventoryController>();
+      final inventoryController = Get.find<MonInventoryController>();
 
       // Load stores from database (fetchAllStores already loads from DB)
       await storesController.fetchAllStores();
@@ -143,7 +141,7 @@ class _SplashPageState extends State<SplashPage> {
 
     final token = apiService.getStoredToken();
     if (token == null) {
-      Get.offAll(() => const LoginPage());
+      Get.offAll(() => const UnifiedLoginScreen());
       return;
     }
 

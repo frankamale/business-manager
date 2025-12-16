@@ -16,7 +16,7 @@ class ApiServiceMonitor extends GetxService {
   final _dbHelper = DatabaseHelper();
 
   String? getStoredToken() {
-    return _storage.read('auth_token');
+    return _storage.read('_tokenKey');
   }
 
   String? getStoredCode() {

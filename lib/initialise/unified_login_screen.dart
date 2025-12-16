@@ -2,12 +2,12 @@ import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/inventory_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
 
 import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
+import '../back_pos/controllers/inventory_controller.dart';
 import 'app_roots.dart';
 
 class UnifiedLoginScreen extends StatefulWidget {

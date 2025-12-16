@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../db/db_helper.dart';
 import '../models/inventory_data.dart';
 
-class InventoryController extends GetxController {
+class MonInventoryController extends GetxController {
   final _dbHelper = DatabaseHelper();
   var inventoryItems = [].obs;
   var isLoading = false.obs;
