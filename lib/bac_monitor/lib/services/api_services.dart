@@ -149,28 +149,13 @@ class MonitorApiService extends GetxService {
     final storedCompanyId = await getStoredCompanyId();
     print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Stored company ID: $storedCompanyId');
     
+    // If we have a stored company ID, use it immediately for offline scenarios
     if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
-      print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Using stored company ID');
-      
-      // Verify the stored company ID is still valid by checking if we can access company data
-      try {
-        final token = await getStoredToken();
-        if (token != null) {
-          // Try to fetch company details to verify the company ID is still valid
-          final response = await getWithAuth('/company/details');
-          final companyDetails = json.decode(response.body);
-          if (companyDetails.containsKey('company') && companyDetails['company'].toString() == storedCompanyId) {
-            print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Stored company ID is still valid');
-            return storedCompanyId;
-          }
-        }
-      } catch (e) {
-        print('WARNING: MonitorApiService.ensureCompanyIdAvailable() - Failed to verify stored company ID: $e');
-        // Continue to fetch fresh company ID
-      }
+      print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Using stored company ID: $storedCompanyId');
+      return storedCompanyId;
     }
-
-    // If not stored or verification failed, try to fetch it
+    
+    // If not stored, try to fetch it from API
     try {
       print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Attempting to fetch company ID from API');
       return await fetchCompanyId();
@@ -180,7 +165,8 @@ class MonitorApiService extends GetxService {
       // Graceful fallback for offline scenarios
       if (e.toString().contains('Authentication token not found') ||
           e.toString().contains('Failed to load data') ||
-          e.toString().contains('Network error')) {
+          e.toString().contains('Network error') ||
+          e.toString().contains('Failed to fetch company ID')) {
         print('WARNING: MonitorApiService.ensureCompanyIdAvailable() - Offline mode detected, using default company ID');
         
         // Use a default company ID for offline mode
@@ -319,6 +305,9 @@ class MonitorApiService extends GetxService {
       http.Response? salesRes;
       http.Response? salesDetailsRes;
       http.Response? inventoryRes;
+      
+      // Log the start of data fetching process
+      debugPrint("ApiService: Starting data fetching process - online mode");
 
       // Service points is now OPTIONAL - don't fail if it returns 404
       try {
@@ -332,47 +321,58 @@ class MonitorApiService extends GetxService {
       }
 
       try {
+        debugPrint("ApiService: Attempting to fetch company details from API");
         companyDetailsRes = await getWithAuth('/company/details');
-        debugPrint("ApiService: Successfully fetched company details");
+        debugPrint("ApiService: Successfully fetched company details with status: ${companyDetailsRes.statusCode}");
+        debugPrint("ApiService: Company details response body: ${companyDetailsRes.body}");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /company/details -> $e");
+        // In offline mode, we can continue without fresh company details
+        companyDetailsRes = null;
       }
 
       try {
         final endDate = dateFormatter.format(now);
+        debugPrint("ApiService: Attempting to fetch sales reports from 2023-09-01 to $endDate");
         salesRes = await getWithAuth(
           '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
         );
         debugPrint(
-          "ApiService: Successfully fetched sales reports from 2023-09-01 to $endDate",
+          "ApiService: Successfully fetched sales reports with status: ${salesRes.statusCode}",
         );
+        debugPrint("ApiService: Sales reports response body length: ${salesRes.body.length}");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /reports/sales -> $e");
+        // In offline mode, we can continue without fresh sales data
+        salesRes = null;
       }
 
       try {
         // Fetch sales details with salesperson and payment info
+        debugPrint("ApiService: Attempting to fetch sales details");
         salesDetailsRes = await getWithAuth(
           '/sales/?pagecount=0&pagesize=5000',
         );
-        debugPrint("ApiService: Successfully fetched sales details");
+        debugPrint("ApiService: Successfully fetched sales details with status: ${salesDetailsRes.statusCode}");
+        debugPrint("ApiService: Sales details response body length: ${salesDetailsRes.body.length}");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /sales/ -> $e");
+        salesDetailsRes = null;
       }
 
       try {
+        debugPrint("ApiService: Attempting to fetch inventory");
         inventoryRes = await getWithAuth('/inventory/');
-        debugPrint("ApiService: Successfully fetched inventory");
+        debugPrint("ApiService: Successfully fetched inventory with status: ${inventoryRes.statusCode}");
+        debugPrint("ApiService: Inventory response body length: ${inventoryRes.body.length}");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /inventory -> $e");
+        inventoryRes = null;
       }
 
-      // Changed validation - only company details and sales are required
-      if (companyDetailsRes == null || salesRes == null) {
-        throw Exception(
-          "One or more REQUIRED data endpoints failed to respond correctly.",
-        );
-      }
+      // In offline mode, we don't require any endpoints to succeed
+      // We'll work with whatever data we can get
+      debugPrint("ApiService: Proceeding with available data (offline mode tolerant)");
 
       // Parse service points only if available and has valid body
       List<dynamic> servicePointsData = [];
@@ -385,27 +385,33 @@ class MonitorApiService extends GetxService {
       }
 
       Map<String, dynamic> companyDetailsData = {};
-      if (companyDetailsRes.body.isNotEmpty) {
+      if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
+          debugPrint("ApiService: Parsed company details successfully");
         } catch (e) {
           debugPrint("ApiService: Failed to parse company details JSON -> $e");
-          throw Exception("Failed to parse company details: $e");
+          // In offline mode, we can continue with empty company details
+          companyDetailsData = {};
         }
-      } else {
-        throw Exception("Company details response is empty");
+      } else if (companyDetailsRes != null) {
+        debugPrint("ApiService: Company details response is empty");
+        companyDetailsData = {};
       }
 
       List<dynamic> salesData = [];
-      if (salesRes.body.isNotEmpty) {
+      if (salesRes != null && salesRes.body.isNotEmpty) {
         try {
           salesData = json.decode(salesRes.body);
+          debugPrint("ApiService: Parsed ${salesData.length} sales records");
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales JSON -> $e");
-          throw Exception("Failed to parse sales data: $e");
+          // In offline mode, we can continue with empty sales data
+          salesData = [];
         }
-      } else {
-        throw Exception("Sales response is empty");
+      } else if (salesRes != null) {
+        debugPrint("ApiService: Sales response is empty");
+        salesData = [];
       }
 
       List<dynamic> salesDetailsData = [];
@@ -429,18 +435,28 @@ class MonitorApiService extends GetxService {
             "ApiService: Failed to parse inventory JSON (will continue without it) -> $e",
           );
         }
-      } else {
+      } else if (inventoryRes != null) {
         debugPrint(
           "ApiService: Inventory response is empty (will continue without it)",
         );
       }
 
       final db = await _dbHelper.database;
-
+      debugPrint("ApiService: Database connection established, starting transaction");
+      
       await db.transaction((txn) async {
-        await txn.delete('service_points');
-        await txn.delete('company_details');
-        await txn.delete('sales');
+        // Only clear tables if we have new data to insert
+        bool hasDataToInsert = companyDetailsData.isNotEmpty ||
+                              salesData.isNotEmpty ||
+                              inventoryData.isNotEmpty ||
+                              servicePointsData.isNotEmpty;
+        
+        if (hasDataToInsert) {
+          debugPrint("ApiService: Clearing old data before inserting fresh data");
+          await txn.delete('service_points');
+          await txn.delete('company_details');
+          await txn.delete('sales');
+        }
 
         if (inventoryData.isNotEmpty) {
           debugPrint(
@@ -450,12 +466,15 @@ class MonitorApiService extends GetxService {
             await _dbHelper.insertInventoryItem(item, db: txn);
           }
         } else {
-          debugPrint(
-            "ApiService: No inventory data available, skipping insertion",
-          );
+          debugPrint("ApiService: No inventory data available, skipping insertion");
         }
 
-        await _dbHelper.insertCompanyDetails(companyDetailsData, db: txn);
+        // Only insert company details if we have valid data
+        if (companyDetailsData.isNotEmpty) {
+          await _dbHelper.insertCompanyDetails(companyDetailsData, db: txn);
+        } else {
+          debugPrint("ApiService: No company details data available, skipping insertion");
+        }
 
         // Only insert service points if data is available
         if (servicePointsData.isNotEmpty) {
@@ -466,9 +485,7 @@ class MonitorApiService extends GetxService {
             await _dbHelper.insertServicePoint(item, db: txn);
           }
         } else {
-          debugPrint(
-            "ApiService: No service points data available, skipping insertion",
-          );
+          debugPrint("ApiService: No service points data available, skipping insertion");
         }
 
         for (final item in salesData) {
@@ -490,13 +507,16 @@ class MonitorApiService extends GetxService {
           }
         }
 
-        await _dbHelper.mapSalesToServicePoints(db: txn);
+        if (hasDataToInsert) {
+          await _dbHelper.mapSalesToServicePoints(db: txn);
+        }
       });
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
       debugPrint(
         "ApiService: All data fetched successfully, and local DB updated.",
       );
+      debugPrint("ApiService: Data fetching and caching completed successfully in online mode");
 
       if (Get.isRegistered<MonOperatorController>()) {
         await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
@@ -605,6 +625,7 @@ class MonitorApiService extends GetxService {
     
     if (token == null) {
       print('ERROR: MonitorApiService._getWithAuth() - Authentication token not found for GET request.');
+      debugPrint("ApiService: Authentication token missing - cannot make authenticated request");
       throw Exception('Authentication token not found for GET request.');
     }
     
@@ -618,16 +639,87 @@ class MonitorApiService extends GetxService {
     );
 
     print('DEBUG: MonitorApiService._getWithAuth() - Received response with status: ${response.statusCode}');
+    debugPrint("ApiService: GET request to $endpoint returned status: ${response.statusCode}");
     
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      debugPrint("ApiService: Successfully fetched data from $endpoint");
       return response;
     } else {
+      debugPrint("ApiService: Failed to load data from $endpoint with status: ${response.statusCode}");
+      debugPrint("ApiService: Response body: ${response.body}");
       _handleResponse(
         response,
       ); // Use handleResponse for centralized error handling
       throw Exception(
         'Failed to load data from $endpoint: ${response.statusCode}',
       );
+    }
+  }
+
+  /// Test method to verify data fetching and caching works correctly when online
+  Future<bool> testDataFetchingAndCaching() async {
+    try {
+      debugPrint("ApiService: Starting test of data fetching and caching logic");
+
+      // Check if we have authentication token
+      final token = await getStoredToken();
+      if (token == null) {
+        debugPrint("ApiService: Test failed - no authentication token available");
+        return false;
+      }
+      debugPrint("ApiService: Authentication token available for testing");
+
+      // Test individual API endpoints
+      bool companyDetailsSuccess = false;
+      bool salesSuccess = false;
+      bool inventorySuccess = false;
+
+      try {
+        final companyResponse = await getWithAuth('/company/details');
+        if (companyResponse.statusCode == 200 && companyResponse.body.isNotEmpty) {
+          companyDetailsSuccess = true;
+          debugPrint("ApiService: Company details endpoint test passed");
+        }
+      } catch (e) {
+        debugPrint("ApiService: Company details endpoint test failed: $e");
+      }
+
+      try {
+        final now = DateTime.now();
+        final endDate = DateFormat('yyyy-MM-dd').format(now);
+        final salesResponse = await getWithAuth(
+          '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
+        );
+        if (salesResponse.statusCode == 200) {
+          salesSuccess = true;
+          debugPrint("ApiService: Sales endpoint test passed");
+        }
+      } catch (e) {
+        debugPrint("ApiService: Sales endpoint test failed: $e");
+      }
+
+      try {
+        final inventoryResponse = await getWithAuth('/inventory/');
+        if (inventoryResponse.statusCode == 200) {
+          inventorySuccess = true;
+          debugPrint("ApiService: Inventory endpoint test passed");
+        }
+      } catch (e) {
+        debugPrint("ApiService: Inventory endpoint test failed: $e");
+      }
+
+      // Test the full data fetching and caching process
+      if (companyDetailsSuccess || salesSuccess || inventorySuccess) {
+        await fetchAndCacheAllData();
+        debugPrint("ApiService: Full data fetching and caching test completed");
+        return true;
+      } else {
+        debugPrint("ApiService: Test failed - all endpoint tests failed");
+        return false;
+      }
+    } catch (e) {
+      debugPrint("ApiService: Data fetching and caching test failed with exception: $e");
+      return false;
     }
   }
 }

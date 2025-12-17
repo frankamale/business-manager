@@ -16,39 +16,81 @@ class DatabaseHelper {
   static String? _currentCompanyId;
 
   Future<Database> get database async {
-    // Get current company ID
-    final companyId = await _getCurrentCompanyId();
+    print("DEBUG: DatabaseHelper.database getter - Starting database retrieval");
     
-    // Check if we already have a database instance for this company
-    if (_databases.containsKey(companyId)) {
-      return _databases[companyId]!;
+    try {
+      // Get current company ID
+      final companyId = await _getCurrentCompanyId();
+      print("DEBUG: DatabaseHelper.database getter - Company ID: $companyId");
+      
+      // Check if we already have a database instance for this company
+      if (_databases.containsKey(companyId)) {
+        print("DEBUG: DatabaseHelper.database getter - Using existing database instance for company: $companyId");
+        return _databases[companyId]!;
+      }
+      
+      print("DEBUG: DatabaseHelper.database getter - No existing database for company, initializing new one");
+      
+      // Initialize new database for this company
+      final db = await _initDb(companyId);
+      _databases[companyId] = db;
+      _currentCompanyId = companyId;
+      print("DEBUG: DatabaseHelper.database getter - New database initialized and stored");
+      return db;
+    } catch (e) {
+      print("ERROR: DatabaseHelper.database getter - Failed to get database: $e");
+      throw Exception('Failed to get database: $e');
     }
-    
-    // Initialize new database for this company
-    final db = await _initDb(companyId);
-    _databases[companyId] = db;
-    _currentCompanyId = companyId;
-    return db;
   }
 
   Future<Database> _initDb(String companyId) async {
+    print("DEBUG: DatabaseHelper._initDb() - Starting database initialization for company: $companyId");
+    
     // Sanitize company ID for use in database name
     final sanitizedCompanyId = _sanitizeCompanyId(companyId);
+    print("DEBUG: DatabaseHelper._initDb() - Sanitized company ID: $sanitizedCompanyId");
     
     // Create company-specific database name
     final dbName = 'app_database_$sanitizedCompanyId.db';
-    String path = join(await getDatabasesPath(), dbName);
+    print("DEBUG: DatabaseHelper._initDb() - Database name: $dbName");
     
-    return await openDatabase(path, version: 7, onCreate: _onCreate, onUpgrade: _onUpgrade);
+    try {
+      String path = join(await getDatabasesPath(), dbName);
+      print("DEBUG: DatabaseHelper._initDb() - Database path: $path");
+      
+      final db = await openDatabase(path, version: 7, onCreate: _onCreate, onUpgrade: _onUpgrade);
+      print("DEBUG: DatabaseHelper._initDb() - Database opened successfully");
+      return db;
+    } catch (e) {
+      print("ERROR: DatabaseHelper._initDb() - Failed to open database: $e");
+      throw Exception('Failed to initialize database: $e');
+    }
   }
 
   Future<String> _getCurrentCompanyId() async {
     try {
+      print("DEBUG: DatabaseHelper._getCurrentCompanyId() - Starting company ID retrieval");
       final apiService = Get.find<MonitorApiService>();
-      return await apiService.ensureCompanyIdAvailable();
+      final companyId = await apiService.ensureCompanyIdAvailable();
+      print("DEBUG: DatabaseHelper._getCurrentCompanyId() - Retrieved company ID: $companyId");
+      return companyId;
     } catch (e) {
       // If company ID is not available, use a default
-      print("DatabaseHelper: Company ID not available, using default: $e");
+      print("ERROR: DatabaseHelper._getCurrentCompanyId() - Company ID not available, using default: $e");
+      
+      // Try to get stored company ID as fallback
+      try {
+        final apiService = Get.find<MonitorApiService>();
+        final storedCompanyId = await apiService.getStoredCompanyId();
+        if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
+          print("DEBUG: DatabaseHelper._getCurrentCompanyId() - Using stored company ID as fallback: $storedCompanyId");
+          return storedCompanyId;
+        }
+      } catch (fallbackError) {
+        print("ERROR: DatabaseHelper._getCurrentCompanyId() - Fallback to stored company ID also failed: $fallbackError");
+      }
+      
+      print("DEBUG: DatabaseHelper._getCurrentCompanyId() - Using default company ID");
       return 'default';
     }
   }

@@ -117,19 +117,30 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeApp() async {
     debugPrint('SplashPage: Before splash delay');
-    await Future.wait([
-      _initializeServicesAndDatabase(),
-      Future.delayed(const Duration(seconds: 2)).then((_) => debugPrint('SplashPage: After splash delay')),
-    ]);
+    
+    // Execute initialization sequentially to avoid race conditions
+    try {
+      await _initializeServicesAndDatabase();
+    } catch (e) {
+      debugPrint('SplashPage: Critical error during initialization: $e');
+      // If initialization fails, still show the splash for minimum time
+      await Future.delayed(const Duration(seconds: 2));
+      debugPrint('SplashPage: After splash delay (with error)');
+      return;
+    }
+    
+    // Only proceed with navigation if initialization was successful
+    await Future.delayed(const Duration(seconds: 2));
+    debugPrint('SplashPage: After splash delay');
   }
 
   Future<void> _initializeServicesAndDatabase() async {
     _initializeControllers();
     
-    // Initialize company ID early in the process
+    // Initialize company ID FIRST - this is critical
     await _initializeCompanyId();
     
-    // Ensure database is open
+    // Now ensure database is open with the correct company ID
     await _ensureDatabaseIsOpen();
     
     // Load data from database
@@ -201,10 +212,46 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _ensureDatabaseIsOpen() async {
     try {
+      debugPrint('SplashPage: Attempting to open database');
+      
+      // First, ensure we have a company ID set
+      final apiService = Get.find<MonitorApiService>();
+      String? companyId = await apiService.getStoredCompanyId();
+      
+      if (companyId == null || companyId.isEmpty) {
+        debugPrint('SplashPage: No company ID found, setting default for offline use');
+        await apiService.storeCompanyId('default_offline_company');
+        companyId = 'default_offline_company';
+      }
+      
+      debugPrint('SplashPage: Using company ID: $companyId');
+      
+      // Now open the database
       final db = await _dbHelper.database;
       debugPrint('SplashPage: Database opened successfully');
+      
+      // Verify we can actually query the database
+      try {
+        final companyDetails = await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+        debugPrint('SplashPage: Database verification successful, company details loaded');
+      } catch (e) {
+        debugPrint('SplashPage: No company details found in database (this is normal for first offline use)');
+      }
+      
     } catch (e) {
       debugPrint('SplashPage: Error opening database - $e');
+      
+      // Try to recover by using default company
+      try {
+        debugPrint('SplashPage: Attempting recovery with default company');
+        final apiService = Get.find<MonitorApiService>();
+        await apiService.storeCompanyId('default_offline_company');
+        final db = await _dbHelper.database;
+        debugPrint('SplashPage: Recovery successful with default database');
+      } catch (recoveryError) {
+        debugPrint('SplashPage: Recovery failed - $recoveryError');
+        // If all else fails, we'll continue but the app may have issues
+      }
     }
   }
 
@@ -220,10 +267,30 @@ class _SplashPageState extends State<SplashPage> {
       final inventoryController = Get.find<MonInventoryController>();
 
       // Load stores from database (fetchAllStores already loads from DB)
-      await storesController.fetchAllStores();
+      try {
+        await storesController.fetchAllStores();
+        debugPrint('SplashPage: Stores loaded successfully');
+        
+        // Check if we have any stores
+        if (storesController.storeList.isEmpty || storesController.storeList.length == 1) {
+          debugPrint('SplashPage: No stores found in database - this might be first offline use');
+        }
+      } catch (e) {
+        debugPrint('SplashPage: Error loading stores - $e');
+      }
       
       // Load inventory from database
-      await inventoryController.loadInventoryFromDb();
+      try {
+        await inventoryController.loadInventoryFromDb();
+        debugPrint('SplashPage: Inventory loaded successfully');
+        
+        // Check if we have any inventory
+        if (inventoryController.inventoryItems.isEmpty) {
+          debugPrint('SplashPage: No inventory found in database - this might be first offline use');
+        }
+      } catch (e) {
+        debugPrint('SplashPage: Error loading inventory - $e');
+      }
       
       debugPrint('SplashPage: Data loaded from database successfully');
       
@@ -271,7 +338,13 @@ class _SplashPageState extends State<SplashPage> {
       final isOnline = await NetworkHelper.hasConnection();
       if (isOnline) {
         debugPrint("SplashPage: Device is online. Syncing recent sales...");
-        await apiService.fetchAndCacheAllData();
+        try {
+          await apiService.fetchAndCacheAllData();
+          debugPrint("SplashPage: Data sync completed successfully");
+        } catch (syncError) {
+          debugPrint("SplashPage: Data sync failed, but continuing with local data: $syncError");
+          // Even if sync fails, we can still proceed with cached data
+        }
       } else {
         debugPrint(
           "SplashPage: Device is offline. Proceeding with local data.",
@@ -279,12 +352,62 @@ class _SplashPageState extends State<SplashPage> {
       }
     } catch (e) {
       debugPrint(
-        "SplashPage: Error during initial sync. Proceeding with local data. Error: $e",
+        "SplashPage: Error during network check or sync. Proceeding with local data. Error: $e",
       );
     }
 
     debugPrint('SplashPage: Before navigation to BottomNav');
+    
+    // Check if we have sufficient data for offline use
+    await _checkOfflineDataAvailability();
+    
     Get.offAll(() => const BottomNav());
+  }
+  
+  /// Check if we have sufficient cached data for offline use
+  Future<void> _checkOfflineDataAvailability() async {
+    try {
+      final isOnline = await NetworkHelper.hasConnection();
+      
+      if (!isOnline) {
+        debugPrint('SplashPage: Checking offline data availability');
+        
+        final storesController = Get.find<MonStoresController>();
+        final inventoryController = Get.find<MonInventoryController>();
+        final operatorController = Get.find<MonOperatorController>();
+        
+        bool hasSufficientData = true;
+        
+        // Check if we have basic company information
+        final companyName = operatorController.companyName.value;
+        if (companyName.isEmpty || companyName == 'Loading...') {
+          debugPrint('SplashPage: No company information available offline');
+          hasSufficientData = false;
+        }
+        
+        // Check if we have any stores
+        if (storesController.storeList.length <= 1) { // Only the "All" option
+          debugPrint('SplashPage: No stores available offline');
+          hasSufficientData = false;
+        }
+        
+        // Check if we have any inventory
+        if (inventoryController.inventoryItems.isEmpty) {
+          debugPrint('SplashPage: No inventory available offline');
+          hasSufficientData = false;
+        }
+        
+        if (!hasSufficientData) {
+          debugPrint('SplashPage: Insufficient offline data - showing warning');
+          // In a real app, you might want to show a warning to the user
+          // that they're offline with limited data
+        } else {
+          debugPrint('SplashPage: Sufficient offline data available');
+        }
+      }
+    } catch (e) {
+      debugPrint('SplashPage: Error checking offline data availability: $e');
+    }
   }
 
 
