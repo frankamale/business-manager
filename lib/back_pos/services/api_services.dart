@@ -27,7 +27,6 @@ class PosApiService extends GetxService {
 
   DatabaseHelper _dbHelper = DatabaseHelper();
 
-
   // Keys for secure storage
   static const String _tokenKey = 'access_token';
   static const String _userIdKey = 'user_id';

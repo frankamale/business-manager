@@ -30,6 +30,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   final AuthController _authController = Get.find<AuthController>();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String? _errorMessage;
 
   // Initialize secure storage for credentials
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
@@ -91,6 +92,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
+        _errorMessage = null;
       });
 
       try {
@@ -161,6 +163,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       } catch (e) {
         // Handle login error
         print('Login error: $e');
+        setState(() {
+          _errorMessage = 'Network error: Please check your internet connection and try again.';
+        });
       } finally {
         setState(() {
           _isLoading = false;
@@ -415,8 +420,20 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               return null;
                             },
                           ),
-                          const SizedBox(height: 12),
 
+                          if (_errorMessage != null)
+
+                            Text(
+
+                              _errorMessage!,
+
+                              style: TextStyle(color: Colors.red),
+
+                              textAlign: TextAlign.center,
+
+                            ),
+
+                          const SizedBox(height: 12),
                           // Sign In Button
                           SizedBox(
                             width: double.infinity,
