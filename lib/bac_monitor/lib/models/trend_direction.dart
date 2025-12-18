@@ -1,0 +1,1 @@
+enum TrendDirection { up, down, none }
