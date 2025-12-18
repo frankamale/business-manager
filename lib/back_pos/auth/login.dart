@@ -2,8 +2,10 @@ import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../bac_monitor/lib/db/db_helper.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
+import '../services/api_services.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -16,9 +18,11 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.put(AuthController());
+  final PosApiService _apiService = PosApiService();
   String? selectedItem;
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String _companyName = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -34,6 +38,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
       curve: Curves.easeInOut,
     );
     _animationController.forward();
+    _loadCompanyDetails();
   }
 
   @override
@@ -49,10 +54,18 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         _isLoading = true;
       });
 
+<<<<<<< HEAD:lib/auth/server_login.dart
+      print('ServerLogin: Calling authController.serverLogin');
+      // Authenticate user via server - close database since this is a new authentication
+      final success = await _authController.serverLogin(
+        _usernameController.text,
+=======
       // Authenticate user
       final success = await _authController.login(
         selectedItem!,
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/login.dart
         _passwordController.text,
+        closeDatabase: true,
       );
 
       setState(() {
@@ -64,6 +77,44 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         await Future.delayed(const Duration(milliseconds: 500));
         Get.off(() => const Homepage());
       }
+    }
+  }
+
+  Future<void> _loadCompanyDetails() async {
+    try {
+      // Try to fetch company details from API
+      final companyDetails = await _apiService.fetchAndStoreCompanyInfo();
+
+      if (companyDetails.containsKey('activeBranch') &&
+          companyDetails['activeBranch'] is Map &&
+          (companyDetails['activeBranch'] as Map).containsKey('company') &&
+          (companyDetails['activeBranch']['company'] as Map).containsKey(
+            'name',
+          )) {
+        final companyName =
+            (companyDetails['activeBranch']['company'] as Map)['name']
+                as String?;
+
+        if (companyName != null && companyName.isNotEmpty) {
+          setState(() {
+            _companyName = companyName;
+          });
+          return;
+        }
+      }
+
+      // If we don't have the full structure, try to get basic company info
+      final companyInfo = await _apiService.getCompanyInfo();
+      if (companyInfo['companyId']?.isNotEmpty ?? false) {
+        // Use company ID as fallback
+        setState(() {
+          _companyName = companyInfo['companyId']!;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _companyName = AppConfig.companyName;
+      });
     }
   }
 
@@ -138,7 +189,10 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
 
                             // Title
                             Text(
-                              "Welcome Back",
+                              _companyName.isNotEmpty
+                                  ? "$_companyName "
+                                  : "${AppConfig.companyName} ",
+
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 28 : 32,
                                 fontWeight: FontWeight.bold,
@@ -147,8 +201,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "${AppConfig.companyName} - Demo",
-
+                              "Welcome Back",
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 14 : 16,
                                 color: Colors.blue.shade600,
@@ -157,7 +210,6 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 40),
 
-                            // Account Selection Dropdown
                             Obx(
                               () => DropdownButtonFormField<String>(
                                 value: selectedItem,

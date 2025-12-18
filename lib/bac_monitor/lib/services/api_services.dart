@@ -18,14 +18,29 @@ class MonitorApiService extends GetxService {
 
   final _dbHelper = DatabaseHelper();
 
+  // ============ IN-MEMORY CACHE ============
+  String? _cachedToken;
+  String? cachedCompanyId;
+  bool _isInitialized = false;
+
+  // Prevent multiple simultaneous initialization attempts
+  Future<void>? _initializationFuture;
+
   Future<String?> getStoredToken() async {
-    final token = await _secureStorage.read(key: "access_token");
-    print('DEBUG: MonitorApiService.getStoredToken() retrieved token: $token');
-    return token;
+    // Return cached token if available
+    if (_cachedToken != null) {
+      return _cachedToken;
+    }
+
+    // Otherwise fetch and cache
+    _cachedToken = await _secureStorage.read(key: "access_token");
+    print('DEBUG: MonitorApiService.getStoredToken() retrieved and cached token');
+    return _cachedToken;
   }
 
   Future<void> storeToken(String token) async {
     await _secureStorage.write(key: 'access_token', value: token);
+    _cachedToken = token; // Update cache
     print('DEBUG: MonitorApiService.storeToken() stored token');
   }
 
@@ -60,10 +75,18 @@ class MonitorApiService extends GetxService {
 
   Future<void> storeCompanyId(String companyId) async {
     await _secureStorage.write(key: 'company_id', value: companyId);
+    cachedCompanyId = companyId; // Update cache
   }
 
   Future<String?> getStoredCompanyId() async {
-    return await _secureStorage.read(key: 'company_id');
+    // Return cached company ID if available
+    if (cachedCompanyId != null) {
+      return cachedCompanyId;
+    }
+
+    // Otherwise fetch and cache
+    cachedCompanyId = await _secureStorage.read(key: 'company_id');
+    return cachedCompanyId;
   }
 
   // Save server credentials
@@ -83,114 +106,126 @@ class MonitorApiService extends GetxService {
   }
 
   /// Initialize company ID during app startup
-  /// This should be called early in the app initialization process
+  /// This should be called ONCE early in the app initialization process
+  /// Uses a singleton pattern to prevent multiple simultaneous calls
   Future<void> initializeCompanyId() async {
+    // If already initialized, return immediately
+    if (_isInitialized && cachedCompanyId != null) {
+      print('DEBUG: MonitorApiService.initializeCompanyId() - Already initialized, skipping');
+      return;
+    }
+
+    // If initialization is in progress, wait for it
+    if (_initializationFuture != null) {
+      print('DEBUG: MonitorApiService.initializeCompanyId() - Initialization in progress, waiting...');
+      await _initializationFuture;
+      return;
+    }
+
+    // Start initialization
+    _initializationFuture = _performInitialization();
+    await _initializationFuture;
+    _initializationFuture = null;
+  }
+
+  Future<void> _performInitialization() async {
     try {
-      print('DEBUG: MonitorApiService.initializeCompanyId() - Starting company ID initialization');
-      
-      // Ensure company ID is available
-      final companyId = await ensureCompanyIdAvailable();
-      print('DEBUG: MonitorApiService.initializeCompanyId() - Company ID initialized: $companyId');
-      
+      print('DEBUG: MonitorApiService._performInitialization() - Starting company ID initialization');
+
+      // Try to get from cache first
+      final cachedId = await getStoredCompanyId();
+      if (cachedId != null && cachedId.isNotEmpty) {
+        print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
+        cachedCompanyId = cachedId;
+        _isInitialized = true;
+
+        // Switch to company database
+        if (cachedId != 'default_offline_company') {
+          try {
+            await _dbHelper.switchCompany(cachedId);
+            print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $cachedId');
+          } catch (e) {
+            print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
+          }
+        }
+        return;
+      }
+
+      // If not cached, fetch from API
+      final companyId = await _fetchCompanyIdOnce();
+      print('DEBUG: MonitorApiService._performInitialization() - Company ID initialized: $companyId');
+
       // Switch to the company's database if we have a valid company ID
       if (companyId != null && companyId.isNotEmpty && companyId != 'default_offline_company') {
         try {
           await _dbHelper.switchCompany(companyId);
-          print('DEBUG: MonitorApiService.initializeCompanyId() - Switched to company database: $companyId');
+          print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $companyId');
         } catch (e) {
-          print('ERROR: MonitorApiService.initializeCompanyId() - Failed to switch company database: $e');
-          // Don't fail the entire initialization if database switch fails
+          print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
         }
       }
-      
+
+      _isInitialized = true;
     } catch (e) {
-      print('ERROR: MonitorApiService.initializeCompanyId() - Failed to initialize company ID: $e');
-      // Don't throw exception to allow app to continue in offline mode
+      print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
+      _isInitialized = false;
     }
   }
 
-  Future<String> fetchCompanyId() async {
+  /// Fetch company ID from API (internal method, only called once)
+  Future<String> _fetchCompanyIdOnce() async {
     try {
-      print('DEBUG: MonitorApiService.fetchCompanyId() - Starting company ID fetch');
+      print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Starting company ID fetch');
       final response = await getWithAuth('/company/details');
       final companyDetails = json.decode(response.body);
-      print('DEBUG: MonitorApiService.fetchCompanyId() - Company details response: $companyDetails');
+      print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Company details response received');
 
       if (companyDetails.containsKey('company')) {
         final companyId = companyDetails['company'];
-        print('DEBUG: MonitorApiService.fetchCompanyId() - Found company ID: $companyId');
+        print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Found company ID: $companyId');
         await storeCompanyId(companyId.toString());
-        
-        // Verify the company ID was stored correctly
-        final storedCompanyId = await getStoredCompanyId();
-        if (storedCompanyId == companyId.toString()) {
-          print('DEBUG: MonitorApiService.fetchCompanyId() - Company ID stored successfully');
-        } else {
-          print('ERROR: MonitorApiService.fetchCompanyId() - Company ID storage verification failed');
-          throw Exception('Failed to verify company ID storage');
-        }
-        
         return companyId.toString();
       } else {
-        print('ERROR: MonitorApiService.fetchCompanyId() - Company ID not found in company details');
+        print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Company ID not found in company details');
         throw Exception('Company ID not found in company details');
       }
     } catch (e) {
-      print('ERROR: MonitorApiService.fetchCompanyId() - Failed to fetch company ID: $e');
+      print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Failed to fetch company ID: $e');
       debugPrint("ApiService: Failed to fetch company ID -> $e");
       throw Exception('Failed to fetch company ID: $e');
     }
   }
 
+  /// Get company ID - returns cached value immediately
+  /// No API calls unless company ID is not available
   Future<String> ensureCompanyIdAvailable() async {
-    print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Checking for stored company ID');
-    
-    // Check if company ID is already stored
+    // Return cached company ID immediately if available
+    if (cachedCompanyId != null && cachedCompanyId!.isNotEmpty) {
+      return cachedCompanyId!;
+    }
+
+    // Try to get from storage
     final storedCompanyId = await getStoredCompanyId();
-    print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Stored company ID: $storedCompanyId');
-    
-    // If we have a stored company ID, use it immediately for offline scenarios
     if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
-      print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Using stored company ID: $storedCompanyId');
+      cachedCompanyId = storedCompanyId;
       return storedCompanyId;
     }
-    
-    // If not stored, try to fetch it from API
-    try {
-      print('DEBUG: MonitorApiService.ensureCompanyIdAvailable() - Attempting to fetch company ID from API');
-      return await fetchCompanyId();
-    } catch (e) {
-      print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Failed to fetch company ID: $e');
-      
-      // Graceful fallback for offline scenarios
-      if (e.toString().contains('Authentication token not found') ||
-          e.toString().contains('Failed to load data') ||
-          e.toString().contains('Network error') ||
-          e.toString().contains('Failed to fetch company ID')) {
-        print('WARNING: MonitorApiService.ensureCompanyIdAvailable() - Offline mode detected, using default company ID');
-        
-        // Use a default company ID for offline mode
-        final defaultCompanyId = 'default_offline_company';
-        await storeCompanyId(defaultCompanyId);
-        return defaultCompanyId;
-      }
-      
-      debugPrint("ApiService: Failed to ensure company ID is available -> $e");
-      throw Exception('Company ID is not available: $e');
-    }
+
+    // If not available, this is an error - initialization should have been called
+    print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Company ID not initialized!');
+    throw Exception('Company ID not initialized. Call initializeCompanyId() first.');
   }
 
   Future<Map<String, dynamic>> post(
-    String endpoint,
-    Map<String, dynamic> data, {
-    bool useToken = true,
-  }) async {
+      String endpoint,
+      Map<String, dynamic> data, {
+        bool useToken = true,
+      }) async {
     try {
-      print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint, useToken: $useToken');
+      print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint');
       final headers = {'Content-Type': 'application/json'};
       if (useToken) {
         final token = await getStoredToken();
-        print('DEBUG: MonitorApiService.post() retrieved token: $token');
         if (token != null) {
           headers['Authorization'] = 'Bearer $token';
         } else {
@@ -269,14 +304,20 @@ class MonitorApiService extends GetxService {
     await _secureStorage.delete(key: 'persistent_code');
     await _secureStorage.delete(key: 'last_sync_timestamp');
     await _secureStorage.delete(key: 'company_id');
+
+    // Clear cache
+    _cachedToken = null;
+    cachedCompanyId = null;
+    _isInitialized = false;
   }
 
   /// Switch to a different company
   /// This will update the stored company ID and switch the database
   Future<void> switchCompany(String newCompanyId) async {
     try {
-      // Store the new company ID
+      // Store the new company ID and update cache
       await storeCompanyId(newCompanyId);
+      cachedCompanyId = newCompanyId;
 
       // Switch to the new company's database
       await _dbHelper.switchCompany(newCompanyId);
@@ -534,7 +575,7 @@ class MonitorApiService extends GetxService {
 
       final lastSyncTimestamp =
           (await getStoredLastSyncTimestamp()) ??
-          now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
+              now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
       final lastSyncDate = DateTime.fromMillisecondsSinceEpoch(
         lastSyncTimestamp,
       );
@@ -619,17 +660,13 @@ class MonitorApiService extends GetxService {
   }
 
   Future<http.Response> getWithAuth(String endpoint) async {
-    print('DEBUG: MonitorApiService._getWithAuth() called for endpoint: $endpoint');
     final token = await getStoredToken();
-    print('DEBUG: MonitorApiService._getWithAuth() retrieved token: $token');
-    
+
     if (token == null) {
-      print('ERROR: MonitorApiService._getWithAuth() - Authentication token not found for GET request.');
-      debugPrint("ApiService: Authentication token missing - cannot make authenticated request");
+      print('ERROR: MonitorApiService.getWithAuth() - Authentication token not found for GET request.');
       throw Exception('Authentication token not found for GET request.');
     }
-    
-    print('DEBUG: MonitorApiService._getWithAuth() - Making authenticated request to $_baseUrl$endpoint');
+
     final response = await http.get(
       Uri.parse('$_baseUrl$endpoint'),
       headers: {
@@ -638,88 +675,14 @@ class MonitorApiService extends GetxService {
       },
     );
 
-    print('DEBUG: MonitorApiService._getWithAuth() - Received response with status: ${response.statusCode}');
-    debugPrint("ApiService: GET request to $endpoint returned status: ${response.statusCode}");
-    
     if (response.statusCode >= 200 && response.statusCode < 300) {
       debugPrint("ApiService: Successfully fetched data from $endpoint");
       return response;
     } else {
-      debugPrint("ApiService: Failed to load data from $endpoint with status: ${response.statusCode}");
-      debugPrint("ApiService: Response body: ${response.body}");
-      _handleResponse(
-        response,
-      ); // Use handleResponse for centralized error handling
+      _handleResponse(response);
       throw Exception(
         'Failed to load data from $endpoint: ${response.statusCode}',
       );
-    }
-  }
-
-  /// Test method to verify data fetching and caching works correctly when online
-  Future<bool> testDataFetchingAndCaching() async {
-    try {
-      debugPrint("ApiService: Starting test of data fetching and caching logic");
-
-      // Check if we have authentication token
-      final token = await getStoredToken();
-      if (token == null) {
-        debugPrint("ApiService: Test failed - no authentication token available");
-        return false;
-      }
-      debugPrint("ApiService: Authentication token available for testing");
-
-      // Test individual API endpoints
-      bool companyDetailsSuccess = false;
-      bool salesSuccess = false;
-      bool inventorySuccess = false;
-
-      try {
-        final companyResponse = await getWithAuth('/company/details');
-        if (companyResponse.statusCode == 200 && companyResponse.body.isNotEmpty) {
-          companyDetailsSuccess = true;
-          debugPrint("ApiService: Company details endpoint test passed");
-        }
-      } catch (e) {
-        debugPrint("ApiService: Company details endpoint test failed: $e");
-      }
-
-      try {
-        final now = DateTime.now();
-        final endDate = DateFormat('yyyy-MM-dd').format(now);
-        final salesResponse = await getWithAuth(
-          '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
-        );
-        if (salesResponse.statusCode == 200) {
-          salesSuccess = true;
-          debugPrint("ApiService: Sales endpoint test passed");
-        }
-      } catch (e) {
-        debugPrint("ApiService: Sales endpoint test failed: $e");
-      }
-
-      try {
-        final inventoryResponse = await getWithAuth('/inventory/');
-        if (inventoryResponse.statusCode == 200) {
-          inventorySuccess = true;
-          debugPrint("ApiService: Inventory endpoint test passed");
-        }
-      } catch (e) {
-        debugPrint("ApiService: Inventory endpoint test failed: $e");
-      }
-
-      // Test the full data fetching and caching process
-      if (companyDetailsSuccess || salesSuccess || inventorySuccess) {
-        await fetchAndCacheAllData();
-        debugPrint("ApiService: Full data fetching and caching test completed");
-        return true;
-      } else {
-        debugPrint("ApiService: Test failed - all endpoint tests failed");
-        return false;
-      }
-    } catch (e) {
-      debugPrint("ApiService: Data fetching and caching test failed with exception: $e");
-      return false;
     }
   }
 }

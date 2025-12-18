@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/settings_service.dart';
-import '../services/api_services.dart';
+import '../database/db_helper.dart';
 
 class SettingsController extends GetxController {
   final SettingsService _settingsService = SettingsService();
-  final PosApiService _apiService = Get.find<PosApiService>();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   RxBool autoUploadEnabled = false.obs;
   RxBool paymentAccessForAllUsers = false.obs;
   RxBool priceEditingEnabled = false.obs;
@@ -31,14 +31,29 @@ class SettingsController extends GetxController {
 
   Future<bool> authenticate() async {
     try {
-      final authResponse = await _apiService.adminSignIn(
+      final password = int.tryParse(passwordController.text);
+      if (password == null) {
+        Get.snackbar('Error', 'Invalid password format');
+        return false;
+      }
+
+      // Authenticate user locally using username and pospassword
+      final user = await _dbHelper.authenticateUserByUsername(
         usernameController.text,
-        passwordController.text,
+        password,
       );
-      if (authResponse.roles.contains('ADMIN')) {
-        return true;
+
+      if (user != null) {
+        // Check if user has admin or supervisor role
+        final userRole = user.role.toLowerCase() ?? '';
+        if (userRole.contains('admin') || userRole.contains('supervisor')) {
+          return true;
+        } else {
+          Get.snackbar('Error', 'User does not have supervisor or admin privileges');
+          return false;
+        }
       } else {
-        Get.snackbar('Error', 'Not an admin user');
+        Get.snackbar('Error', 'Invalid username or password');
         return false;
       }
     } catch (e) {

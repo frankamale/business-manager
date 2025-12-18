@@ -34,9 +34,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
   // Initialize secure storage for credentials
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
   // Keys for secure storage
@@ -55,7 +53,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   Future<void> _loadStoredCredentials() async {
     try {
       final credentials = await _getStoredCredentials();
-      if (credentials['username'] != null && credentials['username']!.isNotEmpty) {
+      if (credentials['username'] != null &&
+          credentials['username']!.isNotEmpty) {
         // Auto-fill username if credentials are stored
         _usernameController.text = credentials['username']!;
         // Note: For security, we don't auto-fill password, but we could indicate
@@ -115,7 +114,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             print('Company ID initialized successfully');
           } catch (e) {
             print('Warning: Failed to initialize company ID: $e');
-            // Don't fail the login process if company ID initialization fails
           }
 
           final Map<String, dynamic>? data = await _apiService
@@ -124,9 +122,13 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           print(roles);
 
           // Save account for current system
-          final system = (roles != null &&
-              roles.any((role) => role.toString().toLowerCase() == 'admin'))
-              ? 'monitor' : 'pos';
+          final system =
+              (roles != null &&
+                  roles.any(
+                    (role) => role.toString().toLowerCase().contains("admin"),
+                  ))
+              ? 'monitor'
+              : 'pos';
 
           if (data != null) {
             final account = UserAccount(
@@ -141,7 +143,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           }
 
           if (roles != null &&
-              roles.any((role) => role.toString().toLowerCase() == 'admin')) {
+              roles.any(
+                (role) => role.toString().toLowerCase().contains("admin"),
+              )) {
             if (!Get.isRegistered<MonDashboardController>()) {
               Get.put(MonDashboardController());
             }
@@ -175,16 +179,19 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   }
 
   // Store credentials securely using FlutterSecureStorage
-  Future<void> _storeCredentialsSecurely(String username, String password) async {
+  Future<void> _storeCredentialsSecurely(
+    String username,
+    String password,
+  ) async {
     try {
       // Store username and password securely
       await _secureStorage.write(key: _usernameKey, value: username);
       await _secureStorage.write(key: _passwordKey, value: password);
-      
+
       // Verify that credentials were stored successfully
       final storedUsername = await _secureStorage.read(key: _usernameKey);
       final storedPassword = await _secureStorage.read(key: _passwordKey);
-      
+
       if (storedUsername == username && storedPassword == password) {
         print('Credentials stored securely successfully');
       } else {
@@ -192,26 +199,17 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       }
     } catch (e) {
       print('Error storing credentials securely: $e');
-      // Even if secure storage fails, don't block the login process
-      // as the main authentication tokens are already stored by the API service
     }
   }
 
-  // Retrieve stored credentials securely (optional helper method)
   Future<Map<String, String?>> _getStoredCredentials() async {
     try {
       final username = await _secureStorage.read(key: _usernameKey);
       final password = await _secureStorage.read(key: _passwordKey);
-      return {
-        'username': username,
-        'password': password,
-      };
+      return {'username': username, 'password': password};
     } catch (e) {
       print('Error retrieving stored credentials: $e');
-      return {
-        'username': null,
-        'password': null,
-      };
+      return {'username': null, 'password': null};
     }
   }
 
@@ -231,8 +229,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     try {
       final username = await _secureStorage.read(key: _usernameKey);
       final password = await _secureStorage.read(key: _passwordKey);
-      return username != null && username.isNotEmpty &&
-             password != null && password.isNotEmpty;
+      return username != null &&
+          username.isNotEmpty &&
+          password != null &&
+          password.isNotEmpty;
     } catch (e) {
       print('Error checking stored credentials: $e');
       return false;
@@ -371,7 +371,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            keyboardType: TextInputType.number,
+                            keyboardType: TextInputType.text,
                             decoration: InputDecoration(
                               labelText: 'Password',
                               prefixIcon: Icon(
@@ -475,12 +475,39 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           const SizedBox(height: 24),
 
                           // Footer
-                          Text(
-                            AppConfig.copyright,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
+                          Row(
+                            children: [
+                              Hero(
+                                tag: 'logo',
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Image.asset(
+                                    "assets/images/logo.png",
+                                    width: isSmallScreen ? 30 : 50,
+                                    height: isSmallScreen ? 30 : 50,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(
+                                        Icons.storefront_rounded,
+                                        size: isSmallScreen ? 30 : 50,
+                                        color: Colors.blue.shade700,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                AppConfig.copyright,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
