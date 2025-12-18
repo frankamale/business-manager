@@ -362,7 +362,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            keyboardType: TextInputType.number,
+                            keyboardType: TextInputType.text,
                             decoration: InputDecoration(
                               labelText: 'Password',
                               prefixIcon: Icon(
