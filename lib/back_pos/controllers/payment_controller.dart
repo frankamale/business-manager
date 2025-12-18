@@ -179,6 +179,7 @@ class PaymentController extends GetxController {
     required String servicePointId,
     required String? customerId,
     required String? companyId,
+    required String? currencyid,
   }) async {
     const uuid = Uuid();
 
@@ -573,6 +574,7 @@ class PaymentController extends GetxController {
         servicePointId: servicePointId,
         customerId: customerId,
         companyId: transactionData['companyId'],
+        currencyid : transactionData['currencyid'],
       );
 
       // Log the payment payload being sent to server
