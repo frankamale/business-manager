@@ -202,7 +202,7 @@ class PosApiService extends GetxService {
     };
 
     final response = await http.get(
-      Uri.parse('$baseurl/rest/cashaccounts'),
+      Uri.parse('$baseurl/cashaccounts'),
       headers: headers,
     );
 
