@@ -41,6 +41,23 @@ class PaymentController extends GetxController {
     }
   }
 
+  Future<Map<String, dynamic>> _getDefaultCashAccount() async {
+    final db = await _dbHelper.database;
+
+    final result = await db!.query(
+      'cash_accounts',
+      where: 'pos = 1 AND main_currency = 1',
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      throw Exception('No POS cash account configured');
+    }
+
+    return result.first;
+  }
+
+
   // Get the latest receipt number from database
   Future<String?> _getLatestReceiptNumber() async {
     try {
@@ -159,36 +176,39 @@ class PaymentController extends GetxController {
   }
 
   // Create payment payload
-  Map<String, dynamic> createPaymentPayload({
+  Future<Map<String, dynamic>> createPaymentPayload({
     required String saleId,
     required double paymentAmount,
     required int paymentTimestamp,
     required String servicePointId,
     required String? customerId,
     required String? companyId,
-  }) {
+  }) async {
     const uuid = Uuid();
+
+    final cashAccount = await _getDefaultCashAccount();
 
     return {
       "id": uuid.v4(),
-      "currencyid": "3a0e97b4-c13a-4a49-9205-182e62039a5a",
+      "currencyid": cashAccount['currency_id'],
       "referenceid": saleId,
       "servicepointid": servicePointId,
       "transactiontypeid": 1,
       "amount": paymentAmount,
-      "method": "Cash",
+      "method": cashAccount['paymentmode_name'] ?? "Cash",
       "methodId": 1,
       "chequeno": "",
-      "cashaccountid": "11111111-1111-1111-1111-111111111111",
+      "cashaccountid": cashAccount['id'],
       "paydate": paymentTimestamp,
       "receipt": true,
-      "currency": "Uganda Shillings",
+      "currency": cashAccount['currency_name'],
       "type": "Sales",
       "bp": customerId ?? "",
       "direction": 1,
       "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
     };
   }
+
 
   // Save sale and payment locally to SQLite
   Future<Map<String, dynamic>> _saveSaleLocally({
@@ -551,7 +571,7 @@ class PaymentController extends GetxController {
       print('=== END SETTLE BILL PAYMENT PAYLOAD ===');
 
       // Post payment to server
-      await _apiService.postSale(paymentPayload);
+      await _apiService.postSale(await paymentPayload);
 
       // Update local database with new payment amount
       final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(salesId);

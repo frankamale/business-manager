@@ -182,6 +182,10 @@ class _SplashScreenState extends State<SplashScreen>
       _log('authenticateApp: Checking if database needs to be opened');
       await _ensureDatabaseIsOpen();
 
+      // Initialize POS-specific data (cash accounts, currency, etc.)
+      _log('authenticateApp: Initializing POS data');
+      await _initializePosData();
+
       // Smart data loading
       _log('authenticateApp: Starting smart data sync');
       await _loadDataWithSmartSync();
@@ -249,6 +253,38 @@ class _SplashScreenState extends State<SplashScreen>
     Get.put(CustomerController());
 
     _log('initializeControllers: All controllers registered successfully');
+  }
+
+  Future<void> _initializePosData() async {
+    _log('initializePosData: Starting POS initialization');
+
+    try {
+      // Get company info (already stored after login)
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId'];
+
+      if (companyId == null || companyId.isEmpty) {
+        _log('initializePosData: No companyId found, skipping', level: 'WARN');
+        return;
+      }
+
+      // Ensure DB is open for this company
+      await _dbHelper.openForCompany(companyId);
+      _log('initializePosData: Database opened for company $companyId');
+
+      // Fetch cash accounts from API
+      _log('initializePosData: Fetching cash accounts from API');
+      final cashAccounts = await _apiService.fetchCashAccounts();
+
+      // Store in local DB
+      await _dbHelper.insertCashAccounts(cashAccounts);
+      _log(
+        'initializePosData: Cash accounts cached successfully (${cashAccounts.length})',
+      );
+    } catch (e, stackTrace) {
+      _log('initializePosData: Error - $e', level: 'ERROR');
+      _log('initializePosData: StackTrace - $stackTrace', level: 'ERROR');
+    }
   }
 
   Future<void> _ensureDatabaseIsOpen() async {
