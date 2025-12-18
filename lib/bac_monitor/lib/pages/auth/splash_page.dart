@@ -6,14 +6,9 @@ import 'package:get/get.dart';
 import '../../../../back_pos/utils/network_helper.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_dashboard_controller.dart';
-import '../../controllers/mon_gross_profit_controller.dart';
-import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
-import '../../controllers/mon_outstanding_payments_controller.dart';
 import '../../controllers/mon_inventory_controller.dart';
-import '../../controllers/mon_salestrends_controller.dart';
 import '../../controllers/mon_store_controller.dart';
-import '../../controllers/mon_store_kpi_controller.dart';
 import '../../controllers/mon_sync_controller.dart';
 import '../../services/api_services.dart';
 import '../../db/db_helper.dart';
@@ -34,11 +29,24 @@ class _SplashPageState extends State<SplashPage> {
     ),
   );
 
+  // Track offline mode
+  bool _isOfflineMode = false;
+  String _statusMessage = 'Initializing...';
+
   @override
   void initState() {
     super.initState();
     debugPrint('SplashPage: initState called');
     _initializeApp();
+  }
+
+  void _updateStatus(String message) {
+    if (mounted) {
+      setState(() {
+        _statusMessage = message;
+      });
+    }
+    debugPrint('SplashPage: $message');
   }
 
   /// Retrieve stored credentials from FlutterSecureStorage
@@ -82,6 +90,32 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
+  /// Check if we have cached data in the database
+  Future<bool> _hasCachedData() async {
+    try {
+      final db = await _dbHelper.database;
+
+      // Check if we have any sales data
+      final salesCount = await db.rawQuery('SELECT COUNT(*) as count FROM sales');
+      final hasSales = (salesCount.first['count'] as int? ?? 0) > 0;
+
+      // Check if we have service points
+      final servicePointsCount = await db.rawQuery('SELECT COUNT(*) as count FROM service_points');
+      final hasServicePoints = (servicePointsCount.first['count'] as int? ?? 0) > 0;
+
+      // Check if we have company details
+      final companyCount = await db.rawQuery('SELECT COUNT(*) as count FROM company_details');
+      final hasCompany = (companyCount.first['count'] as int? ?? 0) > 0;
+
+      debugPrint('SplashPage: Cached data check - Sales: $hasSales, ServicePoints: $hasServicePoints, Company: $hasCompany');
+
+      return hasSales && hasServicePoints && hasCompany;
+    } catch (e) {
+      debugPrint('SplashPage: Error checking cached data - $e');
+      return false;
+    }
+  }
+
   Future<void> _initializeApp() async {
     debugPrint('SplashPage: Starting app initialization');
 
@@ -94,16 +128,29 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeServicesAndDatabase() async {
     try {
-      // STEP 1: Initialize company ID FIRST (before anything else)
-      debugPrint('SplashPage: Step 1 - Initializing company ID');
-      await _initializeCompanyId();
+      // STEP 1: Check network connectivity first
+      _updateStatus('Checking network...');
+      final isOnline = await NetworkHelper.hasConnection();
+      _isOfflineMode = !isOnline;
 
-      // STEP 2: Ensure database is properly opened for the company
-      debugPrint('SplashPage: Step 2 - Opening database');
+      if (_isOfflineMode) {
+        debugPrint('SplashPage: OFFLINE MODE DETECTED');
+        _updateStatus('Offline mode - Loading cached data...');
+      } else {
+        debugPrint('SplashPage: ONLINE MODE');
+        _updateStatus('Online - Syncing data...');
+      }
+
+      // STEP 2: Initialize company ID FIRST (works offline)
+      _updateStatus('Initializing company...');
+      await _initializeCompanyIdOfflineSafe();
+
+      // STEP 3: Ensure database is properly opened for the company
+      _updateStatus('Opening database...');
       await _ensureDatabaseIsOpen();
 
-      // STEP 3: Check credentials and token
-      debugPrint('SplashPage: Step 3 - Checking credentials');
+      // STEP 4: Check credentials and token
+      _updateStatus('Verifying credentials...');
       final hasValidCredentials = await _hasValidCredentials();
 
       if (!hasValidCredentials) {
@@ -112,43 +159,77 @@ class _SplashPageState extends State<SplashPage> {
         return;
       }
 
-      // STEP 4: Sync data from server if online (BEFORE initializing controllers)
-      debugPrint('SplashPage: Step 4 - Syncing data from server');
-      await _syncDataFromServer();
+      // STEP 5: Check if we have cached data (important for offline mode)
+      final hasCachedData = await _hasCachedData();
 
-      // STEP 5: Initialize controllers AFTER data is synced
-      debugPrint('SplashPage: Step 5 - Initializing controllers');
+      if (_isOfflineMode && !hasCachedData) {
+        debugPrint('SplashPage: Offline mode with no cached data - need to go online first');
+        _showOfflineNoDataDialog();
+        return;
+      }
+
+      if (isOnline) {
+        _updateStatus('Syncing data from server...');
+        await _syncDataFromServer();
+      } else {
+        _updateStatus('Loading cached data...');
+        // Just load company details from DB
+        await _loadCompanyDetailsOffline();
+      }
+
+      // STEP 7: Initialize controllers AFTER data is synced/loaded
+      _updateStatus('Initializing app...');
       _initializeControllers();
 
-      // STEP 6: Load initial data from database into controllers
-      debugPrint('SplashPage: Step 6 - Loading data into controllers');
+      // STEP 8: Load initial data from database into controllers
+      _updateStatus('Loading data...');
       await _loadDataIntoControllers();
 
-      // STEP 7: Navigate to main screen
-      debugPrint('SplashPage: Step 7 - Navigating to BottomNav');
+      // STEP 9: Navigate to main screen
+      _updateStatus('Ready!');
+      await Future.delayed(const Duration(milliseconds: 500));
       Get.offAll(() => const BottomNav());
 
     } catch (e) {
       debugPrint('SplashPage: Fatal error during initialization - $e');
-      Get.offAll(() => const UnifiedLoginScreen());
+      _showErrorDialog(e.toString());
     }
   }
 
-  /// Initialize company ID during splash screen - CALLED ONLY ONCE
-  Future<void> _initializeCompanyId() async {
+  /// Initialize company ID with offline support
+  Future<void> _initializeCompanyIdOfflineSafe() async {
     try {
-      debugPrint('SplashPage: Initializing company ID');
+      debugPrint('SplashPage: Initializing company ID (offline-safe)');
       final apiService = Get.find<MonitorApiService>();
 
-      // This method now handles caching internally
-      await apiService.initializeCompanyId();
+      // Try to get stored company ID first (works offline)
+      final storedCompanyId = await apiService.getStoredCompanyId();
 
-      // Get the initialized company ID (from cache)
-      final companyId = await apiService.getStoredCompanyId();
-      debugPrint('SplashPage: Company ID initialized: $companyId');
+      if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
+        debugPrint('SplashPage: Using stored company ID: $storedCompanyId');
+        // Switch to the company database
+        await _dbHelper.switchCompany(storedCompanyId);
+        return;
+      }
+
+      // If no stored ID and we're online, try to fetch it
+      if (!_isOfflineMode) {
+        await apiService.initializeCompanyId();
+        final companyId = await apiService.getStoredCompanyId();
+        debugPrint('SplashPage: Company ID initialized: $companyId');
+      } else {
+        // Offline with no stored company ID - this is a problem
+        throw Exception('No stored company ID available for offline mode');
+      }
 
     } catch (e) {
       debugPrint('SplashPage: Error initializing company ID - $e');
+
+      // If we're offline, we can't proceed without a stored company ID
+      if (_isOfflineMode) {
+        throw Exception('Cannot use app offline without prior login');
+      }
+
       throw Exception('Failed to initialize company ID: $e');
     }
   }
@@ -169,38 +250,50 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  /// Sync data from server BEFORE initializing controllers
-  Future<void> _syncDataFromServer() async {
+  /// Load company details from database (offline-safe)
+  Future<void> _loadCompanyDetailsOffline() async {
     try {
-      final apiService = Get.find<MonitorApiService>();
-      final isOnline = await NetworkHelper.hasConnection();
-
-      if (isOnline) {
-        debugPrint("SplashPage: Device is online. Syncing all data from server...");
-        await apiService.fetchAndCacheAllData();
-        debugPrint("SplashPage: Data sync completed successfully");
-      } else {
-        debugPrint("SplashPage: Device is offline. Using cached data.");
-      }
-
-      // Load company details into operator controller
       if (!Get.isRegistered<MonOperatorController>()) {
         Get.put(MonOperatorController(), permanent: true);
       }
       await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+      debugPrint('SplashPage: Company details loaded from database');
+    } catch (e) {
+      debugPrint('SplashPage: Error loading company details - $e');
+      // Continue anyway - not critical
+    }
+  }
+
+  /// Sync data from server BEFORE initializing controllers
+  Future<void> _syncDataFromServer() async {
+    try {
+      final apiService = Get.find<MonitorApiService>();
+
+      debugPrint("SplashPage: Device is online. Syncing all data from server...");
+      await apiService.fetchAndCacheAllData();
+      debugPrint("SplashPage: Data sync completed successfully");
+
+      // Load company details into operator controller
+      await _loadCompanyDetailsOffline();
 
     } catch (e) {
-      debugPrint("SplashPage: Error during sync - $e. Will use cached data.");
-      // Don't fail - we can work with cached data
+      debugPrint("SplashPage: Error during sync - $e");
+
+      // Check if we have cached data to fall back on
+      final hasCachedData = await _hasCachedData();
+
+      if (hasCachedData) {
+        debugPrint("SplashPage: Sync failed but we have cached data. Continuing...");
+        _isOfflineMode = true; // Switch to offline mode
+        await _loadCompanyDetailsOffline();
+      } else {
+        throw Exception('Failed to sync data and no cached data available');
+      }
     }
   }
 
   void _initializeControllers() {
     debugPrint('SplashPage: Initializing controllers (without triggering data fetch)');
-
-    // Note: We don't call Get.put here because controllers will
-    // auto-initialize when their widgets are built
-    // This prevents premature data fetching
 
     // Only initialize essential non-data controllers
     if (!Get.isRegistered<MonDashboardController>()) {
@@ -235,6 +328,47 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('SplashPage: Error loading data into controllers - $e');
       // Continue anyway - data can be loaded later
     }
+  }
+
+  void _showOfflineNoDataDialog() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('No Internet Connection'),
+        content: const Text(
+          'You are offline and there is no cached data available. '
+              'Please connect to the internet to sync data first.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.offAll(() => const UnifiedLoginScreen());
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  void _showErrorDialog(String error) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Initialization Error'),
+        content: Text(error),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.offAll(() => const UnifiedLoginScreen());
+            },
+            child: const Text('Back to Login'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 
   @override
@@ -288,16 +422,83 @@ class _SplashPageState extends State<SplashPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Loading...',
-              style: TextStyle(
+            Text(
+              _statusMessage,
+              style: const TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
               ),
             ),
+            if (_isOfflineMode) ...[
+              const SizedBox(height: 8),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.cloud_off,
+                    color: Colors.orange,
+                    size: 16,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Offline Mode',
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class OfflineIndicator extends StatelessWidget {
+  const OfflineIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: NetworkHelper.hasConnection(),
+      builder: (context, snapshot) {
+        final isOnline = snapshot.data ?? true;
+
+        if (isOnline) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.orange,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.cloud_off,
+                color: Colors.white,
+                size: 16,
+              ),
+              SizedBox(width: 6),
+              Text(
+                'Offline',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

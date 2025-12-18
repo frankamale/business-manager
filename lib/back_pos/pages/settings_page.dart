@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../auth/login.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/settings_controller.dart';
+import '../services/settings_service.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -55,6 +56,15 @@ class SettingsPage extends StatelessWidget {
               ],
             ),
           ),
+           ListTile(
+                  leading: const Icon(Icons.monitor),
+                  title: const Text('Monitor App'),
+                  subtitle: const Text('View analytics and monitoring dashboard'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () {
+                    SettingsService().navigateToMonitorApp();
+                  },
+                ),
           // Settings list
           Expanded(
             child: ListView(
@@ -106,6 +116,7 @@ class SettingsPage extends StatelessWidget {
                   title: Text('Help & Support'),
                   trailing: Icon(Icons.arrow_forward_ios),
                 ),
+               
                              ],
             ),
           ),

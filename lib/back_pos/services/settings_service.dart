@@ -1,4 +1,6 @@
 import 'package:get_storage/get_storage.dart';
+import 'package:get/get.dart';
+import 'package:bac_pos/initialise/app_roots.dart';
 
 class SettingsService {
   static const String _autoUploadKey = 'auto_upload_sales';
@@ -28,5 +30,9 @@ class SettingsService {
 
   void setPriceEditingEnabled(bool enabled) {
     _box.write(_priceEditingKey, enabled);
+  }
+
+  void navigateToMonitorApp() {
+    Get.offAll(() => const MonitorAppRoot());
   }
 }
