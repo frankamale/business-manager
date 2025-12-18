@@ -82,58 +82,56 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  /// Attempt to auto-login using stored credentials
-  Future<bool> _attemptAutoLogin() async {
-    try {
-      final credentials = await _getStoredCredentials();
-      final apiService = Get.find<MonitorApiService>();
-
-      if (credentials['username'] == null || credentials['password'] == null) {
-        debugPrint('SplashPage: No stored credentials available for auto-login');
-        return false;
-      }
-
-      debugPrint('SplashPage: Attempting auto-login with stored credentials');
-
-      // Check if we already have a valid token (user might already be authenticated)
-      final token = await apiService.getStoredToken();
-      if (token != null && token.isNotEmpty) {
-        debugPrint('SplashPage: Valid token found, skipping re-authentication');
-        return true;
-      }
-    } catch (e) {
-      debugPrint('SplashPage: Auto-login failed - $e');
-      return false;
-    }
-
-    return false;
-  }
-
   Future<void> _initializeApp() async {
-    debugPrint('SplashPage: Before splash delay');
+    debugPrint('SplashPage: Starting app initialization');
 
-    // Run initialization in parallel with splash delay
+    // Run splash delay in parallel with initialization
     await Future.wait([
       _initializeServicesAndDatabase(),
-      Future.delayed(const Duration(seconds: 2)).then((_) => debugPrint('SplashPage: After splash delay')),
+      Future.delayed(const Duration(seconds: 2)),
     ]);
   }
 
   Future<void> _initializeServicesAndDatabase() async {
-    // Initialize controllers first
-    _initializeControllers();
+    try {
+      // STEP 1: Initialize company ID FIRST (before anything else)
+      debugPrint('SplashPage: Step 1 - Initializing company ID');
+      await _initializeCompanyId();
 
-    // Initialize company ID ONCE - this is critical
-    await _initializeCompanyId();
+      // STEP 2: Ensure database is properly opened for the company
+      debugPrint('SplashPage: Step 2 - Opening database');
+      await _ensureDatabaseIsOpen();
 
-    // Open database
-    await _ensureDatabaseIsOpen();
+      // STEP 3: Check credentials and token
+      debugPrint('SplashPage: Step 3 - Checking credentials');
+      final hasValidCredentials = await _hasValidCredentials();
 
-    // Load initial data from database
-    await _loadDataFromDatabase();
+      if (!hasValidCredentials) {
+        debugPrint('SplashPage: No valid credentials found, redirecting to login');
+        Get.offAll(() => const UnifiedLoginScreen());
+        return;
+      }
 
-    // Continue with authentication and navigation
-    await _performAuthAndNavigation();
+      // STEP 4: Sync data from server if online (BEFORE initializing controllers)
+      debugPrint('SplashPage: Step 4 - Syncing data from server');
+      await _syncDataFromServer();
+
+      // STEP 5: Initialize controllers AFTER data is synced
+      debugPrint('SplashPage: Step 5 - Initializing controllers');
+      _initializeControllers();
+
+      // STEP 6: Load initial data from database into controllers
+      debugPrint('SplashPage: Step 6 - Loading data into controllers');
+      await _loadDataIntoControllers();
+
+      // STEP 7: Navigate to main screen
+      debugPrint('SplashPage: Step 7 - Navigating to BottomNav');
+      Get.offAll(() => const BottomNav());
+
+    } catch (e) {
+      debugPrint('SplashPage: Fatal error during initialization - $e');
+      Get.offAll(() => const UnifiedLoginScreen());
+    }
   }
 
   /// Initialize company ID during splash screen - CALLED ONLY ONCE
@@ -151,143 +149,96 @@ class _SplashPageState extends State<SplashPage> {
 
     } catch (e) {
       debugPrint('SplashPage: Error initializing company ID - $e');
-      // Don't fail the app startup if company ID initialization fails
-    }
-  }
-
-  void _initializeControllers() {
-    debugPrint('SplashPage: Initializing controllers');
-
-    // Initialize all controllers that don't need async operations
-    if (!Get.isRegistered<MonOperatorController>()) {
-      Get.put(MonOperatorController());
-    }
-
-    if (!Get.isRegistered<MonSyncController>()) {
-      Get.put(MonSyncController());
-    }
-
-    if (!Get.isRegistered<MonStoresController>()) {
-      Get.put(MonStoresController());
-    }
-
-    if (!Get.isRegistered<MonStoreKpiTrendController>()) {
-      Get.put(MonStoreKpiTrendController());
-    }
-
-    if (!Get.isRegistered<MonDashboardController>()) {
-      Get.put(MonDashboardController());
-    }
-
-    if (!Get.isRegistered<MonKpiOverviewController>()) {
-      Get.put(MonKpiOverviewController());
-    }
-
-    if (!Get.isRegistered<MonSalesTrendsController>()) {
-      Get.put(MonSalesTrendsController());
-    }
-
-    if (!Get.isRegistered<MonGrossProfitController>()) {
-      Get.put(MonGrossProfitController());
-    }
-
-    if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
-      Get.put(MonOutstandingPaymentsController());
-    }
-
-    if (!Get.isRegistered<MonInventoryController>()) {
-      Get.put(MonInventoryController());
+      throw Exception('Failed to initialize company ID: $e');
     }
   }
 
   Future<void> _ensureDatabaseIsOpen() async {
     try {
+      // Force database to open for the current company
       final db = await _dbHelper.database;
       debugPrint('SplashPage: Database opened successfully');
+
+      // Verify we can query the database
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM service_points');
+      debugPrint('SplashPage: Database verification - service_points count: ${result.first['count']}');
+
     } catch (e) {
       debugPrint('SplashPage: Error opening database - $e');
+      throw Exception('Failed to open database: $e');
     }
   }
 
-  Future<void> _loadDataFromDatabase() async {
+  /// Sync data from server BEFORE initializing controllers
+  Future<void> _syncDataFromServer() async {
     try {
-      debugPrint('SplashPage: Checking network connectivity');
-      final hasNetwork = await NetworkHelper.hasConnection();
-      debugPrint('SplashPage: Network available = $hasNetwork');
-
-      // Load data from database for offline use
-      debugPrint('SplashPage: Loading data from database');
-
-      // Get controllers
-      final storesController = Get.find<MonStoresController>();
-      final inventoryController = Get.find<MonInventoryController>();
-
-      // Load data in parallel
-      await Future.wait([
-        storesController.fetchAllStores(),
-        inventoryController.loadInventoryFromDb(),
-      ]);
-
-      debugPrint('SplashPage: Data loaded from database successfully');
-
-    } catch (e) {
-      debugPrint('SplashPage: Error loading data from database - $e');
-      // Continue even if data loading fails
-    }
-  }
-
-  Future<void> _performAuthAndNavigation() async {
-    final apiService = Get.find<MonitorApiService>();
-
-    // Check if we have valid credentials and company ID
-    final hasValidCredentials = await _hasValidCredentials();
-
-    if (!hasValidCredentials) {
-      debugPrint('SplashPage: No valid credentials found, redirecting to login');
-      Get.offAll(() => const UnifiedLoginScreen());
-      return;
-    }
-
-    // Load company details (using cached company ID)
-    await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
-
-    final token = await apiService.getStoredToken();
-
-    if (token == null) {
-      debugPrint('SplashPage: No token found, redirecting to login');
-      Get.offAll(() => const UnifiedLoginScreen());
-      return;
-    }
-
-    // Attempt auto-login if we have stored credentials but no valid session
-    final autoLoginSuccess = await _attemptAutoLogin();
-    if (!autoLoginSuccess) {
-      debugPrint('SplashPage: Auto-login failed, redirecting to login');
-      Get.offAll(() => const UnifiedLoginScreen());
-      return;
-    }
-
-    // Sync data if online
-    try {
+      final apiService = Get.find<MonitorApiService>();
       final isOnline = await NetworkHelper.hasConnection();
+
       if (isOnline) {
-        debugPrint("SplashPage: Device is online. Syncing recent sales...");
+        debugPrint("SplashPage: Device is online. Syncing all data from server...");
         await apiService.fetchAndCacheAllData();
+        debugPrint("SplashPage: Data sync completed successfully");
       } else {
-        debugPrint("SplashPage: Device is offline. Proceeding with local data.");
+        debugPrint("SplashPage: Device is offline. Using cached data.");
       }
+
+      // Load company details into operator controller
+      if (!Get.isRegistered<MonOperatorController>()) {
+        Get.put(MonOperatorController(), permanent: true);
+      }
+      await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+
     } catch (e) {
-      debugPrint("SplashPage: Error during initial sync. Proceeding with local data. Error: $e");
+      debugPrint("SplashPage: Error during sync - $e. Will use cached data.");
+      // Don't fail - we can work with cached data
+    }
+  }
+
+  void _initializeControllers() {
+    debugPrint('SplashPage: Initializing controllers (without triggering data fetch)');
+
+    // Note: We don't call Get.put here because controllers will
+    // auto-initialize when their widgets are built
+    // This prevents premature data fetching
+
+    // Only initialize essential non-data controllers
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController(), permanent: true);
     }
 
-    debugPrint('SplashPage: Before navigation to BottomNav');
-    Get.offAll(() => const BottomNav());
+    if (!Get.isRegistered<MonSyncController>()) {
+      Get.put(MonSyncController(), permanent: true);
+    }
+  }
+
+  /// Load data into controllers AFTER database is ready
+  Future<void> _loadDataIntoControllers() async {
+    try {
+      debugPrint('SplashPage: Loading data into controllers');
+
+      // Initialize stores controller and load stores
+      if (!Get.isRegistered<MonStoresController>()) {
+        final storesController = Get.put(MonStoresController(), permanent: true);
+        await storesController.fetchAllStores();
+      }
+
+      // Initialize inventory controller and load inventory
+      if (!Get.isRegistered<MonInventoryController>()) {
+        final inventoryController = Get.put(MonInventoryController(), permanent: true);
+        await inventoryController.loadInventoryFromDb();
+      }
+
+      debugPrint('SplashPage: Controllers loaded with data successfully');
+
+    } catch (e) {
+      debugPrint('SplashPage: Error loading data into controllers - $e');
+      // Continue anyway - data can be loaded later
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final operatorController = Get.find<MonOperatorController>();
-
     return Scaffold(
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -306,6 +257,18 @@ class _SplashPageState extends State<SplashPage> {
             ),
             const SizedBox(height: 24),
             Obx(() {
+              if (!Get.isRegistered<MonOperatorController>()) {
+                return const Text(
+                  'Welcome',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              }
+
+              final operatorController = Get.find<MonOperatorController>();
               final companyName = operatorController.companyName.value;
               return Text(
                 companyName.isNotEmpty && companyName != 'Loading...'
@@ -322,6 +285,14 @@ class _SplashPageState extends State<SplashPage> {
             const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(
                 PrimaryColors.brightYellow,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Loading...',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
               ),
             ),
           ],

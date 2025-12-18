@@ -1,3 +1,7 @@
+// ============================================================
+// OPTIMIZED MonKpiOverviewController
+// ============================================================
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../db/db_helper.dart';
@@ -11,6 +15,7 @@ class MonKpiOverviewController extends GetxController {
 
   var isLoading = true.obs;
   var hasError = false.obs;
+  var isInitialized = false.obs; // Track if first load is done
 
   var totalSales = "0".obs;
   var salesTrend = "0%".obs;
@@ -29,9 +34,33 @@ class MonKpiOverviewController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchKpiData();
-    ever(dateController.selectedRange, (_) => fetchKpiData());
-    ever(dateController.customRange, (_) => fetchKpiData());
+    // DON'T fetch data here - let the UI trigger it when ready
+    debugPrint('MonKpiOverviewController: onInit - NOT fetching data yet');
+
+    // Set up listeners for date changes
+    ever(dateController.selectedRange, (_) {
+      if (isInitialized.value) {
+        fetchKpiData();
+      }
+    });
+
+    ever(dateController.customRange, (_) {
+      if (isInitialized.value) {
+        fetchKpiData();
+      }
+    });
+  }
+
+  /// Call this manually when the UI is ready
+  Future<void> initializeData() async {
+    if (isInitialized.value) {
+      debugPrint('MonKpiOverviewController: Already initialized, skipping');
+      return;
+    }
+
+    debugPrint('MonKpiOverviewController: Performing first data fetch');
+    await fetchKpiData();
+    isInitialized.value = true;
   }
 
   Future<void> fetchKpiData() async {
@@ -74,11 +103,7 @@ class MonKpiOverviewController extends GetxController {
           endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
           final prevMonth = DateTime(now.year, now.month - 1, 1);
           prevStartDate = prevMonth;
-          prevEndDate = DateTime(
-            now.year,
-            now.month,
-            1,
-          ).subtract(const Duration(milliseconds: 1));
+          prevEndDate = DateTime(now.year, now.month, 1).subtract(const Duration(milliseconds: 1));
           break;
         case DateRange.custom:
           if (customRange != null) {
@@ -89,11 +114,7 @@ class MonKpiOverviewController extends GetxController {
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           } else {
             startDate = now.subtract(const Duration(days: 6));
-            startDate = DateTime(
-              startDate.year,
-              startDate.month,
-              startDate.day,
-            );
+            startDate = DateTime(startDate.year, startDate.month, startDate.day);
             prevStartDate = startDate.subtract(const Duration(days: 7));
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           }
@@ -123,60 +144,33 @@ class MonKpiOverviewController extends GetxController {
           'SELECT COUNT(DISTINCT name) as total FROM service_points';
       const currencyQuery = 'SELECT currency FROM sales LIMIT 1';
 
-      final currentSalesResult = await db.rawQuery(salesQuery, [
-        startMillis,
-        endMillis,
+      // Execute all queries in parallel
+      final results = await Future.wait([
+        db.rawQuery(salesQuery, [startMillis, endMillis]),
+        db.rawQuery(salesQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(transactionsQuery, [startMillis, endMillis]),
+        db.rawQuery(transactionsQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(activeStoresQuery, [startMillis, endMillis]),
+        db.rawQuery(activeStoresQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(basketQuery, [startMillis, endMillis]),
+        db.rawQuery(basketQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(totalStoresQuery),
+        db.rawQuery(currencyQuery),
       ]);
-      final prevSalesResult = await db.rawQuery(salesQuery, [
-        prevStartMillis,
-        prevEndMillis,
-      ]);
-      final currentTransResult = await db.rawQuery(transactionsQuery, [
-        startMillis,
-        endMillis,
-      ]);
-      final prevTransResult = await db.rawQuery(transactionsQuery, [
-        prevStartMillis,
-        prevEndMillis,
-      ]);
-      final currentActiveStoresResult = await db.rawQuery(activeStoresQuery, [
-        startMillis,
-        endMillis,
-      ]);
-      final prevActiveStoresResult = await db.rawQuery(activeStoresQuery, [
-        prevStartMillis,
-        prevEndMillis,
-      ]);
-      final currentBasketResult = await db.rawQuery(basketQuery, [
-        startMillis,
-        endMillis,
-      ]);
-      final prevBasketResult = await db.rawQuery(basketQuery, [
-        prevStartMillis,
-        prevEndMillis,
-      ]);
-      final totalStoresResult = await db.rawQuery(totalStoresQuery);
-      final currencyResult = await db.rawQuery(currencyQuery);
 
-      final currentSales = (currentSalesResult.first['total'] as num? ?? 0.0)
-          .toDouble();
-      final prevSales = (prevSalesResult.first['total'] as num? ?? 0.0)
-          .toDouble();
-      final currentTransactions =
-          currentTransResult.first['count'] as int? ?? 0;
-      final prevTransactions = prevTransResult.first['count'] as int? ?? 0;
-      final currentActiveStores =
-          currentActiveStoresResult.first['active'] as int? ?? 0;
-      final prevActiveStores =
-          prevActiveStoresResult.first['active'] as int? ?? 0;
-      final currentBasket = (currentBasketResult.first['avg'] as num? ?? 0.0)
-          .toDouble();
-      final prevBasket = (prevBasketResult.first['avg'] as num? ?? 0.0)
-          .toDouble();
-      final totalStores = totalStoresResult.first['total'] as int? ?? 0;
+      final currentSales = (results[0].first['total'] as num? ?? 0.0).toDouble();
+      final prevSales = (results[1].first['total'] as num? ?? 0.0).toDouble();
+      final currentTransactions = results[2].first['count'] as int? ?? 0;
+      final prevTransactions = results[3].first['count'] as int? ?? 0;
+      final currentActiveStores = results[4].first['active'] as int? ?? 0;
+      final prevActiveStores = results[5].first['active'] as int? ?? 0;
+      final currentBasket = (results[6].first['avg'] as num? ?? 0.0).toDouble();
+      final prevBasket = (results[7].first['avg'] as num? ?? 0.0).toDouble();
+      final totalStores = results[8].first['total'] as int? ?? 0;
+
       String currency = 'UGX';
-      if (currencyResult.isNotEmpty) {
-        String? dbCurrency = currencyResult.first['currency'] as String?;
+      if (results[9].isNotEmpty) {
+        String? dbCurrency = results[9].first['currency'] as String?;
         if (dbCurrency != null) {
           currency = dbCurrency == 'Uganda Shillings' ? 'UGX' : dbCurrency;
         }
@@ -204,33 +198,26 @@ class MonKpiOverviewController extends GetxController {
       salesTrend.value = percentFormatter.format(salesTrendValue);
       salesTrendDirection.value = salesTrendValue > 0.001
           ? TrendDirection.up
-          : (salesTrendValue < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
+          : (salesTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
 
       totalTransactions.value = fullNumberFormatter.format(currentTransactions);
       transactionsTrend.value = percentFormatter.format(transactionsTrendValue);
       transactionsTrendDirection.value = transactionsTrendValue > 0.001
           ? TrendDirection.up
-          : (transactionsTrendValue < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
+          : (transactionsTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
 
       activeTotalStores.value = '$currentActiveStores / $totalStores';
       storesTrend.value = percentFormatter.format(storesTrendValue);
       storesTrendDirection.value = storesTrendValue > 0.001
           ? TrendDirection.up
-          : (storesTrendValue < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
+          : (storesTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
 
       avgBasketSize.value = compactFormatter.format(currentBasket);
       basketTrend.value = percentFormatter.format(basketTrendValue);
       basketTrendDirection.value = basketTrendValue > 0.001
           ? TrendDirection.up
-          : (basketTrendValue < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
+          : (basketTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
+
     } catch (e) {
       hasError.value = true;
       print("Error fetching KPI data: $e");

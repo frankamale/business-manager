@@ -6,7 +6,6 @@ import '../services/api_services.dart';
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
 
-
   factory DatabaseHelper() => _instance;
 
   DatabaseHelper._internal();
@@ -15,15 +14,18 @@ class DatabaseHelper {
   static final Map<String, Database> _databases = {};
   static String? _currentCompanyId;
 
+  // Cache for company ID to avoid repeated lookups
+  String? _cachedCompanyId;
+
   Future<Database> get database async {
-    // Get current company ID
+    // Get current company ID (with caching)
     final companyId = await _getCurrentCompanyId();
-    
+
     // Check if we already have a database instance for this company
-    if (_databases.containsKey(companyId)) {
+    if (_databases.containsKey(companyId) && _currentCompanyId == companyId) {
       return _databases[companyId]!;
     }
-    
+
     // Initialize new database for this company
     final db = await _initDb(companyId);
     _databases[companyId] = db;
@@ -34,21 +36,36 @@ class DatabaseHelper {
   Future<Database> _initDb(String companyId) async {
     // Sanitize company ID for use in database name
     final sanitizedCompanyId = _sanitizeCompanyId(companyId);
-    
+
     // Create company-specific database name
     final dbName = 'app_database_$sanitizedCompanyId.db';
     String path = join(await getDatabasesPath(), dbName);
-    
-    return await openDatabase(path, version: 7, onCreate: _onCreate, onUpgrade: _onUpgrade);
+
+    print('DatabaseHelper: Opening database at $path');
+
+    return await openDatabase(
+      path,
+      version: 7,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
   }
 
   Future<String> _getCurrentCompanyId() async {
+    // Return cached company ID if available
+    if (_cachedCompanyId != null) {
+      return _cachedCompanyId!;
+    }
+
     try {
       final apiService = Get.find<MonitorApiService>();
-      return await apiService.ensureCompanyIdAvailable();
+      final companyId = await apiService.ensureCompanyIdAvailable();
+      _cachedCompanyId = companyId; // Cache it
+      return companyId;
     } catch (e) {
       // If company ID is not available, use a default
       print("DatabaseHelper: Company ID not available, using default: $e");
+      _cachedCompanyId = 'default';
       return 'default';
     }
   }
@@ -62,28 +79,42 @@ class DatabaseHelper {
   /// This will close the current database and open the one for the specified company
   Future<void> switchCompany(String newCompanyId) async {
     final sanitizedCompanyId = _sanitizeCompanyId(newCompanyId);
-    
+
+    print('DatabaseHelper: Switching to company: $sanitizedCompanyId');
+
+    // Update cached company ID
+    _cachedCompanyId = sanitizedCompanyId;
+
     // If we're already using this company, do nothing
-    if (_currentCompanyId == sanitizedCompanyId) {
+    if (_currentCompanyId == sanitizedCompanyId && _databases.containsKey(sanitizedCompanyId)) {
+      print('DatabaseHelper: Already using this company database');
       return;
     }
-    
-    // Close the current database if it exists
-    if (_currentCompanyId != null && _databases.containsKey(_currentCompanyId)) {
+
+    // Close the current database if it exists and is different
+    if (_currentCompanyId != null &&
+        _currentCompanyId != sanitizedCompanyId &&
+        _databases.containsKey(_currentCompanyId)) {
       try {
+        print('DatabaseHelper: Closing old database for company $_currentCompanyId');
         await _databases[_currentCompanyId]!.close();
         _databases.remove(_currentCompanyId);
       } catch (e) {
         print("DatabaseHelper: Error closing database for company $_currentCompanyId: $e");
       }
     }
-    
+
     // Open the database for the new company
     _currentCompanyId = sanitizedCompanyId;
+
+    // Force database to open
+    await database;
+    print('DatabaseHelper: Successfully switched to company: $sanitizedCompanyId');
   }
 
   /// Close all database instances
   Future<void> closeAllDatabases() async {
+    print('DatabaseHelper: Closing all databases');
     for (final entry in _databases.entries) {
       try {
         await entry.value.close();
@@ -93,11 +124,12 @@ class DatabaseHelper {
     }
     _databases.clear();
     _currentCompanyId = null;
+    _cachedCompanyId = null;
   }
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS  service_points(
+      CREATE TABLE IF NOT EXISTS service_points(
         id TEXT PRIMARY KEY,
         name TEXT,
         code TEXT,
@@ -114,12 +146,11 @@ class DatabaseHelper {
         facilityCode TEXT,
         fullName TEXT,
         servicepointtype TEXT
-    
       )
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS  company_details(
+      CREATE TABLE IF NOT EXISTS company_details(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         branch TEXT,
         company TEXT,
@@ -135,7 +166,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS  sales(
+      CREATE TABLE IF NOT EXISTS sales(
         id TEXT PRIMARY KEY,
         purchaseordernumber TEXT,
         internalrefno TEXT,
@@ -179,66 +210,62 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-  CREATE TABLE IF NOT EXISTS  inventory(
-    id TEXT PRIMARY KEY,
-    ipdid TEXT,
-    code TEXT,
-    externalserial TEXT,
-    name TEXT,
-    category TEXT,
-    price REAL,
-    packsize REAL,
-    packaging TEXT,
-    packagingid TEXT,
-    soldfrom TEXT,
-    shortform TEXT,
-    packagingcode TEXT,
-    efris INTEGER,
-    efrisid TEXT,
-    measurmentunitidefris TEXT,
-    measurmentunit TEXT,
-    measurmentunitid TEXT,
-    vatcategoryid TEXT,
-    branchid TEXT,
-    companyid TEXT,
-    downloadlink TEXT
-  )
-''');
+      CREATE TABLE IF NOT EXISTS inventory(
+        id TEXT PRIMARY KEY,
+        ipdid TEXT,
+        code TEXT,
+        externalserial TEXT,
+        name TEXT,
+        category TEXT,
+        price REAL,
+        packsize REAL,
+        packaging TEXT,
+        packagingid TEXT,
+        soldfrom TEXT,
+        shortform TEXT,
+        packagingcode TEXT,
+        efris INTEGER,
+        efrisid TEXT,
+        measurmentunitidefris TEXT,
+        measurmentunit TEXT,
+        measurmentunitid TEXT,
+        vatcategoryid TEXT,
+        branchid TEXT,
+        companyid TEXT,
+        downloadlink TEXT
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 5) {
-      await db.execute(
-          'ALTER TABLE sales ADD COLUMN service_point_id TEXT'
-      );
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN service_point_id TEXT');
+      } catch (e) {
+        print('DatabaseHelper: Column service_point_id may already exist: $e');
+      }
     }
 
     if (oldVersion < 6) {
-      await db.execute(
-          'ALTER TABLE sales ADD COLUMN salesperson TEXT'
-      );
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN salesperson TEXT');
+      } catch (e) {
+        print('DatabaseHelper: Column salesperson may already exist: $e');
+      }
     }
-
-
   }
 
-  Future<String?> getServicePointIdByName(
-    String name, {
-    DatabaseExecutor? db,
-  }) async {
+  Future<String?> getServicePointIdByName(String name, {DatabaseExecutor? db}) async {
     final executor = db ?? await database;
     final result = await executor.query(
       'service_points',
-      where: 'name = ? ',
+      where: 'name = ?',
       whereArgs: [name],
     );
     return result.isNotEmpty ? result.first['id'] as String? : null;
   }
 
-  Future<void> insertServicePoint(
-    Map<String, dynamic> servicePoint, {
-    DatabaseExecutor? db,
-  }) async {
+  Future<void> insertServicePoint(Map<String, dynamic> servicePoint, {DatabaseExecutor? db}) async {
     final executor = db ?? await database;
     await executor.insert('service_points', {
       'id': servicePoint['id'],
@@ -260,10 +287,7 @@ class DatabaseHelper {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<void> insertCompanyDetails(
-    Map<String, dynamic> companyDetails, {
-    DatabaseExecutor? db,
-  }) async {
+  Future<void> insertCompanyDetails(Map<String, dynamic> companyDetails, {DatabaseExecutor? db}) async {
     final executor = db ?? await database;
     await executor.insert('company_details', {
       'branch': companyDetails['branch'],
@@ -273,17 +297,13 @@ class DatabaseHelper {
       'currentBranchCode': companyDetails['currentBranchCode'],
       'activeBranchName': companyDetails['activeBranch']?['name'],
       'activeBranchAddress': companyDetails['activeBranch']?['address'],
-      'activeBranchPrimaryEmail':
-          companyDetails['activeBranch']?['primaryEmail'],
+      'activeBranchPrimaryEmail': companyDetails['activeBranch']?['primaryEmail'],
       'activeBranchCode': companyDetails['activeBranch']?['code'],
       'efrisEnabled': companyDetails['efrisEnabled'] ? 1 : 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<void> insertSale(
-    Map<String, dynamic> sale, {
-    DatabaseExecutor? db,
-  }) async {
+  Future<void> insertSale(Map<String, dynamic> sale, {DatabaseExecutor? db}) async {
     final executor = db ?? await database;
     Map<String, dynamic> toInsert = {};
 
@@ -327,14 +347,10 @@ class DatabaseHelper {
     if (sale.containsKey('service_point_id')) toInsert['service_point_id'] = sale['service_point_id'];
     if (sale.containsKey('salesperson')) toInsert['salesperson'] = sale['salesperson'];
 
-
     await executor.insert('sales', toInsert, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<void> insertInventoryItem(
-    Map<String, dynamic> item, {
-    DatabaseExecutor? db,
-  }) async {
+  Future<void> insertInventoryItem(Map<String, dynamic> item, {DatabaseExecutor? db}) async {
     final executor = db ?? await database;
     await executor.insert('inventory', {
       'id': item['id'],
@@ -364,26 +380,23 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getAllInventoryItems() async {
     final db = await database;
-    return await db.query(
-        'inventory',
-
-
-    );
+    return await db.query('inventory');
   }
 
   Future<void> mapSalesToServicePoints({DatabaseExecutor? db}) async {
     final executor = db ?? await database;
-    final sales = await executor.query(
-      'sales',
+    final sales = await executor.query('sales');
 
-    );    for (final sale in sales) {
+    for (final sale in sales) {
       final sourceFacility = sale['sourcefacility'] as String?;
       if (sourceFacility == null) continue;
+
       final servicePoints = await executor.query(
         'service_points',
-        where: '(name = ? OR fullName = ?) ',
+        where: '(name = ? OR fullName = ?)',
         whereArgs: [sourceFacility, sourceFacility],
       );
+
       if (servicePoints.isNotEmpty) {
         final servicePointId = servicePoints.first['id'] as String?;
         if (servicePointId != null) {

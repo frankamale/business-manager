@@ -1,5 +1,7 @@
 
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_store_kpi_controller.dart';
+// ============================================================
+// OPTIMIZED MonStoresController
+// ============================================================
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -9,12 +11,14 @@ import '../models/product.dart';
 import '../models/store.dart';
 import '../db/db_helper.dart';
 import '../widgets/finance/date_range.dart';
+import 'mon_store_kpi_controller.dart';
 
 class MonStoresController extends GetxController {
   final dbHelper = DatabaseHelper();
 
   var isLoading = true.obs;
   var isFetchingKpisAndCharts = true.obs;
+  var isInitialized = false.obs;
   var storeList = <Store>[].obs;
   var selectedStore = Rxn<Store>();
   var selectedDateRange = DateRange.last7Days.obs;
@@ -27,9 +31,76 @@ class MonStoresController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchAllStores();
+    // DON'T fetch stores here - call fetchAllStores() manually when ready
+    debugPrint('MonStoresController: onInit - NOT fetching stores yet');
   }
 
+  Future<void> fetchAllStores() async {
+    if (isInitialized.value) {
+      debugPrint('MonStoresController: Already initialized, skipping');
+      return;
+    }
+
+    isLoading.value = true;
+    try {
+      final db = await dbHelper.database;
+      final result = await db.query(
+        'service_points',
+        where: 'stores = ?',
+        whereArgs: [1],
+        orderBy: 'name ASC',
+      );
+      final storesFromDb = result
+          .map((row) => Store(id: row['id'] as String, name: row['name'] as String))
+          .toList();
+      storeList.assignAll([Store.all, ...storesFromDb]);
+
+      if (storeList.isNotEmpty) {
+        selectedStore.value = Store.all;
+        // DON'T fetch data here - let the UI trigger it
+      }
+
+      isInitialized.value = true;
+    } catch (e) {
+      print("Error fetching stores: $e");
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> onStoreChanged(Store? newStore) async {
+    if (newStore != null && newStore.id != selectedStore.value?.id) {
+      selectedStore.value = newStore;
+      await fetchAllDataForSelection();
+    }
+  }
+
+  Future<void> onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) async {
+    selectedDateRange.value = newRange;
+    customDateRange.value = customRange;
+    await fetchAllDataForSelection();
+  }
+
+  Future<void> fetchAllDataForSelection() async {
+    if (selectedStore.value == null) return;
+    isFetchingKpisAndCharts.value = true;
+
+    try {
+      await Future.wait([
+        _fetchSalesDataForChart(),
+        _fetchHourlyTrafficData(),
+        _fetchTopProductsData(),
+        if (Get.isRegistered<MonStoreKpiTrendController>())
+          Get.find<MonStoreKpiTrendController>().fetchKpiTrendData(),
+      ]);
+    } catch (e) {
+      print("Error fetching data for selection: $e");
+    } finally {
+      isFetchingKpisAndCharts.value = false;
+    }
+  }
+
+  // ... rest of the methods remain the same ...
   Future<void> _fetchSalesDataForChart() async {
     try {
       final db = await dbHelper.database;
@@ -58,12 +129,7 @@ class MonStoresController extends GetxController {
 
       if (aggregationType.value == 'hourly') {
         for (int i = 0; i < 24; i += 3) {
-          final hourDate = DateTime(
-            startDate.year,
-            startDate.month,
-            startDate.day,
-            i,
-          );
+          final hourDate = DateTime(startDate.year, startDate.month, startDate.day, i);
           salesByDate[hourlyFormatter.format(hourDate)] = 0.0;
         }
       } else if (aggregationType.value == 'daily') {
@@ -80,25 +146,15 @@ class MonStoresController extends GetxController {
         }
       } else if (aggregationType.value == 'monthly') {
         var currentMonth = DateTime(startDate.year, startDate.month, 1);
-        while (currentMonth.isBefore(endDate) ||
-            currentMonth.isAtSameMomentAs(endDate)) {
+        while (currentMonth.isBefore(endDate) || currentMonth.isAtSameMomentAs(endDate)) {
           salesByDate[dateFormatter.format(currentMonth)] = 0.0;
           currentMonth = DateTime(currentMonth.year, currentMonth.month + 1, 1);
         }
       } else if (aggregationType.value == 'quarterly') {
-        var currentQuarter = DateTime(
-          startDate.year,
-          ((startDate.month - 1) ~/ 3) * 3 + 1,
-          1,
-        );
-        while (currentQuarter.isBefore(endDate) ||
-            currentQuarter.isAtSameMomentAs(endDate)) {
+        var currentQuarter = DateTime(startDate.year, ((startDate.month - 1) ~/ 3) * 3 + 1, 1);
+        while (currentQuarter.isBefore(endDate) || currentQuarter.isAtSameMomentAs(endDate)) {
           salesByDate[dateFormatter.format(currentQuarter)] = 0.0;
-          currentQuarter = DateTime(
-            currentQuarter.year,
-            currentQuarter.month + 3,
-            1,
-          );
+          currentQuarter = DateTime(currentQuarter.year, currentQuarter.month + 3, 1);
         }
       }
 
@@ -108,22 +164,22 @@ class MonStoresController extends GetxController {
 
       if (aggregationType.value == 'hourly') {
         dateGroupClause =
-            "strftime('%Y-%m-%d ', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d:00:00', (CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) / 3 * 3))";
+        "strftime('%Y-%m-%d ', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d:00:00', (CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) / 3 * 3))";
       } else if (aggregationType.value == 'daily') {
         dateGroupClause =
-            "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
       } else if (aggregationType.value == 'weekly') {
         dateGroupClause =
-            "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime', 'weekday 1', '-7 days'))";
+        "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime', 'weekday 1', '-7 days'))";
       } else if (aggregationType.value == 'monthly') {
         dateGroupClause =
-            "strftime('%Y-%m-01', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        "strftime('%Y-%m-01', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
       } else if (aggregationType.value == 'quarterly') {
         dateGroupClause =
-            "strftime('%Y-', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d-01', ((CAST(strftime('%m', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) - 1) / 3 * 3 + 1))";
+        "strftime('%Y-', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d-01', ((CAST(strftime('%m', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) - 1) / 3 * 3 + 1))";
       } else {
         dateGroupClause =
-            "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
         aggregationType.value = 'daily';
       }
 
@@ -135,7 +191,7 @@ class MonStoresController extends GetxController {
           : [selectedStore.value!.name, startMillis, endMillis];
 
       final query =
-          ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM sales $whereClause GROUP BY date, salesId) GROUP BY date ORDER BY date''';
+      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM sales $whereClause GROUP BY date, salesId) GROUP BY date ORDER BY date''';
       final result = await db.rawQuery(query, args);
 
       for (var row in result) {
@@ -159,62 +215,6 @@ class MonStoresController extends GetxController {
     }
   }
 
-  Future<void> fetchAllStores() async {
-    isLoading.value = true;
-    try {
-      final db = await dbHelper.database;
-      final result = await db.query(
-        'service_points',
-        where: 'stores = ?',
-        whereArgs: [1],
-        orderBy: 'name ASC',
-      );
-      final storesFromDb = result
-          .map(
-            (row) =>
-                Store(id: row['id'] as String, name: row['name'] as String),
-          )
-          .toList();
-      storeList.assignAll([Store.all, ...storesFromDb]);
-      if (storeList.isNotEmpty) {
-        selectedStore.value = Store.all;
-        await fetchAllDataForSelection();
-      }
-    } catch (e) {
-      print("Error fetching stores: $e");
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  Future<void> onStoreChanged(Store? newStore) async {
-    if (newStore != null && newStore.id != selectedStore.value?.id) {
-      selectedStore.value = newStore;
-      await fetchAllDataForSelection();
-    }
-  }
-
-  Future<void> onDateRangeChanged(
-    DateRange newRange,
-    DateTimeRange? customRange,
-  ) async {
-    selectedDateRange.value = newRange;
-    customDateRange.value = customRange;
-    await fetchAllDataForSelection();
-  }
-
-  Future<void> fetchAllDataForSelection() async {
-    if (selectedStore.value == null) return;
-    isFetchingKpisAndCharts.value = true;
-    await Future.wait([
-      _fetchSalesDataForChart(),
-      _fetchHourlyTrafficData(),
-      _fetchTopProductsData(),
-      Get.find<MonStoreKpiTrendController>().fetchKpiTrendData(),
-    ]);
-    isFetchingKpisAndCharts.value = false;
-  }
-
   Future<void> _fetchHourlyTrafficData() async {
     try {
       final db = await dbHelper.database;
@@ -224,24 +224,13 @@ class MonStoresController extends GetxController {
           ? 'WHERE transactiondate BETWEEN ? AND ?'
           : 'WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
       final args = isAllStores
-          ? [
-              range.start.millisecondsSinceEpoch,
-              range.end.millisecondsSinceEpoch,
-            ]
-          : [
-              selectedStore.value!.name,
-              range.start.millisecondsSinceEpoch,
-              range.end.millisecondsSinceEpoch,
-            ];
+          ? [range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch]
+          : [selectedStore.value!.name, range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch];
       final query =
           " SELECT CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch')) AS INTEGER) as hour, COUNT(DISTINCT salesId) as count FROM sales $whereClause GROUP BY hour ORDER BY hour ";
       final result = await db.rawQuery(query, args);
       hourlyTrafficData.assignAll(
-        result
-            .map(
-              (row) => HourlyTraffic(row['hour'] as int, row['count'] as int),
-            )
-            .toList(),
+        result.map((row) => HourlyTraffic(row['hour'] as int, row['count'] as int)).toList(),
       );
     } catch (e) {
       print("Error fetching hourly traffic data: $e");
@@ -258,15 +247,8 @@ class MonStoresController extends GetxController {
           ? 'WHERE transactiondate BETWEEN ? AND ?'
           : 'WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
       final args = isAllStores
-          ? [
-              range.start.millisecondsSinceEpoch,
-              range.end.millisecondsSinceEpoch,
-            ]
-          : [
-              selectedStore.value!.name,
-              range.start.millisecondsSinceEpoch,
-              range.end.millisecondsSinceEpoch,
-            ];
+          ? [range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch]
+          : [selectedStore.value!.name, range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch];
 
       final query = '''
         SELECT inventoryname, SUM(quantity) as total_quantity, SUM(amount) as total_revenue
@@ -285,13 +267,12 @@ class MonStoresController extends GetxController {
         return TopProduct(
           rank: index + 1,
           name: row['inventoryname'] as String? ?? 'Unknown Product',
-          imageUrl: '', // Will be populated from inventory table if available
+          imageUrl: '',
           unitsSold: (row['total_quantity'] as num?)?.toInt() ?? 0,
           revenue: (row['total_revenue'] as num?)?.toDouble() ?? 0.0,
         );
       }).toList();
 
-      // Try to populate image URLs from inventory table
       for (var product in products) {
         final inventoryResult = await db.query(
           'inventory',
@@ -370,12 +351,8 @@ class MonStoresController extends GetxController {
   int _getWeekNumber(DateTime date) {
     final firstJan = DateTime(date.year, 1, 1);
     final daysSinceFirstJan = date.difference(firstJan).inDays;
-    final firstMonday = firstJan.add(
-      Duration(days: (1 - firstJan.weekday + 7) % 7),
-    );
+    final firstMonday = firstJan.add(Duration(days: (1 - firstJan.weekday + 7) % 7));
     if (date.isBefore(firstMonday)) return 1;
-    return ((daysSinceFirstJan - firstMonday.difference(firstJan).inDays) ~/
-            7) +
-        1;
+    return ((daysSinceFirstJan - firstMonday.difference(firstJan).inDays) ~/ 7) + 1;
   }
 }
