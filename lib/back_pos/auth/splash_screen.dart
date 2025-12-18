@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:developer' as developer;
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+import 'login.dart';
+import 'server_login.dart';
+import '../services/api_services.dart';
+import '../controllers/auth_controller.dart';
+import '../controllers/service_point_controller.dart';
+import '../controllers/inventory_controller.dart';
+import '../controllers/sales_controller.dart';
+import '../controllers/payment_controller.dart';
+import '../controllers/customer_controller.dart';
+import '../database/db_helper.dart';
+import '../utils/network_helper.dart';
+=======
 import '../../initialise/unified_login_screen.dart';
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
 import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/customer_controller.dart';
@@ -89,9 +103,13 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (!hasServerCredentials) {
         // First time - navigate to server login
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+        _log('authenticateApp: No credentials found, redirecting to server login');
+=======
         _log(
           'authenticateApp: No credentials found, redirecting to server login',
         );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
         setState(() {
           _statusMessage = 'Redirecting to server login...';
         });
@@ -100,7 +118,11 @@ class _SplashScreenState extends State<SplashScreen>
 
         if (mounted) {
           _log('authenticateApp: Navigating to ServerLogin screen');
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+          Get.off(() => const ServerLogin());
+=======
           Get.off(() => const UnifiedLoginScreen());
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
         }
         return;
       }
@@ -111,6 +133,13 @@ class _SplashScreenState extends State<SplashScreen>
       final storedUsername = credentials['username'];
       final storedPassword = credentials['password'];
 
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+      _log('authenticateApp: Retrieved username = ${storedUsername != null ? storedUsername : "null"}');
+      _log('authenticateApp: Retrieved password = ${storedPassword != null ? storedPassword : "null"}');
+
+      if (storedUsername == null || storedPassword == null) {
+        _log('authenticateApp: Credentials are incomplete, redirecting to server login', level: 'WARN');
+=======
       _log(
         'authenticateApp: Retrieved username = ${storedUsername != null ? storedUsername : "null"}',
       );
@@ -123,6 +152,7 @@ class _SplashScreenState extends State<SplashScreen>
           'authenticateApp: Credentials are incomplete, redirecting to server login',
           level: 'WARN',
         );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
         setState(() {
           _statusMessage =
               'Credentials missing, redirecting to server login...';
@@ -132,7 +162,11 @@ class _SplashScreenState extends State<SplashScreen>
 
         if (mounted) {
           _log('authenticateApp: Navigating to ServerLogin screen');
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+          Get.off(() => const ServerLogin());
+=======
           Get.off(() => const UnifiedLoginScreen());
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
         }
         return;
       }
@@ -153,10 +187,14 @@ class _SplashScreenState extends State<SplashScreen>
         _log('authenticateApp: Network available = $hasNetwork');
 
         if (!hasNetwork) {
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+          _log('authenticateApp: No network connection, entering error state', level: 'ERROR');
+=======
           _log(
             'authenticateApp: No network connection, entering error state',
             level: 'ERROR',
           );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
           setState(() {
             _hasError = true;
             _isOfflineMode = true;
@@ -204,10 +242,24 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+        if (widget.nextScreen != null) {
+          _log('authenticateApp: Navigating to custom next screen');
+          Get.off(() => widget.nextScreen!);
+        } else {
+          _log('authenticateApp: Navigating to Login screen');
+          Get.off(() => const Login());
+        }
+      }
+
+      _log('authenticateApp: Authentication process completed successfully');
+
+=======
         Get.off(() => const Login());
       }
 
       _log('authenticateApp: Authentication process completed successfully');
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
     } catch (e, stackTrace) {
       _log('authenticateApp: Error occurred - $e', level: 'ERROR');
       _log('authenticateApp: Stack trace - $stackTrace', level: 'ERROR');
@@ -225,6 +277,66 @@ class _SplashScreenState extends State<SplashScreen>
         colorText: Colors.red.shade900,
         duration: const Duration(seconds: 4),
       );
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+    }
+  }
+
+  void _initializeControllers() {
+    _log('initializeControllers: Starting controller initialization');
+
+    _log('initializeControllers: Registering AuthController');
+    Get.put(AuthController());
+
+    _log('initializeControllers: Registering ServicePointController');
+    Get.put(ServicePointController());
+
+    _log('initializeControllers: Registering InventoryController');
+    Get.put(InventoryController());
+
+    _log('initializeControllers: Registering SalesController');
+    Get.put(SalesController());
+
+    _log('initializeControllers: Registering PaymentController');
+    Get.put(PaymentController());
+
+    _log('initializeControllers: Registering CustomerController');
+    Get.put(CustomerController());
+
+    _log('initializeControllers: All controllers registered successfully');
+  }
+
+  Future<void> _ensureDatabaseIsOpen() async {
+    _log('ensureDatabaseIsOpen: Checking if database needs to be opened');
+    
+    try {
+      // Check if we have company info stored
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId'];
+      
+      if (companyId != null && companyId.isNotEmpty) {
+        _log('ensureDatabaseIsOpen: Company ID found: $companyId');
+        
+        // Check if database is already open
+        try {
+          // Try to access the database - if it's not open, this will throw an exception
+          final db = _dbHelper.database;
+          _log('ensureDatabaseIsOpen: Database is already open');
+        } catch (e) {
+          _log('ensureDatabaseIsOpen: Database is not open, opening it now');
+          // Database is not open, so open it
+          await _dbHelper.openForCompany(companyId);
+          _log('ensureDatabaseIsOpen: Database opened successfully');
+        }
+      } else {
+        _log('ensureDatabaseIsOpen: No company ID found, skipping database open');
+      }
+    } catch (e) {
+      _log('ensureDatabaseIsOpen: Error checking company info - $e', level: 'ERROR');
+      // If we can't get company info, we can't open the database
+    }
+  }
+
+=======
     }  }
 
   void _initializeControllers() {
@@ -287,6 +399,7 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
   Future<void> _loadDataWithSmartSync() async {
     _log('loadDataWithSmartSync: Starting smart sync process');
 
@@ -319,10 +432,14 @@ class _SplashScreenState extends State<SplashScreen>
       await authController.loadUsersFromCache();
       _log('loadDataWithSmartSync: Users loaded successfully from cache');
     } else {
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+      _log('loadDataWithSmartSync: No users data available (offline, no cache)', level: 'WARN');
+=======
       _log(
         'loadDataWithSmartSync: No users data available (offline, no cache)',
         level: 'WARN',
       );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
     }
 
     // 2. Service Points (static - load from cache if exists)
@@ -331,13 +448,26 @@ class _SplashScreenState extends State<SplashScreen>
     });
     _log('loadDataWithSmartSync: Step 2 - Loading service points');
     final hasServicePoints = await _dbHelper.hasCachedData('service_points');
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+    _log('loadDataWithSmartSync: Cached service points exist = $hasServicePoints');
+=======
     _log(
       'loadDataWithSmartSync: Cached service points exist = $hasServicePoints',
     );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
 
     if (!hasServicePoints && hasNetwork) {
       _log('loadDataWithSmartSync: Syncing service points from API');
       await servicePointController.syncServicePointsFromAPI();
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+      _log('loadDataWithSmartSync: Service points synced successfully from API');
+    } else if (hasServicePoints) {
+      _log('loadDataWithSmartSync: Loading service points from cache');
+      await servicePointController.loadServicePointsFromCache();
+      _log('loadDataWithSmartSync: Service points loaded successfully from cache');
+    } else {
+      _log('loadDataWithSmartSync: No service points data available (offline, no cache)', level: 'WARN');
+=======
       _log(
         'loadDataWithSmartSync: Service points synced successfully from API',
       );
@@ -352,6 +482,7 @@ class _SplashScreenState extends State<SplashScreen>
         'loadDataWithSmartSync: No service points data available (offline, no cache)',
         level: 'WARN',
       );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
     }
 
     // 3. Inventory (dynamic - sync if network available)
@@ -363,6 +494,17 @@ class _SplashScreenState extends State<SplashScreen>
     _log('loadDataWithSmartSync: Cached inventory exists = $hasInventory');
 
     if (hasNetwork) {
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+      _log('loadDataWithSmartSync: Syncing inventory from API (network available)');
+      await inventoryController.syncInventoryFromAPI();
+      _log('loadDataWithSmartSync: Inventory synced successfully from API');
+    } else if (hasInventory) {
+      _log('loadDataWithSmartSync: Loading inventory from cache (offline mode)');
+      await inventoryController.loadInventoryFromCache();
+      _log('loadDataWithSmartSync: Inventory loaded successfully from cache');
+    } else {
+      _log('loadDataWithSmartSync: No inventory data available (offline, no cache)', level: 'WARN');
+=======
       _log(
         'loadDataWithSmartSync: Syncing inventory from API (network available)',
       );
@@ -379,6 +521,7 @@ class _SplashScreenState extends State<SplashScreen>
         'loadDataWithSmartSync: No inventory data available (offline, no cache)',
         level: 'WARN',
       );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
     }
 
     // 4. Sales (local only - no remote sync)
@@ -398,6 +541,17 @@ class _SplashScreenState extends State<SplashScreen>
     _log('loadDataWithSmartSync: Cached customers exist = $hasCustomers');
 
     if (hasNetwork) {
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+      _log('loadDataWithSmartSync: Syncing customers from API (network available)');
+      await customerController.syncCustomersFromAPI();
+      _log('loadDataWithSmartSync: Customers synced successfully from API');
+    } else if (hasCustomers) {
+      _log('loadDataWithSmartSync: Loading customers from cache (offline mode)');
+      await customerController.loadCustomersFromCache();
+      _log('loadDataWithSmartSync: Customers loaded successfully from cache');
+    } else {
+      _log('loadDataWithSmartSync: No customers data available (offline, no cache)', level: 'WARN');
+=======
       _log(
         'loadDataWithSmartSync: Syncing customers from API (network available)',
       );
@@ -414,13 +568,18 @@ class _SplashScreenState extends State<SplashScreen>
         'loadDataWithSmartSync: No customers data available (offline, no cache)',
         level: 'WARN',
       );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
     }
 
     // Check if we have minimum required data
     _hasCachedData = hasUsers && hasServicePoints;
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+    _log('loadDataWithSmartSync: Has minimum required data = $_hasCachedData (users: $hasUsers, service points: $hasServicePoints)');
+=======
     _log(
       'loadDataWithSmartSync: Has minimum required data = $_hasCachedData (users: $hasUsers, service points: $hasServicePoints)',
     );
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
     _log('loadDataWithSmartSync: Smart sync process completed');
   }
 
@@ -577,9 +736,19 @@ class _SplashScreenState extends State<SplashScreen>
                     TextButton.icon(
                       onPressed: () {
                         _log('User clicked Continue Offline button');
+<<<<<<< HEAD:lib/auth/splash_screen.dart
+                        if (widget.nextScreen != null) {
+                          _log('Navigating to custom next screen (offline mode)');
+                          Get.off(() => widget.nextScreen!);
+                        } else {
+                          _log('Navigating to Login screen (offline mode)');
+                          Get.off(() => const Login());
+                        }
+=======
 
                         _log('Navigating to Login screen (offline mode)');
                         Get.off(() => const Login());
+>>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/splash_screen.dart
                       },
                       icon: const Icon(Icons.offline_bolt, color: Colors.white),
                       label: const Text('Continue Offline'),
