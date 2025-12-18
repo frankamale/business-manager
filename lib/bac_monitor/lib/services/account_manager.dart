@@ -5,7 +5,7 @@ import 'package:get/get.dart';
 class UserAccount {
   final String id;
   final String username;
-  final String system; // 'monitor' or 'pos'
+  final String system; 
   final Map<String, dynamic> userData;
   final DateTime lastLogin;
 
@@ -80,6 +80,10 @@ class AccountManager extends GetxService {
   Future<void> addAccount(UserAccount account) async {
     // Remove existing account with same id if exists
     accounts.removeWhere((a) => a.id == account.id);
+    
+    // Also remove any accounts with the same username and system to prevent duplicates
+    accounts.removeWhere((a) => a.username == account.username && a.system == account.system && a.id != account.id);
+    
     accounts.add(account);
     await saveAccounts();
   }

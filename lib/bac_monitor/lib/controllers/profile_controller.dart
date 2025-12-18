@@ -217,10 +217,18 @@ class ProfileController extends GetxController {
       final userData = await _getCurrentUserData();
 
       if (userData != null) {
+        final username = userData['username'] ?? 'Unknown';
+        final system = currentSystem.value;
+
+        // Check if an account with the same username and system already exists
+        final existingAccount = _accountManager.accounts.firstWhereOrNull(
+          (account) => account.username == username && account.system == system
+        );
+
         final account = UserAccount(
-          id: currentAccount?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-          username: userData['username'] ?? 'Unknown',
-          system: currentSystem.value,
+          id: existingAccount?.id ?? currentAccount?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          username: username,
+          system: system,
           userData: userData,
           lastLogin: DateTime.now(),
         );

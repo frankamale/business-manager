@@ -56,7 +56,12 @@ class SettingsPage extends StatelessWidget {
               ],
             ),
           ),
-           ListTile(
+
+          // Settings list
+          Expanded(
+            child: ListView(
+              children: [
+                ListTile(
                   leading: const Icon(Icons.monitor),
                   title: const Text('Monitor App'),
                   subtitle: const Text('View analytics and monitoring dashboard'),
@@ -65,10 +70,6 @@ class SettingsPage extends StatelessWidget {
                     SettingsService().navigateToMonitorApp();
                   },
                 ),
-          // Settings list
-          Expanded(
-            child: ListView(
-              children: [
                  ListTile(
                   leading: const Icon(Icons.cloud_upload),
                   title: const Text('Auto Upload Sales'),
@@ -101,22 +102,22 @@ class SettingsPage extends StatelessWidget {
                   title: Text('Notifications'),
                   trailing: Icon(Icons.arrow_forward_ios),
                 ),
-                const ListTile(
-                  leading: Icon(Icons.palette),
-                  title: Text('Theme'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                ),
-                const ListTile(
-                  leading: Icon(Icons.language),
-                  title: Text('Language'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                ),
-                const ListTile(
-                  leading: Icon(Icons.help),
-                  title: Text('Help & Support'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                ),
-               
+                // const ListTile(
+                //   leading: Icon(Icons.palette),
+                //   title: Text('Theme'),
+                //   trailing: Icon(Icons.arrow_forward_ios),
+                // ),
+                // const ListTile(
+                //   leading: Icon(Icons.language),
+                //   title: Text('Language'),
+                //   trailing: Icon(Icons.arrow_forward_ios),
+                // ),
+                // const ListTile(
+                //   leading: Icon(Icons.help),
+                //   title: Text('Help & Support'),
+                //   trailing: Icon(Icons.arrow_forward_ios),
+                // ),
+                //
                              ],
             ),
           ),
