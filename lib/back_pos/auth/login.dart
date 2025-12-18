@@ -54,18 +54,10 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         _isLoading = true;
       });
 
-<<<<<<< HEAD:lib/auth/server_login.dart
-      print('ServerLogin: Calling authController.serverLogin');
-      // Authenticate user via server - close database since this is a new authentication
-      final success = await _authController.serverLogin(
-        _usernameController.text,
-=======
       // Authenticate user
       final success = await _authController.login(
         selectedItem!,
->>>>>>> 4ad480c18732c0cf76ed4cf03e80421a92dfcf06:lib/back_pos/auth/login.dart
         _passwordController.text,
-        closeDatabase: true,
       );
 
       setState(() {

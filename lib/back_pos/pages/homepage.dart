@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../controllers/service_point_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../models/service_point.dart';
+import '../config.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -98,8 +99,8 @@ class _HomepageState extends State<Homepage>
               child: Image.asset("assets/images/logo.png"),
             ),
             const SizedBox(width: 12),
-            const Text(
-              "Testing Company LTD",
+            Text(
+              AppConfig.companyName,
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ],
