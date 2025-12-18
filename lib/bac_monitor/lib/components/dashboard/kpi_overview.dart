@@ -3,13 +3,29 @@ import 'package:get/get.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../widgets/dashboard/kpi_card.dart';
 
-class KpiOverviewSection extends StatelessWidget {
+class KpiOverviewSection extends StatefulWidget {
   const KpiOverviewSection({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final MonKpiOverviewController controller = Get.find<MonKpiOverviewController>();
+  State<KpiOverviewSection> createState() => _KpiOverviewSectionState();
+}
 
+class _KpiOverviewSectionState extends State<KpiOverviewSection> {
+  late final MonKpiOverviewController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.find<MonKpiOverviewController>();
+
+    // 🔥 THIS is the missing trigger
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.initializeData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Obx(() {
       if (controller.isLoading.value) {
         return const SizedBox(
@@ -17,6 +33,7 @@ class KpiOverviewSection extends StatelessWidget {
           child: Center(child: CircularProgressIndicator()),
         );
       }
+
       if (controller.hasError.value) {
         return const SizedBox(
           height: 200,
