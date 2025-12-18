@@ -169,17 +169,8 @@ class ProfilePage extends StatelessWidget {
                           children: [
                             Expanded(
                               child: _buildSystemOption(
-                                title: 'BAC Monitor',
-                                subtitle: 'Business Analytics & Control',
-                                isSelected: currentSystem == 'monitor',
-                                onTap: () => controller.switchSystem('monitor'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildSystemOption(
                                 title: 'POS System',
-                                subtitle: 'Point of Sale',
+                                subtitle: 'Tap to switch to pos interface',
                                 isSelected: currentSystem == 'pos',
                                 onTap: () => controller.switchSystem('pos'),
                               ),
@@ -327,7 +318,7 @@ class ProfilePage extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Container( 
+        child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: PrimaryColors.lightBlue,
