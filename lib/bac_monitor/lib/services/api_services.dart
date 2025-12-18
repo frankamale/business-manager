@@ -87,8 +87,6 @@ class MonitorApiService extends GetxService {
   Future<void> initializeCompanyId() async {
     try {
       print('DEBUG: MonitorApiService.initializeCompanyId() - Starting company ID initialization');
-      
-      // Ensure company ID is available
       final companyId = await ensureCompanyIdAvailable();
       print('DEBUG: MonitorApiService.initializeCompanyId() - Company ID initialized: $companyId');
       
@@ -105,7 +103,6 @@ class MonitorApiService extends GetxService {
       
     } catch (e) {
       print('ERROR: MonitorApiService.initializeCompanyId() - Failed to initialize company ID: $e');
-      // Don't throw exception to allow app to continue in offline mode
     }
   }
 

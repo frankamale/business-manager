@@ -113,7 +113,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             print('Company ID initialized successfully');
           } catch (e) {
             print('Warning: Failed to initialize company ID: $e');
-            // Don't fail the login process if company ID initialization fails
           }
 
           final Map<String, dynamic>? data = await _apiService
@@ -123,7 +122,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
           // Save account for current system
           final system = (roles != null &&
-              roles.any((role) => role.toString().toLowerCase() == 'admin'))
+              roles.any((role) => role.toString().toLowerCase().contains("admin")))
               ? 'monitor' : 'pos';
 
           if (data != null) {
@@ -139,7 +138,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           }
 
           if (roles != null &&
-              roles.any((role) => role.toString().toLowerCase() == 'admin')) {
+              roles.any((role) => role.toString().toLowerCase().contains("admin"))) {
             if (!Get.isRegistered<MonDashboardController>()) {
               Get.put(MonDashboardController());
             }
@@ -187,12 +186,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       }
     } catch (e) {
       print('Error storing credentials securely: $e');
-      // Even if secure storage fails, don't block the login process
-      // as the main authentication tokens are already stored by the API service
     }
   }
 
-  // Retrieve stored credentials securely (optional helper method)
   Future<Map<String, String?>> _getStoredCredentials() async {
     try {
       final username = await _secureStorage.read(key: _usernameKey);
