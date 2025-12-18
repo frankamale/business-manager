@@ -6,6 +6,7 @@ import '../controllers/service_point_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../models/service_point.dart';
 import '../config.dart';
+import '../services/api_services.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -21,6 +22,8 @@ class _HomepageState extends State<Homepage>
   final ServicePointController _servicePointController =
       Get.find<ServicePointController>();
   final AuthController authController = Get.find();
+  final PosApiService _apiService = PosApiService();
+  String _companyName = '';
 
   @override
   void initState() {
@@ -34,12 +37,51 @@ class _HomepageState extends State<Homepage>
       curve: Curves.easeInOut,
     );
     _animationController.forward();
+    _loadCompanyDetails();
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCompanyDetails() async {
+    try {
+      // Try to fetch company details from API
+      final companyDetails = await _apiService.fetchAndStoreCompanyInfo();
+
+      if (companyDetails.containsKey('activeBranch') &&
+          companyDetails['activeBranch'] is Map &&
+          (companyDetails['activeBranch'] as Map).containsKey('company') &&
+          (companyDetails['activeBranch']['company'] as Map).containsKey(
+            'name',
+          )) {
+        final companyName =
+            (companyDetails['activeBranch']['company'] as Map)['name']
+                as String?;
+
+        if (companyName != null && companyName.isNotEmpty) {
+          setState(() {
+            _companyName = companyName;
+          });
+          return;
+        }
+      }
+
+      // If we don't have the full structure, try to get basic company info
+      final companyInfo = await _apiService.getCompanyInfo();
+      if (companyInfo['companyId']?.isNotEmpty ?? false) {
+        // Use company ID as fallback
+        setState(() {
+          _companyName = companyInfo['companyId']!;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _companyName = AppConfig.companyName;
+      });
+    }
   }
 
   IconData _getIconForServicePoint(String type) {
@@ -100,7 +142,10 @@ class _HomepageState extends State<Homepage>
             ),
             const SizedBox(width: 12),
             Text(
-              AppConfig.companyName,
+                _companyName.isNotEmpty
+                    ? "$_companyName "
+                    : "${AppConfig.companyName} ",
+
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ],
