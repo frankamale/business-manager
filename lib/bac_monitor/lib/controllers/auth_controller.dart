@@ -37,11 +37,11 @@ class LoginController extends GetxController {
 
       // After successful login, fetch and store the company ID
       try {
-        final companyId = await _apiService.fetchCompanyId();
+        final companyId = await _apiService.cachedCompanyId;
         debugPrint("LoginController: Successfully fetched and stored company ID: $companyId");
 
         // Switch to the new company's database
-        await _dbHelper.switchCompany(companyId);
+        await _dbHelper.switchCompany(companyId!);
         debugPrint("LoginController: Successfully switched to company database: $companyId");
 
         // Save the current account in AccountManager
