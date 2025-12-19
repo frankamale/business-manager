@@ -125,7 +125,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           final system =
               (roles != null &&
                   roles.any(
-                    (role) => role.toString().toLowerCase() == 'admin',
+                    (role) => role.toString().toLowerCase().contains("admin")
                   ))
               ? 'monitor'
               : 'pos';
@@ -144,7 +144,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
           if (roles != null &&
               roles.any(
-                (role) => role.toString().toLowerCase() == 'admin',
+                (role) => role.toString().toLowerCase().contains("admin"),
               )) {
             if (!Get.isRegistered<MonDashboardController>()) {
               Get.put(MonDashboardController());
