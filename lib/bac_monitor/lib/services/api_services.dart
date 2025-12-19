@@ -319,7 +319,7 @@ class MonitorApiService extends GetxService {
 
       debugPrint("ApiService: Successfully switched to company: $newCompanyId");
 
-      // Fetch and cache data for the new company
+      await clearInitialSyncFlag();
       await fetchAndCacheAllData();
     } catch (e) {
       debugPrint("ApiService: Failed to switch company: $e");
@@ -335,7 +335,6 @@ class MonitorApiService extends GetxService {
     try {
       debugPrint("ApiService: Starting to fetch all data...");
 
-      // Individual calls with logging to find the failing one
       http.Response? servicePointsRes;
       http.Response? companyDetailsRes;
       http.Response? salesRes;
@@ -561,6 +560,9 @@ class MonitorApiService extends GetxService {
       debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");
       rethrow;
     }
+    await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
+    await setInitialSyncCompleted();
+
   }
 
   Future<void> syncRecentSales() async {
@@ -680,4 +682,18 @@ class MonitorApiService extends GetxService {
       );
     }
   }
+
+  Future<void> setInitialSyncCompleted() async {
+    await _secureStorage.write(key: 'initial_sync_completed', value: 'true');
+  }
+
+  Future<bool> isInitialSyncCompleted() async {
+    final value = await _secureStorage.read(key: 'initial_sync_completed');
+    return value == 'true';
+  }
+
+  Future<void> clearInitialSyncFlag() async {
+    await _secureStorage.delete(key: 'initial_sync_completed');
+  }
+
 }

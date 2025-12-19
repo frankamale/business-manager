@@ -169,13 +169,21 @@ class _SplashPageState extends State<SplashPage> {
       }
 
       if (isOnline) {
-        _updateStatus('Syncing data from server...');
-        await _syncDataFromServer();
+        final apiService = Get.find<MonitorApiService>();
+        final initialSyncDone = await apiService.isInitialSyncCompleted();
+
+        if (!initialSyncDone) {
+          _updateStatus('First time sync – downloading data...');
+          await apiService.fetchAndCacheAllData();
+        } else {
+          _updateStatus('Syncing recent sales...');
+          await apiService.syncRecentSales();
+        }
       } else {
         _updateStatus('Loading cached data...');
-        // Just load company details from DB
         await _loadCompanyDetailsOffline();
       }
+
 
       // STEP 7: Initialize controllers AFTER data is synced/loaded
       _updateStatus('Initializing app...');

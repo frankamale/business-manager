@@ -27,6 +27,14 @@ class ProfileController extends GetxController {
       currentSystem.value = currentAccount.system;
     }
     loadProfileData();
+    
+    // Listen to account changes and refresh data accordingly
+    ever(_accountManager.currentAccount, (UserAccount? account) {
+      if (account != null) {
+        currentSystem.value = account.system;
+        refreshUserDataFromAccount(account);
+      }
+    });
   }
 
   Future<void> loadProfileData() async {
@@ -49,6 +57,44 @@ class ProfileController extends GetxController {
     } catch (e) {
       errorMessage.value = 'Failed to load profile data: $e';
       print('ProfileController: Error loading profile data: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> refreshUserDataFromAccount(UserAccount account) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      // Update user data from the account's userData
+      if (account.userData.isNotEmpty) {
+        userData.value = account.userData;
+      } else {
+        // If account doesn't have userData, try to load it from the appropriate service
+        if (account.system == 'monitor') {
+          final user = await _monitorApiService.getStoredUserData();
+          if (user != null) {
+            userData.value = user;
+          }
+        } else {
+          final user = await _posApiService.getStoredUserData();
+          if (user != null) {
+            userData.value = user;
+          }
+        }
+      }
+
+      // Load company data based on the current system
+      final dbHelper = DatabaseHelper();
+      final company = await dbHelper.getCompanyDetails();
+      if (company != null) {
+        companyData.value = company;
+      }
+
+    } catch (e) {
+      errorMessage.value = 'Failed to refresh user data: $e';
+      print('ProfileController: Error refreshing user data: $e');
     } finally {
       isLoading.value = false;
     }
@@ -203,11 +249,17 @@ class ProfileController extends GetxController {
           await _monitorApiService.switchCompany(account.userData['companyId']);
         }
 
+        // Refresh user data in controller
+        await refreshUserDataFromAccount(account);
+
         // Navigate to monitor app
         Get.offAll(() => const MonitorAppRoot());
       } else {
         // Store POS user data
         await _posApiService.saveAuthDataFromMap(account.userData);
+
+        // Refresh user data in controller
+        await refreshUserDataFromAccount(account);
 
         // Navigate to POS app
         Get.offAll(() => const PosAppRoot());
