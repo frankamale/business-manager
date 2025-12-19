@@ -125,7 +125,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           final system =
               (roles != null &&
                   roles.any(
-                    (role) => role.toString().toLowerCase().contains("admin"),
+                    (role) => role.toString().toLowerCase().contains("admin")
                   ))
               ? 'monitor'
               : 'pos';

@@ -186,7 +186,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                   : "${AppConfig.companyName} ",
 
                               style: TextStyle(
-                                fontSize: isSmallScreen ? 28 : 32,
+                                fontSize: isSmallScreen ? 23 : 25,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey.shade800,
                               ),

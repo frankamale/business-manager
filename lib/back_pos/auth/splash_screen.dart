@@ -186,6 +186,10 @@ class _SplashScreenState extends State<SplashScreen>
       _log('authenticateApp: Initializing POS data');
       await _initializePosData();
 
+      // Ensure database is open before smart sync
+      _log('authenticateApp: Ensuring database is open for smart sync');
+      await _ensureDatabaseIsOpenForSmartSync();
+
       // Smart data loading
       _log('authenticateApp: Starting smart data sync');
       await _loadDataWithSmartSync();
@@ -318,6 +322,50 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  /// Ensure database is open specifically for smart sync process
+  /// This is a more robust version that guarantees database is open
+  Future<void> _ensureDatabaseIsOpenForSmartSync() async {
+    _log('ensureDatabaseIsOpenForSmartSync: Ensuring database is open for smart sync');
+
+    try {
+      // Check if we have company info stored
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId'];
+
+      if (companyId != null && companyId.isNotEmpty) {
+        _log('ensureDatabaseIsOpenForSmartSync: Company ID found: $companyId');
+
+        // Check if database is already open
+        if (!_dbHelper.isDatabaseOpen) {
+          _log('ensureDatabaseIsOpenForSmartSync: Database is not open, opening it now');
+          await _dbHelper.openForCompany(companyId);
+          _log('ensureDatabaseIsOpenForSmartSync: Database opened successfully');
+        } else {
+          _log('ensureDatabaseIsOpenForSmartSync: Database is already open');
+        }
+      } else {
+        _log('ensureDatabaseIsOpenForSmartSync: No company ID found, cannot open database', level: 'WARN');
+        // This is a critical error for smart sync
+        throw Exception('No company ID available for database initialization');
+      }
+    } catch (e) {
+      _log('ensureDatabaseIsOpenForSmartSync: Error - $e', level: 'ERROR');
+      // Re-throw to ensure the calling code knows database couldn't be opened
+      throw Exception('Failed to ensure database is open: $e');
+    }
+  }
+
+  /// Safe wrapper for checking cached data that handles database errors gracefully
+  Future<bool> _checkCachedDataSafely(String dataType) async {
+    try {
+      return await _dbHelper.hasCachedData(dataType);
+    } catch (e) {
+      _log('checkCachedDataSafely: Error checking cached data for $dataType - $e', level: 'ERROR');
+      // If we can't check cached data, assume no cache exists
+      return false;
+    }
+  }
+
   Future<void> _loadDataWithSmartSync() async {
     _log('loadDataWithSmartSync: Starting smart sync process');
 
@@ -338,7 +386,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading users...';
     });
     _log('loadDataWithSmartSync: Step 1 - Loading users');
-    final hasUsers = await _dbHelper.hasCachedData('users');
+    final hasUsers = await _checkCachedDataSafely('users');
     _log('loadDataWithSmartSync: Cached users exist = $hasUsers');
 
     if (!hasUsers && hasNetwork) {
@@ -358,7 +406,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading service points...';
     });
     _log('loadDataWithSmartSync: Step 2 - Loading service points');
-    final hasServicePoints = await _dbHelper.hasCachedData('service_points');
+    final hasServicePoints = await _checkCachedDataSafely('service_points');
     _log('loadDataWithSmartSync: Cached service points exist = $hasServicePoints');
 
     if (!hasServicePoints && hasNetwork) {
@@ -378,7 +426,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading inventory...';
     });
     _log('loadDataWithSmartSync: Step 3 - Loading inventory');
-    final hasInventory = await _dbHelper.hasCachedData('inventory');
+    final hasInventory = await _checkCachedDataSafely('inventory');
     _log('loadDataWithSmartSync: Cached inventory exists = $hasInventory');
 
     if (hasNetwork) {
@@ -406,7 +454,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading customers...';
     });
     _log('loadDataWithSmartSync: Step 5 - Loading customers');
-    final hasCustomers = await _dbHelper.hasCachedData('customers');
+    final hasCustomers = await _checkCachedDataSafely('customers');
     _log('loadDataWithSmartSync: Cached customers exist = $hasCustomers');
 
     if (hasNetwork) {
