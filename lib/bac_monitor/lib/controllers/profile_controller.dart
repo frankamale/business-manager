@@ -111,6 +111,14 @@ class ProfileController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
+      // First, logout from current account
+      final currentAccount = _accountManager.currentAccount.value;
+      if (currentAccount != null && currentAccount.id != account.id) {
+        // Clear auth data from both services
+        await _posApiService.clearAuthData();
+        await _monitorApiService.logout();
+      }
+
       // Validate token and handle re-authentication if needed
       bool hasInternet = false;
       bool tokenValid = false;

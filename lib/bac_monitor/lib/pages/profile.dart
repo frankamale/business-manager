@@ -209,7 +209,7 @@ class ProfilePage extends StatelessWidget {
                         ...accounts.map(
                               (account) =>
                               _buildAccountItem(account, controller),
-                        ),
+                        ).toList(),
                       ],
                     ),
                   );
