@@ -69,7 +69,7 @@ class ConnectivityController extends GetxController {
               if (roles != null && roles.isNotEmpty) {
                 final fallbackRole = roles.first.toString();
                 await _secureStorage.write(key: 'user_role', value: fallbackRole);
-                if (fallbackRole.toLowerCase() == 'admin') {
+                if (fallbackRole.toLowerCase().contains("admin")) {
                   Get.offAll(() => const MonitorAppRoot());
                 } else {
                   Get.offAll(() => const PosAppRoot());
@@ -80,7 +80,7 @@ class ConnectivityController extends GetxController {
             // If still no role, default to POS (non-admin)
             debugPrint('SplashScreen: No role found, defaulting to POS app');
             Get.offAll(() => const PosAppRoot());
-          } else if (role.toLowerCase() == 'admin') {
+          } else if (role.toLowerCase().contains("admin")) {
             Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());
@@ -227,7 +227,7 @@ class ConnectivityController extends GetxController {
     if (role == null || role.isEmpty) {
       debugPrint('SplashScreen: User role is null in offline mode, defaulting to POS app');
       Get.offAll(() => const PosAppRoot());
-    } else if (role.toLowerCase() == 'admin') {
+    } else if (role.toLowerCase().contains("admin")) {
       Get.offAll(() => const MonitorAppRoot());
     } else {
       Get.offAll(() => const PosAppRoot());
