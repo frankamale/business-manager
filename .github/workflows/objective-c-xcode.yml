@@ -2,13 +2,14 @@ name: Flutter iOS Build
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build_ios:
     runs-on: macos-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,23 +17,20 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'
+          flutter-version: '3.32.2'
+          architecture: arm64
 
-      - name: Install Dart/Flutter dependencies
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Install CocoaPods (if needed) and pod install
+      - name: Install CocoaPods
         run: |
+          sudo gem install cocoapods --no-document
           cd ios
-          # ensure CocoaPods available and install pods
-          gem install cocoapods --no-document || true
           pod install --repo-update
 
       - name: Build iOS (no codesign)
-        run: flutter build ios --no-codesign --release
-
-      # Optional: run xcodebuild analyze or archive against the workspace
-      - name: (Optional) Xcode analyze
-        run: |
-          cd ios
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release analyze | xcpretty
+        run: flutter build ios --release --no-codesign
