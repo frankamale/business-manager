@@ -18,7 +18,7 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   Future<void> openForCompany(String companyId) async {
-    if (_database != null) {
+    if (_database  != null) {
       await _database!.close();
       _database = null;
     }
@@ -41,6 +41,11 @@ class DatabaseHelper {
       throw Exception('Database not opened. Call openForCompany first.');
     }
     return _database!;
+  }
+
+  /// Check if database is currently open without throwing exceptions
+  bool get isDatabaseOpen {
+    return _database != null;
   }
 
   /// Closes the current database and sets it to null, preparing for a new company database if needed.
@@ -1316,37 +1321,48 @@ class DatabaseHelper {
 
   // Check if cached data exists for a data type
   Future<bool> hasCachedData(String dataType) async {
+    // Ensure database is open before attempting to query
+    if (!isDatabaseOpen) {
+      print('DatabaseHelper: hasCachedData called but database is not open for dataType: $dataType');
+      return false;
+    }
+
     final db = database;
     int count = 0;
 
-    switch (dataType) {
-      case 'users':
-        count =
-            Sqflite.firstIntValue(
-              await db.rawQuery('SELECT COUNT(*) FROM user'),
-            ) ??
-            0;
-        break;
-      case 'service_points':
-        count =
-            Sqflite.firstIntValue(
-              await db.rawQuery('SELECT COUNT(*) FROM service_point'),
-            ) ??
-            0;
-        break;
-      case 'inventory':
-        count = await getInventoryCount();
-        break;
-      case 'sales_transactions':
-        count = await getSalesCount();
-        break;
-      case 'customers':
-        count =
-            Sqflite.firstIntValue(
-              await db.rawQuery('SELECT COUNT(*) FROM customers'),
-            ) ??
-            0;
-        break;
+    try {
+      switch (dataType) {
+        case 'users':
+          count =
+              Sqflite.firstIntValue(
+                await db.rawQuery('SELECT COUNT(*) FROM user'),
+              ) ??
+              0;
+          break;
+        case 'service_points':
+          count =
+              Sqflite.firstIntValue(
+                await db.rawQuery('SELECT COUNT(*) FROM service_point'),
+              ) ??
+              0;
+          break;
+        case 'inventory':
+          count = await getInventoryCount();
+          break;
+        case 'sales_transactions':
+          count = await getSalesCount();
+          break;
+        case 'customers':
+          count =
+              Sqflite.firstIntValue(
+                await db.rawQuery('SELECT COUNT(*) FROM customers'),
+              ) ??
+              0;
+          break;
+      }
+    } catch (e) {
+      print('DatabaseHelper: Error checking cached data for $dataType: $e');
+      return false;
     }
 
     return count > 0;

@@ -57,6 +57,17 @@ class ConnectivityController extends GetxController {
           await _loadDataFromDatabase();
           final role = await _getUserRole();
           print("Retrieved user role for navigation: $role");
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
+          print(role);
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
+          print("--------------------------------------------------------");
           
           // Handle null or empty role with fallback logic
           if (role == null || role.isEmpty) {
@@ -65,6 +76,7 @@ class ConnectivityController extends GetxController {
             final userData = await Get.find<MonitorApiService>().getStoredUserData();
             if (userData != null && userData.containsKey('roles')) {
               final roles = userData['roles'] as List<dynamic>?;
+
               if (roles != null && roles.isNotEmpty) {
                 final fallbackRole = roles.first.toString();
                 await _secureStorage.write(key: 'user_role', value: fallbackRole);
