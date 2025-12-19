@@ -109,15 +109,7 @@ class UserProfileHeader extends StatelessWidget {
             ),
           ),
           // Settings button for quick access
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 20),
-            onPressed: () {
-              // Navigate to profile settings
-              Get.to(() => const ProfilePage());
-            },
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-          ),
+
         ],
       ),
     );

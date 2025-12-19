@@ -235,7 +235,7 @@ class ProfilePage extends StatelessWidget {
                           icon: Icons.add,
                           title: 'Sign in with another account',
                           subtitle: 'Add new account',
-                          onTap: controller.saveCurrentUserAsAccount,
+                          onTap: controller.signOut,
                         ),
                       ],
                     ),
