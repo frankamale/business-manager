@@ -5,6 +5,7 @@ import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/sale_transaction.dart';
 import 'package:bac_pos/back_pos/models/inventory_item.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
+import 'payment_controller.dart';
 
 class SalesController extends GetxController {
   final _dbHelper = DatabaseHelper();
@@ -251,26 +252,17 @@ class SalesController extends GetxController {
           // Add 2 seconds buffer
           final paymentTimestamp = invoiceTimestamp + 2000;
 
-          // Create payment payload
-          final paymentPayload = {
-            "id": uuid.v4(),
-            "currencyid": "3a0e97b4-c13a-4a49-9205-182e62039a5a",
-            "referenceid": salesId,
-            "servicepointid": servicePointId,
-            "transactiontypeid": 1,
-            "amount": paymentAmount,
-            "method": "Cash",
-            "methodId": 1,
-            "chequeno": "",
-            "cashaccountid": "11111111-1111-1111-1111-111111111111",
-            "paydate": paymentTimestamp,
-            "receipt": true,
-            "currency": "Uganda Shillings",
-            "type": "Sales",
-            "bp": customerId ?? "",
-            "direction": 1,
-            "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
-          };
+          // Create payment payload using PaymentController to fetch currencyid from database
+          final paymentController = Get.find<PaymentController>();
+          final paymentPayload = await paymentController.createPaymentPayload(
+            saleId: salesId,
+            paymentAmount: paymentAmount,
+            paymentTimestamp: paymentTimestamp,
+            servicePointId: servicePointId,
+            customerId: customerId,
+            companyId: companyId,
+            currencyid: null, 
+          );
 
           // Log the payment payload being sent to server
           print('=== PAYMENT PAYLOAD BEING SENT TO SERVER ===');
