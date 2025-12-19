@@ -24,9 +24,7 @@ class ConnectivityController extends GetxController {
   var isLoading = true.obs;
   var hasError = false.obs;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
   final DatabaseHelper _dbHelper = DatabaseHelper();
   Timer? _retryTimer;
@@ -58,6 +56,19 @@ class ConnectivityController extends GetxController {
           _initializeControllers();
           await _loadDataFromDatabase();
           final role = await _getUserRole();
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print(role);
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
+          print("------------------------------------------------------------");
           if (role == 'admin') {
             Get.offAll(() => const MonitorAppRoot());
           } else {
@@ -86,36 +97,33 @@ class ConnectivityController extends GetxController {
       checkConnectivity();
     });
   }
+
   Future<Map<String, String?>> _getStoredCredentials() async {
     try {
       final username = await _secureStorage.read(key: 'login_username');
       final password = await _secureStorage.read(key: 'login_password');
-      return {
-        'username': username,
-        'password': password,
-      };
+      return {'username': username, 'password': password};
     } catch (e) {
       debugPrint('SplashScreen: Error retrieving stored credentials - $e');
-      return {
-        'username': null,
-        'password': null,
-      };
+      return {'username': null, 'password': null};
     }
   }
+
   Future<bool> _hasValidCredentials() async {
     try {
       final credentials = await _getStoredCredentials();
       final token = await Get.find<MonitorApiService>().getStoredToken();
-      final companyId = await Get.find<MonitorApiService>().getStoredCompanyId();
+      final companyId = await Get.find<MonitorApiService>()
+          .getStoredCompanyId();
 
       return credentials['username'] != null &&
-             credentials['username']!.isNotEmpty &&
-             credentials['password'] != null &&
-             credentials['password']!.isNotEmpty &&
-             token != null &&
-             token.isNotEmpty &&
-             companyId != null &&
-             companyId.isNotEmpty;
+          credentials['username']!.isNotEmpty &&
+          credentials['password'] != null &&
+          credentials['password']!.isNotEmpty &&
+          token != null &&
+          token.isNotEmpty &&
+          companyId != null &&
+          companyId.isNotEmpty;
     } catch (e) {
       debugPrint('SplashScreen: Error checking valid credentials - $e');
       return false;
@@ -125,12 +133,14 @@ class ConnectivityController extends GetxController {
   Future<String?> _getUserRole() async {
     try {
       final role = await _secureStorage.read(key: 'user_role');
+      print("rrooolllee: $role");
       return role;
     } catch (e) {
       debugPrint('SplashScreen: Error retrieving user role - $e');
       return null;
     }
   }
+
   void _initializeControllers() {
     if (!Get.isRegistered<MonOperatorController>()) {
       Get.put(MonOperatorController());
@@ -163,6 +173,7 @@ class ConnectivityController extends GetxController {
       Get.put(MonInventoryController());
     }
   }
+
   Future<void> _loadDataFromDatabase() async {
     try {
       // Load data from database for offline use
@@ -170,17 +181,17 @@ class ConnectivityController extends GetxController {
       final inventoryController = Get.find<MonInventoryController>();
       // Load stores from database (fetchAllStores already loads from DB)
       await storesController.fetchAllStores();
-      
+
       // Load inventory from database
       await inventoryController.loadInventoryFromDb();
-      
+
       debugPrint('SplashScreen: Data loaded from database successfully');
-      
     } catch (e) {
       debugPrint('SplashScreen: Error loading data from database - $e');
       // Continue even if data loading fails
     }
   }
+
   Future<void> _performOfflineAuthAndNavigation() async {
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
@@ -191,6 +202,7 @@ class ConnectivityController extends GetxController {
       Get.offAll(() => const PosAppRoot());
     }
   }
+
   Future<void> _handleOfflineMode() async {
     isLoading.value = true;
     hasError.value = false;
