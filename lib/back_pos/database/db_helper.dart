@@ -6,9 +6,7 @@ import 'package:bac_pos/back_pos/models/customer.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-
 class DatabaseHelper {
-  
   static final DatabaseHelper _instance = DatabaseHelper._internal();
 
   static DatabaseHelper get instance => _instance;
@@ -24,10 +22,13 @@ class DatabaseHelper {
       await _database!.close();
       _database = null;
     }
-    String path = join(await getDatabasesPath(), 'app_db_company_${companyId}.db');
+    String path = join(
+      await getDatabasesPath(),
+      'app_db_company_${companyId}.db',
+    );
     _database = await openDatabase(
       path,
-      version: 1,
+      version: 12,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -55,6 +56,30 @@ class DatabaseHelper {
       // Drop old table and recreate with correct schema
       await db.execute('DROP TABLE IF EXISTS user');
       await _onCreate(db, newVersion);
+    }
+    if (oldVersion < 12) {
+      await db.execute('''
+    CREATE TABLE IF NOT EXISTS cash_accounts (
+      id TEXT PRIMARY KEY,
+      accountname TEXT,
+      accountnumber TEXT,
+      reference TEXT,
+      paymentmode_code TEXT,
+      paymentmode_name TEXT,
+      currency_id TEXT NOT NULL,
+      currency_code TEXT NOT NULL,
+      currency_name TEXT,
+      main_currency INTEGER,
+      branchid TEXT,
+      companyid TEXT,
+      pos INTEGER
+    )
+  ''');
+
+      await db.execute('''
+    CREATE INDEX IF NOT EXISTS idx_cash_accounts_currency
+    ON cash_accounts(currency_id)
+  ''');
     }
 
     if (oldVersion < 3) {
@@ -233,29 +258,49 @@ class DatabaseHelper {
 
     if (oldVersion < 7) {
       // Allow receiptnumber to be NULL in sales_transactions table
-      await db.execute('ALTER TABLE sales_transactions ALTER COLUMN receiptnumber TEXT;');
+      await db.execute(
+        'ALTER TABLE sales_transactions ALTER COLUMN receiptnumber TEXT;',
+      );
     }
 
     if (oldVersion < 8) {
       // Add upload tracking columns to sales_transactions table
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN upload_status TEXT DEFAULT "pending"');
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN uploaded_at INTEGER');
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN upload_error TEXT');
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN upload_status TEXT DEFAULT "pending"',
+      );
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN uploaded_at INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN upload_error TEXT',
+      );
     }
 
     if (oldVersion < 9) {
       // Add inventory tracking columns to sales_transactions table
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN inventoryid TEXT');
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN inventoryid TEXT',
+      );
       await db.execute('ALTER TABLE sales_transactions ADD COLUMN ipdid TEXT');
     }
 
     if (oldVersion < 10) {
       // Add full ID columns for proper payload reconstruction
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN clientid TEXT');
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN companyid TEXT');
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN branchid TEXT');
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN servicepointid TEXT');
-      await db.execute('ALTER TABLE sales_transactions ADD COLUMN salespersonid TEXT');
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN clientid TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN companyid TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN branchid TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN servicepointid TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE sales_transactions ADD COLUMN salespersonid TEXT',
+      );
     }
 
     if (oldVersion < 11) {
@@ -437,6 +482,28 @@ class DatabaseHelper {
         salespersonid TEXT
       )
     ''');
+    await db.execute('''
+  CREATE TABLE cash_accounts (
+    id TEXT PRIMARY KEY,
+    accountname TEXT,
+    accountnumber TEXT,
+    reference TEXT,
+    paymentmode_code TEXT,
+    paymentmode_name TEXT,
+    currency_id TEXT NOT NULL,
+    currency_code TEXT NOT NULL,
+    currency_name TEXT,
+    main_currency INTEGER,
+    branchid TEXT,
+    companyid TEXT,
+    pos INTEGER
+  )
+''');
+
+    await db.execute('''
+  CREATE INDEX idx_cash_accounts_currency
+  ON cash_accounts(currency_id)
+''');
 
     // Create indexes for faster queries
     await db.execute('''
@@ -681,7 +748,9 @@ class DatabaseHelper {
       }
 
       final user = User.fromMap(maps.first);
-      print('Authentication successful for user: ${user.name} (${user.username})');
+      print(
+        'Authentication successful for user: ${user.name} (${user.username})',
+      );
       return user;
     } catch (e) {
       print('Error during authentication: $e');
@@ -690,10 +759,15 @@ class DatabaseHelper {
   }
 
   // Authenticate user by username and password
-  Future<User?> authenticateUserByUsername(String username, int password) async {
+  Future<User?> authenticateUserByUsername(
+    String username,
+    int password,
+  ) async {
     try {
       final db = database;
-      print('Authenticating user with username: $username and password: $password');
+      print(
+        'Authenticating user with username: $username and password: $password',
+      );
 
       final List<Map<String, dynamic>> maps = await db.query(
         'user',
@@ -703,12 +777,16 @@ class DatabaseHelper {
       );
 
       if (maps.isEmpty) {
-        print('No user found with username: $username and the provided password');
+        print(
+          'No user found with username: $username and the provided password',
+        );
         return null;
       }
 
       final user = User.fromMap(maps.first);
-      print('Authentication successful for user: ${user.name} (${user.username})');
+      print(
+        'Authentication successful for user: ${user.name} (${user.username})',
+      );
       return user;
     } catch (e) {
       print('Error during authentication: $e');
@@ -834,7 +912,9 @@ class DatabaseHelper {
   }
 
   // Get inventory items by category
-  Future<List<InventoryItem>> getInventoryItemsByCategory(String category) async {
+  Future<List<InventoryItem>> getInventoryItemsByCategory(
+    String category,
+  ) async {
     final db = database;
     final List<Map<String, dynamic>> maps = await db.query(
       'inventory',
@@ -862,7 +942,9 @@ class DatabaseHelper {
   }
 
   // Get inventory items by soldfrom (service point type)
-  Future<List<InventoryItem>> getInventoryItemsBySoldFrom(String soldFrom) async {
+  Future<List<InventoryItem>> getInventoryItemsBySoldFrom(
+    String soldFrom,
+  ) async {
     final db = database;
     final List<Map<String, dynamic>> maps = await db.query(
       'inventory',
@@ -903,8 +985,50 @@ class DatabaseHelper {
     );
   }
 
+  Future<void> insertCashAccounts(List<Map<String, dynamic>> accounts) async {
+    final db = database;
+    final batch = db.batch();
+
+    await db.delete('cash_accounts');
+
+    for (final a in accounts) {
+      batch.insert('cash_accounts', {
+        'id': a['id'],
+        'accountname': a['accountname'],
+        'accountnumber': a['accountnumber'],
+        'reference': a['reference'],
+        'paymentmode_code': a['paymentMode']?['code'],
+        'paymentmode_name': a['paymentMode']?['name'],
+        'currency_id': a['currency']?['id'],
+        'currency_code': a['currency']?['code'],
+        'currency_name': a['currency']?['name'],
+        'main_currency': a['currency']?['mainCurrency'] == true ? 1 : 0,
+        'branchid': a['branch'],
+        'companyid': a['company'],
+        'pos': a['pos'] == true ? 1 : 0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+
+    await batch.commit(noResult: true);
+  }
+
+  Future<String?> getDefaultCurrencyId() async {
+    final db = database;
+
+    final result = await db.query(
+      'cash_accounts',
+      columns: ['currency_id'],
+      where: 'pos = 1 AND main_currency = 1',
+      limit: 1,
+    );
+
+    return result.isNotEmpty ? result.first['currency_id'] as String : null;
+  }
+
   // Insert multiple sale transactions
-  Future<void> insertSaleTransactions(List<SaleTransaction> transactions) async {
+  Future<void> insertSaleTransactions(
+    List<SaleTransaction> transactions,
+  ) async {
     final db = database;
     final batch = db.batch();
 
@@ -933,7 +1057,9 @@ class DatabaseHelper {
   }
 
   // Get sale transactions by salesId (items from same sale)
-  Future<List<SaleTransaction>> getSaleTransactionsBySalesId(String salesId) async {
+  Future<List<SaleTransaction>> getSaleTransactionsBySalesId(
+    String salesId,
+  ) async {
     final db = database;
     final List<Map<String, dynamic>> maps = await db.query(
       'sales_transactions',
@@ -1000,39 +1126,60 @@ class DatabaseHelper {
 
     // Start and end of day in milliseconds
     final startOfDay = DateTime.fromMillisecondsSinceEpoch(date);
-    final startMillis = DateTime(startOfDay.year, startOfDay.month, startOfDay.day).millisecondsSinceEpoch;
-    final endMillis = DateTime(startOfDay.year, startOfDay.month, startOfDay.day, 23, 59, 59).millisecondsSinceEpoch;
+    final startMillis = DateTime(
+      startOfDay.year,
+      startOfDay.month,
+      startOfDay.day,
+    ).millisecondsSinceEpoch;
+    final endMillis = DateTime(
+      startOfDay.year,
+      startOfDay.month,
+      startOfDay.day,
+      23,
+      59,
+      59,
+    ).millisecondsSinceEpoch;
 
     // Get payment method totals
-    final paymentSummary = await db.rawQuery('''
+    final paymentSummary = await db.rawQuery(
+      '''
       SELECT
         paymenttype,
         SUM(amountpaid) as totalPaid
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
       GROUP BY paymenttype
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
     // Get category totals
-    final categorySummary = await db.rawQuery('''
+    final categorySummary = await db.rawQuery(
+      '''
       SELECT
         category,
         SUM(amount) as totalAmount
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
       GROUP BY category
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
     // Get complementary items total
-    final complementaryTotal = await db.rawQuery('''
+    final complementaryTotal = await db.rawQuery(
+      '''
       SELECT
         SUM(amount) as total
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ? AND complimentaryid > 0
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
     // Get overall totals with proper categorization
-    final overallTotal = await db.rawQuery('''
+    final overallTotal = await db.rawQuery(
+      '''
       SELECT
         SUM(amount) as totalSales,
         SUM(amountpaid) as totalPaid,
@@ -1045,12 +1192,16 @@ class DatabaseHelper {
         COUNT(DISTINCT CASE WHEN balance > 0 THEN salesId END) as unpaidTransactions
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
     return {
       'paymentSummary': paymentSummary,
       'categorySummary': categorySummary,
-      'complementaryTotal': complementaryTotal.isNotEmpty ? complementaryTotal[0]['total'] ?? 0.0 : 0.0,
+      'complementaryTotal': complementaryTotal.isNotEmpty
+          ? complementaryTotal[0]['total'] ?? 0.0
+          : 0.0,
       'overallTotal': overallTotal.isNotEmpty ? overallTotal[0] : {},
     };
   }
@@ -1065,7 +1216,9 @@ class DatabaseHelper {
   Future<int> getSalesCount() async {
     final db = database;
     final count = Sqflite.firstIntValue(
-      await db.rawQuery('SELECT COUNT(DISTINCT salesId) FROM sales_transactions'),
+      await db.rawQuery(
+        'SELECT COUNT(DISTINCT salesId) FROM sales_transactions',
+      ),
     );
     return count ?? 0;
   }
@@ -1079,7 +1232,9 @@ class DatabaseHelper {
     final db = database;
     final updateData = {
       'upload_status': status,
-      'uploaded_at': status == 'uploaded' ? DateTime.now().millisecondsSinceEpoch : null,
+      'uploaded_at': status == 'uploaded'
+          ? DateTime.now().millisecondsSinceEpoch
+          : null,
       'upload_error': errorMessage,
     };
 
@@ -1092,9 +1247,12 @@ class DatabaseHelper {
   }
 
   // Get sales by upload status
-  Future<List<Map<String, dynamic>>> getSalesByUploadStatus(String status) async {
+  Future<List<Map<String, dynamic>>> getSalesByUploadStatus(
+    String status,
+  ) async {
     final db = database;
-    final List<Map<String, dynamic>> result = await db.rawQuery('''
+    final List<Map<String, dynamic>> result = await db.rawQuery(
+      '''
       SELECT
         salesId,
         receiptnumber,
@@ -1117,7 +1275,9 @@ class DatabaseHelper {
       WHERE upload_status = ?
       GROUP BY salesId
       ORDER BY transactiondate DESC
-    ''', [status]);
+    ''',
+      [status],
+    );
 
     return result;
   }
@@ -1132,17 +1292,13 @@ class DatabaseHelper {
     String? errorMessage,
   ]) async {
     final db = database;
-    await db.insert(
-      'sync_metadata',
-      {
-        'data_type': dataType,
-        'last_sync_timestamp': DateTime.now().millisecondsSinceEpoch,
-        'sync_status': status,
-        'record_count': recordCount,
-        'error_message': errorMessage,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('sync_metadata', {
+      'data_type': dataType,
+      'last_sync_timestamp': DateTime.now().millisecondsSinceEpoch,
+      'sync_status': status,
+      'record_count': recordCount,
+      'error_message': errorMessage,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   // Get sync metadata for a specific data type
@@ -1165,14 +1321,18 @@ class DatabaseHelper {
 
     switch (dataType) {
       case 'users':
-        count = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM user'),
-        ) ?? 0;
+        count =
+            Sqflite.firstIntValue(
+              await db.rawQuery('SELECT COUNT(*) FROM user'),
+            ) ??
+            0;
         break;
       case 'service_points':
-        count = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM service_point'),
-        ) ?? 0;
+        count =
+            Sqflite.firstIntValue(
+              await db.rawQuery('SELECT COUNT(*) FROM service_point'),
+            ) ??
+            0;
         break;
       case 'inventory':
         count = await getInventoryCount();
@@ -1181,9 +1341,11 @@ class DatabaseHelper {
         count = await getSalesCount();
         break;
       case 'customers':
-        count = Sqflite.firstIntValue(
-          await db.rawQuery('SELECT COUNT(*) FROM customers'),
-        ) ?? 0;
+        count =
+            Sqflite.firstIntValue(
+              await db.rawQuery('SELECT COUNT(*) FROM customers'),
+            ) ??
+            0;
         break;
     }
 
@@ -1326,16 +1488,21 @@ class DatabaseHelper {
       final serverSale = await getServerSaleBySalesId(salesId);
 
       if (serverSale != null) {
-        final serverAmountPaid = (serverSale['amountpaid'] as num?)?.toDouble() ?? 0.0;
-        final serverBalance = (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
-        final serverPaymentMode = serverSale['paymentmode'] as String? ?? 'Cash';
+        final serverAmountPaid =
+            (serverSale['amountpaid'] as num?)?.toDouble() ?? 0.0;
+        final serverBalance =
+            (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
+        final serverPaymentMode =
+            serverSale['paymentmode'] as String? ?? 'Cash';
 
         // Check if this is a partial payment (balance > 0 and amountpaid > 0)
         final isPartialPayment = serverBalance > 0 && serverAmountPaid > 0;
 
         // Log partial payment sync
         if (isPartialPayment) {
-          print('Syncing partial payment for salesId: $salesId, Amount Paid: $serverAmountPaid, Balance: $serverBalance');
+          print(
+            'Syncing partial payment for salesId: $salesId, Amount Paid: $serverAmountPaid, Balance: $serverBalance',
+          );
         }
 
         // Update all transactions for this salesId
@@ -1351,7 +1518,9 @@ class DatabaseHelper {
           whereArgs: [salesId],
         );
 
-        print('Synced salesId: $salesId with server data - Amount Paid: $serverAmountPaid, Balance: $serverBalance');
+        print(
+          'Synced salesId: $salesId with server data - Amount Paid: $serverAmountPaid, Balance: $serverBalance',
+        );
       }
     }
   }

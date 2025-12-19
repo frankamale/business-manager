@@ -30,7 +30,10 @@ class PaymentController extends GetxController {
       final latestReceiptNumber = await _getLatestReceiptNumber();
       if (latestReceiptNumber != null) {
         // Extract numeric part from receipt number (e.g., "REC-0005" -> 5)
-        final numericPart = latestReceiptNumber.replaceAll(RegExp(r'[^0-9]'), '');
+        final numericPart = latestReceiptNumber.replaceAll(
+          RegExp(r'[^0-9]'),
+          '',
+        );
         if (numericPart.isNotEmpty) {
           final latestNumber = int.tryParse(numericPart) ?? 0;
           receiptCounter.value = latestNumber + 1;
@@ -39,6 +42,22 @@ class PaymentController extends GetxController {
     } catch (e) {
       receiptCounter.value = 1;
     }
+  }
+
+  Future<Map<String, dynamic>> _getDefaultCashAccount() async {
+    final db = await _dbHelper.database;
+
+    final result = await db!.query(
+      'cash_accounts',
+      where: 'pos = 1 AND main_currency = 1',
+      limit: 1,
+    );
+
+    if (result.isEmpty) {
+      throw Exception('No POS cash account configured');
+    }
+
+    return result.first;
   }
 
   // Get the latest receipt number from database
@@ -50,7 +69,7 @@ class PaymentController extends GetxController {
       }
 
       final result = await db.rawQuery(
-        'SELECT receiptnumber FROM sales_transactions ORDER BY transactiondate DESC LIMIT 1'
+        'SELECT receiptnumber FROM sales_transactions ORDER BY transactiondate DESC LIMIT 1',
       );
 
       if (result.isNotEmpty) {
@@ -63,23 +82,16 @@ class PaymentController extends GetxController {
   }
 
   // Generate unique receipt number
-  Future<String> generateReceiptNumber() async {
-    String number = 'REC-${receiptCounter.value.toString().padLeft(4, '0')}';
+  String generateReceiptNumber() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-    // Safety check: ensure this number doesn't exist in database
-    bool exists = await _receiptNumberExists(number);
+    // Convert timestamp to 6 digits using modulo
+    final shortNumber = timestamp % 1000000;
 
-    // If it exists, keep incrementing until we find a unique one
-    while (exists) {
-      receiptCounter.value++;
-      number = 'REC-${receiptCounter.value.toString().padLeft(4, '0')}';
-      exists = await _receiptNumberExists(number);
-    }
+    // Pad with leading zeros if needed
+    final receiptNumber = shortNumber.toString().padLeft(6, '0');
 
-    // Increment counter for next receipt
-    receiptCounter.value++;
-
-    return number;
+    return 'REC-$receiptNumber';
   }
 
   // Check if receipt number already exists in database
@@ -92,7 +104,7 @@ class PaymentController extends GetxController {
 
       final result = await db.rawQuery(
         'SELECT COUNT(*) as count FROM sales_transactions WHERE receiptnumber = ?',
-        [receiptNumber]
+        [receiptNumber],
       );
 
       final count = result.first['count'] as int;
@@ -122,7 +134,8 @@ class PaymentController extends GetxController {
       final index = entry.key;
       final item = entry.value;
       final inventoryItem = item['item'] as InventoryItem;
-      final sellingPrice = (item['price'] as num?)?.toDouble() ?? inventoryItem.price;
+      final sellingPrice =
+          (item['price'] as num?)?.toDouble() ?? inventoryItem.price;
 
       return {
         "id": uuid.v4(),
@@ -159,30 +172,33 @@ class PaymentController extends GetxController {
   }
 
   // Create payment payload
-  Map<String, dynamic> createPaymentPayload({
+  Future<Map<String, dynamic>> createPaymentPayload({
     required String saleId,
     required double paymentAmount,
     required int paymentTimestamp,
     required String servicePointId,
     required String? customerId,
     required String? companyId,
-  }) {
+    required String? currencyid,
+  }) async {
     const uuid = Uuid();
+
+    final cashAccount = await _getDefaultCashAccount();
 
     return {
       "id": uuid.v4(),
-      "currencyid": "3a0e97b4-c13a-4a49-9205-182e62039a5a",
+      "currencyid": cashAccount['currency_id'],
       "referenceid": saleId,
       "servicepointid": servicePointId,
       "transactiontypeid": 1,
       "amount": paymentAmount,
-      "method": "Cash",
+      "method": cashAccount['paymentmode_name'] ?? "Cash",
       "methodId": 1,
       "chequeno": "",
-      "cashaccountid": "11111111-1111-1111-1111-111111111111",
+      "cashaccountid": cashAccount['id'],
       "paydate": paymentTimestamp,
       "receipt": true,
-      "currency": "Uganda Shillings",
+      "currency": cashAccount['currency_name'],
       "type": "Sales",
       "bp": customerId ?? "",
       "direction": 1,
@@ -219,12 +235,15 @@ class PaymentController extends GetxController {
     for (int i = 0; i < cartItems.length; i++) {
       final item = cartItems[i];
       final inventoryItem = item['item'] as InventoryItem;
-      final sellingPrice = (item['price'] as num?)?.toDouble() ?? inventoryItem.price;
+      final sellingPrice =
+          (item['price'] as num?)?.toDouble() ?? inventoryItem.price;
       final quantity = (item['quantity'] as num).toDouble();
       final itemAmount = sellingPrice * quantity;
 
       // Calculate this item's share of the payment
-      final itemPaymentShare = totalAmount > 0 ? (itemAmount / totalAmount) * paymentAmount : 0.0;
+      final itemPaymentShare = totalAmount > 0
+          ? (itemAmount / totalAmount) * paymentAmount
+          : 0.0;
       final itemBalance = itemAmount - itemPaymentShare;
 
       final transaction = {
@@ -324,17 +343,22 @@ class PaymentController extends GetxController {
       final companyInfo = await _apiService.getCompanyInfo();
 
       if (userData == null) {
-        throw Exception('User information not available. Please refresh and try again.');
+        throw Exception(
+          'User information not available. Please refresh and try again.',
+        );
       }
 
-      final userId = userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
-      final actualSalespersonId = salespersonId ??
-        userData['salespersonid'] ??
-        userData['staffid'] ??
-        userId;
+      final userId =
+          userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
+      final actualSalespersonId =
+          salespersonId ??
+          userData['salespersonid'] ??
+          userData['staffid'] ??
+          userId;
       final branchId = companyInfo['branchId'] ?? '';
       final companyId = companyInfo['companyId'] ?? '';
-      final actualServicePointId = servicePointId ?? companyInfo['servicePointId'] ?? branchId;
+      final actualServicePointId =
+          servicePointId ?? companyInfo['servicePointId'] ?? branchId;
       final issuedByName = userData['staff'] ?? userData['name'] ?? '';
 
       // Get customer name
@@ -406,14 +430,18 @@ class PaymentController extends GetxController {
       final companyInfo = await _apiService.getCompanyInfo();
 
       if (userData == null) {
-        throw Exception('User information not available. Please refresh and try again.');
+        throw Exception(
+          'User information not available. Please refresh and try again.',
+        );
       }
 
-      final userId = userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
-      final actualSalespersonId = salespersonId ??
-        userData['salespersonid'] ??
-        userData['staffid'] ??
-        userId;
+      final userId =
+          userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
+      final actualSalespersonId =
+          salespersonId ??
+          userData['salespersonid'] ??
+          userData['staffid'] ??
+          userId;
       final branchId = companyInfo['branchId'] ?? '';
       final companyId = companyInfo['companyId'] ?? '';
 
@@ -421,9 +449,11 @@ class PaymentController extends GetxController {
       String actualServicePointId = servicePointId ?? '';
       if (actualServicePointId.isEmpty) {
         try {
-          final existingTransactions = await _dbHelper.getSaleTransactionsBySalesId(existingSalesId);
+          final existingTransactions = await _dbHelper
+              .getSaleTransactionsBySalesId(existingSalesId);
           if (existingTransactions.isNotEmpty) {
-            actualServicePointId = existingTransactions.first.servicepointid ?? '';
+            actualServicePointId =
+                existingTransactions.first.servicepointid ?? '';
           }
         } catch (e) {
           // If can't get existing, fall back to current
@@ -441,8 +471,7 @@ class PaymentController extends GetxController {
           if (customer != null) {
             customerName = customer.fullnames;
           }
-        } catch (e) {
-        }
+        } catch (e) {}
       }
 
       // Delete existing transactions for this sale
@@ -505,21 +534,26 @@ class PaymentController extends GetxController {
       final transactionData = await _apiService.fetchSingleTransaction(salesId);
 
       // Calculate outstanding balance from server data
-      final lineItemsList = transactionData['lineItems'] as List<dynamic>? ?? [];
+      final lineItemsList =
+          transactionData['lineItems'] as List<dynamic>? ?? [];
       final totalAmount = lineItemsList.fold<double>(
         0.0,
-        (sum, item) => sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
+        (sum, item) =>
+            sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
       );
-      final currentPaid = double.tryParse(
-        transactionData['amountpaid']?.toString() ??
-        transactionData['amountPaid']?.toString() ?? '0'
-      ) ?? 0.0;
+      final currentPaid =
+          double.tryParse(
+            transactionData['amountpaid']?.toString() ??
+                transactionData['amountPaid']?.toString() ??
+                '0',
+          ) ??
+          0.0;
       final outstandingBalance = totalAmount - currentPaid;
 
       // Only pay up to the outstanding balance
       final paymentAmount = amountTendered < outstandingBalance
-        ? amountTendered
-        : outstandingBalance;
+          ? amountTendered
+          : outstandingBalance;
 
       if (paymentAmount <= 0) {
         throw Exception('No payment amount to process');
@@ -540,6 +574,7 @@ class PaymentController extends GetxController {
         servicePointId: servicePointId,
         customerId: customerId,
         companyId: transactionData['companyId'],
+        currencyid : transactionData['currencyid'],
       );
 
       // Log the payment payload being sent to server
@@ -551,10 +586,12 @@ class PaymentController extends GetxController {
       print('=== END SETTLE BILL PAYMENT PAYLOAD ===');
 
       // Post payment to server
-      await _apiService.postSale(paymentPayload);
+      await _apiService.postSale(await paymentPayload);
 
       // Update local database with new payment amount
-      final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(salesId);
+      final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(
+        salesId,
+      );
       if (saleTransactions.isNotEmpty) {
         final db = await _dbHelper.database;
         final batch = db!.batch();
@@ -562,9 +599,17 @@ class PaymentController extends GetxController {
         for (var transaction in saleTransactions) {
           // Calculate the share of this payment for this item
           final itemAmount = transaction.amount;
-          final totalAmountLocal = saleTransactions.fold<double>(0, (sum, t) => sum + t.amount);
-          final currentPaidLocal = saleTransactions.fold<double>(0, (sum, t) => sum + t.amountpaid);
-          final itemShare = totalAmountLocal > 0 ? (itemAmount / totalAmountLocal) * paymentAmount : 0.0;
+          final totalAmountLocal = saleTransactions.fold<double>(
+            0,
+            (sum, t) => sum + t.amount,
+          );
+          final currentPaidLocal = saleTransactions.fold<double>(
+            0,
+            (sum, t) => sum + t.amountpaid,
+          );
+          final itemShare = totalAmountLocal > 0
+              ? (itemAmount / totalAmountLocal) * paymentAmount
+              : 0.0;
 
           final newAmountPaid = transaction.amountpaid + itemShare;
           final newBalance = transaction.amount - newAmountPaid;
@@ -605,7 +650,9 @@ class PaymentController extends GetxController {
       final hasConnection = await NetworkHelper.hasConnection();
 
       if (!hasConnection) {
-        print('No network connection - sale will be uploaded later when connection is available');
+        print(
+          'No network connection - sale will be uploaded later when connection is available',
+        );
         return;
       }
 
@@ -621,10 +668,12 @@ class PaymentController extends GetxController {
       print('Sale will be uploaded later when retrying from sales listing');
     }
   }
+
   // Public method to fetch transaction data
   Future<Map<String, dynamic>> fetchTransactionData(String salesId) async {
     return await _apiService.fetchSingleTransaction(salesId);
   }
+
   // Public method to get customer by ID
   Future<Customer?> getCustomerById(String clientId) async {
     return await _dbHelper.getCustomerById(clientId);

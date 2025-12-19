@@ -13,16 +13,12 @@ import '../models/sale_transaction.dart';
 import '../database/db_helper.dart';
 import '../config.dart';
 
-
-
 class PosApiService extends GetxService {
   final String baseurl = AppConfig.baseUrl;
 
   // Initialize secure storage
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
   DatabaseHelper _dbHelper = DatabaseHelper();
@@ -94,7 +90,9 @@ class PosApiService extends GetxService {
 
   // Save authentication data to secure storage
   Future<void> _saveAuthData(AuthResponse authResponse) async {
-    print('DEBUG: _saveAuthData called with token: ${authResponse.accessToken}');
+    print(
+      'DEBUG: _saveAuthData called with token: ${authResponse.accessToken}',
+    );
     await _secureStorage.write(key: _tokenKey, value: authResponse.accessToken);
     await _secureStorage.write(key: _userIdKey, value: authResponse.id);
     await _secureStorage.write(key: _usernameKey, value: authResponse.username);
@@ -119,10 +117,16 @@ class PosApiService extends GetxService {
     await _secureStorage.write(key: _userIdKey, value: authData['userId']);
     await _secureStorage.write(key: _usernameKey, value: authData['username']);
     if (authData.containsKey('roles')) {
-      await _secureStorage.write(key: _rolesKey, value: json.encode(authData['roles']));
+      await _secureStorage.write(
+        key: _rolesKey,
+        value: json.encode(authData['roles']),
+      );
     }
     if (authData.containsKey('isAdmin')) {
-      await _secureStorage.write(key: _isAdminKey, value: authData['isAdmin'].toString());
+      await _secureStorage.write(
+        key: _isAdminKey,
+        value: authData['isAdmin'].toString(),
+      );
     }
   }
 
@@ -155,7 +159,7 @@ class PosApiService extends GetxService {
     }
     final isAdminStr = await _secureStorage.read(key: _isAdminKey);
     final isAdmin = isAdminStr == 'true';
-    
+
     return {
       'userId': userId,
       'username': username,
@@ -186,10 +190,27 @@ class PosApiService extends GetxService {
   Future<Map<String, String?>> getServerCredentials() async {
     final username = await _secureStorage.read(key: _serverUsernameKey);
     final password = await _secureStorage.read(key: _serverPasswordKey);
-    return {
-      'username': username,
-      'password': password,
+    return {'username': username, 'password': password};
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCashAccounts() async {
+    final token = await getAccessToken();
+
+    final headers = {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
     };
+
+    final response = await http.get(
+      Uri.parse('$baseurl/cashaccounts'),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(json.decode(response.body));
+    } else {
+      throw Exception('Failed to fetch cash accounts');
+    }
   }
 
   // Check if server credentials are stored
@@ -208,7 +229,8 @@ class PosApiService extends GetxService {
   Future<void> saveCompanyInfo(Map<String, dynamic> companyInfo) async {
     final branchId = companyInfo['branch'] ?? '';
     final companyId = companyInfo['company'] ?? '';
-    final servicePointId = companyInfo['sellingPointId'] ?? companyInfo['branch'] ?? '';
+    final servicePointId =
+        companyInfo['sellingPointId'] ?? companyInfo['branch'] ?? '';
 
     await _secureStorage.write(key: _branchIdKey, value: branchId);
     await _secureStorage.write(key: _companyIdKey, value: companyId);
@@ -220,7 +242,8 @@ class PosApiService extends GetxService {
     return {
       'branchId': await _secureStorage.read(key: _branchIdKey) ?? '',
       'companyId': await _secureStorage.read(key: _companyIdKey) ?? '',
-      'servicePointId': await _secureStorage.read(key: _servicePointIdKey) ?? '',
+      'servicePointId':
+          await _secureStorage.read(key: _servicePointIdKey) ?? '',
     };
   }
 
@@ -239,9 +262,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -268,9 +289,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -297,9 +316,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -312,7 +329,9 @@ class PosApiService extends GetxService {
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        final servicePoints = data.map((json) => ServicePoint.fromMap(json)).toList();
+        final servicePoints = data
+            .map((json) => ServicePoint.fromMap(json))
+            .toList();
         return servicePoints;
       } else {
         throw Exception("Failed to load service points");
@@ -326,9 +345,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -341,7 +358,9 @@ class PosApiService extends GetxService {
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
-        final inventoryItems = data.map((json) => InventoryItem.fromMap(json)).toList();
+        final inventoryItems = data
+            .map((json) => InventoryItem.fromMap(json))
+            .toList();
         return inventoryItems;
       } else {
         throw Exception("Failed to load inventory");
@@ -355,9 +374,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -384,9 +401,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -403,20 +418,23 @@ class PosApiService extends GetxService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
-        throw Exception("Failed to create sale: ${response.statusCode} - ${response.body}");
+        throw Exception(
+          "Failed to create sale: ${response.statusCode} - ${response.body}",
+        );
       }
     } catch (e) {
       rethrow;
     }
   }
 
-  Future<Map<String, dynamic>> updateSale(String saleId, Map<String, dynamic> saleData) async {
+  Future<Map<String, dynamic>> updateSale(
+    String saleId,
+    Map<String, dynamic> saleData,
+  ) async {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -433,7 +451,9 @@ class PosApiService extends GetxService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
-        throw Exception("Failed to update sale: ${response.statusCode} - ${response.body}");
+        throw Exception(
+          "Failed to update sale: ${response.statusCode} - ${response.body}",
+        );
       }
     } catch (e) {
       rethrow;
@@ -444,9 +464,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -467,13 +485,13 @@ class PosApiService extends GetxService {
     }
   }
 
-  Future<Map<String, dynamic>> createPayment(Map<String, dynamic> paymentData) async {
+  Future<Map<String, dynamic>> createPayment(
+    Map<String, dynamic> paymentData,
+  ) async {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -499,9 +517,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -518,7 +534,9 @@ class PosApiService extends GetxService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
-        throw Exception("Failed to post sale: ${response.statusCode} - ${response.body}");
+        throw Exception(
+          "Failed to post sale: ${response.statusCode} - ${response.body}",
+        );
       }
     } catch (e) {
       rethrow;
@@ -535,9 +553,7 @@ class PosApiService extends GetxService {
     try {
       final token = await getAccessToken();
 
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
@@ -551,12 +567,11 @@ class PosApiService extends GetxService {
         'enddate': endDate,
       };
 
-      final uri = Uri.parse("$baseurl/sales/").replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        "$baseurl/sales/",
+      ).replace(queryParameters: queryParams);
 
-      final response = await http.get(
-        uri,
-        headers: headers,
-      );
+      final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);

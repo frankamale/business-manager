@@ -88,7 +88,7 @@ class _SalesListingState extends State<SalesListing> {
     final allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
 
     // Allow cashiers or if setting is enabled, also allow waiters
-    return role == 'cashier' || role.contains('cashier') ||
+    return role == 'cashier' || role.toLowerCase().contains('cashier') || role.toLowerCase().contains('salesperson') ||
            (allowAllUsersPayment && role == 'waiter');
   }
 
