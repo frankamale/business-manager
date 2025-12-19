@@ -56,18 +56,7 @@ class ConnectivityController extends GetxController {
           _initializeControllers();
           await _loadDataFromDatabase();
           final role = await _getUserRole();
-          print("Retrieved user role for navigation: $role");
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
-          print(role);
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
-          print("--------------------------------------------------------");
+    
           
           // Handle null or empty role with fallback logic
           if (role == null || role.isEmpty) {
@@ -91,7 +80,7 @@ class ConnectivityController extends GetxController {
             // If still no role, default to POS (non-admin)
             debugPrint('SplashScreen: No role found, defaulting to POS app');
             Get.offAll(() => const PosAppRoot());
-          } else if (role.toLowerCase().contains("admin")) {
+          } else if (role.toLowerCase() == 'admin') {
             Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());
@@ -238,7 +227,7 @@ class ConnectivityController extends GetxController {
     if (role == null || role.isEmpty) {
       debugPrint('SplashScreen: User role is null in offline mode, defaulting to POS app');
       Get.offAll(() => const PosAppRoot());
-    } else if (role.toLowerCase().contains("admin")) {
+    } else if (role.toLowerCase() == 'admin') {
       Get.offAll(() => const MonitorAppRoot());
     } else {
       Get.offAll(() => const PosAppRoot());
