@@ -478,7 +478,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           Row(
                             children: [
                               Hero(
-                                tag: 'logo',
+                                tag: 'footer_logo',
                                 child: Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(

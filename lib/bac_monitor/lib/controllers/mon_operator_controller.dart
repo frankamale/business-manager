@@ -1,8 +1,10 @@
 import 'package:get/get.dart';
 import '../db/db_helper.dart';
+import '../services/account_manager.dart';
 
 class MonOperatorController extends GetxController {
   final dbHelper = DatabaseHelper();
+  final AccountManager _accountManager = Get.find();
 
   var companyName = "Loading...".obs;
   var companyAddress = "".obs;
@@ -11,6 +13,13 @@ class MonOperatorController extends GetxController {
   void onInit() {
     super.onInit();
     loadCompanyDetailsFromDb();
+    
+    // Listen to account changes and refresh company data
+    ever(_accountManager.currentAccount, (UserAccount? account) {
+      if (account != null) {
+        loadCompanyDetailsFromDb();
+      }
+    });
   }
 
   /// Fetches the company details from the local database.

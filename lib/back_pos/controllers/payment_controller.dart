@@ -370,8 +370,7 @@ class PaymentController extends GetxController {
             customerName = customer.fullnames;
           }
         } catch (e) {
-          // Use default customer name on error
-        }
+      }
       }
 
       // Generate receipt number and sale ID

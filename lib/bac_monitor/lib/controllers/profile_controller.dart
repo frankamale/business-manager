@@ -1,3 +1,4 @@
+import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:get/get.dart';
 import '../../../back_pos/services/api_services.dart';
 import '../../../initialise/app_roots.dart';
@@ -26,6 +27,14 @@ class ProfileController extends GetxController {
       currentSystem.value = currentAccount.system;
     }
     loadProfileData();
+    
+    // Listen to account changes and refresh data accordingly
+    ever(_accountManager.currentAccount, (UserAccount? account) {
+      if (account != null) {
+        currentSystem.value = account.system;
+        refreshUserDataFromAccount(account);
+      }
+    });
   }
 
   Future<void> loadProfileData() async {
@@ -53,6 +62,44 @@ class ProfileController extends GetxController {
     }
   }
 
+  Future<void> refreshUserDataFromAccount(UserAccount account) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      // Update user data from the account's userData
+      if (account.userData.isNotEmpty) {
+        userData.value = account.userData;
+      } else {
+        // If account doesn't have userData, try to load it from the appropriate service
+        if (account.system == 'monitor') {
+          final user = await _monitorApiService.getStoredUserData();
+          if (user != null) {
+            userData.value = user;
+          }
+        } else {
+          final user = await _posApiService.getStoredUserData();
+          if (user != null) {
+            userData.value = user;
+          }
+        }
+      }
+
+      // Load company data based on the current system
+      final dbHelper = DatabaseHelper();
+      final company = await dbHelper.getCompanyDetails();
+      if (company != null) {
+        companyData.value = company;
+      }
+
+    } catch (e) {
+      errorMessage.value = 'Failed to refresh user data: $e';
+      print('ProfileController: Error refreshing user data: $e');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   Future<void> signOut() async {
     try {
       isLoading.value = true;
@@ -68,7 +115,7 @@ class ProfileController extends GetxController {
       }
 
       // Navigate to login
-      Get.offAllNamed('/login');
+      Get.off(()=>UnifiedLoginScreen());
     } catch (e) {
       errorMessage.value = 'Failed to sign out: $e';
       print('ProfileController: Error signing out: $e');
@@ -84,8 +131,8 @@ class ProfileController extends GetxController {
 
       currentSystem.value = system;
 
-      // Get accounts for the target system
-      final systemAccounts = _accountManager.getAccountsForSystem(system);
+      // Get admin accounts for the target system
+      final systemAccounts = _accountManager.getAdminAccountsForSwitch(system: system);
 
       if (systemAccounts.isNotEmpty) {
         // Switch to the most recently used account for this system
@@ -110,6 +157,14 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+
+      // First, logout from current account
+      final currentAccount = _accountManager.currentAccount.value;
+      if (currentAccount != null && currentAccount.id != account.id) {
+        // Clear auth data from both services
+        await _posApiService.clearAuthData();
+        await _monitorApiService.logout();
+      }
 
       // Validate token and handle re-authentication if needed
       bool hasInternet = false;
@@ -188,17 +243,29 @@ class ProfileController extends GetxController {
         // Store monitor user data
         await _monitorApiService.storeUserData(account.userData);
         await _monitorApiService.storeToken(account.userData['accessToken'] ?? '');
+        
+        // Ensure user role is stored separately
+        if (account.userData.containsKey('roles') && account.userData['roles'] is List && account.userData['roles'].isNotEmpty) {
+          final userRole = account.userData['roles'].first.toString();
+          await _monitorApiService.storeUserRole(userRole);
+        }
 
         // Switch to monitor database
         if (account.userData.containsKey('companyId')) {
           await _monitorApiService.switchCompany(account.userData['companyId']);
         }
 
+        // Refresh user data in controller
+        await refreshUserDataFromAccount(account);
+
         // Navigate to monitor app
         Get.offAll(() => const MonitorAppRoot());
       } else {
         // Store POS user data
         await _posApiService.saveAuthDataFromMap(account.userData);
+
+        // Refresh user data in controller
+        await refreshUserDataFromAccount(account);
 
         // Navigate to POS app
         Get.offAll(() => const PosAppRoot());
@@ -250,7 +317,7 @@ class ProfileController extends GetxController {
   }
 
   List<UserAccount> getAvailableAccounts() {
-    return _accountManager.getAccountsForSystem(currentSystem.value);
+    return _accountManager.getAdminAccountsForSwitch(system: currentSystem.value);
   }
 
   String get userName => userData['username'] ?? 'Unknown User';

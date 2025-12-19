@@ -207,15 +207,9 @@ class ProfilePage extends StatelessWidget {
                           ),
                         ),
                         ...accounts.map(
-                          (account) => _buildAccountItem(account, controller),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildMenuItem(
-                          icon: Icons.add,
-                          title: 'Add Current Account',
-                          subtitle: 'Save current session',
-                          onTap: controller.saveCurrentUserAsAccount,
-                        ),
+                              (account) =>
+                              _buildAccountItem(account, controller),
+                        ).toList(),
                       ],
                     ),
                   );
@@ -241,63 +235,13 @@ class ProfilePage extends StatelessWidget {
                           icon: Icons.add,
                           title: 'Sign in with another account',
                           subtitle: 'Add new account',
-                          onTap: controller.saveCurrentUserAsAccount,
+                          onTap: controller.signOut,
                         ),
                       ],
                     ),
                   );
                 }
               }),
-
-              const SizedBox(height: 24),
-
-              // Account Management Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildMenuItem(
-                      icon: Icons.notifications_outlined,
-                      title: 'Notifications',
-                      onTap: () {
-                        Get.snackbar(
-                          'Info',
-                          'Notification settings',
-                          backgroundColor: PrimaryColors.lightBlue,
-                          colorText: Colors.white,
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Sign Out Button
-                    _buildMenuItem(
-                      icon: Icons.logout,
-                      title: 'Sign out',
-                      iconColor: Colors.red,
-                      titleColor: Colors.red,
-                      onTap: () => _showSignOutDialog(context, controller),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // App Version
-                    Center(
-                      child: Text(
-                        AppConfig.copyright,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.4),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
             ],
           ),
         ),
@@ -494,44 +438,6 @@ class ProfilePage extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  void _showSignOutDialog(BuildContext context, ProfileController controller) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: PrimaryColors.lightBlue,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Sign Out', style: TextStyle(color: Colors.white)),
-          content: const Text(
-            'Are you sure you want to sign out?',
-            style: TextStyle(color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white.withOpacity(0.7)),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                controller.signOut();
-              },
-              child: const Text(
-                'Sign Out',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

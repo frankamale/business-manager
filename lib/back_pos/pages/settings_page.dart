@@ -61,15 +61,26 @@ class SettingsPage extends StatelessWidget {
           Expanded(
             child: ListView(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.monitor),
-                  title: const Text('Monitor App'),
-                  subtitle: const Text('View analytics and monitoring dashboard'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    SettingsService().navigateToMonitorApp();
-                  },
-                ),
+                // Conditionally render Monitor App link for admin users only
+                Obx(() {
+                  final user = authController.currentUser.value;
+                  final isAdmin = user != null &&
+                                user.role.toLowerCase().contains('admin');
+                  
+                  if (isAdmin) {
+                    return ListTile(
+                      leading: const Icon(Icons.monitor),
+                      title: const Text('Monitor App'),
+                      subtitle: const Text('View analytics and monitoring dashboard'),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () {
+                        SettingsService().navigateToMonitorApp();
+                      },
+                    );
+                  } else {
+                    return Container(); 
+                  }
+                }),
                  ListTile(
                   leading: const Icon(Icons.cloud_upload),
                   title: const Text('Auto Upload Sales'),

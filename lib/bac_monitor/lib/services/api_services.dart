@@ -10,71 +10,80 @@ import '../db/db_helper.dart';
 
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
     ),
   );
 
   final _dbHelper = DatabaseHelper();
-
-  // ============ IN-MEMORY CACHE ============
-  String? _cachedToken;
+ String? _cachedToken;
   String? cachedCompanyId;
   bool _isInitialized = false;
 
-  // Prevent multiple simultaneous initialization attempts
   Future<void>? _initializationFuture;
 
   Future<String?> getStoredToken() async {
-    // Return cached token if available
     if (_cachedToken != null) {
       return _cachedToken;
     }
 
-    // Otherwise fetch and cache
-    _cachedToken = await _secureStorage.read(key: "access_token");
+    _cachedToken = await secureStorage.read(key: "access_token");
     print('DEBUG: MonitorApiService.getStoredToken() retrieved and cached token');
     return _cachedToken;
   }
 
   Future<void> storeToken(String token) async {
-    await _secureStorage.write(key: 'access_token', value: token);
-    _cachedToken = token; // Update cache
+    await secureStorage.write(key: 'access_token', value: token);
+    _cachedToken = token; 
     print('DEBUG: MonitorApiService.storeToken() stored token');
   }
 
   Future<String?> getStoredCode() async {
-    return await _secureStorage.read(key: 'persistent_code');
+    return await secureStorage.read(key: 'persistent_code');
   }
 
   Future<void> storeCode(String code) async {
     print('DEBUG: MonitorApiService.storeCode() called with code: $code');
-    await _secureStorage.write(key: 'persistent_code', value: code);
-    final savedCode = await _secureStorage.read(key: 'persistent_code');
+    await secureStorage.write(key: 'persistent_code', value: code);
+    final savedCode = await secureStorage.read(key: 'persistent_code');
     print('DEBUG: MonitorApiService.storeCode() verified saved code: $savedCode');
   }
 
   Future<void> storeUserData(Map<String, dynamic> data) async {
-    await _secureStorage.write(key: 'user_data', value: jsonEncode(data));
+    await secureStorage.write(key: 'user_data', value: jsonEncode(data));
+    
+    // Also store user role separately for easier access
+    if (data.containsKey('roles') && data['roles'] is List && data['roles'].isNotEmpty) {
+      final userRole = data['roles'].first.toString();
+      await secureStorage.write(key: 'user_role', value: userRole);
+    }
   }
 
   Future<Map<String, dynamic>?> getStoredUserData() async {
-    final userDataString = await _secureStorage.read(key: 'user_data');
+    final userDataString = await secureStorage.read(key: 'user_data');
     return userDataString != null ? jsonDecode(userDataString) : null;
   }
 
+  Future<String?> getStoredUserRole() async {
+    return await secureStorage.read(key: 'user_role');
+  }
+
+  Future<void> storeUserRole(String role) async {
+    await secureStorage.write(key: 'user_role', value: role);
+  }
+
   Future<void> storeLastSyncTimestamp(int timestamp) async {
-    await _secureStorage.write(key: 'last_sync_timestamp', value: timestamp.toString());
+    await secureStorage.write(key: 'last_sync_timestamp', value: timestamp.toString());
   }
 
   Future<int?> getStoredLastSyncTimestamp() async {
-    final timestampString = await _secureStorage.read(key: 'last_sync_timestamp');
+    final timestampString = await secureStorage.read(key: 'last_sync_timestamp');
     return timestampString != null ? int.parse(timestampString) : null;
   }
 
   Future<void> storeCompanyId(String companyId) async {
-    await _secureStorage.write(key: 'company_id', value: companyId);
+    await secureStorage.write(key: 'company_id', value: companyId);
     cachedCompanyId = companyId; // Update cache
   }
 
@@ -85,20 +94,20 @@ class MonitorApiService extends GetxService {
     }
 
     // Otherwise fetch and cache
-    cachedCompanyId = await _secureStorage.read(key: 'company_id');
+    cachedCompanyId = await secureStorage.read(key: 'company_id');
     return cachedCompanyId;
   }
 
   // Save server credentials
   Future<void> saveServerCredentials(String username, String password) async {
-    await _secureStorage.write(key: 'server_username', value: username);
-    await _secureStorage.write(key: 'server_password', value: password);
+    await secureStorage.write(key: 'server_username', value: username);
+    await secureStorage.write(key: 'server_password', value: password);
   }
 
   // Get stored server credentials
   Future<Map<String, String?>> getServerCredentials() async {
-    final username = await _secureStorage.read(key: 'server_username');
-    final password = await _secureStorage.read(key: 'server_password');
+    final username = await secureStorage.read(key: 'server_username');
+    final password = await secureStorage.read(key: 'server_password');
     return {
       'username': username,
       'password': password,
@@ -299,11 +308,11 @@ class MonitorApiService extends GetxService {
     // Close all database instances on logout
     await _dbHelper.closeAllDatabases();
 
-    await _secureStorage.delete(key: 'access_token');
-    await _secureStorage.delete(key: 'user_data');
-    await _secureStorage.delete(key: 'persistent_code');
-    await _secureStorage.delete(key: 'last_sync_timestamp');
-    await _secureStorage.delete(key: 'company_id');
+    await secureStorage.delete(key: 'access_token');
+    await secureStorage.delete(key: 'user_data');
+    await secureStorage.delete(key: 'persistent_code');
+    await secureStorage.delete(key: 'last_sync_timestamp');
+    await secureStorage.delete(key: 'company_id');
 
     // Clear cache
     _cachedToken = null;
@@ -324,7 +333,7 @@ class MonitorApiService extends GetxService {
 
       debugPrint("ApiService: Successfully switched to company: $newCompanyId");
 
-      // Fetch and cache data for the new company
+      await clearInitialSyncFlag();
       await fetchAndCacheAllData();
     } catch (e) {
       debugPrint("ApiService: Failed to switch company: $e");
@@ -340,7 +349,6 @@ class MonitorApiService extends GetxService {
     try {
       debugPrint("ApiService: Starting to fetch all data...");
 
-      // Individual calls with logging to find the failing one
       http.Response? servicePointsRes;
       http.Response? companyDetailsRes;
       http.Response? salesRes;
@@ -566,6 +574,9 @@ class MonitorApiService extends GetxService {
       debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");
       rethrow;
     }
+    await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
+    await setInitialSyncCompleted();
+
   }
 
   Future<void> syncRecentSales() async {
@@ -685,4 +696,18 @@ class MonitorApiService extends GetxService {
       );
     }
   }
+
+  Future<void> setInitialSyncCompleted() async {
+    await secureStorage.write(key: 'initial_sync_completed', value: 'true');
+  }
+
+  Future<bool> isInitialSyncCompleted() async {
+    final value = await secureStorage.read(key: 'initial_sync_completed');
+    return value == 'true';
+  }
+
+  Future<void> clearInitialSyncFlag() async {
+    await secureStorage.delete(key: 'initial_sync_completed');
+  }
+
 }
