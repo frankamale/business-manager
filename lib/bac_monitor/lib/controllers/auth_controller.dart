@@ -48,6 +48,12 @@ class LoginController extends GetxController {
         final token = await _apiService.getStoredToken();
         final userData = await _apiService.getStoredUserData() ?? {};
 
+        if (userData.containsKey('roles') && userData['roles'] is List && userData['roles'].isNotEmpty) {
+          final userRole = userData['roles'].first.toString();
+          await _apiService.secureStorage.write(key: 'user_role', value: userRole);
+          debugPrint("LoginController: Successfully stored user role: $userRole");
+        }
+
         final account = UserAccount(
           id: companyId,
           username: emailController.text,

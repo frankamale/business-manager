@@ -243,6 +243,12 @@ class ProfileController extends GetxController {
         // Store monitor user data
         await _monitorApiService.storeUserData(account.userData);
         await _monitorApiService.storeToken(account.userData['accessToken'] ?? '');
+        
+        // Ensure user role is stored separately
+        if (account.userData.containsKey('roles') && account.userData['roles'] is List && account.userData['roles'].isNotEmpty) {
+          final userRole = account.userData['roles'].first.toString();
+          await _monitorApiService.storeUserRole(userRole);
+        }
 
         // Switch to monitor database
         if (account.userData.containsKey('companyId')) {
