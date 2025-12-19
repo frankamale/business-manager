@@ -1,3 +1,4 @@
+import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:get/get.dart';
 import '../../../back_pos/services/api_services.dart';
 import '../../../initialise/app_roots.dart';
@@ -68,7 +69,7 @@ class ProfileController extends GetxController {
       }
 
       // Navigate to login
-      Get.offAllNamed('/login');
+      Get.off(()=>UnifiedLoginScreen());
     } catch (e) {
       errorMessage.value = 'Failed to sign out: $e';
       print('ProfileController: Error signing out: $e');
