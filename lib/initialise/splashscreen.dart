@@ -185,7 +185,7 @@ class ConnectivityController extends GetxController {
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
     final role = await _getUserRole();
-    if (role == 'admin') {
+    if (role!.toLowerCase().contains("admin")) {
       Get.offAll(() => const MonitorAppRoot());
     } else {
       Get.offAll(() => const PosAppRoot());

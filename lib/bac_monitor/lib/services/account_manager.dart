@@ -132,10 +132,52 @@ class AccountManager extends GetxService {
       ..sort((a, b) => b.lastLogin.compareTo(a.lastLogin));
   }
 
+  // Check if an account has admin privileges
+  bool _hasAdminPrivileges(UserAccount account) {
+    // Check if userData contains isAdmin flag and it's true
+    return account.userData['isAdmin'] == true ||
+           (account.userData['roles'] != null &&
+            (account.userData['roles'] as List<dynamic>?)
+                ?.any((role) => role.toString().toLowerCase().contains('admin')) == true);
+  }
+
+  // Get accounts with admin privileges, excluding the current account
+  List<UserAccount> getAdminAccountsForSwitch({String? system}) {
+    final filteredAccounts = accounts.where((account) {
+      // Exclude current account
+      final isCurrentAccount = currentAccount.value?.id == account.id;
+      
+      // Filter by system if provided
+      final systemMatch = system == null || account.system == system;
+      
+      // Check admin privileges
+      final isAdmin = _hasAdminPrivileges(account);
+      
+      return !isCurrentAccount && systemMatch && isAdmin;
+    }).toList()
+      ..sort((a, b) => b.lastLogin.compareTo(a.lastLogin));
+    
+    return filteredAccounts;
+  }
+
+  // Get all accounts for switching, excluding current account
+  List<UserAccount> getAccountsForSwitch({String? system}) {
+    final filteredAccounts = accounts.where((account) {
+      // Exclude current account
+      final isCurrentAccount = currentAccount.value?.id == account.id;
+      
+      // Filter by system if provided
+      final systemMatch = system == null || account.system == system;
+      
+      return !isCurrentAccount && systemMatch;
+    }).toList()
+      ..sort((a, b) => b.lastLogin.compareTo(a.lastLogin));
+    
+    return filteredAccounts;
+  }
+
   Future<void> switchToAccount(UserAccount account) async {
     await setCurrentAccount(account);
-    // Here we would trigger system/database switching logic
-    // This will be handled by the ProfileController
   }
 
   Future<void> clearAllAccounts() async {

@@ -84,8 +84,8 @@ class ProfileController extends GetxController {
 
       currentSystem.value = system;
 
-      // Get accounts for the target system
-      final systemAccounts = _accountManager.getAccountsForSystem(system);
+      // Get admin accounts for the target system
+      final systemAccounts = _accountManager.getAdminAccountsForSwitch(system: system);
 
       if (systemAccounts.isNotEmpty) {
         // Switch to the most recently used account for this system
@@ -250,7 +250,7 @@ class ProfileController extends GetxController {
   }
 
   List<UserAccount> getAvailableAccounts() {
-    return _accountManager.getAccountsForSystem(currentSystem.value);
+    return _accountManager.getAdminAccountsForSwitch(system: currentSystem.value);
   }
 
   String get userName => userData['username'] ?? 'Unknown User';

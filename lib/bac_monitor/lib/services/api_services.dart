@@ -17,22 +17,17 @@ class MonitorApiService extends GetxService {
   );
 
   final _dbHelper = DatabaseHelper();
-
-  // ============ IN-MEMORY CACHE ============
-  String? _cachedToken;
+ String? _cachedToken;
   String? cachedCompanyId;
   bool _isInitialized = false;
 
-  // Prevent multiple simultaneous initialization attempts
   Future<void>? _initializationFuture;
 
   Future<String?> getStoredToken() async {
-    // Return cached token if available
     if (_cachedToken != null) {
       return _cachedToken;
     }
 
-    // Otherwise fetch and cache
     _cachedToken = await _secureStorage.read(key: "access_token");
     print('DEBUG: MonitorApiService.getStoredToken() retrieved and cached token');
     return _cachedToken;
@@ -40,7 +35,7 @@ class MonitorApiService extends GetxService {
 
   Future<void> storeToken(String token) async {
     await _secureStorage.write(key: 'access_token', value: token);
-    _cachedToken = token; // Update cache
+    _cachedToken = token; 
     print('DEBUG: MonitorApiService.storeToken() stored token');
   }
 

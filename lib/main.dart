@@ -37,9 +37,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
-  // ============================================
-  // Initialize Services
-  // ============================================
 
   // POS Services
   Get.put(PosApiService());
@@ -49,9 +46,6 @@ void main() async {
   Get.put(MonitorApiService());
   Get.put(AccountManager());
 
-  // ============================================
-  // Initialize POS Controllers
-  // ============================================
 
   Get.put(AuthController());
   Get.put(CustomerController());
@@ -62,9 +56,6 @@ void main() async {
   Get.put(SettingsController());
   Get.put(ServicePointController());
 
-  // ============================================
-  // Initialize Monitor Controllers (with Mon prefix)
-  // ============================================
 
   Get.put(MonDashboardController());
   Get.put(MonGrossProfitController());
