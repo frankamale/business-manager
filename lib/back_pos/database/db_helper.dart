@@ -376,7 +376,7 @@ class DatabaseHelper {
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE user (
+      CREATE TABLE IF NOT EXISTS user (
       id TEXT PRIMARY KEY,
       name TEXT,
       branch TEXT,
@@ -394,7 +394,7 @@ class DatabaseHelper {
       ''');
 
     await db.execute('''
-      CREATE TABLE service_point (
+      CREATE TABLE IF NOT EXISTS service_point (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         code TEXT NOT NULL,
@@ -409,7 +409,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE inventory (
+      CREATE TABLE IF NOT EXISTS inventory (
         id TEXT PRIMARY KEY,
         ipdid TEXT NOT NULL,
         code TEXT NOT NULL,
@@ -437,7 +437,7 @@ class DatabaseHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE sales_transactions (
+      CREATE TABLE IF NOT EXISTS sales_transactions (
         id TEXT PRIMARY KEY,
         purchaseordernumber TEXT,
         internalrefno INTEGER NOT NULL,
@@ -488,7 +488,7 @@ class DatabaseHelper {
       )
     ''');
     await db.execute('''
-  CREATE TABLE cash_accounts (
+  CREATE TABLE IF NOT EXISTS cash_accounts (
     id TEXT PRIMARY KEY,
     accountname TEXT,
     accountnumber TEXT,
@@ -506,26 +506,26 @@ class DatabaseHelper {
 ''');
 
     await db.execute('''
-  CREATE INDEX idx_cash_accounts_currency
+  CREATE INDEX IF NOT EXISTS idx_cash_accounts_currency
   ON cash_accounts(currency_id)
 ''');
 
     // Create indexes for faster queries
     await db.execute('''
-      CREATE INDEX idx_salesId ON sales_transactions(salesId)
+      CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)
     ''');
 
     await db.execute('''
-      CREATE INDEX idx_receiptnumber ON sales_transactions(receiptnumber)
+      CREATE INDEX IF NOT EXISTS idx_receiptnumber ON sales_transactions(receiptnumber)
     ''');
 
     await db.execute('''
-      CREATE INDEX idx_transactiondate ON sales_transactions(transactiondate)
+      CREATE INDEX IF NOT EXISTS idx_transactiondate ON sales_transactions(transactiondate)
     ''');
 
     // Create sync_metadata table for tracking sync status
     await db.execute('''
-      CREATE TABLE sync_metadata (
+      CREATE TABLE IF NOT EXISTS sync_metadata (
         data_type TEXT PRIMARY KEY,
         last_sync_timestamp INTEGER NOT NULL,
         sync_status TEXT NOT NULL,
@@ -536,7 +536,7 @@ class DatabaseHelper {
 
     // Create customers table for caching customer data
     await db.execute('''
-      CREATE TABLE customers (
+      CREATE TABLE IF NOT EXISTS customers (
         id TEXT PRIMARY KEY,
         code TEXT,
         firstname TEXT,
@@ -579,16 +579,16 @@ class DatabaseHelper {
 
     // Create indexes on customers table
     await db.execute('''
-      CREATE INDEX idx_customer_fullnames ON customers(fullnames)
+      CREATE INDEX IF NOT EXISTS idx_customer_fullnames ON customers(fullnames)
     ''');
 
     await db.execute('''
-      CREATE INDEX idx_customer_phone ON customers(phone1)
+      CREATE INDEX IF NOT EXISTS idx_customer_phone ON customers(phone1)
     ''');
 
     // Create server_sales table for storing fetched sales data from server
     await db.execute('''
-      CREATE TABLE server_sales (
+      CREATE TABLE IF NOT EXISTS server_sales (
         id TEXT PRIMARY KEY,
         transactiontypeid INTEGER NOT NULL,
         patrontype TEXT,
@@ -641,11 +641,11 @@ class DatabaseHelper {
 
     // Create indexes for server_sales table
     await db.execute('''
-      CREATE INDEX idx_server_sales_salesId ON server_sales(salesId)
+      CREATE INDEX IF NOT EXISTS idx_server_sales_salesId ON server_sales(salesId)
     ''');
 
     await db.execute('''
-      CREATE INDEX idx_server_sales_transactiondate ON server_sales(transactiondate)
+      CREATE INDEX IF NOT EXISTS idx_server_sales_transactiondate ON server_sales(transactiondate)
     ''');
   }
 

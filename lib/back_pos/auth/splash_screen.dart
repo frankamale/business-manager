@@ -312,6 +312,9 @@ class _SplashScreenState extends State<SplashScreen>
           // Database is not open, so open it
           await _dbHelper.openForCompany(companyId);
           _log('ensureDatabaseIsOpen: Database opened successfully');
+          _log("---------------------------------------");
+          _log("Failed to open");
+          _log("---------------------------------------");
         }
       } else {
         _log('ensureDatabaseIsOpen: No company ID found, skipping database open');
