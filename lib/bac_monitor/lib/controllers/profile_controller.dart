@@ -138,8 +138,14 @@ class ProfileController extends GetxController {
         // Switch to the most recently used account for this system
         await switchToAccount(systemAccounts.first);
       } else {
-        // No accounts for this system, navigate to login for that system
+        // No accounts for this system - ensure database is open before navigation
         if (system == 'pos') {
+          // Open POS database before navigating
+          final companyInfo = await _posApiService.getCompanyInfo();
+          if (companyInfo['companyId'] != null && companyInfo['companyId']!.isNotEmpty) {
+            await _posApiService.openDatabaseForCompany(companyInfo['companyId']!);
+            print('ProfileController: POS database opened for company ${companyInfo['companyId']} (switchSystem)');
+          }
           Get.offAll(() => const PosAppRoot());
         } else {
           Get.offAll(() => const MonitorAppRoot());
@@ -218,17 +224,20 @@ class ProfileController extends GetxController {
         }
       }
 
-      // If no internet, open DB using stored company ID
-      if (!hasInternet) {
-        if (account.system == 'monitor') {
-          if (account.userData.containsKey('companyId')) {
-            await _monitorApiService.switchCompany(account.userData['companyId']);
-          }
+      // ALWAYS ensure database is open before navigation (not just offline)
+      // This fixes the "Database not opened" error when switching modes
+      if (account.system == 'monitor') {
+        if (account.userData.containsKey('companyId')) {
+          await _monitorApiService.switchCompany(account.userData['companyId']);
+        }
+      } else {
+        // For POS: Always open the database before navigation
+        final companyInfo = await _posApiService.getCompanyInfo();
+        if (companyInfo['companyId'] != null && companyInfo['companyId']!.isNotEmpty) {
+          await _posApiService.openDatabaseForCompany(companyInfo['companyId']!);
+          print('ProfileController: POS database opened for company ${companyInfo['companyId']}');
         } else {
-          final companyInfo = await _posApiService.getCompanyInfo();
-          if (companyInfo['companyId']!.isNotEmpty) {
-            await _posApiService.openDatabaseForCompany(companyInfo['companyId']!);
-          }
+          print('ProfileController: Warning - No companyId found for POS database');
         }
       }
 
