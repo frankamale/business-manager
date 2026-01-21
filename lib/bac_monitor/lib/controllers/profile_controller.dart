@@ -162,6 +162,8 @@ class ProfileController extends GetxController {
           }
 
           if (companyId != null && companyId.isNotEmpty) {
+            // Save companyId to POS storage so splash screen can find it
+            await _posApiService.saveCompanyInfo({'company': companyId, 'branch': '', 'sellingPointId': ''});
             await _posApiService.openDatabaseForCompany(companyId);
             print('ProfileController: POS database opened for company $companyId (switchSystem)');
           }
@@ -185,6 +187,11 @@ class ProfileController extends GetxController {
 
       // First, logout from current account
       final currentAccount = _accountManager.currentAccount.value;
+
+      // IMPORTANT: Save companyId BEFORE logout clears it from storage
+      final savedCompanyId = await _monitorApiService.getStoredCompanyId();
+      print('ProfileController: Saved companyId before logout: $savedCompanyId');
+
       if (currentAccount != null && currentAccount.id != account.id) {
         // Clear auth data from both services
         await _posApiService.clearAuthData();
@@ -266,9 +273,9 @@ class ProfileController extends GetxController {
           companyId = currentAccount.userData['companyId']?.toString();
         }
 
-        // 3. Try monitor service's stored company ID
+        // 3. Use the savedCompanyId we captured before logout
         if (companyId == null || companyId.isEmpty) {
-          companyId = await _monitorApiService.getStoredCompanyId();
+          companyId = savedCompanyId;
         }
 
         // 4. Finally try POS service's stored company info
@@ -278,6 +285,8 @@ class ProfileController extends GetxController {
         }
 
         if (companyId != null && companyId.isNotEmpty) {
+          // Save companyId to POS storage so splash screen can find it
+          await _posApiService.saveCompanyInfo({'company': companyId, 'branch': '', 'sellingPointId': ''});
           await _posApiService.openDatabaseForCompany(companyId);
           print('ProfileController: POS database opened for company $companyId');
         } else {
