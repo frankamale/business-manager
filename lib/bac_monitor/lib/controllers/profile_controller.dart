@@ -141,10 +141,29 @@ class ProfileController extends GetxController {
         // No accounts for this system - ensure database is open before navigation
         if (system == 'pos') {
           // Open POS database before navigating
-          final companyInfo = await _posApiService.getCompanyInfo();
-          if (companyInfo['companyId'] != null && companyInfo['companyId']!.isNotEmpty) {
-            await _posApiService.openDatabaseForCompany(companyInfo['companyId']!);
-            print('ProfileController: POS database opened for company ${companyInfo['companyId']} (switchSystem)');
+          // Try multiple sources for companyId since we might be switching from monitor
+          String? companyId;
+
+          // 1. Try current account userData (when switching from monitor to POS)
+          final currentAccount = _accountManager.currentAccount.value;
+          if (currentAccount != null && currentAccount.userData.containsKey('companyId')) {
+            companyId = currentAccount.userData['companyId']?.toString();
+          }
+
+          // 2. Try monitor service's stored company ID
+          if (companyId == null || companyId.isEmpty) {
+            companyId = await _monitorApiService.getStoredCompanyId();
+          }
+
+          // 3. Finally try POS service's stored company info
+          if (companyId == null || companyId.isEmpty) {
+            final companyInfo = await _posApiService.getCompanyInfo();
+            companyId = companyInfo['companyId'];
+          }
+
+          if (companyId != null && companyId.isNotEmpty) {
+            await _posApiService.openDatabaseForCompany(companyId);
+            print('ProfileController: POS database opened for company $companyId (switchSystem)');
           }
           Get.offAll(() => const PosAppRoot());
         } else {
@@ -232,10 +251,35 @@ class ProfileController extends GetxController {
         }
       } else {
         // For POS: Always open the database before navigation
-        final companyInfo = await _posApiService.getCompanyInfo();
-        if (companyInfo['companyId'] != null && companyInfo['companyId']!.isNotEmpty) {
-          await _posApiService.openDatabaseForCompany(companyInfo['companyId']!);
-          print('ProfileController: POS database opened for company ${companyInfo['companyId']}');
+        // Try multiple sources for companyId since we might be switching from monitor
+        String? companyId;
+
+        // 1. Try account userData first (the account we're switching to)
+        if (account.userData.containsKey('companyId')) {
+          companyId = account.userData['companyId']?.toString();
+        }
+
+        // 2. Try current account userData (when switching from monitor to POS)
+        if ((companyId == null || companyId.isEmpty) &&
+            currentAccount != null &&
+            currentAccount.userData.containsKey('companyId')) {
+          companyId = currentAccount.userData['companyId']?.toString();
+        }
+
+        // 3. Try monitor service's stored company ID
+        if (companyId == null || companyId.isEmpty) {
+          companyId = await _monitorApiService.getStoredCompanyId();
+        }
+
+        // 4. Finally try POS service's stored company info
+        if (companyId == null || companyId.isEmpty) {
+          final companyInfo = await _posApiService.getCompanyInfo();
+          companyId = companyInfo['companyId'];
+        }
+
+        if (companyId != null && companyId.isNotEmpty) {
+          await _posApiService.openDatabaseForCompany(companyId);
+          print('ProfileController: POS database opened for company $companyId');
         } else {
           print('ProfileController: Warning - No companyId found for POS database');
         }
