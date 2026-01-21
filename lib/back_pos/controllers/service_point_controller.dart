@@ -1,11 +1,11 @@
 import 'package:get/get.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/service_point.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class ServicePointController extends GetxController {
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   final _apiService = PosApiService();
 
   // Reactive list of service points
@@ -48,7 +48,7 @@ class ServicePointController extends GetxController {
       final points = await _apiService.fetchServicePoints();
 
       // Save service points to database
-      await _dbHelper.insertServicePoints(points);
+      await _dbHelper.insertServicePointModels(points);
 
       // Update sync metadata
       await _dbHelper.updateSyncMetadata('service_points', 'success', points.length);

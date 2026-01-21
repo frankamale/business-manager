@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../models/trend_direction.dart';
 import '../models/store.dart';
 import '../widgets/finance/date_range.dart';
@@ -8,7 +8,7 @@ import 'mon_store_controller.dart';
 
 class MonStoreKpiTrendController extends GetxController {
   final MonStoresController storesController = Get.find();
-  final dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
 
   var isLoading = true.obs;
   var hasError = false.obs;
@@ -45,7 +45,7 @@ class MonStoreKpiTrendController extends GetxController {
         throw Exception("No store selected");
       }
 
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final now = DateTime.now();
       DateTime startDate;
       DateTime endDate;
@@ -114,19 +114,19 @@ class MonStoreKpiTrendController extends GetxController {
       }
 
       final salesQuery = isAllStores
-          ? 'SELECT SUM(amount) as total FROM sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT SUM(amount) as total FROM sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
+          : 'SELECT SUM(amount) as total FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
       final transactionsQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT salesId) as count FROM sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT salesId) as count FROM sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
+          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
       final activeStoresQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT sourcefacility) as active FROM sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT sourcefacility) as active FROM sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
+          : 'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
       final basketQuery = isAllStores
-          ? 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)'
-          : 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ? GROUP BY salesId)';
-      const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM service_points';
-      const currencyQuery = 'SELECT currency FROM sales LIMIT 1';
+          ? 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)'
+          : 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ? GROUP BY salesId)';
+      const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
+      const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
 
       final argsCurrent = isAllStores
           ? [startMillis, endMillis]

@@ -1,9 +1,9 @@
 import 'package:get/get.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../services/account_manager.dart';
 
 class MonOperatorController extends GetxController {
-  final dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
   final AccountManager _accountManager = Get.find();
 
   var companyName = "Loading...".obs;
@@ -25,7 +25,7 @@ class MonOperatorController extends GetxController {
   /// Fetches the company details from the local database.
   Future<void> loadCompanyDetailsFromDb() async {
     try {
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
 
       final result = await db.query('company_details', limit: 1);
 

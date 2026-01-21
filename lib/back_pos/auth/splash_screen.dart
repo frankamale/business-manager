@@ -10,7 +10,7 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/customer_controller.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../utils/network_helper.dart';
 import '../config.dart';
 
@@ -29,7 +29,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   final PosApiService _apiService = PosApiService();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   String _statusMessage = 'Initializing...';
   bool _hasError = false;

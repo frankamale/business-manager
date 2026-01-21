@@ -2,7 +2,7 @@ import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../bac_monitor/lib/db/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../services/api_services.dart';

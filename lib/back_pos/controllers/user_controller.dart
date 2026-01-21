@@ -1,10 +1,10 @@
 import 'package:get/get.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
 
 
 class UserController extends GetxController {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   // Reactive list of users
   var users = <User>[].obs;
@@ -28,7 +28,7 @@ class UserController extends GetxController {
   // Insert a new user
   Future<void> addUser(User user) async {
     try {
-      await _dbHelper.insertUser(user);
+      await _dbHelper.insertUserModel(user);
       await fetchUsers(); // refresh list
     } catch (e) {
       print("Error inserting user: $e");

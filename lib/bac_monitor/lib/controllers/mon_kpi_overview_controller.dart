@@ -4,14 +4,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../models/trend_direction.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
 class MonKpiOverviewController extends GetxController {
   final MonDashboardController dateController = Get.find();
-  final dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
 
   var isLoading = true.obs;
   var hasError = false.obs;
@@ -68,7 +68,7 @@ class MonKpiOverviewController extends GetxController {
       isLoading.value = true;
       hasError.value = false;
 
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final now = DateTime.now();
       DateTime startDate;
       DateTime endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
@@ -133,16 +133,16 @@ class MonKpiOverviewController extends GetxController {
       final prevEndMillis = prevEndDate.millisecondsSinceEpoch;
 
       const salesQuery =
-          'SELECT SUM(total) as total FROM (SELECT SUM(amount) as total FROM sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)';
+          'SELECT SUM(total) as total FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)';
       const transactionsQuery =
-          'SELECT COUNT(DISTINCT salesId) as count FROM sales WHERE transactiondate BETWEEN ? AND ?';
+          'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
       const activeStoresQuery =
-          'SELECT COUNT(DISTINCT sourcefacility) as active FROM sales WHERE transactiondate BETWEEN ? AND ?';
+          'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
       const basketQuery =
-          'SELECT AVG(total) as avg FROM (SELECT SUM(amount) as total FROM sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)';
+          'SELECT AVG(total) as avg FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)';
       const totalStoresQuery =
-          'SELECT COUNT(DISTINCT name) as total FROM service_points';
-      const currencyQuery = 'SELECT currency FROM sales LIMIT 1';
+          'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
+      const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
 
       // Execute all queries in parallel
       final results = await Future.wait([

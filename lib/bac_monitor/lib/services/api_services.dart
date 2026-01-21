@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
@@ -16,7 +16,7 @@ class MonitorApiService extends GetxService {
     ),
   );
 
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
  String? _cachedToken;
   String? cachedCompanyId;
   bool _isInitialized = false;
@@ -151,7 +151,7 @@ class MonitorApiService extends GetxService {
         // Switch to company database
         if (cachedId != 'default_offline_company') {
           try {
-            await _dbHelper.switchCompany(cachedId);
+            await _dbHelper.openForCompany(cachedId);
             print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $cachedId');
           } catch (e) {
             print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
@@ -167,7 +167,7 @@ class MonitorApiService extends GetxService {
       // Switch to the company's database if we have a valid company ID
       if (companyId != null && companyId.isNotEmpty && companyId != 'default_offline_company') {
         try {
-          await _dbHelper.switchCompany(companyId);
+          await _dbHelper.openForCompany(companyId);
           print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $companyId');
         } catch (e) {
           print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
@@ -305,8 +305,8 @@ class MonitorApiService extends GetxService {
     Get.find<MonSyncController>().onClose();
     await Get.delete<MonSyncController>(force: true);
 
-    // Close all database instances on logout
-    await _dbHelper.closeAllDatabases();
+    // Close database instance on logout
+    await _dbHelper.close();
 
     await secureStorage.delete(key: 'access_token');
     await secureStorage.delete(key: 'user_data');
@@ -329,7 +329,7 @@ class MonitorApiService extends GetxService {
       cachedCompanyId = newCompanyId;
 
       // Switch to the new company's database
-      await _dbHelper.switchCompany(newCompanyId);
+      await _dbHelper.openForCompany(newCompanyId);
 
       debugPrint("ApiService: Successfully switched to company: $newCompanyId");
 
@@ -490,21 +490,21 @@ class MonitorApiService extends GetxService {
         );
       }
 
-      final db = await _dbHelper.database;
+      final db = _dbHelper.database;
       debugPrint("ApiService: Database connection established, starting transaction");
-      
+
       await db.transaction((txn) async {
         // Only clear tables if we have new data to insert
         bool hasDataToInsert = companyDetailsData.isNotEmpty ||
                               salesData.isNotEmpty ||
                               inventoryData.isNotEmpty ||
                               servicePointsData.isNotEmpty;
-        
+
         if (hasDataToInsert) {
           debugPrint("ApiService: Clearing old data before inserting fresh data");
-          await txn.delete('service_points');
+          await txn.delete('mon_service_points');
           await txn.delete('company_details');
-          await txn.delete('sales');
+          await txn.delete('mon_sales');
         }
 
         if (inventoryData.isNotEmpty) {
@@ -512,7 +512,7 @@ class MonitorApiService extends GetxService {
             "ApiService: Inserting ${inventoryData.length} inventory items",
           );
           for (final item in inventoryData) {
-            await _dbHelper.insertInventoryItem(item, db: txn);
+            await _dbHelper.insertMonInventoryItem(item, db: txn);
           }
         } else {
           debugPrint("ApiService: No inventory data available, skipping insertion");
@@ -531,21 +531,21 @@ class MonitorApiService extends GetxService {
             "ApiService: Inserting ${servicePointsData.length} service points",
           );
           for (final item in servicePointsData) {
-            await _dbHelper.insertServicePoint(item, db: txn);
+            await _dbHelper.insertMonServicePoint(item, db: txn);
           }
         } else {
           debugPrint("ApiService: No service points data available, skipping insertion");
         }
 
         for (final item in salesData) {
-          await _dbHelper.insertSale(item, db: txn);
+          await _dbHelper.insertMonSale(item, db: txn);
         }
 
         // Update with salesperson and payment info from sales details
         for (final detail in salesDetailsData) {
           if (detail['id'] != null) {
             await txn.update(
-              'sales',
+              'mon_sales',
               {
                 'salesperson': detail['salesperson'],
                 'paymentmode': detail['paymentmode'],
@@ -557,7 +557,7 @@ class MonitorApiService extends GetxService {
         }
 
         if (hasDataToInsert) {
-          await _dbHelper.mapSalesToServicePoints(db: txn);
+          await _dbHelper.mapMonSalesToServicePoints(db: txn);
         }
       });
 
@@ -619,7 +619,7 @@ class MonitorApiService extends GetxService {
           ? json.decode(salesDetailsRes.body)
           : [];
 
-      final db = await _dbHelper.database;
+      final db = _dbHelper.database;
 
       final startOfDayToClear = DateTime(
         lastSyncDate.year,
@@ -634,19 +634,19 @@ class MonitorApiService extends GetxService {
 
       await db.transaction((txn) async {
         await txn.delete(
-          'sales',
+          'mon_sales',
           where: 'transactiondate >= ?',
           whereArgs: [startOfDayMillis],
         );
         for (final item in salesData) {
-          await _dbHelper.insertSale(item, db: txn);
+          await _dbHelper.insertMonSale(item, db: txn);
         }
 
         // Update with salesperson and payment info from sales details
         for (final detail in salesDetailsData) {
           if (detail['id'] != null) {
             await txn.update(
-              'sales',
+              'mon_sales',
               {
                 'salesperson': detail['salesperson'],
                 'paymentmode': detail['paymentmode'],
@@ -657,7 +657,7 @@ class MonitorApiService extends GetxService {
           }
         }
 
-        await _dbHelper.mapSalesToServicePoints(db: txn);
+        await _dbHelper.mapMonSalesToServicePoints(db: txn);
       });
 
       debugPrint(

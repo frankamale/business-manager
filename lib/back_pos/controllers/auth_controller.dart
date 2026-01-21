@@ -1,12 +1,12 @@
 import 'package:get/get.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import '../../bac_monitor/lib/services/account_manager.dart';
 
 class AuthController extends GetxController {
-   final _dbHelper = DatabaseHelper();
+   final _dbHelper = UnifiedDatabaseHelper.instance;
    final _apiService = PosApiService();
    final AccountManager _accountManager = Get.find();
 
@@ -186,7 +186,7 @@ class AuthController extends GetxController {
       
       // Only close the database if explicitly requested (for new authentication)
       if (closeDatabase) {
-        await DatabaseHelper.instance.close();
+        await UnifiedDatabaseHelper.instance.close();
       }
 
       // Authenticate with server

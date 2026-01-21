@@ -2,22 +2,22 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../../back_pos/utils/network_helper.dart';
+import '../back_pos/utils/network_helper.dart';
 import 'app_roots.dart';
 import 'unified_login_screen.dart';
-import '../../bac_monitor/lib/controllers/mon_operator_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_sync_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_store_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_store_kpi_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_kpi_overview_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_salestrends_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_outstanding_payments_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_inventory_controller.dart';
-import '../../bac_monitor/lib/services/api_services.dart';
-import '../../bac_monitor/lib/db/db_helper.dart';
-import '../../bac_monitor/lib/pages/bottom_nav.dart';
+import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
+import '../bac_monitor/lib/controllers/mon_sync_controller.dart';
+import '../bac_monitor/lib/controllers/mon_store_controller.dart';
+import '../bac_monitor/lib/controllers/mon_store_kpi_controller.dart';
+import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
+import '../bac_monitor/lib/controllers/mon_kpi_overview_controller.dart';
+import '../bac_monitor/lib/controllers/mon_salestrends_controller.dart';
+import '../bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
+import '../bac_monitor/lib/controllers/mon_outstanding_payments_controller.dart';
+import '../bac_monitor/lib/controllers/mon_inventory_controller.dart';
+import '../bac_monitor/lib/services/api_services.dart';
+import '../shared/database/unified_db_helper.dart';
+import '../bac_monitor/lib/pages/bottom_nav.dart';
 
 class ConnectivityController extends GetxController {
   var isConnected = false.obs;
@@ -26,7 +26,7 @@ class ConnectivityController extends GetxController {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   Timer? _retryTimer;
 
   @override

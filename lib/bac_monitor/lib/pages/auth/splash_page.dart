@@ -11,7 +11,7 @@ import '../../controllers/mon_inventory_controller.dart';
 import '../../controllers/mon_store_controller.dart';
 import '../../controllers/mon_sync_controller.dart';
 import '../../services/api_services.dart';
-import '../../db/db_helper.dart';
+import '../../../../shared/database/unified_db_helper.dart';
 import '../bottom_nav.dart';
 
 class SplashPage extends StatefulWidget {
@@ -22,7 +22,7 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
@@ -93,14 +93,14 @@ class _SplashPageState extends State<SplashPage> {
   /// Check if we have cached data in the database
   Future<bool> _hasCachedData() async {
     try {
-      final db = await _dbHelper.database;
+      final db = _dbHelper.database;
 
       // Check if we have any sales data
-      final salesCount = await db.rawQuery('SELECT COUNT(*) as count FROM sales');
+      final salesCount = await db.rawQuery('SELECT COUNT(*) as count FROM mon_sales');
       final hasSales = (salesCount.first['count'] as int? ?? 0) > 0;
 
       // Check if we have service points
-      final servicePointsCount = await db.rawQuery('SELECT COUNT(*) as count FROM service_points');
+      final servicePointsCount = await db.rawQuery('SELECT COUNT(*) as count FROM mon_service_points');
       final hasServicePoints = (servicePointsCount.first['count'] as int? ?? 0) > 0;
 
       // Check if we have company details
@@ -245,11 +245,11 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _ensureDatabaseIsOpen() async {
     try {
       // Force database to open for the current company
-      final db = await _dbHelper.database;
+      final db = _dbHelper.database;
       debugPrint('SplashPage: Database opened successfully');
 
       // Verify we can query the database
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM service_points');
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_service_points');
       debugPrint('SplashPage: Database verification - service_points count: ${result.first['count']}');
 
     } catch (e) {

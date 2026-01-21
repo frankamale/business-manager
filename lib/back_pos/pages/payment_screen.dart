@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../services/print_service.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -109,7 +109,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final hasPayment = result['hasPayment'] as bool;
       final receiptnumber = result['receiptnumber'] as String;
       try {
-        final db = await DatabaseHelper().database;
+        final db = await UnifiedDatabaseHelper.instance.database;
         final maps = await db!.query(
           'sales_transactions',
           where: 'receiptnumber = ?',

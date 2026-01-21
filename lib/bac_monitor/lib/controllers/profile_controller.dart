@@ -4,7 +4,7 @@ import '../../../back_pos/services/api_services.dart';
 import '../../../initialise/app_roots.dart';
 import '../services/api_services.dart';
 import '../services/account_manager.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 
 class ProfileController extends GetxController {
   final MonitorApiService _monitorApiService = Get.find();
@@ -48,7 +48,7 @@ class ProfileController extends GetxController {
         userData.value = user;
       }
 
-      final dbHelper = DatabaseHelper();
+      final dbHelper = UnifiedDatabaseHelper.instance;
       final company = await dbHelper.getCompanyDetails();
       if (company != null) {
         companyData.value = company;
@@ -86,7 +86,7 @@ class ProfileController extends GetxController {
       }
 
       // Load company data based on the current system
-      final dbHelper = DatabaseHelper();
+      final dbHelper = UnifiedDatabaseHelper.instance;
       final company = await dbHelper.getCompanyDetails();
       if (company != null) {
         companyData.value = company;

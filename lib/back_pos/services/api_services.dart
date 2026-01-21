@@ -10,7 +10,7 @@ import '../models/service_point.dart';
 import '../models/inventory_item.dart';
 import '../models/customer.dart';
 import '../models/sale_transaction.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../config.dart';
 
 class PosApiService extends GetxService {
@@ -21,7 +21,7 @@ class PosApiService extends GetxService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
-  DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   // Keys for secure storage
   static const String _tokenKey = 'access_token';
