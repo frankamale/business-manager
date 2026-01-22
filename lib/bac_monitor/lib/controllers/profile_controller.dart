@@ -104,21 +104,27 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      print('DEBUG: ProfileController.signOut() - Starting sign out');
 
-      // Clear auth data from both services
-      await _posApiService.clearAuthData();
-      await _monitorApiService.logout();
-
+      // Clear current account first
       final currentAccount = _accountManager.currentAccount.value;
       if (currentAccount != null) {
         await _accountManager.setCurrentAccount(null);
       }
 
+      // Clear auth data from POS service (doesn't close database)
+      await _posApiService.clearAuthData();
+      print('DEBUG: ProfileController.signOut() - POS auth data cleared');
+
+      // Monitor logout closes database and clears all state
+      await _monitorApiService.logout();
+      print('DEBUG: ProfileController.signOut() - Monitor logout completed (database closed)');
+
       // Navigate to login
-      Get.off(()=>UnifiedLoginScreen());
+      Get.offAll(() => const UnifiedLoginScreen());
     } catch (e) {
       errorMessage.value = 'Failed to sign out: $e';
-      print('ProfileController: Error signing out: $e');
+      print('ERROR: ProfileController.signOut() - Error signing out: $e');
     } finally {
       isLoading.value = false;
     }
@@ -128,6 +134,7 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      print('DEBUG: ProfileController.switchSystem() - Switching to system: $system');
 
       currentSystem.value = system;
 
@@ -136,37 +143,47 @@ class ProfileController extends GetxController {
 
       if (systemAccounts.isNotEmpty) {
         // Switch to the most recently used account for this system
+        print('DEBUG: ProfileController.switchSystem() - Found existing account, using switchToAccount');
         await switchToAccount(systemAccounts.first);
       } else {
         // No accounts for this system - ensure database is open before navigation
-        if (system == 'pos') {
-          // Open POS database before navigating
-          // Try multiple sources for companyId since we might be switching from monitor
-          String? companyId;
+        print('DEBUG: ProfileController.switchSystem() - No existing account, opening database manually');
 
-          // 1. Try current account userData (when switching from monitor to POS)
-          final currentAccount = _accountManager.currentAccount.value;
-          if (currentAccount != null && currentAccount.userData.containsKey('companyId')) {
-            companyId = currentAccount.userData['companyId']?.toString();
-          }
+        final dbHelper = UnifiedDatabaseHelper.instance;
+        String? companyId;
 
-          // 2. Try monitor service's stored company ID
-          if (companyId == null || companyId.isEmpty) {
-            companyId = await _monitorApiService.getStoredCompanyId();
-          }
+        // Try to find companyId from various sources
+        final currentAccount = _accountManager.currentAccount.value;
+        if (currentAccount != null && currentAccount.userData.containsKey('companyId')) {
+          companyId = currentAccount.userData['companyId']?.toString();
+        }
 
-          // 3. Finally try POS service's stored company info
-          if (companyId == null || companyId.isEmpty) {
-            final companyInfo = await _posApiService.getCompanyInfo();
-            companyId = companyInfo['companyId'];
-          }
+        if (companyId == null || companyId.isEmpty) {
+          companyId = await _monitorApiService.getStoredCompanyId();
+        }
 
-          if (companyId != null && companyId.isNotEmpty) {
-            // Save companyId to POS storage so splash screen can find it
+        if (companyId == null || companyId.isEmpty) {
+          final companyInfo = await _posApiService.getCompanyInfo();
+          companyId = companyInfo['companyId'];
+        }
+
+        // Ensure database is open
+        if (companyId != null && companyId.isNotEmpty) {
+          print('DEBUG: ProfileController.switchSystem() - Opening database for company: $companyId');
+          await dbHelper.openForCompany(companyId);
+
+          // Store companyId for the target system
+          if (system == 'pos') {
             await _posApiService.saveCompanyInfo({'company': companyId, 'branch': '', 'sellingPointId': ''});
-            await _posApiService.openDatabaseForCompany(companyId);
-            print('ProfileController: POS database opened for company $companyId (switchSystem)');
+          } else {
+            await _monitorApiService.storeCompanyId(companyId);
           }
+        } else {
+          print('WARNING: ProfileController.switchSystem() - No companyId found!');
+        }
+
+        // Navigate to the appropriate app
+        if (system == 'pos') {
           Get.offAll(() => const PosAppRoot());
         } else {
           Get.offAll(() => const MonitorAppRoot());
@@ -174,7 +191,7 @@ class ProfileController extends GetxController {
       }
     } catch (e) {
       errorMessage.value = 'Failed to switch system: $e';
-      print('ProfileController: Error switching system: $e');
+      print('ERROR: ProfileController.switchSystem() - Error: $e');
     } finally {
       isLoading.value = false;
     }
@@ -184,23 +201,38 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      print('DEBUG: ProfileController.switchToAccount() - Switching to account: ${account.username} (${account.system})');
 
-      // First, logout from current account
       final currentAccount = _accountManager.currentAccount.value;
+      final dbHelper = UnifiedDatabaseHelper.instance;
 
-      // IMPORTANT: Save companyId BEFORE logout clears it from storage
-      final savedCompanyId = await _monitorApiService.getStoredCompanyId();
-      print('ProfileController: Saved companyId before logout: $savedCompanyId');
+      // Get companyId from the account we're switching to
+      String? targetCompanyId = account.userData['companyId']?.toString();
 
+      // If not in account userData, try other sources
+      if (targetCompanyId == null || targetCompanyId.isEmpty) {
+        targetCompanyId = await _monitorApiService.getStoredCompanyId();
+        print('DEBUG: ProfileController.switchToAccount() - Got companyId from storage: $targetCompanyId');
+      }
+
+      if (targetCompanyId == null || targetCompanyId.isEmpty) {
+        final companyInfo = await _posApiService.getCompanyInfo();
+        targetCompanyId = companyInfo['companyId'];
+        print('DEBUG: ProfileController.switchToAccount() - Got companyId from POS service: $targetCompanyId');
+      }
+
+      // If switching to a different account, handle logout first
       if (currentAccount != null && currentAccount.id != account.id) {
-        // Clear auth data from both services
+        print('DEBUG: ProfileController.switchToAccount() - Switching from different account, clearing old data');
         await _posApiService.clearAuthData();
-        await _monitorApiService.logout();
+        // Close database but don't clear all monitor state yet
+        await dbHelper.close();
       }
 
       // Validate token and handle re-authentication if needed
-      bool hasInternet = false;
       bool tokenValid = false;
+      bool hasInternet = true;
+
       try {
         if (account.system == 'monitor') {
           await _monitorApiService.getWithAuth('/company/details');
@@ -208,18 +240,18 @@ class ProfileController extends GetxController {
           await _posApiService.validateToken();
         }
         tokenValid = true;
-        hasInternet = true;
       } catch (e) {
         if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
           tokenValid = false;
-          hasInternet = true;
         } else {
           hasInternet = false;
+          print('DEBUG: ProfileController.switchToAccount() - Offline mode detected');
         }
       }
 
+      // Re-authenticate if needed and online
       if (!tokenValid && hasInternet) {
-        // Re-authenticate using stored credentials
+        print('DEBUG: ProfileController.switchToAccount() - Token invalid, re-authenticating');
         try {
           final creds = account.system == 'monitor'
               ? await _monitorApiService.getServerCredentials()
@@ -230,111 +262,69 @@ class ProfileController extends GetxController {
             } else {
               await _posApiService.signIn(creds['username']!, creds['password']!);
             }
-            // Update account with new userData
-            final newUserData = account.system == 'monitor'
-                ? await _monitorApiService.getStoredUserData()
-                : await _posApiService.getStoredUserData();
-            if (newUserData != null) {
-              account = UserAccount(
-                id: account.id,
-                username: account.username,
-                system: account.system,
-                userData: newUserData,
-                lastLogin: account.lastLogin,
-              );
-              await _accountManager.addAccount(account);
-            }
+            print('DEBUG: ProfileController.switchToAccount() - Re-authentication successful');
           }
         } catch (e) {
-          // Re-auth failed, proceed to offline mode
+          print('DEBUG: ProfileController.switchToAccount() - Re-auth failed, continuing offline: $e');
         }
       }
 
-      // ALWAYS ensure database is open before navigation (not just offline)
-      // This fixes the "Database not opened" error when switching modes
-      if (account.system == 'monitor') {
-        if (account.userData.containsKey('companyId')) {
-          await _monitorApiService.switchCompany(account.userData['companyId']);
+      // CRITICAL: Ensure database is open for the target company
+      if (targetCompanyId != null && targetCompanyId.isNotEmpty) {
+        print('DEBUG: ProfileController.switchToAccount() - Opening database for company: $targetCompanyId');
+        await dbHelper.openForCompany(targetCompanyId);
+
+        // Update the account userData to include companyId
+        if (!account.userData.containsKey('companyId')) {
+          account = UserAccount(
+            id: account.id,
+            username: account.username,
+            system: account.system,
+            userData: {...account.userData, 'companyId': targetCompanyId},
+            lastLogin: account.lastLogin,
+          );
         }
       } else {
-        // For POS: Always open the database before navigation
-        // Try multiple sources for companyId since we might be switching from monitor
-        String? companyId;
-
-        // 1. Try account userData first (the account we're switching to)
-        if (account.userData.containsKey('companyId')) {
-          companyId = account.userData['companyId']?.toString();
-        }
-
-        // 2. Try current account userData (when switching from monitor to POS)
-        if ((companyId == null || companyId.isEmpty) &&
-            currentAccount != null &&
-            currentAccount.userData.containsKey('companyId')) {
-          companyId = currentAccount.userData['companyId']?.toString();
-        }
-
-        // 3. Use the savedCompanyId we captured before logout
-        if (companyId == null || companyId.isEmpty) {
-          companyId = savedCompanyId;
-        }
-
-        // 4. Finally try POS service's stored company info
-        if (companyId == null || companyId.isEmpty) {
-          final companyInfo = await _posApiService.getCompanyInfo();
-          companyId = companyInfo['companyId'];
-        }
-
-        if (companyId != null && companyId.isNotEmpty) {
-          // Save companyId to POS storage so splash screen can find it
-          await _posApiService.saveCompanyInfo({'company': companyId, 'branch': '', 'sellingPointId': ''});
-          await _posApiService.openDatabaseForCompany(companyId);
-          print('ProfileController: POS database opened for company $companyId');
-        } else {
-          print('ProfileController: Warning - No companyId found for POS database');
-        }
+        print('WARNING: ProfileController.switchToAccount() - No companyId found!');
       }
 
       // Set the account as current
       await _accountManager.switchToAccount(account);
-
-      // Update current system
       currentSystem.value = account.system;
 
-      // Load the account's data into the appropriate service
+      // Store the account's data in the appropriate service
       if (account.system == 'monitor') {
-        // Store monitor user data
         await _monitorApiService.storeUserData(account.userData);
-        await _monitorApiService.storeToken(account.userData['accessToken'] ?? '');
-        
-        // Ensure user role is stored separately
-        if (account.userData.containsKey('roles') && account.userData['roles'] is List && account.userData['roles'].isNotEmpty) {
-          final userRole = account.userData['roles'].first.toString();
-          await _monitorApiService.storeUserRole(userRole);
+        if (account.userData['accessToken'] != null) {
+          await _monitorApiService.storeToken(account.userData['accessToken']);
         }
-
-        // Switch to monitor database
-        if (account.userData.containsKey('companyId')) {
-          await _monitorApiService.switchCompany(account.userData['companyId']);
+        if (account.userData.containsKey('roles') && account.userData['roles'] is List && (account.userData['roles'] as List).isNotEmpty) {
+          await _monitorApiService.storeUserRole((account.userData['roles'] as List).first.toString());
         }
+        if (targetCompanyId != null && targetCompanyId.isNotEmpty) {
+          await _monitorApiService.storeCompanyId(targetCompanyId);
+        }
+      } else {
+        await _posApiService.saveAuthDataFromMap(account.userData);
+        if (targetCompanyId != null && targetCompanyId.isNotEmpty) {
+          await _posApiService.saveCompanyInfo({'company': targetCompanyId, 'branch': '', 'sellingPointId': ''});
+        }
+      }
 
-        // Refresh user data in controller
-        await refreshUserDataFromAccount(account);
+      // Refresh user data in controller
+      await refreshUserDataFromAccount(account);
 
-        // Navigate to monitor app
+      print('DEBUG: ProfileController.switchToAccount() - Switch complete, navigating to ${account.system}');
+
+      // Navigate to the appropriate app
+      if (account.system == 'monitor') {
         Get.offAll(() => const MonitorAppRoot());
       } else {
-        // Store POS user data
-        await _posApiService.saveAuthDataFromMap(account.userData);
-
-        // Refresh user data in controller
-        await refreshUserDataFromAccount(account);
-
-        // Navigate to POS app
         Get.offAll(() => const PosAppRoot());
       }
     } catch (e) {
       errorMessage.value = 'Failed to switch account: $e';
-      print('ProfileController: Error switching account: $e');
+      print('ERROR: ProfileController.switchToAccount() - Error switching account: $e');
     } finally {
       isLoading.value = false;
     }

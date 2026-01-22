@@ -179,28 +179,40 @@ class AuthController extends GetxController {
     currentUser.value = null;
   }
 
- Future<bool> serverLogin(String username, String password, {bool closeDatabase = true}) async {
+ /// Server login that handles database switching for company-specific data
+  /// closeDatabase: if true, closes any existing database before opening the new company's database
+  Future<bool> serverLogin(String username, String password, {bool closeDatabase = true}) async {
     try {
       String usernameLower = username.toLowerCase();
       isLoggingIn.value = true;
-      
-      // Only close the database if explicitly requested (for new authentication)
+      print('DEBUG: AuthController.serverLogin() - Starting login for: $usernameLower');
+
+      // Close the existing database before new authentication
+      // This ensures we don't have stale data from a previous company
       if (closeDatabase) {
+        print('DEBUG: AuthController.serverLogin() - Closing existing database');
         await UnifiedDatabaseHelper.instance.close();
       }
 
       // Authenticate with server
+      print('DEBUG: AuthController.serverLogin() - Authenticating with server');
       await _apiService.adminSignIn(usernameLower, password);
 
       // Store server credentials
       await _apiService.saveServerCredentials(usernameLower, password);
 
       // Fetch and store company info
+      print('DEBUG: AuthController.serverLogin() - Fetching company info');
       await _apiService.fetchAndStoreCompanyInfo();
 
       // Get company info
       final companyInfo = await _apiService.getCompanyInfo();
       final companyId = companyInfo['companyId']!;
+      print('DEBUG: AuthController.serverLogin() - Got company ID: $companyId');
+
+      // Open database for the new company
+      print('DEBUG: AuthController.serverLogin() - Opening database for company: $companyId');
+      await _dbHelper.openForCompany(companyId);
 
       // Save the current account in AccountManager
       final token = await _apiService.getAccessToken();
@@ -213,6 +225,7 @@ class AuthController extends GetxController {
         system: 'pos',
         userData: {
           ...userData,
+          'companyId': companyId, // Ensure companyId is in userData for later use
           'token': token,
           'credentials': {
             'username': credentials['username'],
@@ -225,12 +238,11 @@ class AuthController extends GetxController {
       await _accountManager.addAccount(account);
       await _accountManager.setCurrentAccount(account);
 
-      // Open database for company
-      await _dbHelper.openForCompany(companyId);
-
+      print('DEBUG: AuthController.serverLogin() - Login successful for company: $companyId');
       isLoggingIn.value = false;
       return true;
     } catch (e) {
+      print('ERROR: AuthController.serverLogin() - Login failed: $e');
       Get.snackbar(
         'Server Login Failed',
         'Invalid server credentials',

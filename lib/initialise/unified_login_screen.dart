@@ -46,7 +46,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     super.initState();
     _loadUserRoles();
     _loadStoredCredentials();
-    _initializeCompanyId();
+    // Note: We don't initialize company ID here because:
+    // 1. On fresh login, there's no company yet
+    // 2. AuthController.serverLogin handles opening the database after authentication
   }
 
   // Load stored credentials if they exist (for auto-fill or remember me functionality)
@@ -57,12 +59,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           credentials['username']!.isNotEmpty) {
         // Auto-fill username if credentials are stored
         _usernameController.text = credentials['username']!;
-        // Note: For security, we don't auto-fill password, but we could indicate
-        // that credentials are remembered
-        print('Loaded stored username: ${credentials['username']}');
+        print('DEBUG: UnifiedLoginScreen - Loaded stored username: ${credentials['username']}');
       }
     } catch (e) {
-      print('Error loading stored credentials: $e');
+      print('DEBUG: UnifiedLoginScreen - Error loading stored credentials: $e');
     }
   }
 
@@ -73,17 +73,11 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   }
 
   Future<void> _loadUserRoles() async {
-    await _authController.loadUserRoles();
-  }
-
-  Future<void> _initializeCompanyId() async {
+    // This may fail if database isn't open yet, which is fine for login screen
     try {
-      print('Initializing company ID during app startup');
-      await _monitorApiService.initializeCompanyId();
-      print('Company ID initialized successfully during startup');
+      await _authController.loadUserRoles();
     } catch (e) {
-      print('Warning: Failed to initialize company ID during startup: $e');
-      // Don't fail the app startup if company ID initialization fails
+      print('DEBUG: UnifiedLoginScreen - Could not load user roles (expected on fresh login): $e');
     }
   }
 
@@ -95,7 +89,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       });
 
       try {
-        // Authenticate user
+        print('DEBUG: UnifiedLoginScreen._handleLogin() - Starting login');
+
+        // Authenticate user - this handles opening database for the company
         final success = await _authController.serverLogin(
           _usernameController.text,
           _passwordController.text,
@@ -108,44 +104,42 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             _passwordController.text,
           );
 
-          // Initialize company ID for Monitor API service
-          try {
-            await _monitorApiService.initializeCompanyId();
-            print('Company ID initialized successfully');
-          } catch (e) {
-            print('Warning: Failed to initialize company ID: $e');
-          }
-
-          final Map<String, dynamic>? data = await _apiService
-              .getStoredUserData();
+          // Get user data and determine system type
+          final Map<String, dynamic>? data = await _apiService.getStoredUserData();
           final List<dynamic>? roles = data?['roles'];
-          print(roles);
+          print('DEBUG: UnifiedLoginScreen._handleLogin() - User roles: $roles');
 
-          // Save account for current system
-          final system =
-              (roles != null &&
-                  roles.any(
-                    (role) => role.toString().toLowerCase().contains("admin")
-                  ))
-              ? 'monitor'
-              : 'pos';
+          // Determine if user is admin (monitor) or regular POS user
+          final isAdmin = roles != null &&
+              roles.any((role) => role.toString().toLowerCase().contains("admin"));
+          final system = isAdmin ? 'monitor' : 'pos';
 
+          // Get companyId from POS service (was stored by serverLogin)
+          final companyInfo = await _apiService.getCompanyInfo();
+          final companyId = companyInfo['companyId'] ?? '';
+
+          // Save account with companyId for later use
           if (data != null) {
             final account = UserAccount(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              id: companyId.isNotEmpty ? companyId : DateTime.now().millisecondsSinceEpoch.toString(),
               username: data['username'] ?? _usernameController.text,
               system: system,
-              userData: data,
+              userData: {...data, 'companyId': companyId},
               lastLogin: DateTime.now(),
             );
             await _accountManager.addAccount(account);
             await _accountManager.setCurrentAccount(account);
           }
 
-          if (roles != null &&
-              roles.any(
-                (role) => role.toString().toLowerCase().contains("admin"),
-              )) {
+          // If going to monitor, also store companyId in monitor service
+          if (isAdmin && companyId.isNotEmpty) {
+            await _monitorApiService.storeCompanyId(companyId);
+          }
+
+          print('DEBUG: UnifiedLoginScreen._handleLogin() - Navigating to $system app');
+
+          if (isAdmin) {
+            // Initialize monitor controllers
             if (!Get.isRegistered<MonDashboardController>()) {
               Get.put(MonDashboardController());
             }
@@ -158,15 +152,13 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             if (!Get.isRegistered<InventoryController>()) {
               Get.put(InventoryController());
             }
-            // Redirect to Monitor app splash screen
             Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());
           }
         }
       } catch (e) {
-        // Handle login error
-        print('Login error: $e');
+        print('ERROR: UnifiedLoginScreen._handleLogin() - Login error: $e');
         setState(() {
           _errorMessage = 'Network error: Please check your internet connection and try again.';
         });

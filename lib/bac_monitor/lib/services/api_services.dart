@@ -141,43 +141,38 @@ class MonitorApiService extends GetxService {
     try {
       print('DEBUG: MonitorApiService._performInitialization() - Starting company ID initialization');
 
-      // Try to get from cache first
+      // Try to get from cache/storage first
       final cachedId = await getStoredCompanyId();
-      if (cachedId != null && cachedId.isNotEmpty) {
+      if (cachedId != null && cachedId.isNotEmpty && cachedId != 'default_offline_company') {
         print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
-        cachedCompanyId = cachedId;
-        _isInitialized = true;
 
-        // Switch to company database
-        if (cachedId != 'default_offline_company') {
-          try {
-            await _dbHelper.openForCompany(cachedId);
-            print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $cachedId');
-          } catch (e) {
-            print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
-          }
+        // Check if database is already open for this company
+        if (_dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == cachedId) {
+          print('DEBUG: MonitorApiService._performInitialization() - Database already open for company: $cachedId');
+          cachedCompanyId = cachedId;
+          _isInitialized = true;
+          return;
         }
+
+        // Switch to company database (without fetching data - caller will handle that)
+        await switchCompany(cachedId, fetchData: false);
         return;
       }
 
       // If not cached, fetch from API
+      print('DEBUG: MonitorApiService._performInitialization() - No cached company ID, fetching from API');
       final companyId = await _fetchCompanyIdOnce();
-      print('DEBUG: MonitorApiService._performInitialization() - Company ID initialized: $companyId');
+      print('DEBUG: MonitorApiService._performInitialization() - Company ID fetched: $companyId');
 
       // Switch to the company's database if we have a valid company ID
-      if (companyId != null && companyId.isNotEmpty && companyId != 'default_offline_company') {
-        try {
-          await _dbHelper.openForCompany(companyId);
-          print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $companyId');
-        } catch (e) {
-          print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
-        }
+      if (companyId.isNotEmpty && companyId != 'default_offline_company') {
+        await switchCompany(companyId, fetchData: false);
       }
 
-      _isInitialized = true;
     } catch (e) {
       print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
       _isInitialized = false;
+      rethrow;
     }
   }
 
@@ -302,41 +297,71 @@ class MonitorApiService extends GetxService {
   }
 
   Future<void> logout() async {
-    Get.find<MonSyncController>().onClose();
-    await Get.delete<MonSyncController>(force: true);
+    print('DEBUG: MonitorApiService.logout() - Starting logout');
+
+    // Stop sync controller if registered
+    try {
+      if (Get.isRegistered<MonSyncController>()) {
+        Get.find<MonSyncController>().onClose();
+        await Get.delete<MonSyncController>(force: true);
+      }
+    } catch (e) {
+      print('DEBUG: MonitorApiService.logout() - Error stopping sync controller: $e');
+    }
 
     // Close database instance on logout
     await _dbHelper.close();
+    print('DEBUG: MonitorApiService.logout() - Database closed');
 
+    // Clear all secure storage keys
     await secureStorage.delete(key: 'access_token');
     await secureStorage.delete(key: 'user_data');
+    await secureStorage.delete(key: 'user_role');
     await secureStorage.delete(key: 'persistent_code');
     await secureStorage.delete(key: 'last_sync_timestamp');
     await secureStorage.delete(key: 'company_id');
+    await secureStorage.delete(key: 'initial_sync_completed');
 
-    // Clear cache
+    // Clear all cached values - IMPORTANT: must be done AFTER storage is cleared
     _cachedToken = null;
     cachedCompanyId = null;
     _isInitialized = false;
+    _initializationFuture = null;
+
+    print('DEBUG: MonitorApiService.logout() - Logout completed, all state cleared');
   }
 
   /// Switch to a different company
   /// This will update the stored company ID and switch the database
-  Future<void> switchCompany(String newCompanyId) async {
+  /// Set fetchData to false to skip data fetching (useful when you'll fetch separately)
+  Future<void> switchCompany(String newCompanyId, {bool fetchData = true}) async {
     try {
+      print('DEBUG: MonitorApiService.switchCompany() - Switching to company: $newCompanyId (current: $cachedCompanyId)');
+
+      // Check if we're already on this company
+      if (cachedCompanyId == newCompanyId && _dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == newCompanyId) {
+        print('DEBUG: MonitorApiService.switchCompany() - Already on company $newCompanyId, skipping');
+        return;
+      }
+
       // Store the new company ID and update cache
       await storeCompanyId(newCompanyId);
       cachedCompanyId = newCompanyId;
 
       // Switch to the new company's database
-      await _dbHelper.openForCompany(newCompanyId);
+      await _dbHelper.switchCompany(newCompanyId);
 
-      debugPrint("ApiService: Successfully switched to company: $newCompanyId");
+      // Mark as initialized since we now have a valid company
+      _isInitialized = true;
 
-      await clearInitialSyncFlag();
-      await fetchAndCacheAllData();
+      print('DEBUG: MonitorApiService.switchCompany() - Successfully switched to company: $newCompanyId');
+
+      if (fetchData) {
+        await clearInitialSyncFlag();
+        await fetchAndCacheAllData();
+      }
     } catch (e) {
-      debugPrint("ApiService: Failed to switch company: $e");
+      print('ERROR: MonitorApiService.switchCompany() - Failed to switch company: $e');
       rethrow;
     }
   }

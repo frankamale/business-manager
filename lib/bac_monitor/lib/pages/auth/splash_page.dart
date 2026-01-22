@@ -215,16 +215,25 @@ class _SplashPageState extends State<SplashPage> {
 
       if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
         debugPrint('SplashPage: Using stored company ID: $storedCompanyId');
-        // Switch to the company database
-        await _dbHelper.switchCompany(storedCompanyId);
+
+        // Check if database is already open for this company
+        if (_dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == storedCompanyId) {
+          debugPrint('SplashPage: Database already open for company: $storedCompanyId');
+          return;
+        }
+
+        // Open database for the company
+        await _dbHelper.openForCompany(storedCompanyId);
+        debugPrint('SplashPage: Database opened for company: $storedCompanyId');
         return;
       }
 
-      // If no stored ID and we're online, try to fetch it
+      // If no stored ID and we're online, try to initialize via API service
       if (!_isOfflineMode) {
+        debugPrint('SplashPage: No stored company ID, initializing from API');
         await apiService.initializeCompanyId();
         final companyId = await apiService.getStoredCompanyId();
-        debugPrint('SplashPage: Company ID initialized: $companyId');
+        debugPrint('SplashPage: Company ID initialized from API: $companyId');
       } else {
         // Offline with no stored company ID - this is a problem
         throw Exception('No stored company ID available for offline mode');
@@ -244,17 +253,22 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _ensureDatabaseIsOpen() async {
     try {
-      // Force database to open for the current company
-      final db = _dbHelper.database;
-      debugPrint('SplashPage: Database opened successfully');
+      // Check if database is open
+      if (!_dbHelper.isDatabaseOpen) {
+        debugPrint('SplashPage: Database not open, this should have been done in _initializeCompanyIdOfflineSafe');
+        throw Exception('Database was not opened during company initialization');
+      }
+
+      debugPrint('SplashPage: Database is open for company: ${_dbHelper.currentCompanyId}');
 
       // Verify we can query the database
+      final db = _dbHelper.database;
       final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_service_points');
       debugPrint('SplashPage: Database verification - service_points count: ${result.first['count']}');
 
     } catch (e) {
-      debugPrint('SplashPage: Error opening database - $e');
-      throw Exception('Failed to open database: $e');
+      debugPrint('SplashPage: Error verifying database - $e');
+      throw Exception('Failed to verify database: $e');
     }
   }
 
