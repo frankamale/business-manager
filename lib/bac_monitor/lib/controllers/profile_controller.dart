@@ -44,14 +44,21 @@ class ProfileController extends GetxController {
     if (dbHelper.isDatabaseOpen) {
       await loadProfileData();
     } else {
-      // Still load user data from storage (doesn't need database)
+      // Still load user data - prioritize current account's userData
       try {
-        final user = await _posApiService.getStoredUserData();
-        if (user != null) {
-          userData.value = user;
+        final currentAccount = _accountManager.currentAccount.value;
+        if (currentAccount != null && currentAccount.userData.isNotEmpty) {
+          userData.value = currentAccount.userData;
+          print('ProfileController: Loaded user data from current account (db not open)');
+        } else {
+          final user = await _posApiService.getStoredUserData();
+          if (user != null) {
+            userData.value = user;
+            print('ProfileController: Loaded user data from storage (db not open)');
+          }
         }
       } catch (e) {
-        print('ProfileController: Error loading user data from storage: $e');
+        print('ProfileController: Error loading user data: $e');
       }
       print('ProfileController: Database not open yet, skipping company data load');
     }
@@ -62,10 +69,18 @@ class ProfileController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // Load user data from storage (doesn't need database)
-      final user = await _posApiService.getStoredUserData();
-      if (user != null) {
-        userData.value = user;
+      // PRIORITY: Use current account's userData if available (most reliable source)
+      final currentAccount = _accountManager.currentAccount.value;
+      if (currentAccount != null && currentAccount.userData.isNotEmpty) {
+        userData.value = currentAccount.userData;
+        print('ProfileController: Loaded user data from current account: ${currentAccount.username}');
+      } else {
+        // Fallback: Load user data from storage
+        final user = await _posApiService.getStoredUserData();
+        if (user != null) {
+          userData.value = user;
+          print('ProfileController: Loaded user data from storage');
+        }
       }
 
       // Load company data from database (needs database)
@@ -74,6 +89,7 @@ class ProfileController extends GetxController {
         final company = await dbHelper.getCompanyDetails();
         if (company != null) {
           companyData.value = company;
+          print('ProfileController: Loaded company data from database');
         }
       } else {
         print('ProfileController: Database not open, skipping company data');
@@ -92,11 +108,13 @@ class ProfileController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // Update user data from the account's userData
+      // ALWAYS use the account's userData - this is the source of truth
       if (account.userData.isNotEmpty) {
         userData.value = account.userData;
+        print('ProfileController: refreshUserDataFromAccount - Using account userData for: ${account.username}');
       } else {
-        // If account doesn't have userData, try to load it from the appropriate service
+        // Only fallback to storage if account userData is truly empty
+        print('ProfileController: refreshUserDataFromAccount - Account userData is empty, falling back to storage');
         if (account.system == 'monitor') {
           final user = await _monitorApiService.getStoredUserData();
           if (user != null) {
@@ -110,11 +128,16 @@ class ProfileController extends GetxController {
         }
       }
 
-      // Load company data based on the current system
+      // Load company data from database (only if database is open)
       final dbHelper = UnifiedDatabaseHelper.instance;
-      final company = await dbHelper.getCompanyDetails();
-      if (company != null) {
-        companyData.value = company;
+      if (dbHelper.isDatabaseOpen) {
+        final company = await dbHelper.getCompanyDetails();
+        if (company != null) {
+          companyData.value = company;
+          print('ProfileController: refreshUserDataFromAccount - Loaded company data from database');
+        }
+      } else {
+        print('ProfileController: refreshUserDataFromAccount - Database not open, skipping company data');
       }
 
     } catch (e) {
@@ -313,11 +336,8 @@ class ProfileController extends GetxController {
         print('WARNING: ProfileController.switchToAccount() - No companyId found!');
       }
 
-      // Set the account as current
-      await _accountManager.switchToAccount(account);
-      currentSystem.value = account.system;
-
-      // Store the account's data in the appropriate service
+      // IMPORTANT: Store the account's data in the appropriate service BEFORE setting current account
+      // This ensures the ever() listeners have access to the correct data
       if (account.system == 'monitor') {
         await _monitorApiService.storeUserData(account.userData);
         if (account.userData['accessToken'] != null) {
@@ -336,8 +356,18 @@ class ProfileController extends GetxController {
         }
       }
 
-      // Refresh user data in controller
-      await refreshUserDataFromAccount(account);
+      // Now set the account as current (this triggers ever() listeners)
+      await _accountManager.switchToAccount(account);
+      currentSystem.value = account.system;
+
+      // Update local state directly from account data (don't rely on storage)
+      userData.value = account.userData;
+
+      // Load company data from the now-open database
+      final company = await dbHelper.getCompanyDetails();
+      if (company != null) {
+        companyData.value = company;
+      }
 
       print('DEBUG: ProfileController.switchToAccount() - Switch complete, navigating to ${account.system}');
 

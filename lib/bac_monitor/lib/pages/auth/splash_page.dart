@@ -10,6 +10,10 @@ import '../../controllers/mon_operator_controller.dart';
 import '../../controllers/mon_inventory_controller.dart';
 import '../../controllers/mon_store_controller.dart';
 import '../../controllers/mon_sync_controller.dart';
+import '../../controllers/mon_kpi_overview_controller.dart';
+import '../../controllers/mon_gross_profit_controller.dart';
+import '../../controllers/mon_outstanding_payments_controller.dart';
+import '../../controllers/mon_salestrends_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
 import '../../../../shared/database/unified_db_helper.dart';
@@ -173,8 +177,14 @@ class _SplashPageState extends State<SplashPage> {
         final apiService = Get.find<MonitorApiService>();
         final initialSyncDone = await apiService.isInitialSyncCompleted();
 
-        if (!initialSyncDone) {
-          _updateStatus('First time sync – downloading data...');
+        // IMPORTANT: Also check if company_details exists for THIS company's database
+        // The initialSyncDone flag is global, but we need per-company data
+        final companyDetails = await _dbHelper.getCompanyDetails();
+        final hasCompanyDetails = companyDetails != null && companyDetails.isNotEmpty;
+
+        if (!initialSyncDone || !hasCompanyDetails) {
+          _updateStatus('Syncing company data...');
+          debugPrint('SplashPage: Full sync needed - initialSyncDone: $initialSyncDone, hasCompanyDetails: $hasCompanyDetails');
           await apiService.fetchAndCacheAllData();
         } else {
           _updateStatus('Syncing recent sales...');
@@ -339,11 +349,10 @@ class _SplashPageState extends State<SplashPage> {
         storesController = Get.put(MonStoresController(), permanent: true);
       } else {
         storesController = Get.find<MonStoresController>();
+        // Reset and re-fetch for account switch
+        storesController.isInitialized.value = false;
       }
-      // Always ensure stores are fetched
-      if (!storesController.isInitialized.value) {
-        await storesController.fetchAllStores();
-      }
+      await storesController.fetchAllStores();
 
       // Initialize inventory controller and load inventory
       MonInventoryController inventoryController;
@@ -365,11 +374,49 @@ class _SplashPageState extends State<SplashPage> {
         await Get.find<ProfileController>().loadProfileData();
       }
 
+      // Reset and refresh dashboard controllers for account switch
+      await _refreshDashboardControllers();
+
       debugPrint('SplashPage: Controllers loaded with data successfully');
 
     } catch (e) {
       debugPrint('SplashPage: Error loading data into controllers - $e');
       // Continue anyway - data can be loaded later
+    }
+  }
+
+  /// Reset and refresh all dashboard controllers for account switch
+  Future<void> _refreshDashboardControllers() async {
+    debugPrint('SplashPage: Refreshing dashboard controllers');
+
+    // Reset and refresh KPI Overview Controller
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      final kpiController = Get.find<MonKpiOverviewController>();
+      kpiController.isInitialized.value = false;
+      await kpiController.fetchKpiData();
+      kpiController.isInitialized.value = true;
+      debugPrint('SplashPage: KPI controller refreshed');
+    }
+
+    // Refresh Gross Profit Controller (doesn't have isInitialized)
+    if (Get.isRegistered<MonGrossProfitController>()) {
+      final grossProfitController = Get.find<MonGrossProfitController>();
+      await grossProfitController.fetchGrossProfitData();
+      debugPrint('SplashPage: Gross profit controller refreshed');
+    }
+
+    // Refresh Outstanding Payments Controller (doesn't have isInitialized)
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      final outstandingController = Get.find<MonOutstandingPaymentsController>();
+      await outstandingController.fetchOutstandingPaymentsData();
+      debugPrint('SplashPage: Outstanding payments controller refreshed');
+    }
+
+    // Refresh Sales Trends Controller (doesn't have isInitialized)
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      final salesTrendsController = Get.find<MonSalesTrendsController>();
+      await salesTrendsController.fetchAllData();
+      debugPrint('SplashPage: Sales trends controller refreshed');
     }
   }
 

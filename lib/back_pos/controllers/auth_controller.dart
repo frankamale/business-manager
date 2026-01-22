@@ -243,11 +243,22 @@ class AuthController extends GetxController {
       return true;
     } catch (e) {
       print('ERROR: AuthController.serverLogin() - Login failed: $e');
-      Get.snackbar(
-        'Server Login Failed',
-        'Invalid server credentials',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      final errorString = e.toString();
+      // Check if error is due to invalid credentials (401)
+      if (errorString.contains('401')) {
+        Get.snackbar(
+          'Server Login Failed',
+          'Invalid server credentials',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        // Network error or server unreachable
+        Get.snackbar(
+          'Connection Error',
+          'Please connect to mobile network',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
       isLoggingIn.value = false;
       return false;
     }
