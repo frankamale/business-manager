@@ -12,8 +12,7 @@ class MonOperatorController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Don't load immediately - wait for database to be ready
-    // The SplashPage or UI will call loadCompanyDetailsFromDb() when ready
+
     _tryLoadCompanyDetails();
 
     // Listen to account changes and refresh company data
