@@ -221,7 +221,7 @@ class _DailySummaryState extends State<DailySummary> {
     final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
     final fullyPaidAmount = (overallTotal['fullyPaidAmount'] as num?)?.toDouble() ?? 0.0;
     final partialPaymentAmount = (overallTotal['partialPaymentAmount'] as num?)?.toDouble() ?? 0.0;
-    final pendingAmount = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
+    final pendingAmount = (totalSales - fullyPaidAmount - partialPaymentAmount).toDouble() ?? 0.0;
     final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
     final fullyPaidTransactions = overallTotal['fullyPaidTransactions'] as int? ?? 0;
     final partialPaymentTransactions = overallTotal['partialPaymentTransactions'] as int? ?? 0;
