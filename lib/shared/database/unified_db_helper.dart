@@ -23,36 +23,68 @@ class UnifiedDatabaseHelper {
 
   static Database? _database;
   static String? _currentCompanyId;
+  static bool _isOpening = false;
 
   UnifiedDatabaseHelper._internal();
 
   /// Opens the database for a specific company
-  Future<void> openForCompany(String companyId) async {
-    if (_database != null) {
-      await _database!.close();
-      _database = null;
+  /// If force is false and database is already open for this company, returns early
+  Future<void> openForCompany(String companyId, {bool force = false}) async {
+    // Prevent concurrent opening
+    if (_isOpening) {
+      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Already opening, waiting...');
+      while (_isOpening) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      // After waiting, check if it's now open for the right company
+      if (_currentCompanyId == companyId && _database != null) {
+        print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Database now open for $companyId after wait');
+        return;
+      }
     }
 
-    String path = join(
-      await getDatabasesPath(),
-      'unified_db_company_$companyId.db',
-    );
+    // Skip if already open for same company (unless forced)
+    if (!force && _currentCompanyId == companyId && _database != null) {
+      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Already open for company $companyId, skipping');
+      return;
+    }
 
-    _database = await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
+    _isOpening = true;
+    try {
+      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Opening database for company: $companyId');
 
-    _currentCompanyId = companyId;
+      // Close existing database if open
+      if (_database != null) {
+        print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Closing previous database for company: $_currentCompanyId');
+        await _database!.close();
+        _database = null;
+        _currentCompanyId = null;
+      }
+
+      String path = join(
+        await getDatabasesPath(),
+        'unified_db_company_$companyId.db',
+      );
+
+      _database = await openDatabase(
+        path,
+        version: 1,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      );
+
+      _currentCompanyId = companyId;
+      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Successfully opened database for company: $companyId');
+    } finally {
+      _isOpening = false;
+    }
   }
 
   /// Synchronous getter for the database instance
   /// Throws an exception if no database is open
   Database get database {
     if (_database == null) {
-      throw Exception('Database not opened. Call openForCompany first.');
+      throw Exception('Database not opened. Call openForCompany first. Current companyId: $_currentCompanyId');
     }
     return _database!;
   }
@@ -60,6 +92,7 @@ class UnifiedDatabaseHelper {
   /// Async getter that auto-opens with default company if needed
   Future<Database> get databaseAsync async {
     if (_database == null) {
+      print('WARNING: UnifiedDatabaseHelper.databaseAsync() - No database open, opening with default');
       await openForCompany('default');
     }
     return _database!;
@@ -74,6 +107,7 @@ class UnifiedDatabaseHelper {
   /// Closes the current database
   Future<void> close() async {
     if (_database != null) {
+      print('DEBUG: UnifiedDatabaseHelper.close() - Closing database for company: $_currentCompanyId');
       await _database!.close();
       _database = null;
       _currentCompanyId = null;
@@ -81,11 +115,22 @@ class UnifiedDatabaseHelper {
   }
 
   /// Switch to a different company's database
+  /// This is the preferred method for changing companies - it handles the check internally
   Future<void> switchCompany(String newCompanyId) async {
+    print('DEBUG: UnifiedDatabaseHelper.switchCompany() - Switching to company: $newCompanyId (current: $_currentCompanyId)');
     if (_currentCompanyId == newCompanyId && _database != null) {
+      print('DEBUG: UnifiedDatabaseHelper.switchCompany() - Already on company $newCompanyId, skipping');
       return;
     }
     await openForCompany(newCompanyId);
+  }
+
+  /// Ensure database is open for the given company
+  /// Opens if not open, switches if open for different company
+  Future<void> ensureOpenForCompany(String companyId) async {
+    if (_database == null || _currentCompanyId != companyId) {
+      await openForCompany(companyId);
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
