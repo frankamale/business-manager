@@ -1067,7 +1067,58 @@ class UnifiedDatabaseHelper {
     final batch = db.batch();
     await db.delete('server_sales');
     for (var sale in salesData) {
-      batch.insert('server_sales', sale, conflictAlgorithm: ConflictAlgorithm.replace);
+      // Sanitize the data: convert booleans to integers and handle nulls for NOT NULL columns
+      final sanitizedSale = {
+        'id': sale['id'],
+        'transactiontypeid': sale['transactiontypeid'] ?? 0,
+        'patrontype': sale['patrontype'],
+        'purchaseorderno': sale['purchaseorderno'],
+        'internalrefno': sale['internalrefno'] ?? 0,
+        'issuedby': sale['issuedby'],
+        'receiptnumber': sale['receiptnumber'],
+        'receivedby': sale['receivedby'],
+        'remarks': sale['remarks'] ?? '', // NOT NULL - provide default
+        'transactiondate': sale['transactiondate'] ?? 0,
+        'entrytimestamp': sale['entrytimestamp'] ?? 0,
+        'destinationbp': sale['destinationbp'] ?? '', // NOT NULL
+        'paymentmode': sale['paymentmode'],
+        'sellingpoint': sale['sellingpoint'] ?? '', // NOT NULL
+        'genno': sale['genno'] ?? '', // NOT NULL
+        'paymentterms': sale['paymentterms'] ?? '', // NOT NULL
+        'validtill': sale['validtill'] ?? 0,
+        'currency': sale['currency'] ?? '', // NOT NULL
+        'quantity': (sale['quantity'] as num?)?.toDouble() ?? 0.0,
+        'unitquantity': (sale['unitquantity'] as num?)?.toDouble() ?? 0.0,
+        'amount': (sale['amount'] as num?)?.toDouble() ?? 0.0,
+        'costamount': (sale['costamount'] as num?)?.toDouble() ?? 0.0,
+        'amountpaid': (sale['amountpaid'] as num?)?.toDouble() ?? 0.0,
+        'balance': (sale['balance'] as num?)?.toDouble() ?? 0.0,
+        'cnt': sale['cnt'] ?? 0,
+        'inventoryname': sale['inventoryname'],
+        'category': sale['category'],
+        'subcategory': sale['subcategory'],
+        'salesperson': sale['salesperson'] ?? '', // NOT NULL
+        'locationid': sale['locationid'] ?? '', // NOT NULL
+        'location': sale['location'] ?? '', // NOT NULL
+        'tillid': sale['tillid'] ?? '', // NOT NULL
+        'till': sale['till'] ?? '', // NOT NULL
+        // Convert booleans to integers
+        'service': (sale['service'] == true || sale['service'] == 1) ? 1 : 0,
+        'payments': (sale['payments'] == true || sale['payments'] == 1) ? 1 : 0,
+        'committed': (sale['committed'] == true || sale['committed'] == 1) ? 1 : 0,
+        'ready': (sale['ready'] == true || sale['ready'] == 1) ? 1 : 0,
+        'transactionstatus': sale['transactionstatus'] ?? '', // NOT NULL
+        'products': (sale['products'] as num?)?.toDouble() ?? 0.0,
+        'services': (sale['services'] as num?)?.toDouble() ?? 0.0,
+        'reportingcurrencyrate': (sale['reportingcurrencyrate'] as num?)?.toDouble() ?? 0.0,
+        'efris': (sale['efris'] == true || sale['efris'] == 1) ? 1 : 0,
+        'efrisstatus': (sale['efrisstatus'] == true || sale['efrisstatus'] == 1) ? 1 : 0,
+        'efrismessage': sale['efrismessage'],
+        'salesId': sale['salesId'] ?? '', // NOT NULL
+        'stageid': sale['stageid'],
+        'returnid': sale['returnid'],
+      };
+      batch.insert('server_sales', sanitizedSale, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }

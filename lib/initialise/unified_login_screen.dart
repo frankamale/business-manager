@@ -131,9 +131,27 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             await _accountManager.setCurrentAccount(account);
           }
 
-          // If going to monitor, also store companyId in monitor service
-          if (isAdmin && companyId.isNotEmpty) {
-            await _monitorApiService.storeCompanyId(companyId);
+          // If going to monitor, sync all auth data to monitor service
+          if (isAdmin) {
+            // Get the token from POS service and store in Monitor service
+            final token = await _apiService.getAccessToken();
+            if (token != null && token.isNotEmpty) {
+              await _monitorApiService.storeToken(token);
+              print('DEBUG: UnifiedLoginScreen._handleLogin() - Token synced to MonitorApiService');
+            }
+            if (companyId.isNotEmpty) {
+              await _monitorApiService.storeCompanyId(companyId);
+            }
+            // Store user data in monitor service
+            if (data != null) {
+              await _monitorApiService.storeUserData({...data, 'companyId': companyId});
+            }
+            // Save server credentials to monitor service for re-auth
+            await _monitorApiService.saveServerCredentials(
+              _usernameController.text,
+              _passwordController.text,
+            );
+            print('DEBUG: UnifiedLoginScreen._handleLogin() - All auth data synced to MonitorApiService');
           }
 
           print('DEBUG: UnifiedLoginScreen._handleLogin() - Navigating to $system app');
