@@ -1081,7 +1081,7 @@ class UnifiedDatabaseHelper {
         'transactiondate': sale['transactiondate'] ?? 0,
         'entrytimestamp': sale['entrytimestamp'] ?? 0,
         'destinationbp': sale['destinationbp'] ?? '', // NOT NULL
-        'paymentmode': sale['paymentmode'],
+        'paymentmode': sale['paymentmode'] ?? 'Cash', // NOT NULL
         'sellingpoint': sale['sellingpoint'] ?? '', // NOT NULL
         'genno': sale['genno'] ?? '', // NOT NULL
         'paymentterms': sale['paymentterms'] ?? '', // NOT NULL
