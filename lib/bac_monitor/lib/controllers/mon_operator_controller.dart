@@ -12,8 +12,10 @@ class MonOperatorController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadCompanyDetailsFromDb();
-    
+    // Don't load immediately - wait for database to be ready
+    // The SplashPage or UI will call loadCompanyDetailsFromDb() when ready
+    _tryLoadCompanyDetails();
+
     // Listen to account changes and refresh company data
     ever(_accountManager.currentAccount, (UserAccount? account) {
       if (account != null) {
@@ -22,8 +24,25 @@ class MonOperatorController extends GetxController {
     });
   }
 
+  /// Try to load company details if database is ready
+  Future<void> _tryLoadCompanyDetails() async {
+    if (dbHelper.isDatabaseOpen) {
+      await loadCompanyDetailsFromDb();
+    } else {
+      print('MonOperatorController: Database not open yet, skipping initial load');
+    }
+  }
+
   /// Fetches the company details from the local database.
   Future<void> loadCompanyDetailsFromDb() async {
+    // Check if database is open before accessing
+    if (!dbHelper.isDatabaseOpen) {
+      print('MonOperatorController: Database not open, cannot load company details');
+      companyName.value = 'Loading...';
+      companyAddress.value = '';
+      return;
+    }
+
     try {
       final db = dbHelper.database;
 

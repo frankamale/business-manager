@@ -26,8 +26,9 @@ class ProfileController extends GetxController {
     if (currentAccount != null) {
       currentSystem.value = currentAccount.system;
     }
-    loadProfileData();
-    
+    // Try to load profile data if database is ready
+    _tryLoadProfileData();
+
     // Listen to account changes and refresh data accordingly
     ever(_accountManager.currentAccount, (UserAccount? account) {
       if (account != null) {
@@ -37,21 +38,45 @@ class ProfileController extends GetxController {
     });
   }
 
+  /// Try to load profile data if database is ready
+  Future<void> _tryLoadProfileData() async {
+    final dbHelper = UnifiedDatabaseHelper.instance;
+    if (dbHelper.isDatabaseOpen) {
+      await loadProfileData();
+    } else {
+      // Still load user data from storage (doesn't need database)
+      try {
+        final user = await _posApiService.getStoredUserData();
+        if (user != null) {
+          userData.value = user;
+        }
+      } catch (e) {
+        print('ProfileController: Error loading user data from storage: $e');
+      }
+      print('ProfileController: Database not open yet, skipping company data load');
+    }
+  }
+
   Future<void> loadProfileData() async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // Load user data
+      // Load user data from storage (doesn't need database)
       final user = await _posApiService.getStoredUserData();
       if (user != null) {
         userData.value = user;
       }
 
+      // Load company data from database (needs database)
       final dbHelper = UnifiedDatabaseHelper.instance;
-      final company = await dbHelper.getCompanyDetails();
-      if (company != null) {
-        companyData.value = company;
+      if (dbHelper.isDatabaseOpen) {
+        final company = await dbHelper.getCompanyDetails();
+        if (company != null) {
+          companyData.value = company;
+        }
+      } else {
+        print('ProfileController: Database not open, skipping company data');
       }
 
     } catch (e) {

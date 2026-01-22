@@ -10,6 +10,7 @@ import '../../controllers/mon_operator_controller.dart';
 import '../../controllers/mon_inventory_controller.dart';
 import '../../controllers/mon_store_controller.dart';
 import '../../controllers/mon_sync_controller.dart';
+import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../bottom_nav.dart';
@@ -333,15 +334,35 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('SplashPage: Loading data into controllers');
 
       // Initialize stores controller and load stores
+      MonStoresController storesController;
       if (!Get.isRegistered<MonStoresController>()) {
-        final storesController = Get.put(MonStoresController(), permanent: true);
+        storesController = Get.put(MonStoresController(), permanent: true);
+      } else {
+        storesController = Get.find<MonStoresController>();
+      }
+      // Always ensure stores are fetched
+      if (!storesController.isInitialized.value) {
         await storesController.fetchAllStores();
       }
 
       // Initialize inventory controller and load inventory
+      MonInventoryController inventoryController;
       if (!Get.isRegistered<MonInventoryController>()) {
-        final inventoryController = Get.put(MonInventoryController(), permanent: true);
-        await inventoryController.loadInventoryFromDb();
+        inventoryController = Get.put(MonInventoryController(), permanent: true);
+      } else {
+        inventoryController = Get.find<MonInventoryController>();
+      }
+      // Always ensure inventory is loaded
+      await inventoryController.loadInventoryFromDb();
+
+      // Load company details into MonOperatorController
+      if (Get.isRegistered<MonOperatorController>()) {
+        await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+      }
+
+      // Load profile data into ProfileController
+      if (Get.isRegistered<ProfileController>()) {
+        await Get.find<ProfileController>().loadProfileData();
       }
 
       debugPrint('SplashPage: Controllers loaded with data successfully');

@@ -2,6 +2,7 @@ import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../additions/colors.dart';
+import '../controllers/mon_operator_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../services/account_manager.dart';
 
@@ -11,6 +12,7 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.find();
+    final operatorController = Get.find<MonOperatorController>();
 
     return Obx(() {
       if (controller.isLoading.value) {
@@ -126,7 +128,7 @@ class ProfilePage extends StatelessWidget {
                     const SizedBox(height: 16),
                     // Name
                     Text(
-                      controller.userRole,
+                      operatorController.companyName.value,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
