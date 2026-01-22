@@ -28,12 +28,7 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (controller.isLoading.value) {
-        return const SizedBox(
-          height: 200,
-          child: Center(child: CircularProgressIndicator()),
-        );
-      }
+
 
       final isLoading = controller.isLoading.value;
 
