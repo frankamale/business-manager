@@ -532,12 +532,14 @@ class MonitorApiService extends GetxService {
           await txn.delete('mon_sales');
         }
 
+        // Use chunked batch inserts for better performance (reduces GC pressure)
         if (inventoryData.isNotEmpty) {
-          debugPrint(
-            "ApiService: Inserting ${inventoryData.length} inventory items",
-          );
-          for (final item in inventoryData) {
-            await _dbHelper.insertMonInventoryItem(item, db: txn);
+          debugPrint("ApiService: Batch inserting ${inventoryData.length} inventory items in chunks");
+          const chunkSize = 500;
+          for (var i = 0; i < inventoryData.length; i += chunkSize) {
+            final end = (i + chunkSize < inventoryData.length) ? i + chunkSize : inventoryData.length;
+            final chunk = inventoryData.sublist(i, end);
+            await _dbHelper.insertMonInventoryItemsBatch(chunk, db: txn);
           }
         } else {
           debugPrint("ApiService: No inventory data available, skipping insertion");
@@ -550,34 +552,48 @@ class MonitorApiService extends GetxService {
           debugPrint("ApiService: No company details data available, skipping insertion");
         }
 
-        // Only insert service points if data is available
+        // Use batch insert for service points
         if (servicePointsData.isNotEmpty) {
-          debugPrint(
-            "ApiService: Inserting ${servicePointsData.length} service points",
-          );
-          for (final item in servicePointsData) {
-            await _dbHelper.insertMonServicePoint(item, db: txn);
-          }
+          debugPrint("ApiService: Batch inserting ${servicePointsData.length} service points");
+          await _dbHelper.insertMonServicePointsBatch(servicePointsData, db: txn);
         } else {
           debugPrint("ApiService: No service points data available, skipping insertion");
         }
 
-        for (final item in salesData) {
-          await _dbHelper.insertMonSale(item, db: txn);
+        // Use chunked batch insert for sales to reduce memory pressure
+        if (salesData.isNotEmpty) {
+          debugPrint("ApiService: Batch inserting ${salesData.length} sales records in chunks");
+          const chunkSize = 500;
+          for (var i = 0; i < salesData.length; i += chunkSize) {
+            final end = (i + chunkSize < salesData.length) ? i + chunkSize : salesData.length;
+            final chunk = salesData.sublist(i, end);
+            await _dbHelper.insertMonSalesBatch(chunk, db: txn);
+            debugPrint("ApiService: Inserted sales chunk ${(i ~/ chunkSize) + 1}/${(salesData.length / chunkSize).ceil()} (${chunk.length} records)");
+          }
         }
 
-        // Update with salesperson and payment info from sales details
-        for (final detail in salesDetailsData) {
-          if (detail['id'] != null) {
-            await txn.update(
-              'mon_sales',
-              {
-                'salesperson': detail['salesperson'],
-                'paymentmode': detail['paymentmode'],
-              },
-              where: 'salesId = ?',
-              whereArgs: [detail['id']],
-            );
+        // Chunked batch update with salesperson and payment info from sales details
+        if (salesDetailsData.isNotEmpty) {
+          debugPrint("ApiService: Updating ${salesDetailsData.length} sales with details in chunks");
+          const chunkSize = 500;
+          for (var i = 0; i < salesDetailsData.length; i += chunkSize) {
+            final end = (i + chunkSize < salesDetailsData.length) ? i + chunkSize : salesDetailsData.length;
+            final chunk = salesDetailsData.sublist(i, end);
+            final updateBatch = txn.batch();
+            for (final detail in chunk) {
+              if (detail['id'] != null) {
+                updateBatch.update(
+                  'mon_sales',
+                  {
+                    'salesperson': detail['salesperson'],
+                    'paymentmode': detail['paymentmode'],
+                  },
+                  where: 'salesId = ?',
+                  whereArgs: [detail['id']],
+                );
+              }
+            }
+            await updateBatch.commit(noResult: true);
           }
         }
 
@@ -628,7 +644,14 @@ class MonitorApiService extends GetxService {
 
       final List<dynamic> salesData = json.decode(response.body);
 
-      // Also fetch sales details for salesperson info
+      // Early return if no sales data - skip all database operations
+      if (salesData.isEmpty) {
+        debugPrint("ApiService: No new sales to sync, skipping database operations.");
+        await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
+        return;
+      }
+
+      // Only fetch sales details if we have sales data to process
       http.Response? salesDetailsRes;
       try {
         salesDetailsRes = await getWithAuth(
@@ -654,7 +677,7 @@ class MonitorApiService extends GetxService {
       final startOfDayMillis = startOfDayToClear.millisecondsSinceEpoch;
 
       debugPrint(
-        "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting updates.",
+        "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting ${salesData.length} new records.",
       );
 
       await db.transaction((txn) async {
@@ -663,23 +686,27 @@ class MonitorApiService extends GetxService {
           where: 'transactiondate >= ?',
           whereArgs: [startOfDayMillis],
         );
-        for (final item in salesData) {
-          await _dbHelper.insertMonSale(item, db: txn);
-        }
 
-        // Update with salesperson and payment info from sales details
-        for (final detail in salesDetailsData) {
-          if (detail['id'] != null) {
-            await txn.update(
-              'mon_sales',
-              {
-                'salesperson': detail['salesperson'],
-                'paymentmode': detail['paymentmode'],
-              },
-              where: 'salesId = ?',
-              whereArgs: [detail['id']],
-            );
+        // Use batch insert for better performance
+        await _dbHelper.insertMonSalesBatch(salesData, db: txn);
+
+        // Batch update with salesperson and payment info from sales details
+        if (salesDetailsData.isNotEmpty) {
+          final updateBatch = txn.batch();
+          for (final detail in salesDetailsData) {
+            if (detail['id'] != null) {
+              updateBatch.update(
+                'mon_sales',
+                {
+                  'salesperson': detail['salesperson'],
+                  'paymentmode': detail['paymentmode'],
+                },
+                where: 'salesId = ?',
+                whereArgs: [detail['id']],
+              );
+            }
           }
+          await updateBatch.commit(noResult: true);
         }
 
         await _dbHelper.mapMonSalesToServicePoints(db: txn);

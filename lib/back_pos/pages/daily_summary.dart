@@ -219,13 +219,10 @@ class _DailySummaryState extends State<DailySummary> {
 
     final overallTotal = summaryData?['overallTotal'] as Map<String, dynamic>? ?? {};
     final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
-    final fullyPaidAmount = (overallTotal['fullyPaidAmount'] as num?)?.toDouble() ?? 0.0;
-    final partialPaymentAmount = (overallTotal['partialPaymentAmount'] as num?)?.toDouble() ?? 0.0;
-    final pendingAmount = (totalSales - fullyPaidAmount - partialPaymentAmount).toDouble() ?? 0.0;
+    final totalPaid = (overallTotal['totalPaid'] as num?)?.toDouble() ?? 0.0;
+    // totalBalance is the actual amount not yet received by cashiers
+    final pendingAmount = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
     final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
-    final fullyPaidTransactions = overallTotal['fullyPaidTransactions'] as int? ?? 0;
-    final partialPaymentTransactions = overallTotal['partialPaymentTransactions'] as int? ?? 0;
-    final unpaidTransactions = overallTotal['unpaidTransactions'] as int? ?? 0;
 
     final paymentSummary = summaryData?['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
     final categorySummary = summaryData?['categorySummary'] as List<Map<String, dynamic>>? ?? [];
@@ -234,54 +231,47 @@ class _DailySummaryState extends State<DailySummary> {
     // Build payment method list
     final paymentData = <Map<String, dynamic>>[];
     double totalPaidAmount = 0.0;
-    
-for (var payment in paymentSummary) {
-  final type = payment['paymenttype'] as String? ?? 'Unknown';
-  if (type.toLowerCase() == 'pending') continue;
 
-  double amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
+    for (var payment in paymentSummary) {
+      final type = payment['paymenttype'] as String? ?? 'Unknown';
+      if (type.toLowerCase() == 'pending') continue;
 
-  // Add partial payments into the Cash figure
-  if (type.toLowerCase() == 'cash') {
-    amount += partialPaymentAmount;
-  }
+      double amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
+      totalPaidAmount += amount;
 
-  totalPaidAmount += amount;
+      IconData icon;
+      Color color;
+      String label;
 
-  IconData icon;
-  Color color;
-  String label;
+      switch (type.toLowerCase()) {
+        case 'cash':
+          icon = Icons.payments_outlined;
+          color = Colors.green;
+          label = 'Cash';
+          break;
+        case 'card':
+          icon = Icons.credit_card;
+          color = Colors.blue;
+          label = 'Card';
+          break;
+        case 'mobile':
+          icon = Icons.phone_android;
+          color = Colors.orange;
+          label = 'Mobile Money';
+          break;
+        default:
+          icon = Icons.account_balance_wallet;
+          color = Colors.purple;
+          label = type;
+      }
 
-  switch (type.toLowerCase()) {
-    case 'cash':
-      icon = Icons.payments_outlined;
-      color = Colors.green;
-      label = 'Cash';
-      break;
-    case 'card':
-      icon = Icons.credit_card;
-      color = Colors.blue;
-      label = 'Card';
-      break;
-    case 'mobile':
-      icon = Icons.phone_android;
-      color = Colors.orange;
-      label = 'Mobile Money';
-      break;
-    default:
-      icon = Icons.account_balance_wallet;
-      color = Colors.purple;
-      label = type;
-  }
-
-  // Add only CASH, CARD, MOBILE rows — no partial row
-  paymentData.add({
-    'icon': icon,
-    'label': label,
-    'amount': 'UGX ${currencyFormat.format(amount)}',
-    'color': color,
-  });
-}
+      paymentData.add({
+        'icon': icon,
+        'label': label,
+        'amount': 'UGX ${currencyFormat.format(amount)}',
+        'color': color,
+      });
+    }
 
 
     // Add Pending row

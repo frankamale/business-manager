@@ -3,6 +3,8 @@ import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../shared/database/unified_db_helper.dart';
+import '../../bac_monitor/lib/services/api_services.dart' as monitor;
+import '../../bac_monitor/lib/services/account_manager.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../services/api_services.dart';
@@ -106,6 +108,43 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     } catch (e) {
       setState(() {
         _companyName = AppConfig.companyName;
+      });
+    }
+  }
+
+  /// Logout current account and navigate to unified login screen
+  Future<void> _logoutAndGoToServerLogin() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      print('DEBUG: Login._logoutAndGoToServerLogin() - Starting logout');
+
+      // Clear current account from AccountManager
+      if (Get.isRegistered<AccountManager>()) {
+        final accountManager = Get.find<AccountManager>();
+        await accountManager.setCurrentAccount(null);
+      }
+
+      // Clear POS auth data
+      await _apiService.clearAuthData();
+      print('DEBUG: Login._logoutAndGoToServerLogin() - POS auth data cleared');
+
+      // Call monitor logout which closes database and clears all state
+      final monitorApiService = monitor.MonitorApiService();
+      await monitorApiService.logout();
+      print('DEBUG: Login._logoutAndGoToServerLogin() - Monitor logout completed (database closed)');
+
+      // Navigate to unified login screen
+      Get.offAll(() => const UnifiedLoginScreen());
+    } catch (e) {
+      print('ERROR: Login._logoutAndGoToServerLogin() - Error: $e');
+      // Still navigate even if there's an error
+      Get.offAll(() => const UnifiedLoginScreen());
+    } finally {
+      setState(() {
+        _isLoading = false;
       });
     }
   }
@@ -355,11 +394,12 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 18),
                             GestureDetector(
-                              onTap: () => {Get.to(UnifiedLoginScreen())},
-
+                              onTap: _isLoading ? null : _logoutAndGoToServerLogin,
                               child: Text(
                                 "Login with server credentials",
-                                style: TextStyle(color: Colors.blue),
+                                style: TextStyle(
+                                  color: _isLoading ? Colors.grey : Colors.blue,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),

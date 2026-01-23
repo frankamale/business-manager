@@ -244,6 +244,23 @@ class ProfilePage extends StatelessWidget {
                   );
                 }
               }),
+
+              const SizedBox(height: 24),
+
+              // Logout Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: _buildMenuItem(
+                  icon: Icons.logout,
+                  title: 'Logout',
+                  subtitle: 'Sign out of your account',
+                  iconColor: Colors.red,
+                  titleColor: Colors.red.shade300,
+                  onTap: controller.signOut,
+                ),
+              ),
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
