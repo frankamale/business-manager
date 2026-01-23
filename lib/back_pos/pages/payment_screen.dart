@@ -1,3 +1,4 @@
+import 'package:bac_pos/back_pos/controllers/customer_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -39,6 +40,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final PaymentController _paymentController = Get.find<PaymentController>();
   final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
   final TextEditingController amountTenderedController = TextEditingController();
+  final CustomerController customerController = CustomerController();
 
   String formatMoney(double amount) {
     return _numberFormat.format(amount.toInt());
@@ -117,8 +119,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
 
-        String customerName = widget.customer ?? 'Cash Customer';
-        
+        String customerid = widget.customer ?? 'Cash Customer';
+
+        String customerName = 'Cash Customer';
+        if (customerid != "") {
+          final customer = customerController.getCustomerById(customerid!);
+          if (customer != null) {
+            customerName = customer.fullnames;
+          }
+        }
         // Get current user (cashier) for issuedBy field
         String cashierName = 'Cashier';
         final authController = Get.find<AuthController>();
