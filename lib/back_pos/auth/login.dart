@@ -2,6 +2,7 @@ import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../bac_monitor/lib/controllers/profile_controller.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
@@ -19,6 +20,8 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.put(AuthController());
   final PosApiService _apiService = PosApiService();
+  final ProfileController controller = Get.find();
+
   String? selectedItem;
   bool _obscurePassword = true;
   bool _isLoading = false;
@@ -355,7 +358,10 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 18),
                             GestureDetector(
-                              onTap: () => {Get.to(UnifiedLoginScreen())},
+                              onTap: () =>  {
+                                 controller.signOut(),
+                                Get.to(UnifiedLoginScreen()),
+                              },
 
                               child: Text(
                                 "Login with server credentials",

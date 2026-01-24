@@ -529,8 +529,8 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                       child: Image.asset(
                         "assets/images/logo.png",
-                        width: 120,
-                        height: 120,
+                        width: 100,
+                        height: 100,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(
                             Icons.storefront_rounded,
@@ -542,7 +542,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
 
                 // App Name
                 FadeTransition(
@@ -550,7 +550,7 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Text(
                     AppConfig.appName,
                     style: TextStyle(
-                      fontSize: 36,
+                      fontSize: 30,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       letterSpacing: 2,
@@ -571,7 +571,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                 ),
-                const SizedBox(height: 60),
+                const SizedBox(height: 40),
 
                 // Loading Indicator or Error Icon
                 if (!_hasError)
@@ -606,7 +606,6 @@ class _SplashScreenState extends State<SplashScreen>
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: () {
-                      _log('User clicked Retry Connection button');
                       setState(() {
                         _hasError = false;
                         _isOfflineMode = false;

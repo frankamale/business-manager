@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../additions/colors.dart';
 import '../../../../shared/database/unified_db_helper.dart';
@@ -328,10 +329,10 @@ class _InventoryPageState extends State<InventoryPage>
         ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
-          sliver: SliverToBoxAdapter(
-            child: InventoryDataTable(items: _filteredItems, isServicesView: _selectedView == "Services"),
+          sliver:  SliverToBoxAdapter(
+              child: InventoryDataTable(items: _filteredItems, isServicesView: _selectedView == "Services"),
+            ),
           ),
-        ),
       ],
     );
   }
