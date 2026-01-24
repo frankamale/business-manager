@@ -27,6 +27,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   String? selectedItem;
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isLoading2 = false;
   String _companyName = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -119,36 +120,16 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   Future<void> _logoutAndGoToServerLogin() async {
     try {
       setState(() {
-        _isLoading = true;
+        _isLoading2 = true;
       });
-
+controller.signOut();
       print('DEBUG: Login._logoutAndGoToServerLogin() - Starting logout');
 
-      // Clear current account from AccountManager
-      if (Get.isRegistered<AccountManager>()) {
-        final accountManager = Get.find<AccountManager>();
-        await accountManager.setCurrentAccount(null);
-      }
-
-      // Clear POS auth data
-      await _apiService.clearAuthData();
-      print('DEBUG: Login._logoutAndGoToServerLogin() - POS auth data cleared');
-
-      // Call monitor logout which closes database and clears all state
-      final monitorApiService = monitor.MonitorApiService();
-      await monitorApiService.logout();
-      print('DEBUG: Login._logoutAndGoToServerLogin() - Monitor logout completed (database closed)');
-
-      // Navigate to unified login screen
-      Get.offAll(() => const UnifiedLoginScreen());
-    } catch (e) {
-      print('ERROR: Login._logoutAndGoToServerLogin() - Error: $e');
-      // Still navigate even if there's an error
-      Get.offAll(() => const UnifiedLoginScreen());
-    } finally {
       setState(() {
         _isLoading = false;
       });
+    } catch (e) {
+      print(e);
     }
   }
 
@@ -397,11 +378,11 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 18),
                             GestureDetector(
-                              onTap: _isLoading ? null : _logoutAndGoToServerLogin,
+                              onTap: _isLoading2 ? null : _logoutAndGoToServerLogin,
                               child: Text(
                                 "Login with server credentials",
                                 style: TextStyle(
-                                  color: _isLoading ? Colors.grey : Colors.blue,
+                                  color: _isLoading2 ? Colors.grey : Colors.blue,
                                 ),
                               ),
                             ),
