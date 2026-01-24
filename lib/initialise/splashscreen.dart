@@ -27,7 +27,6 @@ class ConnectivityController extends GetxController {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
-  final _dbHelper = UnifiedDatabaseHelper.instance;
   Timer? _retryTimer;
 
   @override
@@ -57,19 +56,24 @@ class ConnectivityController extends GetxController {
           _initializeControllers();
           await _loadDataFromDatabase();
           final role = await _getUserRole();
-    
-          
+
           // Handle null or empty role with fallback logic
           if (role == null || role.isEmpty) {
-            debugPrint('SplashScreen: User role is null or empty, using fallback logic');
+            debugPrint(
+              'SplashScreen: User role is null or empty, using fallback logic',
+            );
             // Try to determine role from user data as fallback
-            final userData = await Get.find<MonitorApiService>().getStoredUserData();
+            final userData = await Get.find<MonitorApiService>()
+                .getStoredUserData();
             if (userData != null && userData.containsKey('roles')) {
               final roles = userData['roles'] as List<dynamic>?;
 
               if (roles != null && roles.isNotEmpty) {
                 final fallbackRole = roles.first.toString();
-                await _secureStorage.write(key: 'user_role', value: fallbackRole);
+                await _secureStorage.write(
+                  key: 'user_role',
+                  value: fallbackRole,
+                );
                 if (fallbackRole.toLowerCase().contains("admin")) {
                   Get.offAll(() => const MonitorAppRoot());
                 } else {
@@ -147,20 +151,23 @@ class ConnectivityController extends GetxController {
       // Try to get role from secure storage first
       final role = await _secureStorage.read(key: 'user_role');
       print("Retrieved user role: $role");
-      
+
       if (role != null && role.isNotEmpty) {
         return role;
       }
-      
+
       // If not found in secure storage, try to get from user data
       final userData = await Get.find<MonitorApiService>().getStoredUserData();
-      if (userData != null && userData.containsKey('roles') && userData['roles'] is List && userData['roles'].isNotEmpty) {
+      if (userData != null &&
+          userData.containsKey('roles') &&
+          userData['roles'] is List &&
+          userData['roles'].isNotEmpty) {
         final userRole = userData['roles'].first.toString();
         // Store it for future use
         await _secureStorage.write(key: 'user_role', value: userRole);
         return userRole;
       }
-      
+
       return null;
     } catch (e) {
       debugPrint('SplashScreen: Error retrieving user role - $e');
@@ -223,10 +230,12 @@ class ConnectivityController extends GetxController {
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
     final role = await _getUserRole();
-    
+
     // Handle null role in offline mode
     if (role == null || role.isEmpty) {
-      debugPrint('SplashScreen: User role is null in offline mode, defaulting to POS app');
+      debugPrint(
+        'SplashScreen: User role is null in offline mode, defaulting to POS app',
+      );
       Get.offAll(() => const PosAppRoot());
     } else if (role.toLowerCase().contains("admin")) {
       Get.offAll(() => const MonitorAppRoot());

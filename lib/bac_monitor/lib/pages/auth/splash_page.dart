@@ -37,6 +37,9 @@ class _SplashPageState extends State<SplashPage> {
   // Track offline mode
   bool _isOfflineMode = false;
   String _statusMessage = 'Initializing...';
+  int _syncProgress = 0;
+  int _syncTotal = 0;
+  int _recordsFetched = 0;
 
   @override
   void initState() {
@@ -45,10 +48,13 @@ class _SplashPageState extends State<SplashPage> {
     _initializeApp();
   }
 
-  void _updateStatus(String message) {
+  void _updateStatus(String message, {int? progress, int? total, int? records}) {
     if (mounted) {
       setState(() {
         _statusMessage = message;
+        if (progress != null) _syncProgress = progress;
+        if (total != null) _syncTotal = total;
+        if (records != null) _recordsFetched = records;
       });
     }
     debugPrint('SplashPage: $message');
@@ -183,9 +189,28 @@ class _SplashPageState extends State<SplashPage> {
         final hasCompanyDetails = companyDetails != null && companyDetails.isNotEmpty;
 
         if (!initialSyncDone || !hasCompanyDetails) {
-          _updateStatus('Syncing company data...');
+          // Use batched monthly sync for initial data (last 12 months)
+          _updateStatus('Syncing company data...', progress: 0, total: 13, records: 0);
           debugPrint('SplashPage: Full sync needed - initialSyncDone: $initialSyncDone, hasCompanyDetails: $hasCompanyDetails');
-          await apiService.fetchAndCacheAllData();
+
+          final success = await apiService.fetchInitialDataWithProgress(
+            onProgress: (current, total, records) {
+              _updateStatus(
+                'Syncing sales data...',
+                progress: current,
+                total: total,
+                records: records,
+              );
+            },
+          );
+
+          if (!success) {
+            debugPrint('SplashPage: Initial sync failed, checking for cached data');
+            final hasCachedData = await _hasCachedData();
+            if (!hasCachedData) {
+              throw Exception('Failed to sync data and no cached data available');
+            }
+          }
         } else {
           _updateStatus('Syncing recent sales...');
           await apiService.syncRecentSales();
@@ -208,6 +233,11 @@ class _SplashPageState extends State<SplashPage> {
       _updateStatus('Ready!');
       await Future.delayed(const Duration(milliseconds: 500));
       Get.offAll(() => const BottomNav());
+
+      // STEP 10: Start background sync for older data (after navigation)
+      if (isOnline) {
+        _startBackgroundSyncForOlderData();
+      }
 
     } catch (e) {
       debugPrint('SplashPage: Fatal error during initialization - $e');
@@ -385,6 +415,28 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
+  /// Start background sync for older sales data (runs after dashboard is shown)
+  void _startBackgroundSyncForOlderData() {
+    debugPrint('SplashPage: Starting background sync for older data');
+
+    final apiService = Get.find<MonitorApiService>();
+
+    // Run in background without awaiting
+    apiService.fetchOlderSalesInBackground(
+      onProgress: (completed, total, records) {
+        debugPrint('Background sync: $completed/$total months, $records records');
+      },
+      onComplete: () {
+        debugPrint('SplashPage: Background sync for older data completed');
+
+        // Optionally refresh dashboard controllers after background sync completes
+        if (Get.isRegistered<MonSalesTrendsController>()) {
+          Get.find<MonSalesTrendsController>().fetchAllData();
+        }
+      },
+    );
+  }
+
   /// Reset and refresh all dashboard controllers for account switch
   Future<void> _refreshDashboardControllers() async {
     debugPrint('SplashPage: Refreshing dashboard controllers');
@@ -506,11 +558,37 @@ class _SplashPageState extends State<SplashPage> {
               );
             }),
             const SizedBox(height: 40),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                PrimaryColors.brightYellow,
+            if (_syncTotal > 0) ...[
+              // Show progress bar during sync
+              SizedBox(
+                width: 200,
+                child: Column(
+                  children: [
+                    LinearProgressIndicator(
+                      value: _syncProgress / _syncTotal,
+                      backgroundColor: Colors.white24,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        PrimaryColors.brightYellow,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // Text(
+                    //   'Syncing sales records ....',
+                    //   style: const TextStyle(
+                    //     color: Colors.white54,
+                    //     fontSize: 12,
+                    //   ),
+                    // ),
+                  ],
+                ),
               ),
-            ),
+            ] else ...[
+              const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  PrimaryColors.brightYellow,
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Text(
               _statusMessage,
