@@ -422,71 +422,61 @@ class _PaymentScreenState extends State<PaymentScreen> {
             // Action Buttons (fixed at bottom)
             Padding(
               padding: const EdgeInsets.all(12.0),
-              child: Obx(
-                () => Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _paymentController.isProcessing.value
-                            ? null
-                            : () => Get.back(),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: Colors.grey[600],
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          "Cancel",
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
+              child: Obx(() => Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _paymentController.isProcessing.value
+                        ? null
+                        : () => Get.back(),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: Colors.grey[600],
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
+                      child: const Text(
+                        "Cancel",
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: _paymentController.isProcessing.value
-                            ? null
-                            : _saveBillAndPayment,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: Colors.green[700],
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _paymentController.isProcessing.value
+                        ? null
+                        : _saveBillAndPayment,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: Colors.green[700],
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        child: _paymentController.isProcessing.value
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : Text(
-                                widget.isUpdateMode
-                                    ? "Update Sale"
-                                    : "Save Bill",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                      ),
+                      child: _paymentController.isProcessing.value
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
                               ),
-                      ),
+                            )
+                          : Text(
+                              widget.isUpdateMode ? "Update Sale" : "Save Bill",
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                ],
+              )),
             ),
           ],
         ),
@@ -494,12 +484,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildAmountRow(
-    String label,
-    double amount,
-    Color color, {
-    double fontSize = 20,
-  }) {
+  Widget _buildAmountRow(String label, double amount, Color color, {double fontSize = 20}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(

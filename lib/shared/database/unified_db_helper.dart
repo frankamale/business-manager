@@ -1194,6 +1194,36 @@ class UnifiedDatabaseHelper {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  /// Batch insert service points for better performance
+  Future<void> insertMonServicePointsBatch(List<dynamic> servicePoints, {DatabaseExecutor? db}) async {
+    if (servicePoints.isEmpty) return;
+    final executor = db ?? database;
+    final batch = executor is Database ? executor.batch() : (executor as Transaction).batch();
+
+    for (final sp in servicePoints) {
+      batch.insert('mon_service_points', {
+        'id': sp['id'],
+        'name': sp['name'],
+        'code': sp['code'],
+        'branch': sp['branch'],
+        'company': sp['company'],
+        'mainServicePoint': sp['mainServicePoint'] == true ? 1 : 0,
+        'stores': sp['stores'] == true ? 1 : 0,
+        'sales': sp['sales'] == true ? 1 : 0,
+        'production': sp['production'] == true ? 1 : 0,
+        'booking': sp['booking'] == true ? 1 : 0,
+        'servicePointTypeId': sp['servicePointTypeId'],
+        'departmentid': sp['departmentid'],
+        'facilityName': sp['name'],
+        'facilityCode': sp['facility']?['code'],
+        'fullName': sp['fullName'],
+        'servicepointtype': sp['servicepointtype'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+
+    await batch.commit(noResult: true);
+  }
+
   Future<List<Map<String, dynamic>>> getMonServicePoints() async {
     final db = database;
     return await db.query('mon_service_points');
@@ -1426,6 +1456,42 @@ class UnifiedDatabaseHelper {
       'companyid': item['companyid'],
       'downloadlink': item['downloadlink'],
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Batch insert inventory items for better performance
+  Future<void> insertMonInventoryItemsBatch(List<dynamic> items, {DatabaseExecutor? db}) async {
+    if (items.isEmpty) return;
+    final executor = db ?? database;
+    final batch = executor is Database ? executor.batch() : (executor as Transaction).batch();
+
+    for (final item in items) {
+      batch.insert('mon_inventory', {
+        'id': item['id'],
+        'ipdid': item['ipdid'],
+        'code': item['code'],
+        'externalserial': item['externalserial'],
+        'name': item['name'],
+        'category': item['category'],
+        'price': item['price'],
+        'packsize': item['packsize'],
+        'packaging': item['packaging'],
+        'packagingid': item['packagingid'],
+        'soldfrom': item['soldfrom'],
+        'shortform': item['shortform'],
+        'packagingcode': item['packagingcode'],
+        'efris': item['efris'] == true ? 1 : 0,
+        'efrisid': item['efrisid'],
+        'measurmentunitidefris': item['measurmentunitidefris'],
+        'measurmentunit': item['measurmentunit'],
+        'measurmentunitid': item['measurmentunitid'],
+        'vatcategoryid': item['vatcategoryid'],
+        'branchid': item['branchid'],
+        'companyid': item['companyid'],
+        'downloadlink': item['downloadlink'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+
+    await batch.commit(noResult: true);
   }
 
   Future<List<Map<String, dynamic>>> getMonInventoryItems() async {
