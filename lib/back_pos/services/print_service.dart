@@ -645,80 +645,88 @@ class PrintService {
                   ],
                 ),
               ),
-              pw.SizedBox(height: 6),
-              pw.Divider(thickness: 1),
               pw.SizedBox(height: 4),
-
-              // Sales Overview Section
               pw.Center(
                 child: pw.Text(
-                  '-- SALES OVERVIEW --',
-                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                  'Transactions: $totalTransactions',
+                  style: pw.TextStyle(fontSize: 9),
                 ),
               ),
-              pw.SizedBox(height: 4),
-
-              // Total Sales
-              _buildSummaryRow('Total Sales', totalSales, count: totalTransactions, isBold: true),
-              pw.SizedBox(height: 2),
-              _buildSummaryRow('Fully Paid', fullyPaidAmount, count: fullyPaidTransactions),
-              pw.SizedBox(height: 2),
-              _buildSummaryRow('Partial', partialPaymentAmount, count: partialPaymentTransactions),
-              pw.SizedBox(height: 2),
-              _buildSummaryRow('Pending', pendingAmount, count: unpaidTransactions, isBold: true),
-
               pw.SizedBox(height: 6),
-              pw.Divider(thickness: 0.5),
-              pw.SizedBox(height: 4),
+              _buildDottedLine(),
+              pw.SizedBox(height: 6),
 
-              // Payment Methods Section
+              // Payment Methods Section - amounts received
               pw.Center(
                 child: pw.Text(
-                  '-- PAYMENT METHODS --',
-                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                  'PAYMENTS RECEIVED',
+                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
                 ),
               ),
-              pw.SizedBox(height: 4),
+              pw.SizedBox(height: 6),
 
-              ...paymentSummary.map((payment) {
+              // List each payment method
+              ...paymentSummary.where((payment) {
+                final type = (payment['paymenttype'] as String? ?? '').toLowerCase();
+                return type != 'pending' && type.isNotEmpty;
+              }).map((payment) {
                 final type = payment['paymenttype'] as String? ?? 'Unknown';
                 final amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
                 return pw.Padding(
-                  padding: pw.EdgeInsets.only(bottom: 2),
-                  child: _buildSimpleRow(type, amount),
+                  padding: pw.EdgeInsets.only(bottom: 3),
+                  child: _buildReceiptRow(type, amount),
                 );
               }),
 
-              pw.SizedBox(height: 6),
-              pw.Divider(thickness: 0.5),
               pw.SizedBox(height: 4),
+              _buildDottedLine(),
+              pw.SizedBox(height: 6),
+
+              // Pending - amount yet to be paid
+              _buildReceiptRow('PENDING', pendingAmount, isBold: true),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                '  (Not yet paid)',
+                style: pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic),
+              ),
+
+              pw.SizedBox(height: 6),
+              _buildDottedLine(),
+              pw.SizedBox(height: 6),
+
+              // Total - all sales
+              _buildReceiptRow('TOTAL SALES', totalSales, isBold: true, fontSize: 12),
+
+              pw.SizedBox(height: 8),
+              _buildDottedLine(),
+              pw.SizedBox(height: 6),
 
               // Category Breakdown Section
               pw.Center(
                 child: pw.Text(
-                  '-- BY CATEGORY --',
-                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                  'BY CATEGORY',
+                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
                 ),
               ),
-              pw.SizedBox(height: 4),
+              pw.SizedBox(height: 6),
 
               ...categorySummary.map((category) {
                 final catName = category['category'] as String? ?? 'Unknown';
                 final amount = (category['totalAmount'] as num?)?.toDouble() ?? 0.0;
                 return pw.Padding(
-                  padding: pw.EdgeInsets.only(bottom: 2),
-                  child: _buildSimpleRow(catName, amount),
+                  padding: pw.EdgeInsets.only(bottom: 3),
+                  child: _buildReceiptRow(catName, amount),
                 );
               }),
 
               if (complementaryTotal != null && complementaryTotal > 0) ...[
-                pw.SizedBox(height: 2),
-                _buildSimpleRow('Complementary', complementaryTotal),
+                pw.SizedBox(height: 3),
+                _buildReceiptRow('Complementary', complementaryTotal),
               ],
 
+              pw.SizedBox(height: 8),
+              _buildDottedLine(),
               pw.SizedBox(height: 6),
-              pw.Divider(thickness: 1),
-              pw.SizedBox(height: 4),
 
               // Footer
               pw.Center(
@@ -734,7 +742,7 @@ class PrintService {
                   style: pw.TextStyle(fontSize: 7),
                 ),
               ),
-              pw.SizedBox(height: 8),
+              pw.SizedBox(height: 10),
             ],
           );
         },
@@ -744,52 +752,37 @@ class PrintService {
     return pdf.save();
   }
 
-  // Helper for summary row with count and amount
-  static pw.Widget _buildSummaryRow(String label, double amount, {int? count, bool isBold = false}) {
-    final style = pw.TextStyle(
-      fontSize: 10,
-      fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-    );
+  // Helper for dotted line separator
+  static pw.Widget _buildDottedLine() {
     return pw.Row(
-      children: [
-        pw.Expanded(
-          flex: 3,
-          child: pw.Text(label, style: style),
-        ),
-        if (count != null)
-          pw.SizedBox(
-            width: 25,
-            child: pw.Text('($count)', style: pw.TextStyle(fontSize: 9), textAlign: pw.TextAlign.center),
-          ),
-        pw.Expanded(
-          flex: 3,
-          child: pw.Text(
-            '${_currencyFormat.format(amount)}',
-            style: style,
-            textAlign: pw.TextAlign.right,
+      children: List.generate(
+        35,
+        (index) => pw.Expanded(
+          child: pw.Container(
+            height: 1,
+            margin: pw.EdgeInsets.symmetric(horizontal: 1),
+            color: PdfColors.black,
           ),
         ),
-      ],
+      ),
     );
   }
 
-  // Helper for simple label-value row
-  static pw.Widget _buildSimpleRow(String label, double amount) {
+  // Helper for receipt row with label and amount
+  static pw.Widget _buildReceiptRow(String label, double amount, {bool isBold = false, double fontSize = 10}) {
+    final style = pw.TextStyle(
+      fontSize: fontSize,
+      fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+    );
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
         pw.Expanded(
-          flex: 2,
-          child: pw.Text(
-            label,
-            style: pw.TextStyle(fontSize: 10),
-            maxLines: 1,
-          ),
+          child: pw.Text(label, style: style),
         ),
         pw.Text(
-          '${_currencyFormat.format(amount)}',
-          style: pw.TextStyle(fontSize: 10),
-          textAlign: pw.TextAlign.right,
+          _currencyFormat.format(amount),
+          style: style,
         ),
       ],
     );

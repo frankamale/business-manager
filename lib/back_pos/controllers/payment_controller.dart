@@ -227,7 +227,8 @@ class PaymentController extends GetxController {
 
     // Calculate totals
     final totalAmount = calculateTotalAmount(cartItems);
-    final paymentAmount = amountTendered;
+    // Cap payment at total amount - excess is change returned to customer, not recorded as payment
+    final paymentAmount = amountTendered > totalAmount ? totalAmount : amountTendered;
 
     // Create sale transaction for each line item
     final List<Map<String, dynamic>> saleTransactions = [];

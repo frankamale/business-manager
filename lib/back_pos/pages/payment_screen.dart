@@ -235,43 +235,43 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Receipt Number
-                    if (!isKeyboardVisible) ...[
-                      Obx(
-                        () => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue[200]!),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                "Receipt: ",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                'REC-${_paymentController.receiptCounter.value.toString().padLeft(4, '0')}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
+                    // if (!isKeyboardVisible) ...[
+                    //   Obx(
+                    //     () => Container(
+                    //       padding: const EdgeInsets.symmetric(
+                    //         horizontal: 12,
+                    //         vertical: 10,
+                    //       ),
+                    //       decoration: BoxDecoration(
+                    //         color: Colors.blue[50],
+                    //         borderRadius: BorderRadius.circular(8),
+                    //         border: Border.all(color: Colors.blue[200]!),
+                    //       ),
+                    //       child: Row(
+                    //         mainAxisAlignment: MainAxisAlignment.center,
+                    //         children: [
+                    //           const Text(
+                    //             "Receipt: ",
+                    //             style: TextStyle(
+                    //               fontSize: 12,
+                    //               color: Colors.grey,
+                    //               fontWeight: FontWeight.w500,
+                    //             ),
+                    //           ),
+                    //           Text(
+                    //             'REC-${_paymentController.receiptCounter.value.toString().padLeft(4, '0')}',
+                    //             style: const TextStyle(
+                    //               fontSize: 16,
+                    //               fontWeight: FontWeight.bold,
+                    //               color: Colors.blue,
+                    //             ),
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ),
+                    //   const SizedBox(height: 12),
+                    // ],
 
                     // Amount Due
                     _buildAmountRow(
