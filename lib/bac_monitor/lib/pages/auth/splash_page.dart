@@ -37,9 +37,6 @@ class _SplashPageState extends State<SplashPage> {
   // Track offline mode
   bool _isOfflineMode = false;
   String _statusMessage = 'Initializing...';
-  int _syncProgress = 0;
-  int _syncTotal = 0;
-  int _recordsFetched = 0;
 
   @override
   void initState() {
@@ -48,13 +45,10 @@ class _SplashPageState extends State<SplashPage> {
     _initializeApp();
   }
 
-  void _updateStatus(String message, {int? progress, int? total, int? records}) {
+  void _updateStatus(String message) {
     if (mounted) {
       setState(() {
         _statusMessage = message;
-        if (progress != null) _syncProgress = progress;
-        if (total != null) _syncTotal = total;
-        if (records != null) _recordsFetched = records;
       });
     }
     debugPrint('SplashPage: $message');
@@ -129,40 +123,36 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeApp() async {
     debugPrint('SplashPage: Starting app initialization');
-
-    // Run splash delay in parallel with initialization
-    await Future.wait([
-      _initializeServicesAndDatabase(),
-      Future.delayed(const Duration(seconds: 2)),
-    ]);
+    await _initializeServicesAndDatabase();
   }
 
   Future<void> _initializeServicesAndDatabase() async {
     try {
+      final stopwatch = Stopwatch()..start();
+
       // STEP 1: Check network connectivity first
       _updateStatus('Checking network...');
       final isOnline = await NetworkHelper.hasConnection();
       _isOfflineMode = !isOnline;
-
-      if (_isOfflineMode) {
-        debugPrint('SplashPage: OFFLINE MODE DETECTED');
-        _updateStatus('Offline mode - Loading cached data...');
-      } else {
-        debugPrint('SplashPage: ONLINE MODE');
-        _updateStatus('Online - Syncing data...');
-      }
+      debugPrint('SplashPage: Network check took ${stopwatch.elapsedMilliseconds}ms - Online: $isOnline');
 
       // STEP 2: Initialize company ID FIRST (works offline)
       _updateStatus('Initializing company...');
+      stopwatch.reset();
       await _initializeCompanyIdOfflineSafe();
+      debugPrint('SplashPage: Company init took ${stopwatch.elapsedMilliseconds}ms');
 
       // STEP 3: Ensure database is properly opened for the company
       _updateStatus('Opening database...');
+      stopwatch.reset();
       await _ensureDatabaseIsOpen();
+      debugPrint('SplashPage: Database check took ${stopwatch.elapsedMilliseconds}ms');
 
       // STEP 4: Check credentials and token
       _updateStatus('Verifying credentials...');
+      stopwatch.reset();
       final hasValidCredentials = await _hasValidCredentials();
+      debugPrint('SplashPage: Credentials check took ${stopwatch.elapsedMilliseconds}ms');
 
       if (!hasValidCredentials) {
         debugPrint('SplashPage: No valid credentials found, redirecting to login');
@@ -171,7 +161,9 @@ class _SplashPageState extends State<SplashPage> {
       }
 
       // STEP 5: Check if we have cached data (important for offline mode)
+      stopwatch.reset();
       final hasCachedData = await _hasCachedData();
+      debugPrint('SplashPage: Cached data check took ${stopwatch.elapsedMilliseconds}ms - Has data: $hasCachedData');
 
       if (_isOfflineMode && !hasCachedData) {
         debugPrint('SplashPage: Offline mode with no cached data - need to go online first');
@@ -181,39 +173,33 @@ class _SplashPageState extends State<SplashPage> {
 
       if (isOnline) {
         final apiService = Get.find<MonitorApiService>();
+        stopwatch.reset();
         final initialSyncDone = await apiService.isInitialSyncCompleted();
+        debugPrint('SplashPage: Initial sync check took ${stopwatch.elapsedMilliseconds}ms - Done: $initialSyncDone');
 
         // IMPORTANT: Also check if company_details exists for THIS company's database
-        // The initialSyncDone flag is global, but we need per-company data
+        stopwatch.reset();
         final companyDetails = await _dbHelper.getCompanyDetails();
         final hasCompanyDetails = companyDetails != null && companyDetails.isNotEmpty;
+        debugPrint('SplashPage: Company details check took ${stopwatch.elapsedMilliseconds}ms - Has: $hasCompanyDetails');
 
         if (!initialSyncDone || !hasCompanyDetails) {
-          // Use batched monthly sync for initial data (last 12 months)
-          _updateStatus('Syncing company data...', progress: 0, total: 13, records: 0);
+          _updateStatus('Syncing company data...');
           debugPrint('SplashPage: Full sync needed - initialSyncDone: $initialSyncDone, hasCompanyDetails: $hasCompanyDetails');
 
-          final success = await apiService.fetchInitialDataWithProgress(
-            onProgress: (current, total, records) {
-              _updateStatus(
-                'Syncing sales data...',
-                progress: current,
-                total: total,
-                records: records,
-              );
-            },
-          );
-
-          if (!success) {
-            debugPrint('SplashPage: Initial sync failed, checking for cached data');
+          try {
+            stopwatch.reset();
+            await apiService.fetchAndCacheAllData();
+            debugPrint('SplashPage: Data fetch took ${stopwatch.elapsedMilliseconds}ms');
+          } catch (e) {
+            debugPrint('SplashPage: Initial sync failed, checking for cached data - $e');
             final hasCachedData = await _hasCachedData();
             if (!hasCachedData) {
               throw Exception('Failed to sync data and no cached data available');
             }
           }
         } else {
-          _updateStatus('Syncing recent sales...');
-          await apiService.syncRecentSales();
+          debugPrint('SplashPage: Initial sync already done, skipping data fetch');
         }
       } else {
         _updateStatus('Loading cached data...');
@@ -223,21 +209,20 @@ class _SplashPageState extends State<SplashPage> {
 
       // STEP 7: Initialize controllers AFTER data is synced/loaded
       _updateStatus('Initializing app...');
+      stopwatch.reset();
       _initializeControllers();
+      debugPrint('SplashPage: Controllers init took ${stopwatch.elapsedMilliseconds}ms');
 
       // STEP 8: Load initial data from database into controllers
       _updateStatus('Loading data...');
+      stopwatch.reset();
       await _loadDataIntoControllers();
+      debugPrint('SplashPage: Load data into controllers took ${stopwatch.elapsedMilliseconds}ms');
 
       // STEP 9: Navigate to main screen
       _updateStatus('Ready!');
-      await Future.delayed(const Duration(milliseconds: 500));
+      debugPrint('SplashPage: Total initialization complete, navigating to BottomNav');
       Get.offAll(() => const BottomNav());
-
-      // STEP 10: Start background sync for older data (after navigation)
-      if (isOnline) {
-        _startBackgroundSyncForOlderData();
-      }
 
     } catch (e) {
       debugPrint('SplashPage: Fatal error during initialization - $e');
@@ -415,28 +400,6 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  /// Start background sync for older sales data (runs after dashboard is shown)
-  void _startBackgroundSyncForOlderData() {
-    debugPrint('SplashPage: Starting background sync for older data');
-
-    final apiService = Get.find<MonitorApiService>();
-
-    // Run in background without awaiting
-    apiService.fetchOlderSalesInBackground(
-      onProgress: (completed, total, records) {
-        debugPrint('Background sync: $completed/$total months, $records records');
-      },
-      onComplete: () {
-        debugPrint('SplashPage: Background sync for older data completed');
-
-        // Optionally refresh dashboard controllers after background sync completes
-        if (Get.isRegistered<MonSalesTrendsController>()) {
-          Get.find<MonSalesTrendsController>().fetchAllData();
-        }
-      },
-    );
-  }
-
   /// Reset and refresh all dashboard controllers for account switch
   Future<void> _refreshDashboardControllers() async {
     debugPrint('SplashPage: Refreshing dashboard controllers');
@@ -558,37 +521,11 @@ class _SplashPageState extends State<SplashPage> {
               );
             }),
             const SizedBox(height: 40),
-            if (_syncTotal > 0) ...[
-              // Show progress bar during sync
-              SizedBox(
-                width: 200,
-                child: Column(
-                  children: [
-                    LinearProgressIndicator(
-                      value: _syncProgress / _syncTotal,
-                      backgroundColor: Colors.white24,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        PrimaryColors.brightYellow,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Text(
-                    //   'Syncing sales records ....',
-                    //   style: const TextStyle(
-                    //     color: Colors.white54,
-                    //     fontSize: 12,
-                    //   ),
-                    // ),
-                  ],
-                ),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(
+                PrimaryColors.brightYellow,
               ),
-            ] else ...[
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  PrimaryColors.brightYellow,
-                ),
-              ),
-            ],
+            ),
             const SizedBox(height: 16),
             Text(
               _statusMessage,

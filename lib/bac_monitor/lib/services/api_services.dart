@@ -366,22 +366,44 @@ class MonitorApiService extends GetxService {
     }
   }
 
+  /// Check if we already have sales data in the database
+  Future<bool> _hasSalesInDb() async {
+    try {
+      final db = _dbHelper.database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_sales');
+      final count = result.first['count'] as int? ?? 0;
+      debugPrint("ApiService: Found $count sales records in database");
+      return count > 0;
+    } catch (e) {
+      debugPrint("ApiService: Error checking sales count -> $e");
+      return false;
+    }
+  }
+
   Future<void> fetchAndCacheAllData() async {
     final now = DateTime.now();
     final dateFormatter = DateFormat('yyyy-MM-dd');
-    final currentDate = dateFormatter.format(now);
 
     try {
       debugPrint("ApiService: Starting to fetch all data...");
+
+      // Check if we already have sales in the database
+      final hasSales = await _hasSalesInDb();
+      if (hasSales) {
+        debugPrint("ApiService: Sales already exist in database, skipping fetch");
+        await setInitialSyncCompleted();
+
+        if (Get.isRegistered<MonOperatorController>()) {
+          await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+        }
+        return;
+      }
 
       http.Response? servicePointsRes;
       http.Response? companyDetailsRes;
       http.Response? salesRes;
       http.Response? salesDetailsRes;
       http.Response? inventoryRes;
-      
-      // Log the start of data fetching process
-      debugPrint("ApiService: Starting data fetching process - online mode");
 
       // Service points is now OPTIONAL - don't fail if it returns 404
       try {
@@ -391,64 +413,46 @@ class MonitorApiService extends GetxService {
         debugPrint(
           "ApiService: Service points endpoint failed (will continue without it) -> $e",
         );
-        servicePointsRes = null; // Explicitly set to null to continue
+        servicePointsRes = null;
       }
 
       try {
-        debugPrint("ApiService: Attempting to fetch company details from API");
         companyDetailsRes = await getWithAuth('/company/details');
-        debugPrint("ApiService: Successfully fetched company details with status: ${companyDetailsRes.statusCode}");
-        debugPrint("ApiService: Company details response body: ${companyDetailsRes.body}");
+        debugPrint("ApiService: Successfully fetched company details");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /company/details -> $e");
-        // In offline mode, we can continue without fresh company details
         companyDetailsRes = null;
       }
 
       try {
         final endDate = dateFormatter.format(now);
-        debugPrint("ApiService: Attempting to fetch sales reports from 2023-09-01 to $endDate");
+        debugPrint("ApiService: Fetching sales from 2023-09-01 to $endDate");
         salesRes = await getWithAuth(
           '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
         );
-        debugPrint(
-          "ApiService: Successfully fetched sales reports with status: ${salesRes.statusCode}",
-        );
-        debugPrint("ApiService: Sales reports response body length: ${salesRes.body.length}");
+        debugPrint("ApiService: Successfully fetched sales reports");
       } catch (e) {
-        debugPrint("ApiService: Failed to fetch /reports/sales -> $e");
-        // In offline mode, we can continue without fresh sales data
+        debugPrint("ApiService: Failed to fetch sales -> $e");
         salesRes = null;
       }
 
       try {
-        // Fetch sales details with salesperson and payment info
-        debugPrint("ApiService: Attempting to fetch sales details");
-        salesDetailsRes = await getWithAuth(
-          '/sales/?pagecount=0&pagesize=5000',
-        );
-        debugPrint("ApiService: Successfully fetched sales details with status: ${salesDetailsRes.statusCode}");
-        debugPrint("ApiService: Sales details response body length: ${salesDetailsRes.body.length}");
+        salesDetailsRes = await getWithAuth('/sales/?pagecount=0&pagesize=5000');
+        debugPrint("ApiService: Successfully fetched sales details");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /sales/ -> $e");
         salesDetailsRes = null;
       }
 
       try {
-        debugPrint("ApiService: Attempting to fetch inventory");
         inventoryRes = await getWithAuth('/inventory/');
-        debugPrint("ApiService: Successfully fetched inventory with status: ${inventoryRes.statusCode}");
-        debugPrint("ApiService: Inventory response body length: ${inventoryRes.body.length}");
+        debugPrint("ApiService: Successfully fetched inventory");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /inventory -> $e");
         inventoryRes = null;
       }
 
-      // In offline mode, we don't require any endpoints to succeed
-      // We'll work with whatever data we can get
-      debugPrint("ApiService: Proceeding with available data (offline mode tolerant)");
-
-      // Parse service points only if available and has valid body
+      // Parse responses
       List<dynamic> servicePointsData = [];
       if (servicePointsRes != null && servicePointsRes.body.isNotEmpty) {
         try {
@@ -462,15 +466,9 @@ class MonitorApiService extends GetxService {
       if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
-          debugPrint("ApiService: Parsed company details successfully");
         } catch (e) {
           debugPrint("ApiService: Failed to parse company details JSON -> $e");
-          // In offline mode, we can continue with empty company details
-          companyDetailsData = {};
         }
-      } else if (companyDetailsRes != null) {
-        debugPrint("ApiService: Company details response is empty");
-        companyDetailsData = {};
       }
 
       List<dynamic> salesData = [];
@@ -480,12 +478,7 @@ class MonitorApiService extends GetxService {
           debugPrint("ApiService: Parsed ${salesData.length} sales records");
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales JSON -> $e");
-          // In offline mode, we can continue with empty sales data
-          salesData = [];
         }
-      } else if (salesRes != null) {
-        debugPrint("ApiService: Sales response is empty");
-        salesData = [];
       }
 
       List<dynamic> salesDetailsData = [];
@@ -501,121 +494,70 @@ class MonitorApiService extends GetxService {
       if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
         try {
           inventoryData = json.decode(inventoryRes.body);
-          debugPrint(
-            "ApiService: Parsed ${inventoryData.length} inventory items",
-          );
+          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items");
         } catch (e) {
-          debugPrint(
-            "ApiService: Failed to parse inventory JSON (will continue without it) -> $e",
-          );
+          debugPrint("ApiService: Failed to parse inventory JSON -> $e");
         }
-      } else if (inventoryRes != null) {
-        debugPrint(
-          "ApiService: Inventory response is empty (will continue without it)",
-        );
       }
 
       final db = _dbHelper.database;
-      debugPrint("ApiService: Database connection established, starting transactions");
 
-      // Check if we have data to insert
-      bool hasDataToInsert = companyDetailsData.isNotEmpty ||
-                            salesData.isNotEmpty ||
-                            inventoryData.isNotEmpty ||
-                            servicePointsData.isNotEmpty;
-
-      // TRANSACTION 1: Clear old data and insert new data
-      await db.transaction((txn) async {
-        if (hasDataToInsert) {
-          debugPrint("ApiService: Clearing old data before inserting fresh data");
-          await txn.delete('mon_service_points');
-          await txn.delete('company_details');
-          await txn.delete('mon_sales');
+      // Clear and insert data
+      if (servicePointsData.isNotEmpty) {
+        await _dbHelper.deleteAllMonServicePoints();
+        debugPrint("ApiService: Inserting ${servicePointsData.length} service points");
+        for (final sp in servicePointsData) {
+          await _dbHelper.insertMonServicePoint(sp);
         }
-
-        // Use chunked batch inserts for better performance (reduces GC pressure)
-        if (inventoryData.isNotEmpty) {
-          debugPrint("ApiService: Batch inserting ${inventoryData.length} inventory items in chunks");
-          const chunkSize = 500;
-          for (var i = 0; i < inventoryData.length; i += chunkSize) {
-            final end = (i + chunkSize < inventoryData.length) ? i + chunkSize : inventoryData.length;
-            final chunk = inventoryData.sublist(i, end);
-            await _dbHelper.insertMonInventoryItemsBatch(chunk, db: txn);
-          }
-        } else {
-          debugPrint("ApiService: No inventory data available, skipping insertion");
-        }
-
-        // Only insert company details if we have valid data
-        if (companyDetailsData.isNotEmpty) {
-          await _dbHelper.insertCompanyDetails(companyDetailsData, db: txn);
-        } else {
-          debugPrint("ApiService: No company details data available, skipping insertion");
-        }
-
-        // Use batch insert for service points
-        if (servicePointsData.isNotEmpty) {
-          debugPrint("ApiService: Batch inserting ${servicePointsData.length} service points");
-          await _dbHelper.insertMonServicePointsBatch(servicePointsData, db: txn);
-        } else {
-          debugPrint("ApiService: No service points data available, skipping insertion");
-        }
-
-        // Use chunked batch insert for sales to reduce memory pressure
-        if (salesData.isNotEmpty) {
-          debugPrint("ApiService: Batch inserting ${salesData.length} sales records in chunks");
-          const chunkSize = 500;
-          for (var i = 0; i < salesData.length; i += chunkSize) {
-            final end = (i + chunkSize < salesData.length) ? i + chunkSize : salesData.length;
-            final chunk = salesData.sublist(i, end);
-            await _dbHelper.insertMonSalesBatch(chunk, db: txn);
-            debugPrint("ApiService: Inserted sales chunk ${(i ~/ chunkSize) + 1}/${(salesData.length / chunkSize).ceil()} (${chunk.length} records)");
-          }
-        }
-      });
-
-      // TRANSACTION 2: Update sales with salesperson/payment info (uses salesId index)
-      if (salesDetailsData.isNotEmpty) {
-        debugPrint("ApiService: Starting update transaction for ${salesDetailsData.length} sales details");
-        await db.transaction((txn) async {
-          // Reduced chunk size for updates (200 instead of 500) to reduce lock contention
-          const chunkSize = 200;
-          for (var i = 0; i < salesDetailsData.length; i += chunkSize) {
-            final end = (i + chunkSize < salesDetailsData.length) ? i + chunkSize : salesDetailsData.length;
-            final chunk = salesDetailsData.sublist(i, end);
-            final updateBatch = txn.batch();
-            for (final detail in chunk) {
-              if (detail['id'] != null) {
-                updateBatch.update(
-                  'mon_sales',
-                  {
-                    'salesperson': detail['salesperson'],
-                    'paymentmode': detail['paymentmode'],
-                  },
-                  where: 'salesId = ?',
-                  whereArgs: [detail['id']],
-                );
-              }
-            }
-            await updateBatch.commit(noResult: true);
-          }
-          debugPrint("ApiService: Completed sales details update");
-        });
       }
 
-      // TRANSACTION 3: Map sales to service points
-      if (hasDataToInsert) {
-        await db.transaction((txn) async {
-          await _dbHelper.mapMonSalesToServicePoints(db: txn);
-          debugPrint("ApiService: Completed mapping sales to service points");
-        });
+      if (companyDetailsData.isNotEmpty) {
+        await _dbHelper.deleteAllCompanyDetails();
+        await _dbHelper.insertCompanyDetails(companyDetailsData);
+      }
+
+      if (inventoryData.isNotEmpty) {
+        debugPrint("ApiService: Inserting ${inventoryData.length} inventory items");
+        for (final item in inventoryData) {
+          await _dbHelper.insertMonInventoryItem(item);
+        }
+      }
+
+      if (salesData.isNotEmpty) {
+        await _dbHelper.deleteAllMonSales();
+        debugPrint("ApiService: Inserting ${salesData.length} sales records");
+        for (final sale in salesData) {
+          await _dbHelper.insertMonSale(sale);
+        }
+      }
+
+      // Update sales with salesperson/payment info
+      if (salesDetailsData.isNotEmpty) {
+        debugPrint("ApiService: Updating sales with salesperson details");
+        for (final detail in salesDetailsData) {
+          if (detail['id'] != null) {
+            await db.update(
+              'mon_sales',
+              {
+                'salesperson': detail['salesperson'],
+                'paymentmode': detail['paymentmode'],
+              },
+              where: 'salesId = ?',
+              whereArgs: [detail['id']],
+            );
+          }
+        }
+      }
+
+      // Map sales to service points
+      if (salesData.isNotEmpty) {
+        await _dbHelper.mapMonSalesToServicePoints();
+        debugPrint("ApiService: Completed mapping sales to service points");
       }
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-      debugPrint(
-        "ApiService: All data fetched successfully, and local DB updated.",
-      );
-      debugPrint("ApiService: Data fetching and caching completed successfully in online mode");
+      await setInitialSyncCompleted();
+      debugPrint("ApiService: All data fetched and cached successfully");
 
       if (Get.isRegistered<MonOperatorController>()) {
         await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
@@ -624,9 +566,6 @@ class MonitorApiService extends GetxService {
       debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");
       rethrow;
     }
-    await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-    await setInitialSyncCompleted();
-
   }
 
   Future<void> syncRecentSales() async {
@@ -689,49 +628,37 @@ class MonitorApiService extends GetxService {
         "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting ${salesData.length} new records.",
       );
 
-      // TRANSACTION 1: Delete old and insert new sales
-      await db.transaction((txn) async {
-        await txn.delete(
-          'mon_sales',
-          where: 'transactiondate >= ?',
-          whereArgs: [startOfDayMillis],
-        );
+      // Delete old sales
+      await db.delete(
+        'mon_sales',
+        where: 'transactiondate >= ?',
+        whereArgs: [startOfDayMillis],
+      );
 
-        // Use batch insert for better performance
-        await _dbHelper.insertMonSalesBatch(salesData, db: txn);
-      });
-
-      // TRANSACTION 2: Update with salesperson and payment info (uses salesId index)
-      if (salesDetailsData.isNotEmpty) {
-        await db.transaction((txn) async {
-          // Reduced chunk size for updates (200 instead of all at once)
-          const chunkSize = 200;
-          for (var i = 0; i < salesDetailsData.length; i += chunkSize) {
-            final end = (i + chunkSize < salesDetailsData.length) ? i + chunkSize : salesDetailsData.length;
-            final chunk = salesDetailsData.sublist(i, end);
-            final updateBatch = txn.batch();
-            for (final detail in chunk) {
-              if (detail['id'] != null) {
-                updateBatch.update(
-                  'mon_sales',
-                  {
-                    'salesperson': detail['salesperson'],
-                    'paymentmode': detail['paymentmode'],
-                  },
-                  where: 'salesId = ?',
-                  whereArgs: [detail['id']],
-                );
-              }
-            }
-            await updateBatch.commit(noResult: true);
-          }
-        });
+      // Insert new sales
+      for (final sale in salesData) {
+        await _dbHelper.insertMonSale(sale);
       }
 
-      // TRANSACTION 3: Map sales to service points
-      await db.transaction((txn) async {
-        await _dbHelper.mapMonSalesToServicePoints(db: txn);
-      });
+      // Update with salesperson and payment info
+      if (salesDetailsData.isNotEmpty) {
+        for (final detail in salesDetailsData) {
+          if (detail['id'] != null) {
+            await db.update(
+              'mon_sales',
+              {
+                'salesperson': detail['salesperson'],
+                'paymentmode': detail['paymentmode'],
+              },
+              where: 'salesId = ?',
+              whereArgs: [detail['id']],
+            );
+          }
+        }
+      }
+
+      // Map sales to service points
+      await _dbHelper.mapMonSalesToServicePoints();
 
       debugPrint(
         "ApiService: Successfully synced and replaced ${salesData.length} sales records for the specified period.",
@@ -793,510 +720,6 @@ class MonitorApiService extends GetxService {
 
   Future<void> clearInitialSyncFlag() async {
     await secureStorage.delete(key: 'initial_sync_completed');
-  }
-
-  // ==================== BATCHED MONTHLY SYNC METHODS ====================
-
-  /// Track the oldest month that has been synced
-  Future<void> storeOldestSyncedMonth(String yearMonth) async {
-    await secureStorage.write(key: 'oldest_synced_month', value: yearMonth);
-  }
-
-  Future<String?> getOldestSyncedMonth() async {
-    return await secureStorage.read(key: 'oldest_synced_month');
-  }
-
-  /// Track if background sync is complete (all historical data fetched)
-  Future<void> setFullHistorySyncCompleted() async {
-    await secureStorage.write(key: 'full_history_sync_completed', value: 'true');
-  }
-
-  Future<bool> isFullHistorySyncCompleted() async {
-    final value = await secureStorage.read(key: 'full_history_sync_completed');
-    return value == 'true';
-  }
-
-  Future<void> clearFullHistorySyncFlag() async {
-    await secureStorage.delete(key: 'full_history_sync_completed');
-    await secureStorage.delete(key: 'oldest_synced_month');
-  }
-
-  /// Generate weekly date ranges within a month
-  List<Map<String, DateTime>> _generateWeeklyRanges(DateTime monthStart, DateTime monthEnd) {
-    final ranges = <Map<String, DateTime>>[];
-    var current = monthStart;
-
-    while (current.isBefore(monthEnd) || current.isAtSameMomentAs(monthEnd)) {
-      final weekEnd = current.add(const Duration(days: 6));
-      ranges.add({
-        'start': current,
-        'end': weekEnd.isAfter(monthEnd) ? monthEnd : weekEnd,
-      });
-      current = weekEnd.add(const Duration(days: 1));
-    }
-
-    return ranges;
-  }
-
-  /// Fetch and insert sales for a specific date range (internal helper)
-  /// Returns the number of records fetched, or throws on failure
-  Future<int> _fetchAndInsertSalesForRange(DateTime rangeStart, DateTime rangeEnd) async {
-    final dateFormatter = DateFormat('yyyy-MM-dd');
-    final startDate = dateFormatter.format(rangeStart);
-    final endDate = dateFormatter.format(rangeEnd);
-
-    debugPrint("ApiService: Fetching sales for $startDate to $endDate");
-
-    final response = await getWithAuth(
-      '/sales/reports/transaction/detail?startDate=$startDate&endDate=$endDate',
-      timeout: const Duration(minutes: 3),
-    );
-
-    final List<dynamic> salesData = json.decode(response.body);
-
-    if (salesData.isEmpty) {
-      debugPrint("ApiService: No sales found for $startDate to $endDate");
-      return 0;
-    }
-
-    // Also fetch sales details for salesperson info
-    List<dynamic> salesDetailsData = [];
-    try {
-      final salesDetailsRes = await getWithAuth(
-        '/sales/?pagecount=0&pagesize=5000&startdate=$startDate&enddate=$endDate',
-        timeout: const Duration(minutes: 2),
-      );
-      salesDetailsData = json.decode(salesDetailsRes.body);
-    } catch (e) {
-      debugPrint("ApiService: Failed to fetch sales details for $startDate to $endDate -> $e");
-    }
-
-    final db = _dbHelper.database;
-
-    // TRANSACTION 1: Insert sales data
-    await db.transaction((txn) async {
-      // Use batch insert for better performance
-      await _dbHelper.insertMonSalesBatch(salesData, db: txn);
-    });
-
-    // TRANSACTION 2: Update with salesperson and payment info (uses salesId index)
-    if (salesDetailsData.isNotEmpty) {
-      await db.transaction((txn) async {
-        // Reduced chunk size for updates
-        const chunkSize = 200;
-        for (var i = 0; i < salesDetailsData.length; i += chunkSize) {
-          final end = (i + chunkSize < salesDetailsData.length) ? i + chunkSize : salesDetailsData.length;
-          final chunk = salesDetailsData.sublist(i, end);
-          final updateBatch = txn.batch();
-          for (final detail in chunk) {
-            if (detail['id'] != null) {
-              updateBatch.update(
-                'mon_sales',
-                {
-                  'salesperson': detail['salesperson'],
-                  'paymentmode': detail['paymentmode'],
-                },
-                where: 'salesId = ?',
-                whereArgs: [detail['id']],
-              );
-            }
-          }
-          await updateBatch.commit(noResult: true);
-        }
-      });
-    }
-
-    // TRANSACTION 3: Map sales to service points
-    await db.transaction((txn) async {
-      await _dbHelper.mapMonSalesToServicePoints(db: txn);
-    });
-
-    debugPrint("ApiService: Inserted ${salesData.length} sales for $startDate to $endDate");
-    return salesData.length;
-  }
-
-  /// Fetch sales for a specific month and insert into database
-  /// Returns the number of records fetched, or -1 if failed
-  /// Automatically falls back to weekly fetches if monthly fetch fails
-  Future<int> _fetchAndInsertSalesForMonth(DateTime monthStart, DateTime monthEnd, {bool clearExisting = false}) async {
-    final dateFormatter = DateFormat('yyyy-MM-dd');
-    final startDate = dateFormatter.format(monthStart);
-    final endDate = dateFormatter.format(monthEnd);
-
-    // Clear existing data for this month if requested
-    if (clearExisting) {
-      final db = _dbHelper.database;
-      final startMillis = monthStart.millisecondsSinceEpoch;
-      final endMillis = monthEnd.add(const Duration(days: 1)).millisecondsSinceEpoch;
-      await db.delete(
-        'mon_sales',
-        where: 'transactiondate >= ? AND transactiondate < ?',
-        whereArgs: [startMillis, endMillis],
-      );
-    }
-
-    // First, try to fetch the entire month at once
-    try {
-      debugPrint("ApiService: Attempting monthly fetch for $startDate to $endDate");
-      return await _fetchAndInsertSalesForRange(monthStart, monthEnd);
-    } catch (e) {
-      // Check if it's a connection/timeout error that warrants retry with smaller batches
-      final errorStr = e.toString().toLowerCase();
-      final isConnectionError = errorStr.contains('connection closed') ||
-          errorStr.contains('timeout') ||
-          errorStr.contains('failed to parse http') ||
-          errorStr.contains('clientexception');
-
-      if (!isConnectionError) {
-        debugPrint("ApiService: Non-recoverable error for $startDate to $endDate -> $e");
-        return -1;
-      }
-
-      debugPrint("ApiService: Monthly fetch failed for $startDate to $endDate, falling back to weekly batches -> $e");
-    }
-
-    // Fall back to weekly batches
-    final weeklyRanges = _generateWeeklyRanges(monthStart, monthEnd);
-    debugPrint("ApiService: Fetching ${weeklyRanges.length} weeks for $startDate to $endDate");
-
-    int totalRecords = 0;
-    int failedWeeks = 0;
-
-    for (final range in weeklyRanges) {
-      try {
-        final records = await _fetchAndInsertSalesForRange(range['start']!, range['end']!);
-        totalRecords += records;
-        // Small delay between weekly requests
-        await Future.delayed(const Duration(milliseconds: 200));
-      } catch (e) {
-        failedWeeks++;
-        debugPrint("ApiService: Failed to fetch week ${dateFormatter.format(range['start']!)} to ${dateFormatter.format(range['end']!)} -> $e");
-      }
-    }
-
-    if (failedWeeks == weeklyRanges.length) {
-      debugPrint("ApiService: All weekly batches failed for $startDate to $endDate");
-      return -1;
-    }
-
-    debugPrint("ApiService: Completed weekly fetch for $startDate to $endDate - $totalRecords records, $failedWeeks failed weeks");
-    return totalRecords;
-  }
-
-  /// Fetch essential data (company details, service points, inventory) without sales
-  Future<void> _fetchEssentialData() async {
-    try {
-      debugPrint("ApiService: Fetching essential data (company, service points, inventory)...");
-
-      http.Response? servicePointsRes;
-      http.Response? companyDetailsRes;
-      http.Response? inventoryRes;
-
-      // Fetch company details
-      try {
-        companyDetailsRes = await getWithAuth('/company/details');
-        debugPrint("ApiService: Successfully fetched company details");
-      } catch (e) {
-        debugPrint("ApiService: Failed to fetch company details -> $e");
-      }
-
-      // Fetch service points
-      try {
-        servicePointsRes = await getWithAuth('/servicepoints');
-        debugPrint("ApiService: Successfully fetched service points");
-      } catch (e) {
-        debugPrint("ApiService: Failed to fetch service points -> $e");
-      }
-
-      // Fetch inventory
-      try {
-        inventoryRes = await getWithAuth('/inventory/');
-        debugPrint("ApiService: Successfully fetched inventory");
-      } catch (e) {
-        debugPrint("ApiService: Failed to fetch inventory -> $e");
-      }
-
-      // Parse responses
-      Map<String, dynamic> companyDetailsData = {};
-      if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
-        try {
-          companyDetailsData = json.decode(companyDetailsRes.body);
-        } catch (e) {
-          debugPrint("ApiService: Failed to parse company details -> $e");
-        }
-      }
-
-      List<dynamic> servicePointsData = [];
-      if (servicePointsRes != null && servicePointsRes.body.isNotEmpty) {
-        try {
-          servicePointsData = json.decode(servicePointsRes.body);
-        } catch (e) {
-          debugPrint("ApiService: Failed to parse service points -> $e");
-        }
-      }
-
-      List<dynamic> inventoryData = [];
-      if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
-        try {
-          inventoryData = json.decode(inventoryRes.body);
-        } catch (e) {
-          debugPrint("ApiService: Failed to parse inventory -> $e");
-        }
-      }
-
-      // Insert into database
-      final db = _dbHelper.database;
-      await db.transaction((txn) async {
-        if (companyDetailsData.isNotEmpty) {
-          await txn.delete('company_details');
-          await _dbHelper.insertCompanyDetails(companyDetailsData, db: txn);
-        }
-
-        if (servicePointsData.isNotEmpty) {
-          await txn.delete('mon_service_points');
-          for (final sp in servicePointsData) {
-            await _dbHelper.insertMonServicePoint(sp, db: txn);
-          }
-        }
-
-        if (inventoryData.isNotEmpty) {
-          for (final item in inventoryData) {
-            await _dbHelper.insertMonInventoryItem(item, db: txn);
-          }
-        }
-      });
-
-      if (Get.isRegistered<MonOperatorController>()) {
-        await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
-      }
-
-      debugPrint("ApiService: Essential data fetched and stored successfully");
-    } catch (e) {
-      debugPrint("ApiService: Failed to fetch essential data -> $e");
-      rethrow;
-    }
-  }
-
-  /// Generate list of month ranges from start date to end date
-  List<Map<String, DateTime>> _generateMonthRanges(DateTime startDate, DateTime endDate) {
-    final ranges = <Map<String, DateTime>>[];
-    var current = DateTime(endDate.year, endDate.month, 1);
-    final earliest = DateTime(startDate.year, startDate.month, 1);
-
-    while (current.isAfter(earliest) || current.isAtSameMomentAs(earliest)) {
-      final monthStart = current;
-      final monthEnd = DateTime(current.year, current.month + 1, 0); // Last day of month
-
-      ranges.add({
-        'start': monthStart,
-        'end': monthEnd.isAfter(endDate) ? endDate : monthEnd,
-      });
-
-      // Move to previous month
-      current = DateTime(current.year, current.month - 1, 1);
-    }
-
-    return ranges;
-  }
-
-  /// Initial sync: Fetch essential data + last 12 months of sales
-  /// Returns true if successful, false otherwise
-  /// Calls onProgress callback with (currentMonth, totalMonths, recordsFetched)
-  Future<bool> fetchInitialDataWithProgress({
-    Function(int currentMonth, int totalMonths, int recordsFetched)? onProgress,
-  }) async {
-    try {
-      debugPrint("ApiService: Starting initial data fetch (last 12 months)...");
-
-      // First, fetch essential data
-      await _fetchEssentialData();
-
-      // Clear existing sales before initial sync
-      final db = _dbHelper.database;
-      await db.delete('mon_sales');
-
-      // Generate month ranges for last 12 months
-      final now = DateTime.now();
-      final twelveMonthsAgo = DateTime(now.year - 1, now.month, 1);
-      final monthRanges = _generateMonthRanges(twelveMonthsAgo, now);
-
-      debugPrint("ApiService: Will fetch ${monthRanges.length} months of data");
-
-      int totalRecords = 0;
-      String? oldestMonth;
-
-      for (var i = 0; i < monthRanges.length; i++) {
-        final range = monthRanges[i];
-        final recordsFetched = await _fetchAndInsertSalesForMonth(
-          range['start']!,
-          range['end']!,
-        );
-
-        if (recordsFetched >= 0) {
-          totalRecords += recordsFetched;
-          oldestMonth = DateFormat('yyyy-MM').format(range['start']!);
-        }
-
-        onProgress?.call(i + 1, monthRanges.length, totalRecords);
-
-        // Small delay to avoid overwhelming the server
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      // Store the oldest synced month
-      if (oldestMonth != null) {
-        await storeOldestSyncedMonth(oldestMonth);
-      }
-
-      await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-      await setInitialSyncCompleted();
-
-      debugPrint("ApiService: Initial sync completed. Total records: $totalRecords");
-      return true;
-    } catch (e) {
-      debugPrint("ApiService: Initial data fetch failed -> $e");
-      return false;
-    }
-  }
-
-  /// Background sync: Continue fetching older data month by month
-  /// Starts from the oldest synced month and goes back to 2023-09-01
-  /// Calls onProgress callback with (monthsCompleted, totalMonths, recordsFetched)
-  Future<void> fetchOlderSalesInBackground({
-    Function(int monthsCompleted, int totalMonths, int recordsFetched)? onProgress,
-    Function()? onComplete,
-  }) async {
-    try {
-      // Check if full history is already synced
-      if (await isFullHistorySyncCompleted()) {
-        debugPrint("ApiService: Full history already synced, skipping background fetch");
-        onComplete?.call();
-        return;
-      }
-
-      // Get the oldest synced month
-      final oldestSyncedStr = await getOldestSyncedMonth();
-      if (oldestSyncedStr == null) {
-        debugPrint("ApiService: No oldest synced month found, skipping background fetch");
-        onComplete?.call();
-        return;
-      }
-
-      final parts = oldestSyncedStr.split('-');
-      final oldestSynced = DateTime(int.parse(parts[0]), int.parse(parts[1]), 1);
-
-      // Define the earliest date to sync (2023-09-01)
-      final earliestDate = DateTime(2023, 9, 1);
-
-      // If we've already synced back to the earliest date, mark as complete
-      if (oldestSynced.isBefore(earliestDate) || oldestSynced.isAtSameMomentAs(earliestDate)) {
-        await setFullHistorySyncCompleted();
-        debugPrint("ApiService: Full history sync already complete");
-        onComplete?.call();
-        return;
-      }
-
-      // Generate month ranges from oldest synced to earliest date (going backwards)
-      final previousMonth = DateTime(oldestSynced.year, oldestSynced.month - 1, 1);
-      final monthRanges = _generateMonthRanges(earliestDate, previousMonth);
-
-      debugPrint("ApiService: Background sync will fetch ${monthRanges.length} months of older data");
-
-      int totalRecords = 0;
-      String? newOldestMonth;
-
-      for (var i = 0; i < monthRanges.length; i++) {
-        final range = monthRanges[i];
-        final recordsFetched = await _fetchAndInsertSalesForMonth(
-          range['start']!,
-          range['end']!,
-        );
-
-        if (recordsFetched >= 0) {
-          totalRecords += recordsFetched;
-          newOldestMonth = DateFormat('yyyy-MM').format(range['start']!);
-          // Update oldest synced month as we go
-          await storeOldestSyncedMonth(newOldestMonth);
-        }
-
-        onProgress?.call(i + 1, monthRanges.length, totalRecords);
-
-        // Delay to avoid overwhelming the server and keep UI responsive
-        await Future.delayed(const Duration(milliseconds: 200));
-      }
-
-      await setFullHistorySyncCompleted();
-      debugPrint("ApiService: Background sync completed. Total records: $totalRecords");
-      onComplete?.call();
-    } catch (e) {
-      debugPrint("ApiService: Background sync failed -> $e");
-    }
-  }
-
-  /// Reload all data from 2023-09-01 to now in monthly batches
-  /// This clears existing sales and re-fetches everything
-  /// Calls onProgress callback with (monthsCompleted, totalMonths, recordsFetched)
-  Future<bool> reloadAllDataInBatches({
-    Function(int monthsCompleted, int totalMonths, int recordsFetched)? onProgress,
-  }) async {
-    try {
-      debugPrint("ApiService: Starting full data reload from 2023-09-01...");
-
-      // First, fetch essential data
-      await _fetchEssentialData();
-
-      // Clear all existing sales
-      final db = _dbHelper.database;
-      await db.delete('mon_sales');
-
-      // Clear sync tracking
-      await clearFullHistorySyncFlag();
-
-      // Generate month ranges from 2023-09-01 to now
-      final now = DateTime.now();
-      final earliestDate = DateTime(2023, 9, 1);
-      final monthRanges = _generateMonthRanges(earliestDate, now);
-
-      debugPrint("ApiService: Will reload ${monthRanges.length} months of data");
-
-      int totalRecords = 0;
-      int failedMonths = 0;
-      String? oldestMonth;
-
-      for (var i = 0; i < monthRanges.length; i++) {
-        final range = monthRanges[i];
-        final recordsFetched = await _fetchAndInsertSalesForMonth(
-          range['start']!,
-          range['end']!,
-        );
-
-        if (recordsFetched >= 0) {
-          totalRecords += recordsFetched;
-          oldestMonth = DateFormat('yyyy-MM').format(range['start']!);
-        } else {
-          failedMonths++;
-        }
-
-        onProgress?.call(i + 1, monthRanges.length, totalRecords);
-
-        // Small delay to avoid overwhelming the server
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      // Store sync state
-      if (oldestMonth != null) {
-        await storeOldestSyncedMonth(oldestMonth);
-      }
-      await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-      await setInitialSyncCompleted();
-      await setFullHistorySyncCompleted();
-
-      debugPrint("ApiService: Full reload completed. Total records: $totalRecords, Failed months: $failedMonths");
-      return failedMonths == 0;
-    } catch (e) {
-      debugPrint("ApiService: Full data reload failed -> $e");
-      return false;
-    }
   }
 
 }

@@ -1227,36 +1227,6 @@ class UnifiedDatabaseHelper {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  /// Batch insert service points for better performance
-  Future<void> insertMonServicePointsBatch(List<dynamic> servicePoints, {DatabaseExecutor? db}) async {
-    if (servicePoints.isEmpty) return;
-    final executor = db ?? database;
-    final batch = executor is Database ? executor.batch() : (executor as Transaction).batch();
-
-    for (final sp in servicePoints) {
-      batch.insert('mon_service_points', {
-        'id': sp['id'],
-        'name': sp['name'],
-        'code': sp['code'],
-        'branch': sp['branch'],
-        'company': sp['company'],
-        'mainServicePoint': sp['mainServicePoint'] == true ? 1 : 0,
-        'stores': sp['stores'] == true ? 1 : 0,
-        'sales': sp['sales'] == true ? 1 : 0,
-        'production': sp['production'] == true ? 1 : 0,
-        'booking': sp['booking'] == true ? 1 : 0,
-        'servicePointTypeId': sp['servicePointTypeId'],
-        'departmentid': sp['departmentid'],
-        'facilityName': sp['name'],
-        'facilityCode': sp['facility']?['code'],
-        'fullName': sp['fullName'],
-        'servicepointtype': sp['servicepointtype'],
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    await batch.commit(noResult: true);
-  }
-
   Future<List<Map<String, dynamic>>> getMonServicePoints() async {
     final db = database;
     return await db.query('mon_service_points');
@@ -1355,62 +1325,6 @@ class UnifiedDatabaseHelper {
     await executor.insert('mon_sales', toInsert, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  /// Batch insert multiple sales records for better performance
-  Future<void> insertMonSalesBatch(List<dynamic> sales, {DatabaseExecutor? db}) async {
-    if (sales.isEmpty) return;
-
-    final executor = db ?? database;
-    final batch = executor is Database ? executor.batch() : (executor as Transaction).batch();
-
-    for (final sale in sales) {
-      Map<String, dynamic> toInsert = {};
-
-      if (sale.containsKey('id')) toInsert['id'] = sale['id'];
-      if (sale.containsKey('purchaseordernumber')) toInsert['purchaseordernumber'] = sale['purchaseordernumber'];
-      if (sale.containsKey('internalrefno')) toInsert['internalrefno'] = sale['internalrefno'];
-      if (sale.containsKey('issuedby')) toInsert['issuedby'] = sale['issuedby'];
-      if (sale.containsKey('receiptnumber')) toInsert['receiptnumber'] = sale['receiptnumber'];
-      if (sale.containsKey('receivedby')) toInsert['receivedby'] = sale['receivedby'];
-      if (sale.containsKey('remarks')) toInsert['remarks'] = sale['remarks'];
-      if (sale.containsKey('transactiondate')) toInsert['transactiondate'] = sale['transactiondate'];
-      if (sale.containsKey('costcentre')) toInsert['costcentre'] = sale['costcentre'];
-      if (sale.containsKey('destinationbp')) toInsert['destinationbp'] = sale['destinationbp'];
-      if (sale.containsKey('paymentmode')) toInsert['paymentmode'] = sale['paymentmode'];
-      if (sale.containsKey('sourcefacility')) toInsert['sourcefacility'] = sale['sourcefacility'];
-      if (sale.containsKey('genno')) toInsert['genno'] = sale['genno'];
-      if (sale.containsKey('paymenttype')) toInsert['paymenttype'] = sale['paymenttype'];
-      if (sale.containsKey('validtill')) toInsert['validtill'] = sale['validtill'];
-      if (sale.containsKey('currency')) toInsert['currency'] = sale['currency'];
-      if (sale.containsKey('quantity')) toInsert['quantity'] = sale['quantity'];
-      if (sale.containsKey('unitquantity')) toInsert['unitquantity'] = sale['unitquantity'];
-      if (sale.containsKey('amount')) toInsert['amount'] = sale['amount'];
-      if (sale.containsKey('amountpaid')) toInsert['amountpaid'] = sale['amountpaid'];
-      if (sale.containsKey('balance')) toInsert['balance'] = sale['balance'];
-      if (sale.containsKey('sellingprice')) toInsert['sellingprice'] = sale['sellingprice'];
-      if (sale.containsKey('costprice')) toInsert['costprice'] = sale['costprice'];
-      if (sale.containsKey('sellingprice_original')) toInsert['sellingprice_original'] = sale['sellingprice_original'];
-      if (sale.containsKey('inventoryname')) toInsert['inventoryname'] = sale['inventoryname'];
-      if (sale.containsKey('category')) toInsert['category'] = sale['category'];
-      if (sale.containsKey('subcategory')) toInsert['subcategory'] = sale['subcategory'];
-      if (sale.containsKey('gnrtd')) toInsert['gnrtd'] = (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0;
-      if (sale.containsKey('printed')) toInsert['printed'] = (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0;
-      if (sale.containsKey('redeemed')) toInsert['redeemed'] = (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0;
-      if (sale.containsKey('cancelled')) toInsert['cancelled'] = (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0;
-      if (sale.containsKey('patron')) toInsert['patron'] = sale['patron'];
-      if (sale.containsKey('department')) toInsert['department'] = sale['department'];
-      if (sale.containsKey('packsize')) toInsert['packsize'] = sale['packsize'];
-      if (sale.containsKey('packaging')) toInsert['packaging'] = sale['packaging'];
-      if (sale.containsKey('complimentaryid')) toInsert['complimentaryid'] = sale['complimentaryid'];
-      if (sale.containsKey('salesId')) toInsert['salesId'] = sale['salesId'];
-      if (sale.containsKey('service_point_id')) toInsert['service_point_id'] = sale['service_point_id'];
-      if (sale.containsKey('salesperson')) toInsert['salesperson'] = sale['salesperson'];
-
-      batch.insert('mon_sales', toInsert, conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    await batch.commit(noResult: true);
-  }
-
   Future<List<Map<String, dynamic>>> getMonSales() async {
     final db = database;
     return await db.query('mon_sales', orderBy: 'transactiondate DESC');
@@ -1489,42 +1403,6 @@ class UnifiedDatabaseHelper {
       'companyid': item['companyid'],
       'downloadlink': item['downloadlink'],
     }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  /// Batch insert inventory items for better performance
-  Future<void> insertMonInventoryItemsBatch(List<dynamic> items, {DatabaseExecutor? db}) async {
-    if (items.isEmpty) return;
-    final executor = db ?? database;
-    final batch = executor is Database ? executor.batch() : (executor as Transaction).batch();
-
-    for (final item in items) {
-      batch.insert('mon_inventory', {
-        'id': item['id'],
-        'ipdid': item['ipdid'],
-        'code': item['code'],
-        'externalserial': item['externalserial'],
-        'name': item['name'],
-        'category': item['category'],
-        'price': item['price'],
-        'packsize': item['packsize'],
-        'packaging': item['packaging'],
-        'packagingid': item['packagingid'],
-        'soldfrom': item['soldfrom'],
-        'shortform': item['shortform'],
-        'packagingcode': item['packagingcode'],
-        'efris': item['efris'] == true ? 1 : 0,
-        'efrisid': item['efrisid'],
-        'measurmentunitidefris': item['measurmentunitidefris'],
-        'measurmentunit': item['measurmentunit'],
-        'measurmentunitid': item['measurmentunitid'],
-        'vatcategoryid': item['vatcategoryid'],
-        'branchid': item['branchid'],
-        'companyid': item['companyid'],
-        'downloadlink': item['downloadlink'],
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
-    }
-
-    await batch.commit(noResult: true);
   }
 
   Future<List<Map<String, dynamic>>> getMonInventoryItems() async {
