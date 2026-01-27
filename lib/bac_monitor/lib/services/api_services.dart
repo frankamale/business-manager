@@ -516,15 +516,16 @@ class MonitorApiService extends GetxService {
       }
 
       final db = _dbHelper.database;
-      debugPrint("ApiService: Database connection established, starting transaction");
+      debugPrint("ApiService: Database connection established, starting transactions");
 
+      // Check if we have data to insert
+      bool hasDataToInsert = companyDetailsData.isNotEmpty ||
+                            salesData.isNotEmpty ||
+                            inventoryData.isNotEmpty ||
+                            servicePointsData.isNotEmpty;
+
+      // TRANSACTION 1: Clear old data and insert new data
       await db.transaction((txn) async {
-        // Only clear tables if we have new data to insert
-        bool hasDataToInsert = companyDetailsData.isNotEmpty ||
-                              salesData.isNotEmpty ||
-                              inventoryData.isNotEmpty ||
-                              servicePointsData.isNotEmpty;
-
         if (hasDataToInsert) {
           debugPrint("ApiService: Clearing old data before inserting fresh data");
           await txn.delete('mon_service_points');
@@ -571,11 +572,14 @@ class MonitorApiService extends GetxService {
             debugPrint("ApiService: Inserted sales chunk ${(i ~/ chunkSize) + 1}/${(salesData.length / chunkSize).ceil()} (${chunk.length} records)");
           }
         }
+      });
 
-        // Chunked batch update with salesperson and payment info from sales details
-        if (salesDetailsData.isNotEmpty) {
-          debugPrint("ApiService: Updating ${salesDetailsData.length} sales with details in chunks");
-          const chunkSize = 500;
+      // TRANSACTION 2: Update sales with salesperson/payment info (uses salesId index)
+      if (salesDetailsData.isNotEmpty) {
+        debugPrint("ApiService: Starting update transaction for ${salesDetailsData.length} sales details");
+        await db.transaction((txn) async {
+          // Reduced chunk size for updates (200 instead of 500) to reduce lock contention
+          const chunkSize = 200;
           for (var i = 0; i < salesDetailsData.length; i += chunkSize) {
             final end = (i + chunkSize < salesDetailsData.length) ? i + chunkSize : salesDetailsData.length;
             final chunk = salesDetailsData.sublist(i, end);
@@ -595,12 +599,17 @@ class MonitorApiService extends GetxService {
             }
             await updateBatch.commit(noResult: true);
           }
-        }
+          debugPrint("ApiService: Completed sales details update");
+        });
+      }
 
-        if (hasDataToInsert) {
+      // TRANSACTION 3: Map sales to service points
+      if (hasDataToInsert) {
+        await db.transaction((txn) async {
           await _dbHelper.mapMonSalesToServicePoints(db: txn);
-        }
-      });
+          debugPrint("ApiService: Completed mapping sales to service points");
+        });
+      }
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
       debugPrint(
@@ -680,6 +689,7 @@ class MonitorApiService extends GetxService {
         "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting ${salesData.length} new records.",
       );
 
+      // TRANSACTION 1: Delete old and insert new sales
       await db.transaction((txn) async {
         await txn.delete(
           'mon_sales',
@@ -689,26 +699,37 @@ class MonitorApiService extends GetxService {
 
         // Use batch insert for better performance
         await _dbHelper.insertMonSalesBatch(salesData, db: txn);
+      });
 
-        // Batch update with salesperson and payment info from sales details
-        if (salesDetailsData.isNotEmpty) {
-          final updateBatch = txn.batch();
-          for (final detail in salesDetailsData) {
-            if (detail['id'] != null) {
-              updateBatch.update(
-                'mon_sales',
-                {
-                  'salesperson': detail['salesperson'],
-                  'paymentmode': detail['paymentmode'],
-                },
-                where: 'salesId = ?',
-                whereArgs: [detail['id']],
-              );
+      // TRANSACTION 2: Update with salesperson and payment info (uses salesId index)
+      if (salesDetailsData.isNotEmpty) {
+        await db.transaction((txn) async {
+          // Reduced chunk size for updates (200 instead of all at once)
+          const chunkSize = 200;
+          for (var i = 0; i < salesDetailsData.length; i += chunkSize) {
+            final end = (i + chunkSize < salesDetailsData.length) ? i + chunkSize : salesDetailsData.length;
+            final chunk = salesDetailsData.sublist(i, end);
+            final updateBatch = txn.batch();
+            for (final detail in chunk) {
+              if (detail['id'] != null) {
+                updateBatch.update(
+                  'mon_sales',
+                  {
+                    'salesperson': detail['salesperson'],
+                    'paymentmode': detail['paymentmode'],
+                  },
+                  where: 'salesId = ?',
+                  whereArgs: [detail['id']],
+                );
+              }
             }
+            await updateBatch.commit(noResult: true);
           }
-          await updateBatch.commit(noResult: true);
-        }
+        });
+      }
 
+      // TRANSACTION 3: Map sales to service points
+      await db.transaction((txn) async {
         await _dbHelper.mapMonSalesToServicePoints(db: txn);
       });
 
@@ -852,29 +873,41 @@ class MonitorApiService extends GetxService {
 
     final db = _dbHelper.database;
 
+    // TRANSACTION 1: Insert sales data
     await db.transaction((txn) async {
       // Use batch insert for better performance
       await _dbHelper.insertMonSalesBatch(salesData, db: txn);
+    });
 
-      // Batch update with salesperson and payment info
-      if (salesDetailsData.isNotEmpty) {
-        final updateBatch = txn.batch();
-        for (final detail in salesDetailsData) {
-          if (detail['id'] != null) {
-            updateBatch.update(
-              'mon_sales',
-              {
-                'salesperson': detail['salesperson'],
-                'paymentmode': detail['paymentmode'],
-              },
-              where: 'salesId = ?',
-              whereArgs: [detail['id']],
-            );
+    // TRANSACTION 2: Update with salesperson and payment info (uses salesId index)
+    if (salesDetailsData.isNotEmpty) {
+      await db.transaction((txn) async {
+        // Reduced chunk size for updates
+        const chunkSize = 200;
+        for (var i = 0; i < salesDetailsData.length; i += chunkSize) {
+          final end = (i + chunkSize < salesDetailsData.length) ? i + chunkSize : salesDetailsData.length;
+          final chunk = salesDetailsData.sublist(i, end);
+          final updateBatch = txn.batch();
+          for (final detail in chunk) {
+            if (detail['id'] != null) {
+              updateBatch.update(
+                'mon_sales',
+                {
+                  'salesperson': detail['salesperson'],
+                  'paymentmode': detail['paymentmode'],
+                },
+                where: 'salesId = ?',
+                whereArgs: [detail['id']],
+              );
+            }
           }
+          await updateBatch.commit(noResult: true);
         }
-        await updateBatch.commit(noResult: true);
-      }
+      });
+    }
 
+    // TRANSACTION 3: Map sales to service points
+    await db.transaction((txn) async {
       await _dbHelper.mapMonSalesToServicePoints(db: txn);
     });
 

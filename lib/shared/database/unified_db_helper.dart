@@ -68,10 +68,13 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 1,
+        version: 2,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       );
+
+      // Apply performance optimizations
+      await _applyPragmaOptimizations(_database!);
 
       _currentCompanyId = companyId;
       print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Successfully opened database for company: $companyId');
@@ -508,10 +511,40 @@ class UnifiedDatabaseHelper {
     // Monitor indexes
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_transactiondate ON mon_sales(transactiondate)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_service_point ON mon_sales(service_point_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Future migrations will be handled here
+    // Add missing index for existing databases
+    if (oldVersion < 2) {
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+    }
+  }
+
+  /// Apply PRAGMA optimizations for better performance
+  Future<void> _applyPragmaOptimizations(Database db) async {
+    try {
+      // Enable Write-Ahead Logging for better concurrent read/write performance
+      await db.execute('PRAGMA journal_mode = WAL');
+      // Reduce fsync calls for better write performance (NORMAL is safe for most cases)
+      await db.execute('PRAGMA synchronous = NORMAL');
+      // Increase page cache size (10000 pages * 4KB = ~40MB cache)
+      await db.execute('PRAGMA cache_size = 10000');
+      // Store temp tables in memory for faster operations
+      await db.execute('PRAGMA temp_store = MEMORY');
+      print('DEBUG: UnifiedDatabaseHelper - PRAGMA optimizations applied');
+    } catch (e) {
+      print('WARNING: UnifiedDatabaseHelper - Failed to apply PRAGMA optimizations: $e');
+    }
+  }
+
+  /// Ensure index exists on salesId for existing databases (call during migration)
+  Future<void> ensureSalesIdIndex() async {
+    if (_database != null) {
+      await _database!.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+      print('DEBUG: UnifiedDatabaseHelper - Ensured salesId index exists');
+    }
   }
 
   // ========================================================================
