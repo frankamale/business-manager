@@ -1,6 +1,7 @@
 import 'package:bac_pos/back_pos/pages/daily_summary.dart';
 import 'package:bac_pos/back_pos/pages/pos_screen.dart';
 import 'package:bac_pos/back_pos/pages/sales_listing.dart';
+import 'package:bac_pos/back_pos/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../auth/login.dart';
@@ -36,12 +37,11 @@ class SalesPointDetails extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await authController.logout();
-              Get.offAll(() => const Login());
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Get.to(() => const SettingsPage());
             },
-            tooltip: 'Logout',
+            tooltip: 'Settings',
           ),
         ],
       ),

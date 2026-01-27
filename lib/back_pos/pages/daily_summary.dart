@@ -221,7 +221,7 @@ class _DailySummaryState extends State<DailySummary> {
     final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
     final totalPaid = (overallTotal['totalPaid'] as num?)?.toDouble() ?? 0.0;
     // totalBalance is the actual amount not yet received by cashiers
-    final pendingAmount = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
+    final pendingAmount = ((overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0) > 0 ? ((overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0) : 0.0 ;
     final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
 
     final paymentSummary = summaryData?['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
@@ -236,7 +236,7 @@ class _DailySummaryState extends State<DailySummary> {
       final type = payment['paymenttype'] as String? ?? 'Unknown';
       if (type.toLowerCase() == 'pending') continue;
 
-      double amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
+      double amount = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
       totalPaidAmount += amount;
 
       IconData icon;

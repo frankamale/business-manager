@@ -593,7 +593,7 @@ class PrintService {
     );
   }
 
-  // Generate daily summary PDF
+  // Generate daily summary PDF for thermal receipt printer (80mm roll)
   static Future<Uint8List> generateDailySummaryPdf({
     required DateTime date,
     required double totalSales,
@@ -611,339 +611,188 @@ class PrintService {
     final pdf = pw.Document();
 
     pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: pw.EdgeInsets.all(32),
+      pw.Page(
+        pageFormat: PdfPageFormat.roll80,
+        margin: pw.EdgeInsets.all(8),
         build: (context) {
-          return [
-            // Header
-            pw.Center(
-              child: pw.Column(
-                children: [
-                  pw.Text(
-                    AppConfig.companyName,
-                    style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      AppConfig.companyName,
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    AppConfig.appName,
-                    style: pw.TextStyle(fontSize: 14),
-                  ),
-                  pw.SizedBox(height: 8),
-                  pw.Text(
-                    'DAILY SALES SUMMARY',
-                    style: pw.TextStyle(
-                      fontSize: 20,
-                      fontWeight: pw.FontWeight.bold,
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      'DAILY SUMMARY',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    _dateFormat.format(date),
-                    style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700),
-                  ),
-                ],
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      DateFormat('dd MMM yyyy').format(date),
+                      style: pw.TextStyle(fontSize: 10),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            pw.SizedBox(height: 24),
-            pw.Divider(thickness: 2),
-            pw.SizedBox(height: 16),
+              pw.SizedBox(height: 6),
+              pw.Divider(thickness: 1),
+              pw.SizedBox(height: 4),
 
-            // Key Metrics Section
-            pw.Text(
-              'SALES OVERVIEW',
-              style: pw.TextStyle(
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.blue900,
+              // Sales Overview Section
+              pw.Center(
+                child: pw.Text(
+                  '-- SALES OVERVIEW --',
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                ),
               ),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey400),
-              children: [
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColors.blue50),
-                  children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        'Metric',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        'Transactions',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        'Amount (UGX)',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                  ],
+              pw.SizedBox(height: 4),
+
+              // Total Sales
+              _buildSummaryRow('Total Sales', totalSales, count: totalTransactions, isBold: true),
+              pw.SizedBox(height: 2),
+              _buildSummaryRow('Fully Paid', fullyPaidAmount, count: fullyPaidTransactions),
+              pw.SizedBox(height: 2),
+              _buildSummaryRow('Partial', partialPaymentAmount, count: partialPaymentTransactions),
+              pw.SizedBox(height: 2),
+              _buildSummaryRow('Pending', pendingAmount, count: unpaidTransactions, isBold: true),
+
+              pw.SizedBox(height: 6),
+              pw.Divider(thickness: 0.5),
+              pw.SizedBox(height: 4),
+
+              // Payment Methods Section
+              pw.Center(
+                child: pw.Text(
+                  '-- PAYMENT METHODS --',
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
                 ),
-                pw.TableRow(
-                  children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text('Total Sales'),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        totalTransactions.toString(),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        _currencyFormat.format(totalSales),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                  ],
+              ),
+              pw.SizedBox(height: 4),
+
+              ...paymentSummary.map((payment) {
+                final type = payment['paymenttype'] as String? ?? 'Unknown';
+                final amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
+                return pw.Padding(
+                  padding: pw.EdgeInsets.only(bottom: 2),
+                  child: _buildSimpleRow(type, amount),
+                );
+              }),
+
+              pw.SizedBox(height: 6),
+              pw.Divider(thickness: 0.5),
+              pw.SizedBox(height: 4),
+
+              // Category Breakdown Section
+              pw.Center(
+                child: pw.Text(
+                  '-- BY CATEGORY --',
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
                 ),
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColors.green50),
-                  children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text('Fully Paid'),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        fullyPaidTransactions.toString(),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        _currencyFormat.format(fullyPaidAmount),
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColors.orange50),
-                  children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text('Partial Payments'),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        partialPaymentTransactions.toString(),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        _currencyFormat.format(partialPaymentAmount),
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColors.red50),
-                  children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text('Pending Amount'),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        unpaidTransactions.toString(),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        _currencyFormat.format(pendingAmount),
-                        textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.red700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              ),
+              pw.SizedBox(height: 4),
+
+              ...categorySummary.map((category) {
+                final catName = category['category'] as String? ?? 'Unknown';
+                final amount = (category['totalAmount'] as num?)?.toDouble() ?? 0.0;
+                return pw.Padding(
+                  padding: pw.EdgeInsets.only(bottom: 2),
+                  child: _buildSimpleRow(catName, amount),
+                );
+              }),
+
+              if (complementaryTotal != null && complementaryTotal > 0) ...[
+                pw.SizedBox(height: 2),
+                _buildSimpleRow('Complementary', complementaryTotal),
               ],
-            ),
-            pw.SizedBox(height: 24),
 
-            // Payment Methods Breakdown
-            pw.Text(
-              'PAYMENT METHODS',
-              style: pw.TextStyle(
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.blue900,
-              ),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey400),
-              children: [
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColors.blue50),
-                  children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        'Payment Method',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        'Amount (UGX)',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                  ],
+              pw.SizedBox(height: 6),
+              pw.Divider(thickness: 1),
+              pw.SizedBox(height: 4),
+
+              // Footer
+              pw.Center(
+                child: pw.Text(
+                  'Printed: ${DateFormat('dd/MM/yy HH:mm').format(DateTime.now())}',
+                  style: pw.TextStyle(fontSize: 8),
                 ),
-                ...paymentSummary.map((payment) {
-                  final type = payment['paymenttype'] as String? ?? 'Unknown';
-                  final amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
-                  return pw.TableRow(
-                    children: [
-                      pw.Padding(
-                        padding: pw.EdgeInsets.all(8),
-                        child: pw.Text(type),
-                      ),
-                      pw.Padding(
-                        padding: pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          _currencyFormat.format(amount),
-                          textAlign: pw.TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ],
-            ),
-            pw.SizedBox(height: 24),
-
-            // Category Breakdown
-            pw.Text(
-              'CATEGORY BREAKDOWN',
-              style: pw.TextStyle(
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.blue900,
               ),
-            ),
-            pw.SizedBox(height: 12),
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey400),
-              children: [
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: PdfColors.blue50),
-                  children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        'Category',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(8),
-                      child: pw.Text(
-                        'Amount (UGX)',
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                        textAlign: pw.TextAlign.right,
-                      ),
-                    ),
-                  ],
+              pw.SizedBox(height: 2),
+              pw.Center(
+                child: pw.Text(
+                  AppConfig.copyright,
+                  style: pw.TextStyle(fontSize: 7),
                 ),
-                ...categorySummary.map((category) {
-                  final catName = category['category'] as String? ?? 'Unknown';
-                  final amount = (category['totalAmount'] as num?)?.toDouble() ?? 0.0;
-                  return pw.TableRow(
-                    children: [
-                      pw.Padding(
-                        padding: pw.EdgeInsets.all(8),
-                        child: pw.Text(catName),
-                      ),
-                      pw.Padding(
-                        padding: pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          _currencyFormat.format(amount),
-                          textAlign: pw.TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-                if (complementaryTotal != null && complementaryTotal > 0)
-                  pw.TableRow(
-                    decoration: pw.BoxDecoration(color: PdfColors.teal50),
-                    children: [
-                      pw.Padding(
-                        padding: pw.EdgeInsets.all(8),
-                        child: pw.Text('Complementary Items'),
-                      ),
-                      pw.Padding(
-                        padding: pw.EdgeInsets.all(8),
-                        child: pw.Text(
-                          _currencyFormat.format(complementaryTotal),
-                          textAlign: pw.TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            pw.SizedBox(height: 32),
-
-            // Footer
-            pw.Divider(thickness: 1),
-            pw.SizedBox(height: 8),
-            pw.Center(
-              child: pw.Text(
-                'Generated on ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                style: pw.TextStyle(fontSize: 16, color: PdfColors.grey600),
               ),
-            ),
-            pw.Center(
-              child: pw.Text(
-                AppConfig.copyright,
-                style: pw.TextStyle(fontSize: 15, color: PdfColors.grey600),
-              ),
-            ),
-          ];
+              pw.SizedBox(height: 8),
+            ],
+          );
         },
       ),
     );
 
     return pdf.save();
+  }
+
+  // Helper for summary row with count and amount
+  static pw.Widget _buildSummaryRow(String label, double amount, {int? count, bool isBold = false}) {
+    final style = pw.TextStyle(
+      fontSize: 10,
+      fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
+    );
+    return pw.Row(
+      children: [
+        pw.Expanded(
+          flex: 3,
+          child: pw.Text(label, style: style),
+        ),
+        if (count != null)
+          pw.SizedBox(
+            width: 25,
+            child: pw.Text('($count)', style: pw.TextStyle(fontSize: 9), textAlign: pw.TextAlign.center),
+          ),
+        pw.Expanded(
+          flex: 3,
+          child: pw.Text(
+            '${_currencyFormat.format(amount)}',
+            style: style,
+            textAlign: pw.TextAlign.right,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper for simple label-value row
+  static pw.Widget _buildSimpleRow(String label, double amount) {
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Expanded(
+          flex: 2,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(fontSize: 10),
+            maxLines: 1,
+          ),
+        ),
+        pw.Text(
+          '${_currencyFormat.format(amount)}',
+          style: pw.TextStyle(fontSize: 10),
+          textAlign: pw.TextAlign.right,
+        ),
+      ],
+    );
   }
 
   // Print daily summary
