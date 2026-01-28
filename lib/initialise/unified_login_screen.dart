@@ -91,73 +91,37 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       try {
         print('DEBUG: UnifiedLoginScreen._handleLogin() - Starting login');
 
-        // Authenticate user - this handles opening database for the company
-        final success = await _authController.serverLogin(
+        // Authenticate user - returns all needed data so we don't re-read
+        final loginResult = await _authController.serverLogin(
           _usernameController.text,
           _passwordController.text,
         );
 
-        if (success) {
-          // Store credentials securely after successful authentication
-          await _storeCredentialsSecurely(
-            _usernameController.text,
-            _passwordController.text,
-          );
+        if (loginResult != null) {
+          // Extract data from login result (no storage reads needed)
+          final companyId = loginResult['companyId'] as String;
+          final token = loginResult['token'] as String;
+          final userData = loginResult['userData'] as Map<String, dynamic>;
+          final roles = userData['roles'] as List<dynamic>?;
 
-          // Get user data and determine system type
-          final Map<String, dynamic>? data = await _apiService.getStoredUserData();
-          final List<dynamic>? roles = data?['roles'];
           print('DEBUG: UnifiedLoginScreen._handleLogin() - User roles: $roles');
 
           // Determine if user is admin (monitor) or regular POS user
           final isAdmin = roles != null &&
               roles.any((role) => role.toString().toLowerCase().contains("admin"));
-          final system = isAdmin ? 'monitor' : 'pos';
 
-          // Get companyId from POS service (was stored by serverLogin)
-          final companyInfo = await _apiService.getCompanyInfo();
-          final companyId = companyInfo['companyId'] ?? '';
+          // Fire-and-forget: Store credentials for auto-fill (non-blocking)
+          _storeCredentialsSecurely(_usernameController.text, _passwordController.text);
 
-          // Save account with companyId for later use
-          if (data != null) {
-            final account = UserAccount(
-              id: companyId.isNotEmpty ? companyId : DateTime.now().millisecondsSinceEpoch.toString(),
-              username: data['username'] ?? _usernameController.text,
-              system: system,
-              userData: {...data, 'companyId': companyId},
-              lastLogin: DateTime.now(),
-            );
-            await _accountManager.addAccount(account);
-            await _accountManager.setCurrentAccount(account);
+          // Fire-and-forget: Sync to monitor service if admin (non-blocking)
+          if (isAdmin) {
+            _syncToMonitorService(token, companyId, userData, _usernameController.text, _passwordController.text);
           }
 
-          // If going to monitor, sync all auth data to monitor service
-          if (isAdmin) {
-            // Get the token from POS service and store in Monitor service
-            final token = await _apiService.getAccessToken();
-            if (token != null && token.isNotEmpty) {
-              await _monitorApiService.storeToken(token);
-              print('DEBUG: UnifiedLoginScreen._handleLogin() - Token synced to MonitorApiService');
-            }
-            if (companyId.isNotEmpty) {
-              await _monitorApiService.storeCompanyId(companyId);
-            }
-            // Store user data in monitor service
-            if (data != null) {
-              await _monitorApiService.storeUserData({...data, 'companyId': companyId});
-            }
-            // Save server credentials to monitor service for re-auth
-            await _monitorApiService.saveServerCredentials(
-              _usernameController.text,
-              _passwordController.text,
-            );
-            print('DEBUG: UnifiedLoginScreen._handleLogin() - All auth data synced to MonitorApiService');
-          }
-
-          print('DEBUG: UnifiedLoginScreen._handleLogin() - Navigating to $system app');
+          print('DEBUG: UnifiedLoginScreen._handleLogin() - Navigating to ${isAdmin ? 'monitor' : 'pos'} app');
 
           if (isAdmin) {
-            // Initialize monitor controllers
+            // Initialize monitor controllers (fast in-memory operations)
             if (!Get.isRegistered<MonDashboardController>()) {
               Get.put(MonDashboardController());
             }
@@ -188,35 +152,42 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
   }
 
-  // Store credentials securely using FlutterSecureStorage
-  Future<void> _storeCredentialsSecurely(
-    String username,
-    String password,
-  ) async {
-    try {
-      // Store username and password securely
-      await _secureStorage.write(key: _usernameKey, value: username);
-      await _secureStorage.write(key: _passwordKey, value: password);
+  /// Fire-and-forget sync to monitor service
+  void _syncToMonitorService(String token, String companyId, Map<String, dynamic> userData, String username, String password) {
+    // Run in background - don't await
+    Future.wait([
+      _monitorApiService.storeToken(token),
+      _monitorApiService.storeCompanyId(companyId),
+      _monitorApiService.storeUserData({...userData, 'companyId': companyId}),
+      _monitorApiService.saveServerCredentials(username, password),
+    ]).then((_) {
+      print('DEBUG: UnifiedLoginScreen - Monitor service sync completed in background');
+    }).catchError((e) {
+      print('DEBUG: UnifiedLoginScreen - Monitor service sync error (non-fatal): $e');
+    });
+  }
 
-      // Verify that credentials were stored successfully
-      final storedUsername = await _secureStorage.read(key: _usernameKey);
-      final storedPassword = await _secureStorage.read(key: _passwordKey);
-
-      if (storedUsername == username && storedPassword == password) {
-        print('Credentials stored securely successfully');
-      } else {
-        print('Warning: Credential storage verification failed');
-      }
-    } catch (e) {
-      print('Error storing credentials securely: $e');
-    }
+  // Store credentials securely using FlutterSecureStorage (fire-and-forget)
+  void _storeCredentialsSecurely(String username, String password) {
+    // Run in background - don't block navigation
+    Future.wait([
+      _secureStorage.write(key: _usernameKey, value: username),
+      _secureStorage.write(key: _passwordKey, value: password),
+    ]).then((_) {
+      print('DEBUG: Credentials stored for auto-fill');
+    }).catchError((e) {
+      print('DEBUG: Credential storage error (non-fatal): $e');
+    });
   }
 
   Future<Map<String, String?>> _getStoredCredentials() async {
     try {
-      final username = await _secureStorage.read(key: _usernameKey);
-      final password = await _secureStorage.read(key: _passwordKey);
-      return {'username': username, 'password': password};
+      // Read both in parallel
+      final results = await Future.wait([
+        _secureStorage.read(key: _usernameKey),
+        _secureStorage.read(key: _passwordKey),
+      ]);
+      return {'username': results[0], 'password': results[1]};
     } catch (e) {
       print('Error retrieving stored credentials: $e');
       return {'username': null, 'password': null};
@@ -226,8 +197,11 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   // Clear stored credentials (for logout or security purposes)
   Future<void> _clearStoredCredentials() async {
     try {
-      await _secureStorage.delete(key: _usernameKey);
-      await _secureStorage.delete(key: _passwordKey);
+      // Delete both in parallel
+      await Future.wait([
+        _secureStorage.delete(key: _usernameKey),
+        _secureStorage.delete(key: _passwordKey),
+      ]);
       print('Stored credentials cleared successfully');
     } catch (e) {
       print('Error clearing stored credentials: $e');
@@ -237,8 +211,13 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   // Check if credentials are stored securely
   Future<bool> _hasStoredCredentials() async {
     try {
-      final username = await _secureStorage.read(key: _usernameKey);
-      final password = await _secureStorage.read(key: _passwordKey);
+      // Read both in parallel
+      final results = await Future.wait([
+        _secureStorage.read(key: _usernameKey),
+        _secureStorage.read(key: _passwordKey),
+      ]);
+      final username = results[0];
+      final password = results[1];
       return username != null &&
           username.isNotEmpty &&
           password != null &&

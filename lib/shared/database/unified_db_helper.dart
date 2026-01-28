@@ -71,10 +71,16 @@ class UnifiedDatabaseHelper {
         version: 2,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
+        onOpen: (db) async {
+          // Apply PRAGMA optimizations after database is fully opened
+          // Using rawQuery since Android rejects execute() for PRAGMA in some contexts
+          await db.rawQuery('PRAGMA journal_mode = WAL');
+          await db.rawQuery('PRAGMA synchronous = NORMAL');
+          await db.rawQuery('PRAGMA cache_size = 10000');
+          await db.rawQuery('PRAGMA temp_store = MEMORY');
+          print('DEBUG: UnifiedDatabaseHelper - PRAGMA optimizations applied via onOpen');
+        },
       );
-
-      // Apply performance optimizations
-      await _applyPragmaOptimizations(_database!);
 
       _currentCompanyId = companyId;
       print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Successfully opened database for company: $companyId');
@@ -522,22 +528,6 @@ class UnifiedDatabaseHelper {
     }
   }
 
-  /// Apply PRAGMA optimizations for better performance
-  Future<void> _applyPragmaOptimizations(Database db) async {
-    try {
-      // Enable Write-Ahead Logging for better concurrent read/write performance
-      await db.execute('PRAGMA journal_mode = WAL');
-      // Reduce fsync calls for better write performance (NORMAL is safe for most cases)
-      await db.execute('PRAGMA synchronous = NORMAL');
-      // Increase page cache size (10000 pages * 4KB = ~40MB cache)
-      await db.execute('PRAGMA cache_size = 10000');
-      // Store temp tables in memory for faster operations
-      await db.execute('PRAGMA temp_store = MEMORY');
-      print('DEBUG: UnifiedDatabaseHelper - PRAGMA optimizations applied');
-    } catch (e) {
-      print('WARNING: UnifiedDatabaseHelper - Failed to apply PRAGMA optimizations: $e');
-    }
-  }
 
   /// Ensure index exists on salesId for existing databases (call during migration)
   Future<void> ensureSalesIdIndex() async {
@@ -1347,30 +1337,23 @@ class UnifiedDatabaseHelper {
 
   Future<void> mapMonSalesToServicePoints({DatabaseExecutor? db}) async {
     final executor = db ?? database;
-    final sales = await executor.query('mon_sales');
 
-    for (final sale in sales) {
-      final sourceFacility = sale['sourcefacility'] as String?;
-      if (sourceFacility == null) continue;
-
-      final servicePoints = await executor.query(
-        'mon_service_points',
-        where: '(name = ? OR fullName = ?)',
-        whereArgs: [sourceFacility, sourceFacility],
-      );
-
-      if (servicePoints.isNotEmpty) {
-        final servicePointId = servicePoints.first['id'] as String?;
-        if (servicePointId != null) {
-          await executor.update(
-            'mon_sales',
-            {'service_point_id': servicePointId},
-            where: 'id = ?',
-            whereArgs: [sale['id']],
-          );
-        }
-      }
-    }
+    // Use a single SQL UPDATE with subquery - much faster than individual operations
+    await executor.rawUpdate('''
+      UPDATE mon_sales
+      SET service_point_id = (
+        SELECT id FROM mon_service_points
+        WHERE mon_service_points.name = mon_sales.sourcefacility
+           OR mon_service_points.fullName = mon_sales.sourcefacility
+        LIMIT 1
+      )
+      WHERE sourcefacility IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM mon_service_points
+          WHERE mon_service_points.name = mon_sales.sourcefacility
+             OR mon_service_points.fullName = mon_sales.sourcefacility
+        )
+    ''');
   }
 
   // ========================================================================

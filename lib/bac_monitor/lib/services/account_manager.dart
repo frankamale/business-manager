@@ -50,8 +50,33 @@ class AccountManager extends GetxService {
   @override
   void onInit() {
     super.onInit();
-    loadAccounts();
-    loadCurrentAccount();
+    _loadAllData();
+  }
+
+  /// Load accounts and current account in parallel
+  Future<void> _loadAllData() async {
+    try {
+      final results = await Future.wait([
+        _secureStorage.read(key: _accountsKey),
+        _secureStorage.read(key: _currentAccountKey),
+      ]);
+
+      final accountsJson = results[0];
+      final currentAccountId = results[1];
+
+      if (accountsJson != null) {
+        final List<dynamic> accountsList = jsonDecode(accountsJson);
+        accounts.value = accountsList
+            .map((accountJson) => UserAccount.fromJson(accountJson))
+            .toList();
+      }
+
+      if (currentAccountId != null) {
+        currentAccount.value = accounts.firstWhereOrNull((account) => account.id == currentAccountId);
+      }
+    } catch (e) {
+      print('Error loading accounts: $e');
+    }
   }
 
   Future<void> loadAccounts() async {
@@ -101,8 +126,7 @@ class AccountManager extends GetxService {
   Future<void> setCurrentAccount(UserAccount? account) async {
     currentAccount.value = account;
     if (account != null) {
-      await _secureStorage.write(key: _currentAccountKey, value: account.id);
-      // Update last login time
+      // Update last login time in memory
       final updatedAccount = UserAccount(
         id: account.id,
         username: account.username,
@@ -110,7 +134,18 @@ class AccountManager extends GetxService {
         userData: account.userData,
         lastLogin: DateTime.now(),
       );
-      await addAccount(updatedAccount);
+
+      // Update in-memory list
+      accounts.removeWhere((a) => a.id == account.id);
+      accounts.removeWhere((a) => a.username == account.username && a.system == account.system && a.id != account.id);
+      accounts.add(updatedAccount);
+
+      // Write both current account ID and accounts list in parallel (single batch)
+      final accountsJson = jsonEncode(accounts.map((a) => a.toJson()).toList());
+      await Future.wait([
+        _secureStorage.write(key: _currentAccountKey, value: account.id),
+        _secureStorage.write(key: _accountsKey, value: accountsJson),
+      ]);
     } else {
       await _secureStorage.delete(key: _currentAccountKey);
     }
@@ -183,7 +218,10 @@ class AccountManager extends GetxService {
   Future<void> clearAllAccounts() async {
     accounts.clear();
     currentAccount.value = null;
-    await _secureStorage.delete(key: _accountsKey);
-    await _secureStorage.delete(key: _currentAccountKey);
+    // Delete both keys in parallel
+    await Future.wait([
+      _secureStorage.delete(key: _accountsKey),
+      _secureStorage.delete(key: _currentAccountKey),
+    ]);
   }
 }

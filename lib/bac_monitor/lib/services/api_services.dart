@@ -4,9 +4,20 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:sqflite/sqflite.dart';
 import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
 import '../../../shared/database/unified_db_helper.dart';
+
+/// Top-level function for isolate-based JSON decoding
+/// Must be top-level or static for compute() to work
+List<dynamic> _decodeJsonList(String jsonString) {
+  return json.decode(jsonString) as List<dynamic>;
+}
+
+Map<String, dynamic> _decodeJsonMap(String jsonString) {
+  return json.decode(jsonString) as Map<String, dynamic>;
+}
 
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
@@ -452,7 +463,7 @@ class MonitorApiService extends GetxService {
         inventoryRes = null;
       }
 
-      // Parse responses
+      // Parse responses - use compute() for large datasets to avoid main thread blocking
       List<dynamic> servicePointsData = [];
       if (servicePointsRes != null && servicePointsRes.body.isNotEmpty) {
         try {
@@ -471,11 +482,12 @@ class MonitorApiService extends GetxService {
         }
       }
 
+      // Parse large datasets on isolate to prevent GC pressure on main thread
       List<dynamic> salesData = [];
       if (salesRes != null && salesRes.body.isNotEmpty) {
         try {
-          salesData = json.decode(salesRes.body);
-          debugPrint("ApiService: Parsed ${salesData.length} sales records");
+          salesData = await compute(_decodeJsonList, salesRes.body);
+          debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales JSON -> $e");
         }
@@ -484,7 +496,7 @@ class MonitorApiService extends GetxService {
       List<dynamic> salesDetailsData = [];
       if (salesDetailsRes != null && salesDetailsRes.body.isNotEmpty) {
         try {
-          salesDetailsData = json.decode(salesDetailsRes.body);
+          salesDetailsData = await compute(_decodeJsonList, salesDetailsRes.body);
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales details JSON -> $e");
         }
@@ -493,8 +505,8 @@ class MonitorApiService extends GetxService {
       List<dynamic> inventoryData = [];
       if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
         try {
-          inventoryData = json.decode(inventoryRes.body);
-          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items");
+          inventoryData = await compute(_decodeJsonList, inventoryRes.body);
+          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
         } catch (e) {
           debugPrint("ApiService: Failed to parse inventory JSON -> $e");
         }
@@ -502,58 +514,159 @@ class MonitorApiService extends GetxService {
 
       final db = _dbHelper.database;
 
-      // Clear and insert data
-      if (servicePointsData.isNotEmpty) {
-        await _dbHelper.deleteAllMonServicePoints();
-        debugPrint("ApiService: Inserting ${servicePointsData.length} service points");
-        for (final sp in servicePointsData) {
-          await _dbHelper.insertMonServicePoint(sp);
-        }
-      }
+      // Use transaction with batch for optimal performance
+      // Batch reduces Dart-to-Native FFI overhead by executing all inserts in one go
+      await db.transaction((txn) async {
+        // Clear old data
+        await txn.delete('mon_service_points');
+        await txn.delete('company_details');
+        await txn.delete('mon_sales');
 
-      if (companyDetailsData.isNotEmpty) {
-        await _dbHelper.deleteAllCompanyDetails();
-        await _dbHelper.insertCompanyDetails(companyDetailsData);
-      }
-
-      if (inventoryData.isNotEmpty) {
-        debugPrint("ApiService: Inserting ${inventoryData.length} inventory items");
-        for (final item in inventoryData) {
-          await _dbHelper.insertMonInventoryItem(item);
-        }
-      }
-
-      if (salesData.isNotEmpty) {
-        await _dbHelper.deleteAllMonSales();
-        debugPrint("ApiService: Inserting ${salesData.length} sales records");
-        for (final sale in salesData) {
-          await _dbHelper.insertMonSale(sale);
-        }
-      }
-
-      // Update sales with salesperson/payment info
-      if (salesDetailsData.isNotEmpty) {
-        debugPrint("ApiService: Updating sales with salesperson details");
-        for (final detail in salesDetailsData) {
-          if (detail['id'] != null) {
-            await db.update(
-              'mon_sales',
-              {
-                'salesperson': detail['salesperson'],
-                'paymentmode': detail['paymentmode'],
-              },
-              where: 'salesId = ?',
-              whereArgs: [detail['id']],
-            );
+        // Insert inventory using batch
+        if (inventoryData.isNotEmpty) {
+          debugPrint("ApiService: Batch inserting ${inventoryData.length} inventory items");
+          final inventoryBatch = txn.batch();
+          for (final item in inventoryData) {
+            inventoryBatch.insert('mon_inventory', {
+              'id': item['id'],
+              'ipdid': item['ipdid'],
+              'code': item['code'],
+              'externalserial': item['externalserial'],
+              'name': item['name'],
+              'category': item['category'],
+              'price': item['price'],
+              'packsize': item['packsize'],
+              'packaging': item['packaging'],
+              'packagingid': item['packagingid'],
+              'soldfrom': item['soldfrom'],
+              'shortform': item['shortform'],
+              'packagingcode': item['packagingcode'],
+              'efris': item['efris'] == true ? 1 : 0,
+              'efrisid': item['efrisid'],
+              'measurmentunitidefris': item['measurmentunitidefris'],
+              'measurmentunit': item['measurmentunit'],
+              'measurmentunitid': item['measurmentunitid'],
+              'vatcategoryid': item['vatcategoryid'],
+              'branchid': item['branchid'],
+              'companyid': item['companyid'],
+              'downloadlink': item['downloadlink'],
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
           }
+          await inventoryBatch.commit(noResult: true);
         }
-      }
 
-      // Map sales to service points
-      if (salesData.isNotEmpty) {
-        await _dbHelper.mapMonSalesToServicePoints();
-        debugPrint("ApiService: Completed mapping sales to service points");
-      }
+        // Insert company details (single record, no batch needed)
+        if (companyDetailsData.isNotEmpty) {
+          await txn.insert('company_details', {
+            'branch': companyDetailsData['branch'],
+            'company': companyDetailsData['company'],
+            'userCode': companyDetailsData['userCode'],
+            'currentBranchName': companyDetailsData['currentBranchName'],
+            'currentBranchCode': companyDetailsData['currentBranchCode'],
+            'activeBranchName': companyDetailsData['activeBranch']?['name'],
+            'activeBranchAddress': companyDetailsData['activeBranch']?['address'],
+            'activeBranchPrimaryEmail': companyDetailsData['activeBranch']?['primaryEmail'],
+            'activeBranchCode': companyDetailsData['activeBranch']?['code'],
+            'efrisEnabled': companyDetailsData['efrisEnabled'] == true ? 1 : 0,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+
+        // Insert service points using batch
+        if (servicePointsData.isNotEmpty) {
+          debugPrint("ApiService: Batch inserting ${servicePointsData.length} service points");
+          final spBatch = txn.batch();
+          for (final sp in servicePointsData) {
+            spBatch.insert('mon_service_points', {
+              'id': sp['id'],
+              'name': sp['name'],
+              'code': sp['code'],
+              'branch': sp['branch'],
+              'company': sp['company'],
+              'mainServicePoint': sp['mainServicePoint'] == true ? 1 : 0,
+              'stores': sp['stores'] == true ? 1 : 0,
+              'sales': sp['sales'] == true ? 1 : 0,
+              'production': sp['production'] == true ? 1 : 0,
+              'booking': sp['booking'] == true ? 1 : 0,
+              'servicePointTypeId': sp['servicePointTypeId'],
+              'departmentid': sp['departmentid'],
+              'facilityName': sp['name'],
+              'facilityCode': sp['facility']?['code'],
+              'fullName': sp['fullName'],
+              'servicepointtype': sp['servicepointtype'],
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+          await spBatch.commit(noResult: true);
+        }
+
+        // Insert sales using batch - this is the big one (4000+ records)
+        if (salesData.isNotEmpty) {
+          debugPrint("ApiService: Batch inserting ${salesData.length} sales records");
+          final salesBatch = txn.batch();
+          for (final sale in salesData) {
+            salesBatch.insert('mon_sales', {
+              'id': sale['id'],
+              'purchaseordernumber': sale['purchaseordernumber'],
+              'internalrefno': sale['internalrefno'],
+              'issuedby': sale['issuedby'],
+              'receiptnumber': sale['receiptnumber'],
+              'receivedby': sale['receivedby'],
+              'remarks': sale['remarks'],
+              'transactiondate': sale['transactiondate'],
+              'costcentre': sale['costcentre'],
+              'destinationbp': sale['destinationbp'],
+              'paymentmode': sale['paymentmode'],
+              'sourcefacility': sale['sourcefacility'],
+              'genno': sale['genno'],
+              'paymenttype': sale['paymenttype'],
+              'validtill': sale['validtill'],
+              'currency': sale['currency'],
+              'quantity': sale['quantity'],
+              'unitquantity': sale['unitquantity'],
+              'amount': sale['amount'],
+              'amountpaid': sale['amountpaid'],
+              'balance': sale['balance'],
+              'sellingprice': sale['sellingprice'],
+              'costprice': sale['costprice'],
+              'sellingprice_original': sale['sellingprice_original'],
+              'inventoryname': sale['inventoryname'],
+              'category': sale['category'],
+              'subcategory': sale['subcategory'],
+              'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
+              'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
+              'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
+              'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
+              'patron': sale['patron'],
+              'department': sale['department'],
+              'packsize': sale['packsize'],
+              'packaging': sale['packaging'],
+              'complimentaryid': sale['complimentaryid'],
+              'salesId': sale['salesId'],
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+          await salesBatch.commit(noResult: true);
+        }
+
+        // Update sales with salesperson/payment info using batch
+        if (salesDetailsData.isNotEmpty) {
+          debugPrint("ApiService: Batch updating ${salesDetailsData.length} sales with details");
+          final updateBatch = txn.batch();
+          for (final detail in salesDetailsData) {
+            if (detail['id'] != null) {
+              updateBatch.update(
+                'mon_sales',
+                {
+                  'salesperson': detail['salesperson'],
+                  'paymentmode': detail['paymentmode'],
+                },
+                where: 'salesId = ?',
+                whereArgs: [detail['id']],
+              );
+            }
+          }
+          await updateBatch.commit(noResult: true);
+        }
+
+      });
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
       await setInitialSyncCompleted();
@@ -590,7 +703,8 @@ class MonitorApiService extends GetxService {
         '/sales/reports/transaction/detail?startDate=$startDate&endDate=$endDate',
       );
 
-      final List<dynamic> salesData = json.decode(response.body);
+      // Parse on isolate to prevent GC pressure
+      final List<dynamic> salesData = await compute(_decodeJsonList, response.body);
 
       // Early return if no sales data - skip all database operations
       if (salesData.isEmpty) {
@@ -612,7 +726,7 @@ class MonitorApiService extends GetxService {
       }
 
       final List<dynamic> salesDetailsData = salesDetailsRes != null
-          ? json.decode(salesDetailsRes.body)
+          ? await compute(_decodeJsonList, salesDetailsRes.body)
           : [];
 
       final db = _dbHelper.database;
@@ -628,23 +742,64 @@ class MonitorApiService extends GetxService {
         "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting ${salesData.length} new records.",
       );
 
-      // Delete old sales
-      await db.delete(
-        'mon_sales',
-        where: 'transactiondate >= ?',
-        whereArgs: [startOfDayMillis],
-      );
+      // Use transaction with batch for optimal performance
+      await db.transaction((txn) async {
+        await txn.delete(
+          'mon_sales',
+          where: 'transactiondate >= ?',
+          whereArgs: [startOfDayMillis],
+        );
 
-      // Insert new sales
-      for (final sale in salesData) {
-        await _dbHelper.insertMonSale(sale);
-      }
+        // Batch insert sales
+        final salesBatch = txn.batch();
+        for (final sale in salesData) {
+          salesBatch.insert('mon_sales', {
+            'id': sale['id'],
+            'purchaseordernumber': sale['purchaseordernumber'],
+            'internalrefno': sale['internalrefno'],
+            'issuedby': sale['issuedby'],
+            'receiptnumber': sale['receiptnumber'],
+            'receivedby': sale['receivedby'],
+            'remarks': sale['remarks'],
+            'transactiondate': sale['transactiondate'],
+            'costcentre': sale['costcentre'],
+            'destinationbp': sale['destinationbp'],
+            'paymentmode': sale['paymentmode'],
+            'sourcefacility': sale['sourcefacility'],
+            'genno': sale['genno'],
+            'paymenttype': sale['paymenttype'],
+            'validtill': sale['validtill'],
+            'currency': sale['currency'],
+            'quantity': sale['quantity'],
+            'unitquantity': sale['unitquantity'],
+            'amount': sale['amount'],
+            'amountpaid': sale['amountpaid'],
+            'balance': sale['balance'],
+            'sellingprice': sale['sellingprice'],
+            'costprice': sale['costprice'],
+            'sellingprice_original': sale['sellingprice_original'],
+            'inventoryname': sale['inventoryname'],
+            'category': sale['category'],
+            'subcategory': sale['subcategory'],
+            'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
+            'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
+            'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
+            'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
+            'patron': sale['patron'],
+            'department': sale['department'],
+            'packsize': sale['packsize'],
+            'packaging': sale['packaging'],
+            'complimentaryid': sale['complimentaryid'],
+            'salesId': sale['salesId'],
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+        await salesBatch.commit(noResult: true);
 
-      // Update with salesperson and payment info
-      if (salesDetailsData.isNotEmpty) {
+        // Batch update with salesperson and payment info
+        final updateBatch = txn.batch();
         for (final detail in salesDetailsData) {
           if (detail['id'] != null) {
-            await db.update(
+            updateBatch.update(
               'mon_sales',
               {
                 'salesperson': detail['salesperson'],
@@ -655,10 +810,8 @@ class MonitorApiService extends GetxService {
             );
           }
         }
-      }
-
-      // Map sales to service points
-      await _dbHelper.mapMonSalesToServicePoints();
+        await updateBatch.commit(noResult: true);
+      });
 
       debugPrint(
         "ApiService: Successfully synced and replaced ${salesData.length} sales records for the specified period.",

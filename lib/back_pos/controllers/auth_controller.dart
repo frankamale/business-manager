@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
+import 'package:bac_pos/back_pos/models/auth_response.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import '../../bac_monitor/lib/services/account_manager.dart';
 
@@ -180,28 +181,28 @@ class AuthController extends GetxController {
   }
 
  /// Server login that handles database switching for company-specific data
+  /// Returns login result with user data, or null on failure
   /// closeDatabase: if true, closes any existing database before opening the new company's database
-  Future<bool> serverLogin(String username, String password, {bool closeDatabase = true}) async {
+  Future<Map<String, dynamic>?> serverLogin(String username, String password, {bool closeDatabase = true}) async {
     try {
       String usernameLower = username.toLowerCase();
       isLoggingIn.value = true;
       print('DEBUG: AuthController.serverLogin() - Starting login for: $usernameLower');
 
-      // Close the existing database before new authentication
-      // This ensures we don't have stale data from a previous company
+      // Close the existing database before new authentication (non-blocking if possible)
       if (closeDatabase) {
         print('DEBUG: AuthController.serverLogin() - Closing existing database');
-        await UnifiedDatabaseHelper.instance.close();
+        UnifiedDatabaseHelper.instance.close(); // Don't await - can run in background
       }
 
       // Authenticate with server
       print('DEBUG: AuthController.serverLogin() - Authenticating with server');
-      await _apiService.adminSignIn(usernameLower, password);
+      final authResponse = await _apiService.adminSignIn(usernameLower, password);
 
-      // Store server credentials
-      await _apiService.saveServerCredentials(usernameLower, password);
+      // Save credentials in background (fire-and-forget)
+      _apiService.saveServerCredentials(usernameLower, password);
 
-      // Fetch and store company info
+      // Fetch company info (we need this)
       print('DEBUG: AuthController.serverLogin() - Fetching company info');
       await _apiService.fetchAndStoreCompanyInfo();
 
@@ -214,10 +215,13 @@ class AuthController extends GetxController {
       print('DEBUG: AuthController.serverLogin() - Opening database for company: $companyId');
       await _dbHelper.openForCompany(companyId);
 
-      // Save the current account in AccountManager
-      final token = await _apiService.getAccessToken();
-      final userData = await _apiService.getStoredUserData() ?? {};
-      final credentials = await _apiService.getServerCredentials();
+      // Build user data from auth response (no need to re-read from storage)
+      final userData = {
+        'userId': authResponse.id,
+        'username': authResponse.username,
+        'roles': authResponse.roles,
+        'accessToken': authResponse.accessToken,
+      };
 
       final account = UserAccount(
         id: companyId,
@@ -225,22 +229,30 @@ class AuthController extends GetxController {
         system: 'pos',
         userData: {
           ...userData,
-          'companyId': companyId, // Ensure companyId is in userData for later use
-          'token': token,
+          'companyId': companyId,
+          'token': authResponse.accessToken,
           'credentials': {
-            'username': credentials['username'],
-            'password': credentials['password'],
+            'username': usernameLower,
+            'password': password,
           },
         },
         lastLogin: DateTime.now(),
       );
 
-      await _accountManager.addAccount(account);
-      await _accountManager.setCurrentAccount(account);
+      // Set current account in background (fire-and-forget for navigation speed)
+      _accountManager.setCurrentAccount(account);
 
       print('DEBUG: AuthController.serverLogin() - Login successful for company: $companyId');
       isLoggingIn.value = false;
-      return true;
+
+      // Return all data needed by caller so they don't need to re-read
+      return {
+        'companyId': companyId,
+        'token': authResponse.accessToken,
+        'userData': userData,
+        'username': usernameLower,
+        'password': password,
+      };
     } catch (e) {
       print('ERROR: AuthController.serverLogin() - Login failed: $e');
       final errorString = e.toString();
@@ -260,7 +272,7 @@ class AuthController extends GetxController {
         );
       }
       isLoggingIn.value = false;
-      return false;
+      return null;
     }
   }
 }
