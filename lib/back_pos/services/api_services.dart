@@ -74,7 +74,6 @@ class PosApiService extends GetxService {
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
-      print(requestBody);
 
       if (response.statusCode == 200) {
         final authResponse = AuthResponse.fromJson(json.decode(response.body));
@@ -90,9 +89,6 @@ class PosApiService extends GetxService {
 
   // Save authentication data to secure storage
   Future<void> _saveAuthData(AuthResponse authResponse) async {
-    print(
-      'DEBUG: _saveAuthData called with token: ${authResponse.accessToken}',
-    );
     // Write all auth data in parallel to reduce GC pressure
     await Future.wait([
       _secureStorage.write(key: _tokenKey, value: authResponse.accessToken),
@@ -100,7 +96,6 @@ class PosApiService extends GetxService {
       _secureStorage.write(key: _usernameKey, value: authResponse.username),
       _secureStorage.write(key: _rolesKey, value: json.encode(authResponse.roles)),
     ]);
-    print('DEBUG: Saved auth data for token: ${authResponse.accessToken}');
   }
 
   // Save authentication data from map (for account switching)
@@ -123,9 +118,7 @@ class PosApiService extends GetxService {
 
   // Get stored access token
   Future<String?> getAccessToken() async {
-    final token = await _secureStorage.read(key: _tokenKey);
-    print('DEBUG: getAccessToken() retrieved token: $token');
-    return token;
+    return await _secureStorage.read(key: _tokenKey);
   }
 
   // Check if user is authenticated

@@ -32,30 +32,23 @@ class UnifiedDatabaseHelper {
   Future<void> openForCompany(String companyId, {bool force = false}) async {
     // Prevent concurrent opening
     if (_isOpening) {
-      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Already opening, waiting...');
       while (_isOpening) {
         await Future.delayed(const Duration(milliseconds: 50));
       }
-      // After waiting, check if it's now open for the right company
       if (_currentCompanyId == companyId && _database != null) {
-        print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Database now open for $companyId after wait');
         return;
       }
     }
 
     // Skip if already open for same company (unless forced)
     if (!force && _currentCompanyId == companyId && _database != null) {
-      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Already open for company $companyId, skipping');
       return;
     }
 
     _isOpening = true;
     try {
-      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Opening database for company: $companyId');
-
       // Close existing database if open
       if (_database != null) {
-        print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Closing previous database for company: $_currentCompanyId');
         await _database!.close();
         _database = null;
         _currentCompanyId = null;
@@ -73,17 +66,14 @@ class UnifiedDatabaseHelper {
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
           // Apply PRAGMA optimizations after database is fully opened
-          // Using rawQuery since Android rejects execute() for PRAGMA in some contexts
           await db.rawQuery('PRAGMA journal_mode = WAL');
           await db.rawQuery('PRAGMA synchronous = NORMAL');
           await db.rawQuery('PRAGMA cache_size = 10000');
           await db.rawQuery('PRAGMA temp_store = MEMORY');
-          print('DEBUG: UnifiedDatabaseHelper - PRAGMA optimizations applied via onOpen');
         },
       );
 
       _currentCompanyId = companyId;
-      print('DEBUG: UnifiedDatabaseHelper.openForCompany() - Successfully opened database for company: $companyId');
     } finally {
       _isOpening = false;
     }
@@ -101,7 +91,6 @@ class UnifiedDatabaseHelper {
   /// Async getter that auto-opens with default company if needed
   Future<Database> get databaseAsync async {
     if (_database == null) {
-      print('WARNING: UnifiedDatabaseHelper.databaseAsync() - No database open, opening with default');
       await openForCompany('default');
     }
     return _database!;
@@ -116,7 +105,6 @@ class UnifiedDatabaseHelper {
   /// Closes the current database
   Future<void> close() async {
     if (_database != null) {
-      print('DEBUG: UnifiedDatabaseHelper.close() - Closing database for company: $_currentCompanyId');
       await _database!.close();
       _database = null;
       _currentCompanyId = null;
@@ -126,9 +114,7 @@ class UnifiedDatabaseHelper {
   /// Switch to a different company's database
   /// This is the preferred method for changing companies - it handles the check internally
   Future<void> switchCompany(String newCompanyId) async {
-    print('DEBUG: UnifiedDatabaseHelper.switchCompany() - Switching to company: $newCompanyId (current: $_currentCompanyId)');
     if (_currentCompanyId == newCompanyId && _database != null) {
-      print('DEBUG: UnifiedDatabaseHelper.switchCompany() - Already on company $newCompanyId, skipping');
       return;
     }
     await openForCompany(newCompanyId);
@@ -533,7 +519,6 @@ class UnifiedDatabaseHelper {
   Future<void> ensureSalesIdIndex() async {
     if (_database != null) {
       await _database!.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
-      print('DEBUG: UnifiedDatabaseHelper - Ensured salesId index exists');
     }
   }
 

@@ -34,7 +34,6 @@ class AuthController extends GetxController {
       final roles = await _dbHelper.getAllRoles();
       userRoles.value = roles;
       isLoadingRoles.value = false;
-      print(userRoles);
     } catch (e) {
       isLoadingRoles.value = false;
     }
@@ -187,32 +186,26 @@ class AuthController extends GetxController {
     try {
       String usernameLower = username.toLowerCase();
       isLoggingIn.value = true;
-      print('DEBUG: AuthController.serverLogin() - Starting login for: $usernameLower');
 
       // Close the existing database before new authentication (non-blocking if possible)
       if (closeDatabase) {
-        print('DEBUG: AuthController.serverLogin() - Closing existing database');
-        UnifiedDatabaseHelper.instance.close(); // Don't await - can run in background
+        UnifiedDatabaseHelper.instance.close();
       }
 
       // Authenticate with server
-      print('DEBUG: AuthController.serverLogin() - Authenticating with server');
       final authResponse = await _apiService.adminSignIn(usernameLower, password);
 
       // Save credentials in background (fire-and-forget)
       _apiService.saveServerCredentials(usernameLower, password);
 
       // Fetch company info (we need this)
-      print('DEBUG: AuthController.serverLogin() - Fetching company info');
       await _apiService.fetchAndStoreCompanyInfo();
 
       // Get company info
       final companyInfo = await _apiService.getCompanyInfo();
       final companyId = companyInfo['companyId']!;
-      print('DEBUG: AuthController.serverLogin() - Got company ID: $companyId');
 
       // Open database for the new company
-      print('DEBUG: AuthController.serverLogin() - Opening database for company: $companyId');
       await _dbHelper.openForCompany(companyId);
 
       // Build user data from auth response (no need to re-read from storage)
@@ -239,10 +232,9 @@ class AuthController extends GetxController {
         lastLogin: DateTime.now(),
       );
 
-      // Set current account in background (fire-and-forget for navigation speed)
-      _accountManager.setCurrentAccount(account);
+      // Set current account - must await to ensure account is set before navigation
+      await _accountManager.setCurrentAccount(account);
 
-      print('DEBUG: AuthController.serverLogin() - Login successful for company: $companyId');
       isLoggingIn.value = false;
 
       // Return all data needed by caller so they don't need to re-read
@@ -254,7 +246,6 @@ class AuthController extends GetxController {
         'password': password,
       };
     } catch (e) {
-      print('ERROR: AuthController.serverLogin() - Login failed: $e');
       final errorString = e.toString();
       // Check if error is due to invalid credentials (401)
       if (errorString.contains('401')) {

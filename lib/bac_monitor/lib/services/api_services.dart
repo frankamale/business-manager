@@ -40,14 +40,14 @@ class MonitorApiService extends GetxService {
     }
 
     _cachedToken = await secureStorage.read(key: "access_token");
-    print('DEBUG: MonitorApiService.getStoredToken() retrieved and cached token');
+    // print('DEBUG: MonitorApiService.getStoredToken() retrieved and cached token');
     return _cachedToken;
   }
 
   Future<void> storeToken(String token) async {
     await secureStorage.write(key: 'access_token', value: token);
     _cachedToken = token; 
-    print('DEBUG: MonitorApiService.storeToken() stored token');
+    // print('DEBUG: MonitorApiService.storeToken() stored token');
   }
 
   Future<String?> getStoredCode() async {
@@ -55,10 +55,10 @@ class MonitorApiService extends GetxService {
   }
 
   Future<void> storeCode(String code) async {
-    print('DEBUG: MonitorApiService.storeCode() called with code: $code');
+    // print('DEBUG: MonitorApiService.storeCode() called with code: $code');
     await secureStorage.write(key: 'persistent_code', value: code);
     final savedCode = await secureStorage.read(key: 'persistent_code');
-    print('DEBUG: MonitorApiService.storeCode() verified saved code: $savedCode');
+    // print('DEBUG: MonitorApiService.storeCode() verified saved code: $savedCode');
   }
 
   Future<void> storeUserData(Map<String, dynamic> data) async {
@@ -131,13 +131,13 @@ class MonitorApiService extends GetxService {
   Future<void> initializeCompanyId() async {
     // If already initialized, return immediately
     if (_isInitialized && cachedCompanyId != null) {
-      print('DEBUG: MonitorApiService.initializeCompanyId() - Already initialized, skipping');
+      // print('DEBUG: MonitorApiService.initializeCompanyId() - Already initialized, skipping');
       return;
     }
 
     // If initialization is in progress, wait for it
     if (_initializationFuture != null) {
-      print('DEBUG: MonitorApiService.initializeCompanyId() - Initialization in progress, waiting...');
+      // print('DEBUG: MonitorApiService.initializeCompanyId() - Initialization in progress, waiting...');
       await _initializationFuture;
       return;
     }
@@ -150,16 +150,16 @@ class MonitorApiService extends GetxService {
 
   Future<void> _performInitialization() async {
     try {
-      print('DEBUG: MonitorApiService._performInitialization() - Starting company ID initialization');
+      // print('DEBUG: MonitorApiService._performInitialization() - Starting company ID initialization');
 
       // Try to get from cache/storage first
       final cachedId = await getStoredCompanyId();
       if (cachedId != null && cachedId.isNotEmpty && cachedId != 'default_offline_company') {
-        print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
+        // print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
 
         // Check if database is already open for this company
         if (_dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == cachedId) {
-          print('DEBUG: MonitorApiService._performInitialization() - Database already open for company: $cachedId');
+          // print('DEBUG: MonitorApiService._performInitialization() - Database already open for company: $cachedId');
           cachedCompanyId = cachedId;
           _isInitialized = true;
           return;
@@ -171,9 +171,9 @@ class MonitorApiService extends GetxService {
       }
 
       // If not cached, fetch from API
-      print('DEBUG: MonitorApiService._performInitialization() - No cached company ID, fetching from API');
+      // print('DEBUG: MonitorApiService._performInitialization() - No cached company ID, fetching from API');
       final companyId = await _fetchCompanyIdOnce();
-      print('DEBUG: MonitorApiService._performInitialization() - Company ID fetched: $companyId');
+      // print('DEBUG: MonitorApiService._performInitialization() - Company ID fetched: $companyId');
 
       // Switch to the company's database if we have a valid company ID
       if (companyId.isNotEmpty && companyId != 'default_offline_company') {
@@ -181,7 +181,7 @@ class MonitorApiService extends GetxService {
       }
 
     } catch (e) {
-      print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
+      // print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
       _isInitialized = false;
       rethrow;
     }
@@ -190,23 +190,23 @@ class MonitorApiService extends GetxService {
   /// Fetch company ID from API (internal method, only called once)
   Future<String> _fetchCompanyIdOnce() async {
     try {
-      print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Starting company ID fetch');
+      // print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Starting company ID fetch');
       final response = await getWithAuth('/company/details');
       final companyDetails = json.decode(response.body);
-      print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Company details response received');
+      // print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Company details response received');
 
       if (companyDetails.containsKey('company')) {
         final companyId = companyDetails['company'];
-        print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Found company ID: $companyId');
+        // print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Found company ID: $companyId');
         await storeCompanyId(companyId.toString());
         return companyId.toString();
       } else {
-        print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Company ID not found in company details');
+        // print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Company ID not found in company details');
         throw Exception('Company ID not found in company details');
       }
     } catch (e) {
-      print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Failed to fetch company ID: $e');
-      debugPrint("ApiService: Failed to fetch company ID -> $e");
+      // print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Failed to fetch company ID: $e');
+      // debugPrint("ApiService: Failed to fetch company ID -> $e");
       throw Exception('Failed to fetch company ID: $e');
     }
   }
@@ -227,7 +227,7 @@ class MonitorApiService extends GetxService {
     }
 
     // If not available, this is an error - initialization should have been called
-    print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Company ID not initialized!');
+    // print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Company ID not initialized!');
     throw Exception('Company ID not initialized. Call initializeCompanyId() first.');
   }
 
@@ -237,40 +237,40 @@ class MonitorApiService extends GetxService {
         bool useToken = true,
       }) async {
     try {
-      print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint');
+      // print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint');
       final headers = {'Content-Type': 'application/json'};
       if (useToken) {
         final token = await getStoredToken();
         if (token != null) {
           headers['Authorization'] = 'Bearer $token';
         } else {
-          print('ERROR: MonitorApiService.post() - Authentication token not found.');
+          // print('ERROR: MonitorApiService.post() - Authentication token not found.');
           throw Exception('Authentication token not found.');
         }
       }
-      print('DEBUG: MonitorApiService.post() - Making POST request to $_baseUrl$endpoint');
+      // print('DEBUG: MonitorApiService.post() - Making POST request to $_baseUrl$endpoint');
       final response = await http.post(
         Uri.parse('$_baseUrl$endpoint'),
         headers: headers,
         body: jsonEncode(data),
       );
-      print('DEBUG: MonitorApiService.post() - Received response with status: ${response.statusCode}');
+      // print('DEBUG: MonitorApiService.post() - Received response with status: ${response.statusCode}');
       return _handleResponse(response);
     } catch (e) {
-      print('ERROR: MonitorApiService.post() - Network error: $e');
+      // print('ERROR: MonitorApiService.post() - Network error: $e');
       throw Exception('Network error: $e');
     }
   }
 
   Future<void> login(String email, String password) async {
-    print("login begin ----- ");
+    // print("login begin ----- ");
 
     final response = await post('/auth/signin', {
       'username': email.trim().toLowerCase(),
       'password': password.trim(),
     }, useToken: false);
-    print("next .....");
-    print(response);
+    // print("next .....");
+    // print(response);
     if (response.containsKey('accessToken')) {
       await storeToken(response['accessToken']);
 
@@ -285,7 +285,7 @@ class MonitorApiService extends GetxService {
       // Store server credentials for re-authentication
       await saveServerCredentials(email, password);
 
-      print("login success ----- authentication completed");
+      // print("login success ----- authentication completed");
 
       await storeCode(DateTime.now().millisecondsSinceEpoch.toString());
     } else {
@@ -308,7 +308,7 @@ class MonitorApiService extends GetxService {
   }
 
   Future<void> logout() async {
-    print('DEBUG: MonitorApiService.logout() - Starting logout');
+    // print('DEBUG: MonitorApiService.logout() - Starting logout');
 
     // Stop sync controller if registered
     try {
@@ -317,12 +317,12 @@ class MonitorApiService extends GetxService {
         await Get.delete<MonSyncController>(force: true);
       }
     } catch (e) {
-      print('DEBUG: MonitorApiService.logout() - Error stopping sync controller: $e');
+      // print('DEBUG: MonitorApiService.logout() - Error stopping sync controller: $e');
     }
 
     // Close database instance on logout
     await _dbHelper.close();
-    print('DEBUG: MonitorApiService.logout() - Database closed');
+    // print('DEBUG: MonitorApiService.logout() - Database closed');
 
     // Clear all secure storage keys
     await secureStorage.delete(key: 'access_token');
@@ -339,7 +339,7 @@ class MonitorApiService extends GetxService {
     _isInitialized = false;
     _initializationFuture = null;
 
-    print('DEBUG: MonitorApiService.logout() - Logout completed, all state cleared');
+    // print('DEBUG: MonitorApiService.logout() - Logout completed, all state cleared');
   }
 
   /// Switch to a different company
@@ -347,11 +347,11 @@ class MonitorApiService extends GetxService {
   /// Set fetchData to false to skip data fetching (useful when you'll fetch separately)
   Future<void> switchCompany(String newCompanyId, {bool fetchData = true}) async {
     try {
-      print('DEBUG: MonitorApiService.switchCompany() - Switching to company: $newCompanyId (current: $cachedCompanyId)');
+      // print('DEBUG: MonitorApiService.switchCompany() - Switching to company: $newCompanyId (current: $cachedCompanyId)');
 
       // Check if we're already on this company
       if (cachedCompanyId == newCompanyId && _dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == newCompanyId) {
-        print('DEBUG: MonitorApiService.switchCompany() - Already on company $newCompanyId, skipping');
+        // print('DEBUG: MonitorApiService.switchCompany() - Already on company $newCompanyId, skipping');
         return;
       }
 
@@ -365,14 +365,14 @@ class MonitorApiService extends GetxService {
       // Mark as initialized since we now have a valid company
       _isInitialized = true;
 
-      print('DEBUG: MonitorApiService.switchCompany() - Successfully switched to company: $newCompanyId');
+      // print('DEBUG: MonitorApiService.switchCompany() - Successfully switched to company: $newCompanyId');
 
       if (fetchData) {
         await clearInitialSyncFlag();
         await fetchAndCacheAllData();
       }
     } catch (e) {
-      print('ERROR: MonitorApiService.switchCompany() - Failed to switch company: $e');
+      // print('ERROR: MonitorApiService.switchCompany() - Failed to switch company: $e');
       rethrow;
     }
   }
@@ -383,10 +383,10 @@ class MonitorApiService extends GetxService {
       final db = _dbHelper.database;
       final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_sales');
       final count = result.first['count'] as int? ?? 0;
-      debugPrint("ApiService: Found $count sales records in database");
+      // debugPrint("ApiService: Found $count sales records in database");
       return count > 0;
     } catch (e) {
-      debugPrint("ApiService: Error checking sales count -> $e");
+      // debugPrint("ApiService: Error checking sales count -> $e");
       return false;
     }
   }
@@ -396,12 +396,12 @@ class MonitorApiService extends GetxService {
     final dateFormatter = DateFormat('yyyy-MM-dd');
 
     try {
-      debugPrint("ApiService: Starting to fetch all data...");
+      // debugPrint("ApiService: Starting to fetch all data...");
 
       // Check if we already have sales in the database
       final hasSales = await _hasSalesInDb();
       if (hasSales) {
-        debugPrint("ApiService: Sales already exist in database, skipping fetch");
+        // debugPrint("ApiService: Sales already exist in database, skipping fetch");
         await setInitialSyncCompleted();
 
         if (Get.isRegistered<MonOperatorController>()) {
@@ -419,7 +419,7 @@ class MonitorApiService extends GetxService {
       // Service points is now OPTIONAL - don't fail if it returns 404
       try {
         servicePointsRes = await getWithAuth('/servicepoints');
-        debugPrint("ApiService: Successfully fetched service points");
+        // debugPrint("ApiService: Successfully fetched service points");
       } catch (e) {
         debugPrint(
           "ApiService: Service points endpoint failed (will continue without it) -> $e",
@@ -429,37 +429,37 @@ class MonitorApiService extends GetxService {
 
       try {
         companyDetailsRes = await getWithAuth('/company/details');
-        debugPrint("ApiService: Successfully fetched company details");
+        // debugPrint("ApiService: Successfully fetched company details");
       } catch (e) {
-        debugPrint("ApiService: Failed to fetch /company/details -> $e");
+        // debugPrint("ApiService: Failed to fetch /company/details -> $e");
         companyDetailsRes = null;
       }
 
       try {
         final endDate = dateFormatter.format(now);
-        debugPrint("ApiService: Fetching sales from 2023-09-01 to $endDate");
+        // debugPrint("ApiService: Fetching sales from 2023-09-01 to $endDate");
         salesRes = await getWithAuth(
           '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
         );
-        debugPrint("ApiService: Successfully fetched sales reports");
+        // debugPrint("ApiService: Successfully fetched sales reports");
       } catch (e) {
-        debugPrint("ApiService: Failed to fetch sales -> $e");
+        // debugPrint("ApiService: Failed to fetch sales -> $e");
         salesRes = null;
       }
 
       try {
         salesDetailsRes = await getWithAuth('/sales/?pagecount=0&pagesize=5000');
-        debugPrint("ApiService: Successfully fetched sales details");
+        // debugPrint("ApiService: Successfully fetched sales details");
       } catch (e) {
-        debugPrint("ApiService: Failed to fetch /sales/ -> $e");
+        // debugPrint("ApiService: Failed to fetch /sales/ -> $e");
         salesDetailsRes = null;
       }
 
       try {
         inventoryRes = await getWithAuth('/inventory/');
-        debugPrint("ApiService: Successfully fetched inventory");
+        // debugPrint("ApiService: Successfully fetched inventory");
       } catch (e) {
-        debugPrint("ApiService: Failed to fetch /inventory -> $e");
+        // debugPrint("ApiService: Failed to fetch /inventory -> $e");
         inventoryRes = null;
       }
 
@@ -469,7 +469,7 @@ class MonitorApiService extends GetxService {
         try {
           servicePointsData = json.decode(servicePointsRes.body);
         } catch (e) {
-          debugPrint("ApiService: Failed to parse service points JSON -> $e");
+          // debugPrint("ApiService: Failed to parse service points JSON -> $e");
         }
       }
 
@@ -478,7 +478,7 @@ class MonitorApiService extends GetxService {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
         } catch (e) {
-          debugPrint("ApiService: Failed to parse company details JSON -> $e");
+          // debugPrint("ApiService: Failed to parse company details JSON -> $e");
         }
       }
 
@@ -487,9 +487,9 @@ class MonitorApiService extends GetxService {
       if (salesRes != null && salesRes.body.isNotEmpty) {
         try {
           salesData = await compute(_decodeJsonList, salesRes.body);
-          debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
+          // debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
         } catch (e) {
-          debugPrint("ApiService: Failed to parse sales JSON -> $e");
+          // debugPrint("ApiService: Failed to parse sales JSON -> $e");
         }
       }
 
@@ -498,7 +498,7 @@ class MonitorApiService extends GetxService {
         try {
           salesDetailsData = await compute(_decodeJsonList, salesDetailsRes.body);
         } catch (e) {
-          debugPrint("ApiService: Failed to parse sales details JSON -> $e");
+          // debugPrint("ApiService: Failed to parse sales details JSON -> $e");
         }
       }
 
@@ -506,9 +506,9 @@ class MonitorApiService extends GetxService {
       if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
         try {
           inventoryData = await compute(_decodeJsonList, inventoryRes.body);
-          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
+          // debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
         } catch (e) {
-          debugPrint("ApiService: Failed to parse inventory JSON -> $e");
+          // debugPrint("ApiService: Failed to parse inventory JSON -> $e");
         }
       }
 
@@ -524,7 +524,7 @@ class MonitorApiService extends GetxService {
 
         // Insert inventory using batch
         if (inventoryData.isNotEmpty) {
-          debugPrint("ApiService: Batch inserting ${inventoryData.length} inventory items");
+          // debugPrint("ApiService: Batch inserting ${inventoryData.length} inventory items");
           final inventoryBatch = txn.batch();
           for (final item in inventoryData) {
             inventoryBatch.insert('mon_inventory', {
@@ -573,7 +573,7 @@ class MonitorApiService extends GetxService {
 
         // Insert service points using batch
         if (servicePointsData.isNotEmpty) {
-          debugPrint("ApiService: Batch inserting ${servicePointsData.length} service points");
+          // debugPrint("ApiService: Batch inserting ${servicePointsData.length} service points");
           final spBatch = txn.batch();
           for (final sp in servicePointsData) {
             spBatch.insert('mon_service_points', {
@@ -600,7 +600,7 @@ class MonitorApiService extends GetxService {
 
         // Insert sales using batch - this is the big one (4000+ records)
         if (salesData.isNotEmpty) {
-          debugPrint("ApiService: Batch inserting ${salesData.length} sales records");
+          // debugPrint("ApiService: Batch inserting ${salesData.length} sales records");
           final salesBatch = txn.batch();
           for (final sale in salesData) {
             salesBatch.insert('mon_sales', {
@@ -648,7 +648,7 @@ class MonitorApiService extends GetxService {
 
         // Update sales with salesperson/payment info using batch
         if (salesDetailsData.isNotEmpty) {
-          debugPrint("ApiService: Batch updating ${salesDetailsData.length} sales with details");
+          // debugPrint("ApiService: Batch updating ${salesDetailsData.length} sales with details");
           final updateBatch = txn.batch();
           for (final detail in salesDetailsData) {
             if (detail['id'] != null) {
@@ -670,20 +670,20 @@ class MonitorApiService extends GetxService {
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
       await setInitialSyncCompleted();
-      debugPrint("ApiService: All data fetched and cached successfully");
+      // debugPrint("ApiService: All data fetched and cached successfully");
 
       if (Get.isRegistered<MonOperatorController>()) {
         await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
       }
     } catch (e) {
-      debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");
+      // debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");
       rethrow;
     }
   }
 
   Future<void> syncRecentSales() async {
     try {
-      debugPrint("ApiService: Starting recent sales sync...");
+      // debugPrint("ApiService: Starting recent sales sync...");
       final now = DateTime.now();
 
       final lastSyncTimestamp =
@@ -697,7 +697,7 @@ class MonitorApiService extends GetxService {
       final startDate = dateFormatter.format(lastSyncDate);
       final endDate = dateFormatter.format(now);
 
-      debugPrint("ApiService: Syncing from $startDate to $endDate.");
+      // debugPrint("ApiService: Syncing from $startDate to $endDate.");
 
       final response = await getWithAuth(
         '/sales/reports/transaction/detail?startDate=$startDate&endDate=$endDate',
@@ -708,7 +708,7 @@ class MonitorApiService extends GetxService {
 
       // Early return if no sales data - skip all database operations
       if (salesData.isEmpty) {
-        debugPrint("ApiService: No new sales to sync, skipping database operations.");
+        // debugPrint("ApiService: No new sales to sync, skipping database operations.");
         await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
         return;
       }
@@ -819,7 +819,7 @@ class MonitorApiService extends GetxService {
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
     } catch (e) {
-      debugPrint("ApiService: Error during recent sales sync: $e");
+      // debugPrint("ApiService: Error during recent sales sync: $e");
     }
   }
 
@@ -827,7 +827,7 @@ class MonitorApiService extends GetxService {
     final token = await getStoredToken();
 
     if (token == null) {
-      print('ERROR: MonitorApiService.getWithAuth() - Authentication token not found for GET request.');
+      // print('ERROR: MonitorApiService.getWithAuth() - Authentication token not found for GET request.');
       throw Exception('Authentication token not found for GET request.');
     }
 
@@ -849,7 +849,7 @@ class MonitorApiService extends GetxService {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        debugPrint("ApiService: Successfully fetched data from $endpoint");
+        // debugPrint("ApiService: Successfully fetched data from $endpoint");
         return response;
       } else {
         _handleResponse(response);

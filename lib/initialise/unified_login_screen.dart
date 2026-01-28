@@ -57,12 +57,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       final credentials = await _getStoredCredentials();
       if (credentials['username'] != null &&
           credentials['username']!.isNotEmpty) {
-        // Auto-fill username if credentials are stored
         _usernameController.text = credentials['username']!;
-        print('DEBUG: UnifiedLoginScreen - Loaded stored username: ${credentials['username']}');
       }
     } catch (e) {
-      print('DEBUG: UnifiedLoginScreen - Error loading stored credentials: $e');
+      // Ignore - not critical for login
     }
   }
 
@@ -77,7 +75,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     try {
       await _authController.loadUserRoles();
     } catch (e) {
-      print('DEBUG: UnifiedLoginScreen - Could not load user roles (expected on fresh login): $e');
+      // Expected on fresh login - ignore
     }
   }
 
@@ -89,8 +87,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       });
 
       try {
-        print('DEBUG: UnifiedLoginScreen._handleLogin() - Starting login');
-
         // Authenticate user - returns all needed data so we don't re-read
         final loginResult = await _authController.serverLogin(
           _usernameController.text,
@@ -104,21 +100,31 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           final userData = loginResult['userData'] as Map<String, dynamic>;
           final roles = userData['roles'] as List<dynamic>?;
 
-          print('DEBUG: UnifiedLoginScreen._handleLogin() - User roles: $roles');
-
           // Determine if user is admin (monitor) or regular POS user
           final isAdmin = roles != null &&
               roles.any((role) => role.toString().toLowerCase().contains("admin"));
+          final targetSystem = isAdmin ? 'monitor' : 'pos';
+
+          // Update account with correct system if needed
+          final currentAccount = _accountManager.currentAccount.value;
+          if (currentAccount != null && currentAccount.system != targetSystem) {
+            final updatedAccount = UserAccount(
+              id: currentAccount.id,
+              username: currentAccount.username,
+              system: targetSystem,
+              userData: {...currentAccount.userData, 'companyId': companyId},
+              lastLogin: DateTime.now(),
+            );
+            await _accountManager.setCurrentAccount(updatedAccount);
+          }
 
           // Fire-and-forget: Store credentials for auto-fill (non-blocking)
           _storeCredentialsSecurely(_usernameController.text, _passwordController.text);
 
-          // Fire-and-forget: Sync to monitor service if admin (non-blocking)
+          // Sync to monitor service if admin - MUST await for account switching to work
           if (isAdmin) {
-            _syncToMonitorService(token, companyId, userData, _usernameController.text, _passwordController.text);
+            await _syncToMonitorServiceAsync(token, companyId, userData, _usernameController.text, _passwordController.text);
           }
-
-          print('DEBUG: UnifiedLoginScreen._handleLogin() - Navigating to ${isAdmin ? 'monitor' : 'pos'} app');
 
           if (isAdmin) {
             // Initialize monitor controllers (fast in-memory operations)
@@ -140,7 +146,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           }
         }
       } catch (e) {
-        print('ERROR: UnifiedLoginScreen._handleLogin() - Login error: $e');
         setState(() {
           _errorMessage = 'Network error: Please check your internet connection and try again.';
         });
@@ -152,66 +157,47 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
   }
 
-  /// Fire-and-forget sync to monitor service
-  void _syncToMonitorService(String token, String companyId, Map<String, dynamic> userData, String username, String password) {
-    // Run in background - don't await
-    Future.wait([
+  /// Sync to monitor service - awaitable version for critical path
+  Future<void> _syncToMonitorServiceAsync(String token, String companyId, Map<String, dynamic> userData, String username, String password) async {
+    await Future.wait([
       _monitorApiService.storeToken(token),
       _monitorApiService.storeCompanyId(companyId),
       _monitorApiService.storeUserData({...userData, 'companyId': companyId}),
       _monitorApiService.saveServerCredentials(username, password),
-    ]).then((_) {
-      print('DEBUG: UnifiedLoginScreen - Monitor service sync completed in background');
-    }).catchError((e) {
-      print('DEBUG: UnifiedLoginScreen - Monitor service sync error (non-fatal): $e');
-    });
+    ]);
   }
 
   // Store credentials securely using FlutterSecureStorage (fire-and-forget)
   void _storeCredentialsSecurely(String username, String password) {
-    // Run in background - don't block navigation
     Future.wait([
       _secureStorage.write(key: _usernameKey, value: username),
       _secureStorage.write(key: _passwordKey, value: password),
-    ]).then((_) {
-      print('DEBUG: Credentials stored for auto-fill');
-    }).catchError((e) {
-      print('DEBUG: Credential storage error (non-fatal): $e');
-    });
+    ]);
   }
 
   Future<Map<String, String?>> _getStoredCredentials() async {
     try {
-      // Read both in parallel
       final results = await Future.wait([
         _secureStorage.read(key: _usernameKey),
         _secureStorage.read(key: _passwordKey),
       ]);
       return {'username': results[0], 'password': results[1]};
     } catch (e) {
-      print('Error retrieving stored credentials: $e');
       return {'username': null, 'password': null};
     }
   }
 
   // Clear stored credentials (for logout or security purposes)
   Future<void> _clearStoredCredentials() async {
-    try {
-      // Delete both in parallel
-      await Future.wait([
-        _secureStorage.delete(key: _usernameKey),
-        _secureStorage.delete(key: _passwordKey),
-      ]);
-      print('Stored credentials cleared successfully');
-    } catch (e) {
-      print('Error clearing stored credentials: $e');
-    }
+    await Future.wait([
+      _secureStorage.delete(key: _usernameKey),
+      _secureStorage.delete(key: _passwordKey),
+    ]);
   }
 
   // Check if credentials are stored securely
   Future<bool> _hasStoredCredentials() async {
     try {
-      // Read both in parallel
       final results = await Future.wait([
         _secureStorage.read(key: _usernameKey),
         _secureStorage.read(key: _passwordKey),
@@ -223,7 +209,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           password != null &&
           password.isNotEmpty;
     } catch (e) {
-      print('Error checking stored credentials: $e');
       return false;
     }
   }

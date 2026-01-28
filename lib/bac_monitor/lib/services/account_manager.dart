@@ -75,7 +75,7 @@ class AccountManager extends GetxService {
         currentAccount.value = accounts.firstWhereOrNull((account) => account.id == currentAccountId);
       }
     } catch (e) {
-      print('Error loading accounts: $e');
+      // Silent fail - non-critical
     }
   }
 
@@ -89,7 +89,7 @@ class AccountManager extends GetxService {
             .toList();
       }
     } catch (e) {
-      print('Error loading accounts: $e');
+      // Silent fail - non-critical
     }
   }
 
@@ -98,7 +98,7 @@ class AccountManager extends GetxService {
       final accountsJson = jsonEncode(accounts.map((account) => account.toJson()).toList());
       await _secureStorage.write(key: _accountsKey, value: accountsJson);
     } catch (e) {
-      print('Error saving accounts: $e');
+      // Silent fail - non-critical
     }
   }
 
@@ -158,7 +158,7 @@ class AccountManager extends GetxService {
         currentAccount.value = accounts.firstWhereOrNull((account) => account.id == currentAccountId);
       }
     } catch (e) {
-      print('Error loading current account: $e');
+      // Silent fail - non-critical
     }
   }
 
