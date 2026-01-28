@@ -183,7 +183,13 @@ class _SplashPageState extends State<SplashPage> {
         final hasCompanyDetails = companyDetails != null && companyDetails.isNotEmpty;
         debugPrint('SplashPage: Company details check took ${stopwatch.elapsedMilliseconds}ms - Has: $hasCompanyDetails');
 
+        // Check if sync is needed (cache window: 30 minutes)
+        stopwatch.reset();
+        final syncNeeded = await apiService.isSyncNeeded(cacheMinutes: 30);
+        debugPrint('SplashPage: Sync needed check took ${stopwatch.elapsedMilliseconds}ms - Needed: $syncNeeded');
+
         if (!initialSyncDone || !hasCompanyDetails) {
+          // Initial sync required - always sync
           _updateStatus('Syncing company data...');
           debugPrint('SplashPage: Full sync needed - initialSyncDone: $initialSyncDone, hasCompanyDetails: $hasCompanyDetails');
 
@@ -198,8 +204,21 @@ class _SplashPageState extends State<SplashPage> {
               throw Exception('Failed to sync data and no cached data available');
             }
           }
+        } else if (syncNeeded) {
+          // Sync cache expired (>30 minutes) - refresh data
+          _updateStatus('Refreshing data...');
+          debugPrint('SplashPage: Sync cache expired, refreshing data');
+
+          try {
+            stopwatch.reset();
+            await apiService.fetchAndCacheAllData();
+            debugPrint('SplashPage: Data refresh took ${stopwatch.elapsedMilliseconds}ms');
+          } catch (e) {
+            debugPrint('SplashPage: Data refresh failed, using cached data - $e');
+            // Continue with cached data - not a fatal error
+          }
         } else {
-          debugPrint('SplashPage: Initial sync already done, skipping data fetch');
+          debugPrint('SplashPage: Sync cache valid (<30 min old), skipping data fetch');
         }
       } else {
         _updateStatus('Loading cached data...');

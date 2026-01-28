@@ -106,11 +106,11 @@ class MonStoreKpiTrendController extends GetxController {
       final isAllStores = storesController.selectedStore.value!.id == Store.all.id;
       final storeName = storesController.selectedStore.value!.name;
 
-      print('DEBUG: Selected store: ${storesController.selectedStore.value!.name}, isAllStores: $isAllStores, storeName: $storeName');
+      // print('DEBUG: Selected store: ${storesController.selectedStore.value!.name}, isAllStores: $isAllStores, storeName: $storeName');
       if (isAllStores) {
-        print('DEBUG: Filtering disabled - querying all stores (no sourcefacility filter)');
+        // print('DEBUG: Filtering disabled - querying all stores (no sourcefacility filter)');
       } else {
-        print('DEBUG: Filtering enabled - querying only for sourcefacility = "$storeName"');
+        // print('DEBUG: Filtering enabled - querying only for sourcefacility = "$storeName"');
       }
 
       final salesQuery = isAllStores
@@ -135,10 +135,10 @@ class MonStoreKpiTrendController extends GetxController {
           ? [prevStartMillis, prevEndMillis]
           : [storeName, prevStartMillis, prevEndMillis];
 
-      print('DEBUG: Sales Query: $salesQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
-      print('DEBUG: Transactions Query: $transactionsQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
-      print('DEBUG: Active Stores Query: $activeStoresQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
-      print('DEBUG: Basket Query: $basketQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
+      // print('DEBUG: Sales Query: $salesQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
+      // print('DEBUG: Transactions Query: $transactionsQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
+      // print('DEBUG: Active Stores Query: $activeStoresQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
+      // print('DEBUG: Basket Query: $basketQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
 
       final currentSalesResult = await db.rawQuery(salesQuery, argsCurrent);
       final prevSalesResult = await db.rawQuery(salesQuery, argsPrev);
@@ -151,16 +151,16 @@ class MonStoreKpiTrendController extends GetxController {
       final totalStoresResult = await db.rawQuery(totalStoresQuery);
       final currencyResult = await db.rawQuery(currencyQuery);
 
-      print('DEBUG: Current Sales Result: $currentSalesResult');
-      print('DEBUG: Prev Sales Result: $prevSalesResult');
-      print('DEBUG: Current Transactions Result: $currentTransResult');
-      print('DEBUG: Prev Transactions Result: $prevTransResult');
-      print('DEBUG: Current Active Stores Result: $currentActiveStoresResult');
-      print('DEBUG: Prev Active Stores Result: $prevActiveStoresResult');
-      print('DEBUG: Current Basket Result: $currentBasketResult');
-      print('DEBUG: Prev Basket Result: $prevBasketResult');
-      print('DEBUG: Total Stores Result: $totalStoresResult');
-      print('DEBUG: Currency Result: $currencyResult');
+      // print('DEBUG: Current Sales Result: $currentSalesResult');
+      // print('DEBUG: Prev Sales Result: $prevSalesResult');
+      // print('DEBUG: Current Transactions Result: $currentTransResult');
+      // print('DEBUG: Prev Transactions Result: $prevTransResult');
+      // print('DEBUG: Current Active Stores Result: $currentActiveStoresResult');
+      // print('DEBUG: Prev Active Stores Result: $prevActiveStoresResult');
+      // print('DEBUG: Current Basket Result: $currentBasketResult');
+      // print('DEBUG: Prev Basket Result: $prevBasketResult');
+      // print('DEBUG: Total Stores Result: $totalStoresResult');
+      // print('DEBUG: Currency Result: $currencyResult');
 
 
       final currentSales = (currentSalesResult.first['total'] as num? ?? 0.0).toDouble();
@@ -184,7 +184,6 @@ class MonStoreKpiTrendController extends GetxController {
 
       final compactFormatter = NumberFormat.compact();
       final fullNumberFormatter = NumberFormat('#,##0');
-      final percentFormatter = NumberFormat.compact();
 
       const double epsilon = 0.01;
       final salesTrendValue = (currentSales - prevSales) / (prevSales.abs() + epsilon);
@@ -192,35 +191,47 @@ class MonStoreKpiTrendController extends GetxController {
       final storesTrendValue = (currentActiveStores - prevActiveStores) / (prevActiveStores.abs() + epsilon);
       final basketTrendValue = (currentBasket - prevBasket) / (prevBasket.abs() + epsilon);
 
+      // Helper to format trend as percentage
+      String formatTrendPercent(double value) {
+        final percent = (value * 100).abs();
+        if (percent >= 100) {
+          return '${percent.toStringAsFixed(0)}%';
+        } else if (percent >= 10) {
+          return '${percent.toStringAsFixed(0)}%';
+        } else {
+          return '${percent.toStringAsFixed(1)}%';
+        }
+      }
+
       totalSales.value = compactFormatter.format(currentSales);
-      salesTrend.value = percentFormatter.format(salesTrendValue);
+      salesTrend.value = formatTrendPercent(salesTrendValue);
       salesTrendDirection.value = salesTrendValue > 0.01
           ? TrendDirection.up
           : (salesTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
 
       totalTransactions.value = fullNumberFormatter.format(currentTransactions);
-      transactionsTrend.value = percentFormatter.format(transactionsTrendValue);
+      transactionsTrend.value = formatTrendPercent(transactionsTrendValue);
       transactionsTrendDirection.value = transactionsTrendValue > 0.01
           ? TrendDirection.up
           : (transactionsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
 
       activeTotalStores.value = '$currentActiveStores / $totalStores';
-      storesTrend.value = percentFormatter.format(storesTrendValue);
+      storesTrend.value = formatTrendPercent(storesTrendValue);
       storesTrendDirection.value = storesTrendValue > 0.01
           ? TrendDirection.up
           : (storesTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
 
       avgBasketSize.value = compactFormatter.format(currentBasket);
-      basketTrend.value = percentFormatter.format(basketTrendValue);
+      basketTrend.value = formatTrendPercent(basketTrendValue);
       basketTrendDirection.value = basketTrendValue > 0.01
           ? TrendDirection.up
           : (basketTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
 
-      print('DEBUG: Final KPI Values - Total Sales: ${totalSales.value}, Transactions: ${totalTransactions.value}, Active Stores: ${activeTotalStores.value}, Avg Basket: ${avgBasketSize.value}');
-      print('DEBUG: Trends - Sales: ${salesTrend.value}, Transactions: ${transactionsTrend.value}, Stores: ${storesTrend.value}, Basket: ${basketTrend.value}');
+      // print('DEBUG: Final KPI Values - Total Sales: ${totalSales.value}, Transactions: ${totalTransactions.value}, Active Stores: ${activeTotalStores.value}, Avg Basket: ${avgBasketSize.value}');
+      // print('DEBUG: Trends - Sales: ${salesTrend.value}, Transactions: ${transactionsTrend.value}, Stores: ${storesTrend.value}, Basket: ${basketTrend.value}');
     } catch (e) {
       hasError.value = true;
-      print("Error fetching store KPI trend data: $e");
+      // print("Error fetching store KPI trend data: $e");
       totalSales.value = "-";
       totalTransactions.value = "-";
       activeTotalStores.value = "- / -";

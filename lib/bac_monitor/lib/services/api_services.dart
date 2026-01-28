@@ -871,6 +871,21 @@ class MonitorApiService extends GetxService {
     return value == 'true';
   }
 
+  /// Check if data sync is needed based on 30-minute cache window
+  /// Returns true if sync is needed, false if recent sync exists
+  Future<bool> isSyncNeeded({int cacheMinutes = 30}) async {
+    final lastSyncTimestamp = await getStoredLastSyncTimestamp();
+    if (lastSyncTimestamp == null) {
+      return true; // No previous sync, need to sync
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final cacheWindowMs = cacheMinutes * 60 * 1000;
+    final timeSinceLastSync = now - lastSyncTimestamp;
+
+    return timeSinceLastSync > cacheWindowMs;
+  }
+
   Future<void> clearInitialSyncFlag() async {
     await secureStorage.delete(key: 'initial_sync_completed');
   }
