@@ -4,7 +4,7 @@ import '../../../back_pos/services/api_services.dart';
 import '../../../initialise/app_roots.dart';
 import '../services/api_services.dart';
 import '../services/account_manager.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 
 class ProfileController extends GetxController {
   final MonitorApiService _monitorApiService = Get.find();
@@ -26,8 +26,9 @@ class ProfileController extends GetxController {
     if (currentAccount != null) {
       currentSystem.value = currentAccount.system;
     }
-    loadProfileData();
-    
+    // Try to load profile data if database is ready
+    _tryLoadProfileData();
+
     // Listen to account changes and refresh data accordingly
     ever(_accountManager.currentAccount, (UserAccount? account) {
       if (account != null) {
@@ -37,21 +38,61 @@ class ProfileController extends GetxController {
     });
   }
 
+  /// Try to load profile data if database is ready
+  Future<void> _tryLoadProfileData() async {
+    final dbHelper = UnifiedDatabaseHelper.instance;
+    if (dbHelper.isDatabaseOpen) {
+      await loadProfileData();
+    } else {
+      // Still load user data - prioritize current account's userData
+      try {
+        final currentAccount = _accountManager.currentAccount.value;
+        if (currentAccount != null && currentAccount.userData.isNotEmpty) {
+          userData.value = currentAccount.userData;
+          print('ProfileController: Loaded user data from current account (db not open)');
+        } else {
+          final user = await _posApiService.getStoredUserData();
+          if (user != null) {
+            userData.value = user;
+            print('ProfileController: Loaded user data from storage (db not open)');
+          }
+        }
+      } catch (e) {
+        print('ProfileController: Error loading user data: $e');
+      }
+      print('ProfileController: Database not open yet, skipping company data load');
+    }
+  }
+
   Future<void> loadProfileData() async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // Load user data
-      final user = await _posApiService.getStoredUserData();
-      if (user != null) {
-        userData.value = user;
+      // PRIORITY: Use current account's userData if available (most reliable source)
+      final currentAccount = _accountManager.currentAccount.value;
+      if (currentAccount != null && currentAccount.userData.isNotEmpty) {
+        userData.value = currentAccount.userData;
+        print('ProfileController: Loaded user data from current account: ${currentAccount.username}');
+      } else {
+        // Fallback: Load user data from storage
+        final user = await _posApiService.getStoredUserData();
+        if (user != null) {
+          userData.value = user;
+          print('ProfileController: Loaded user data from storage');
+        }
       }
 
-      final dbHelper = DatabaseHelper();
-      final company = await dbHelper.getCompanyDetails();
-      if (company != null) {
-        companyData.value = company;
+      // Load company data from database (needs database)
+      final dbHelper = UnifiedDatabaseHelper.instance;
+      if (dbHelper.isDatabaseOpen) {
+        final company = await dbHelper.getCompanyDetails();
+        if (company != null) {
+          companyData.value = company;
+          print('ProfileController: Loaded company data from database');
+        }
+      } else {
+        print('ProfileController: Database not open, skipping company data');
       }
 
     } catch (e) {
@@ -67,11 +108,13 @@ class ProfileController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // Update user data from the account's userData
+      // ALWAYS use the account's userData - this is the source of truth
       if (account.userData.isNotEmpty) {
         userData.value = account.userData;
+        print('ProfileController: refreshUserDataFromAccount - Using account userData for: ${account.username}');
       } else {
-        // If account doesn't have userData, try to load it from the appropriate service
+        // Only fallback to storage if account userData is truly empty
+        print('ProfileController: refreshUserDataFromAccount - Account userData is empty, falling back to storage');
         if (account.system == 'monitor') {
           final user = await _monitorApiService.getStoredUserData();
           if (user != null) {
@@ -85,11 +128,16 @@ class ProfileController extends GetxController {
         }
       }
 
-      // Load company data based on the current system
-      final dbHelper = DatabaseHelper();
-      final company = await dbHelper.getCompanyDetails();
-      if (company != null) {
-        companyData.value = company;
+      // Load company data from database (only if database is open)
+      final dbHelper = UnifiedDatabaseHelper.instance;
+      if (dbHelper.isDatabaseOpen) {
+        final company = await dbHelper.getCompanyDetails();
+        if (company != null) {
+          companyData.value = company;
+          print('ProfileController: refreshUserDataFromAccount - Loaded company data from database');
+        }
+      } else {
+        print('ProfileController: refreshUserDataFromAccount - Database not open, skipping company data');
       }
 
     } catch (e) {
@@ -104,21 +152,27 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      print('DEBUG: ProfileController.signOut() - Starting sign out');
 
-      // Clear auth data from both services
-      await _posApiService.clearAuthData();
-      await _monitorApiService.logout();
-
+      // Clear current account first
       final currentAccount = _accountManager.currentAccount.value;
       if (currentAccount != null) {
         await _accountManager.setCurrentAccount(null);
       }
 
+      // Clear auth data from POS service (doesn't close database)
+      await _posApiService.clearAuthData();
+      print('DEBUG: ProfileController.signOut() - POS auth data cleared');
+
+      // Monitor logout closes database and clears all state
+      await _monitorApiService.logout();
+      print('DEBUG: ProfileController.signOut() - Monitor logout completed (database closed)');
+
       // Navigate to login
-      Get.off(()=>UnifiedLoginScreen());
+      Get.offAll(() => const UnifiedLoginScreen());
     } catch (e) {
       errorMessage.value = 'Failed to sign out: $e';
-      print('ProfileController: Error signing out: $e');
+      print('ERROR: ProfileController.signOut() - Error signing out: $e');
     } finally {
       isLoading.value = false;
     }
@@ -128,6 +182,7 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      print('DEBUG: ProfileController.switchSystem() - Switching to system: $system');
 
       currentSystem.value = system;
 
@@ -136,9 +191,46 @@ class ProfileController extends GetxController {
 
       if (systemAccounts.isNotEmpty) {
         // Switch to the most recently used account for this system
+        print('DEBUG: ProfileController.switchSystem() - Found existing account, using switchToAccount');
         await switchToAccount(systemAccounts.first);
       } else {
-        // No accounts for this system, navigate to login for that system
+        // No accounts for this system - ensure database is open before navigation
+        print('DEBUG: ProfileController.switchSystem() - No existing account, opening database manually');
+
+        final dbHelper = UnifiedDatabaseHelper.instance;
+        String? companyId;
+
+        // Try to find companyId from various sources
+        final currentAccount = _accountManager.currentAccount.value;
+        if (currentAccount != null && currentAccount.userData.containsKey('companyId')) {
+          companyId = currentAccount.userData['companyId']?.toString();
+        }
+
+        if (companyId == null || companyId.isEmpty) {
+          companyId = await _monitorApiService.getStoredCompanyId();
+        }
+
+        if (companyId == null || companyId.isEmpty) {
+          final companyInfo = await _posApiService.getCompanyInfo();
+          companyId = companyInfo['companyId'];
+        }
+
+        // Ensure database is open
+        if (companyId != null && companyId.isNotEmpty) {
+          print('DEBUG: ProfileController.switchSystem() - Opening database for company: $companyId');
+          await dbHelper.openForCompany(companyId);
+
+          // Store companyId for the target system
+          if (system == 'pos') {
+            await _posApiService.saveCompanyInfo({'company': companyId, 'branch': '', 'sellingPointId': ''});
+          } else {
+            await _monitorApiService.storeCompanyId(companyId);
+          }
+        } else {
+          print('WARNING: ProfileController.switchSystem() - No companyId found!');
+        }
+
+        // Navigate to the appropriate app
         if (system == 'pos') {
           Get.offAll(() => const PosAppRoot());
         } else {
@@ -147,7 +239,7 @@ class ProfileController extends GetxController {
       }
     } catch (e) {
       errorMessage.value = 'Failed to switch system: $e';
-      print('ProfileController: Error switching system: $e');
+      print('ERROR: ProfileController.switchSystem() - Error: $e');
     } finally {
       isLoading.value = false;
     }
@@ -157,18 +249,38 @@ class ProfileController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+      print('DEBUG: ProfileController.switchToAccount() - Switching to account: ${account.username} (${account.system})');
 
-      // First, logout from current account
       final currentAccount = _accountManager.currentAccount.value;
+      final dbHelper = UnifiedDatabaseHelper.instance;
+
+      // Get companyId from the account we're switching to
+      String? targetCompanyId = account.userData['companyId']?.toString();
+
+      // If not in account userData, try other sources
+      if (targetCompanyId == null || targetCompanyId.isEmpty) {
+        targetCompanyId = await _monitorApiService.getStoredCompanyId();
+        print('DEBUG: ProfileController.switchToAccount() - Got companyId from storage: $targetCompanyId');
+      }
+
+      if (targetCompanyId == null || targetCompanyId.isEmpty) {
+        final companyInfo = await _posApiService.getCompanyInfo();
+        targetCompanyId = companyInfo['companyId'];
+        print('DEBUG: ProfileController.switchToAccount() - Got companyId from POS service: $targetCompanyId');
+      }
+
+      // If switching to a different account, handle logout first
       if (currentAccount != null && currentAccount.id != account.id) {
-        // Clear auth data from both services
+        print('DEBUG: ProfileController.switchToAccount() - Switching from different account, clearing old data');
         await _posApiService.clearAuthData();
-        await _monitorApiService.logout();
+        // Close database but don't clear all monitor state yet
+        await dbHelper.close();
       }
 
       // Validate token and handle re-authentication if needed
-      bool hasInternet = false;
       bool tokenValid = false;
+      bool hasInternet = true;
+
       try {
         if (account.system == 'monitor') {
           await _monitorApiService.getWithAuth('/company/details');
@@ -176,18 +288,18 @@ class ProfileController extends GetxController {
           await _posApiService.validateToken();
         }
         tokenValid = true;
-        hasInternet = true;
       } catch (e) {
         if (e.toString().contains('401') || e.toString().contains('Unauthorized')) {
           tokenValid = false;
-          hasInternet = true;
         } else {
           hasInternet = false;
+          print('DEBUG: ProfileController.switchToAccount() - Offline mode detected');
         }
       }
 
+      // Re-authenticate if needed and online
       if (!tokenValid && hasInternet) {
-        // Re-authenticate using stored credentials
+        print('DEBUG: ProfileController.switchToAccount() - Token invalid, re-authenticating');
         try {
           final creds = account.system == 'monitor'
               ? await _monitorApiService.getServerCredentials()
@@ -198,81 +310,76 @@ class ProfileController extends GetxController {
             } else {
               await _posApiService.signIn(creds['username']!, creds['password']!);
             }
-            // Update account with new userData
-            final newUserData = account.system == 'monitor'
-                ? await _monitorApiService.getStoredUserData()
-                : await _posApiService.getStoredUserData();
-            if (newUserData != null) {
-              account = UserAccount(
-                id: account.id,
-                username: account.username,
-                system: account.system,
-                userData: newUserData,
-                lastLogin: account.lastLogin,
-              );
-              await _accountManager.addAccount(account);
-            }
+            print('DEBUG: ProfileController.switchToAccount() - Re-authentication successful');
           }
         } catch (e) {
-          // Re-auth failed, proceed to offline mode
+          print('DEBUG: ProfileController.switchToAccount() - Re-auth failed, continuing offline: $e');
         }
       }
 
-      // If no internet, open DB using stored company ID
-      if (!hasInternet) {
-        if (account.system == 'monitor') {
-          if (account.userData.containsKey('companyId')) {
-            await _monitorApiService.switchCompany(account.userData['companyId']);
-          }
-        } else {
-          final companyInfo = await _posApiService.getCompanyInfo();
-          if (companyInfo['companyId']!.isNotEmpty) {
-            await _posApiService.openDatabaseForCompany(companyInfo['companyId']!);
-          }
+      // CRITICAL: Ensure database is open for the target company
+      if (targetCompanyId != null && targetCompanyId.isNotEmpty) {
+        print('DEBUG: ProfileController.switchToAccount() - Opening database for company: $targetCompanyId');
+        await dbHelper.openForCompany(targetCompanyId);
+
+        // Update the account userData to include companyId
+        if (!account.userData.containsKey('companyId')) {
+          account = UserAccount(
+            id: account.id,
+            username: account.username,
+            system: account.system,
+            userData: {...account.userData, 'companyId': targetCompanyId},
+            lastLogin: account.lastLogin,
+          );
+        }
+      } else {
+        print('WARNING: ProfileController.switchToAccount() - No companyId found!');
+      }
+
+      // IMPORTANT: Store the account's data in the appropriate service BEFORE setting current account
+      // This ensures the ever() listeners have access to the correct data
+      if (account.system == 'monitor') {
+        await _monitorApiService.storeUserData(account.userData);
+        if (account.userData['accessToken'] != null) {
+          await _monitorApiService.storeToken(account.userData['accessToken']);
+        }
+        if (account.userData.containsKey('roles') && account.userData['roles'] is List && (account.userData['roles'] as List).isNotEmpty) {
+          await _monitorApiService.storeUserRole((account.userData['roles'] as List).first.toString());
+        }
+        if (targetCompanyId != null && targetCompanyId.isNotEmpty) {
+          await _monitorApiService.storeCompanyId(targetCompanyId);
+        }
+      } else {
+        await _posApiService.saveAuthDataFromMap(account.userData);
+        if (targetCompanyId != null && targetCompanyId.isNotEmpty) {
+          await _posApiService.saveCompanyInfo({'company': targetCompanyId, 'branch': '', 'sellingPointId': ''});
         }
       }
 
-      // Set the account as current
+      // Now set the account as current (this triggers ever() listeners)
       await _accountManager.switchToAccount(account);
-
-      // Update current system
       currentSystem.value = account.system;
 
-      // Load the account's data into the appropriate service
+      // Update local state directly from account data (don't rely on storage)
+      userData.value = account.userData;
+
+      // Load company data from the now-open database
+      final company = await dbHelper.getCompanyDetails();
+      if (company != null) {
+        companyData.value = company;
+      }
+
+      print('DEBUG: ProfileController.switchToAccount() - Switch complete, navigating to ${account.system}');
+
+      // Navigate to the appropriate app
       if (account.system == 'monitor') {
-        // Store monitor user data
-        await _monitorApiService.storeUserData(account.userData);
-        await _monitorApiService.storeToken(account.userData['accessToken'] ?? '');
-        
-        // Ensure user role is stored separately
-        if (account.userData.containsKey('roles') && account.userData['roles'] is List && account.userData['roles'].isNotEmpty) {
-          final userRole = account.userData['roles'].first.toString();
-          await _monitorApiService.storeUserRole(userRole);
-        }
-
-        // Switch to monitor database
-        if (account.userData.containsKey('companyId')) {
-          await _monitorApiService.switchCompany(account.userData['companyId']);
-        }
-
-        // Refresh user data in controller
-        await refreshUserDataFromAccount(account);
-
-        // Navigate to monitor app
         Get.offAll(() => const MonitorAppRoot());
       } else {
-        // Store POS user data
-        await _posApiService.saveAuthDataFromMap(account.userData);
-
-        // Refresh user data in controller
-        await refreshUserDataFromAccount(account);
-
-        // Navigate to POS app
         Get.offAll(() => const PosAppRoot());
       }
     } catch (e) {
       errorMessage.value = 'Failed to switch account: $e';
-      print('ProfileController: Error switching account: $e');
+      print('ERROR: ProfileController.switchToAccount() - Error switching account: $e');
     } finally {
       isLoading.value = false;
     }

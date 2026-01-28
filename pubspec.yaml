@@ -46,6 +46,7 @@ dependencies:
   get_storage: ^2.1.1
   fl_chart: ^0.68.0
   connectivity_plus: ^7.0.0
+  skeletonizer: ^2.1.2
 
 
 
@@ -53,7 +54,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   flutter_test:
     sdk: flutter
-  mockito: ^5.4.4
+  mockito: ^5.6.1
   build_runner: ^2.4.9
 
 flutter_launcher_icons:

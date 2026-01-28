@@ -1,11 +1,11 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
 class MonOutstandingPaymentsController extends GetxController {
-  final DatabaseHelper dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
   final MonDashboardController dashboardController = Get.find<MonDashboardController>();
 
   // Observables for selected period
@@ -35,7 +35,7 @@ class MonOutstandingPaymentsController extends GetxController {
       isLoading.value = true;
       hasError.value = false;
 
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final now = DateTime.now();
 
       // Calculate selected period range
@@ -99,7 +99,7 @@ class MonOutstandingPaymentsController extends GetxController {
       // Query for selected period outstanding payments
       const outstandingQuery = '''
         SELECT SUM(balance) as total
-        FROM sales
+        FROM mon_sales
         WHERE transactiondate BETWEEN ? AND ?
         AND balance > 0
       ''';

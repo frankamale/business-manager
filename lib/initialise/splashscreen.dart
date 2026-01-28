@@ -1,23 +1,24 @@
 import 'dart:async';
+import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../../back_pos/utils/network_helper.dart';
+import '../back_pos/utils/network_helper.dart';
 import 'app_roots.dart';
 import 'unified_login_screen.dart';
-import '../../bac_monitor/lib/controllers/mon_operator_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_sync_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_store_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_store_kpi_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_kpi_overview_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_salestrends_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_outstanding_payments_controller.dart';
-import '../../bac_monitor/lib/controllers/mon_inventory_controller.dart';
-import '../../bac_monitor/lib/services/api_services.dart';
-import '../../bac_monitor/lib/db/db_helper.dart';
-import '../../bac_monitor/lib/pages/bottom_nav.dart';
+import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
+import '../bac_monitor/lib/controllers/mon_sync_controller.dart';
+import '../bac_monitor/lib/controllers/mon_store_controller.dart';
+import '../bac_monitor/lib/controllers/mon_store_kpi_controller.dart';
+import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
+import '../bac_monitor/lib/controllers/mon_kpi_overview_controller.dart';
+import '../bac_monitor/lib/controllers/mon_salestrends_controller.dart';
+import '../bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
+import '../bac_monitor/lib/controllers/mon_outstanding_payments_controller.dart';
+import '../bac_monitor/lib/controllers/mon_inventory_controller.dart';
+import '../bac_monitor/lib/services/api_services.dart';
+import '../shared/database/unified_db_helper.dart';
+import '../bac_monitor/lib/pages/bottom_nav.dart';
 
 class ConnectivityController extends GetxController {
   var isConnected = false.obs;
@@ -26,7 +27,6 @@ class ConnectivityController extends GetxController {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
-  final DatabaseHelper _dbHelper = DatabaseHelper();
   Timer? _retryTimer;
 
   @override
@@ -56,19 +56,25 @@ class ConnectivityController extends GetxController {
           _initializeControllers();
           await _loadDataFromDatabase();
           final role = await _getUserRole();
-          print("Retrieved user role for navigation: $role");
-          
+
           // Handle null or empty role with fallback logic
           if (role == null || role.isEmpty) {
-            debugPrint('SplashScreen: User role is null or empty, using fallback logic');
+            debugPrint(
+              'SplashScreen: User role is null or empty, using fallback logic',
+            );
             // Try to determine role from user data as fallback
-            final userData = await Get.find<MonitorApiService>().getStoredUserData();
+            final userData = await Get.find<MonitorApiService>()
+                .getStoredUserData();
             if (userData != null && userData.containsKey('roles')) {
               final roles = userData['roles'] as List<dynamic>?;
+
               if (roles != null && roles.isNotEmpty) {
                 final fallbackRole = roles.first.toString();
-                await _secureStorage.write(key: 'user_role', value: fallbackRole);
-                if (fallbackRole.toLowerCase() == 'admin') {
+                await _secureStorage.write(
+                  key: 'user_role',
+                  value: fallbackRole,
+                );
+                if (fallbackRole.toLowerCase().contains("admin")) {
                   Get.offAll(() => const MonitorAppRoot());
                 } else {
                   Get.offAll(() => const PosAppRoot());
@@ -145,20 +151,23 @@ class ConnectivityController extends GetxController {
       // Try to get role from secure storage first
       final role = await _secureStorage.read(key: 'user_role');
       print("Retrieved user role: $role");
-      
+
       if (role != null && role.isNotEmpty) {
         return role;
       }
-      
+
       // If not found in secure storage, try to get from user data
       final userData = await Get.find<MonitorApiService>().getStoredUserData();
-      if (userData != null && userData.containsKey('roles') && userData['roles'] is List && userData['roles'].isNotEmpty) {
+      if (userData != null &&
+          userData.containsKey('roles') &&
+          userData['roles'] is List &&
+          userData['roles'].isNotEmpty) {
         final userRole = userData['roles'].first.toString();
         // Store it for future use
         await _secureStorage.write(key: 'user_role', value: userRole);
         return userRole;
       }
-      
+
       return null;
     } catch (e) {
       debugPrint('SplashScreen: Error retrieving user role - $e');
@@ -221,10 +230,12 @@ class ConnectivityController extends GetxController {
     // Load company details
     await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
     final role = await _getUserRole();
-    
+
     // Handle null role in offline mode
     if (role == null || role.isEmpty) {
-      debugPrint('SplashScreen: User role is null in offline mode, defaulting to POS app');
+      debugPrint(
+        'SplashScreen: User role is null in offline mode, defaulting to POS app',
+      );
       Get.offAll(() => const PosAppRoot());
     } else if (role.toLowerCase().contains("admin")) {
       Get.offAll(() => const MonitorAppRoot());

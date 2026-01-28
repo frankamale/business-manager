@@ -8,13 +8,32 @@ import '../../controllers/mon_store_controller.dart';
 import '../../models/store.dart';
 import '../../widgets/finance/date_range.dart';
 
-class Stores extends StatelessWidget {
+class Stores extends StatefulWidget {
   const Stores({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final MonStoresController controller = Get.put(MonStoresController());
+  State<Stores> createState() => _StoresState();
+}
 
+class _StoresState extends State<Stores> {
+  late final MonStoresController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(MonStoresController());
+    // Ensure stores are fetched when page loads
+    _loadStores();
+  }
+
+  Future<void> _loadStores() async {
+    if (!controller.isInitialized.value) {
+      await controller.fetchAllStores();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: PrimaryColors.darkBlue,
       body: Obx(() {

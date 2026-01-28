@@ -9,12 +9,12 @@ import '../models/dashboard.dart';
 import '../models/hourly_customer_traffic.dart';
 import '../models/product.dart';
 import '../models/store.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_store_kpi_controller.dart';
 
 class MonStoresController extends GetxController {
-  final dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
 
   var isLoading = true.obs;
   var isFetchingKpisAndCharts = true.obs;
@@ -43,9 +43,9 @@ class MonStoresController extends GetxController {
 
     isLoading.value = true;
     try {
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final result = await db.query(
-        'service_points',
+        'mon_service_points',
         where: 'stores = ?',
         whereArgs: [1],
         orderBy: 'name ASC',
@@ -103,7 +103,7 @@ class MonStoresController extends GetxController {
   // ... rest of the methods remain the same ...
   Future<void> _fetchSalesDataForChart() async {
     try {
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final range = _getDateRange();
       final storeId = selectedStore.value!.id;
       final isAllStores = storeId == Store.all.id;
@@ -191,7 +191,7 @@ class MonStoresController extends GetxController {
           : [selectedStore.value!.name, startMillis, endMillis];
 
       final query =
-      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM sales $whereClause GROUP BY date, salesId) GROUP BY date ORDER BY date''';
+      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM mon_sales $whereClause GROUP BY date, salesId) GROUP BY date ORDER BY date''';
       final result = await db.rawQuery(query, args);
 
       for (var row in result) {
@@ -217,7 +217,7 @@ class MonStoresController extends GetxController {
 
   Future<void> _fetchHourlyTrafficData() async {
     try {
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final range = _getDateRange();
       final isAllStores = selectedStore.value!.id == Store.all.id;
       final whereClause = isAllStores
@@ -227,7 +227,7 @@ class MonStoresController extends GetxController {
           ? [range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch]
           : [selectedStore.value!.name, range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch];
       final query =
-          " SELECT CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch')) AS INTEGER) as hour, COUNT(DISTINCT salesId) as count FROM sales $whereClause GROUP BY hour ORDER BY hour ";
+          " SELECT CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch')) AS INTEGER) as hour, COUNT(DISTINCT salesId) as count FROM mon_sales $whereClause GROUP BY hour ORDER BY hour ";
       final result = await db.rawQuery(query, args);
       hourlyTrafficData.assignAll(
         result.map((row) => HourlyTraffic(row['hour'] as int, row['count'] as int)).toList(),
@@ -240,7 +240,7 @@ class MonStoresController extends GetxController {
 
   Future<void> _fetchTopProductsData() async {
     try {
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final range = _getDateRange();
       final isAllStores = selectedStore.value!.id == Store.all.id;
       final whereClause = isAllStores
@@ -252,7 +252,7 @@ class MonStoresController extends GetxController {
 
       final query = '''
         SELECT inventoryname, SUM(quantity) as total_quantity, SUM(amount) as total_revenue
-        FROM sales
+        FROM mon_sales
         $whereClause
         GROUP BY inventoryname
         ORDER BY total_quantity DESC
@@ -275,7 +275,7 @@ class MonStoresController extends GetxController {
 
       for (var product in products) {
         final inventoryResult = await db.query(
-          'inventory',
+          'mon_inventory',
           columns: ['downloadlink'],
           where: 'name = ?',
           whereArgs: [product.name],

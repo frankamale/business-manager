@@ -1,12 +1,12 @@
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/customer.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class CustomerController extends GetxController {
   final _apiService = PosApiService();
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   // Reactive list of customers
   var customers = <Customer>[].obs;

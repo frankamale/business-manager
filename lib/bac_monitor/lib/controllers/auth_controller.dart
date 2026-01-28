@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../pages/bottom_nav.dart';
 import '../services/api_services.dart';
 import '../services/account_manager.dart';
 
 class LoginController extends GetxController {
   final MonitorApiService _apiService = Get.find();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   final AccountManager _accountManager = Get.find();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();

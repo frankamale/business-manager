@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/sale_transaction.dart';
 import 'package:bac_pos/back_pos/models/inventory_item.dart';
@@ -8,7 +8,7 @@ import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import 'payment_controller.dart';
 
 class SalesController extends GetxController {
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   final _apiService = PosApiService();
 
   // Reactive list of sale transactions

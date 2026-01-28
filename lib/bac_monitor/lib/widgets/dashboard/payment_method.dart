@@ -78,6 +78,8 @@ class PaymentMethodHorizontalBarChart extends StatelessWidget {
       );
     }
 
+    final compactFormatter = NumberFormat.compact(locale: 'en_US');
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -87,25 +89,58 @@ class PaymentMethodHorizontalBarChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Summary by Payment Method",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (periodLabel != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              periodLabel!,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Summary by Payment Method",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (periodLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        periodLabel!,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
-          ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Total',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
+                      fontSize: 11,
+                    ),
+                  ),
+                  Text(
+                    'UGX ${compactFormatter.format(totalSales)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Divider(color: Colors.white.withOpacity(0.2)),
           const SizedBox(height: 12),
@@ -135,8 +170,8 @@ class PaymentMethodHorizontalBarChart extends StatelessWidget {
     required double maxValue,
     required Color color,
   }) {
-    final formatter = NumberFormat.compact(locale: 'en_US');
-    final formattedValue = formatter.format(value);
+    final compactFormatter = NumberFormat.compact(locale: 'en_US');
+    final formattedValue = compactFormatter.format(value);
     final percentage = totalValue > 0 ? (value / totalValue) * 100 : 0.0;
 
     return Padding(
@@ -146,21 +181,31 @@ class PaymentMethodHorizontalBarChart extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                mode,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
+              Expanded(
+                child: Text(
+                  mode,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
-              Text(
-                '(${percentage.toStringAsFixed(0)}%)',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${percentage.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -168,7 +213,7 @@ class PaymentMethodHorizontalBarChart extends StatelessWidget {
                 formattedValue,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -181,21 +226,21 @@ class PaymentMethodHorizontalBarChart extends StatelessWidget {
               return Stack(
                 children: [
                   Container(
-                    height: 8,
+                    height: 10,
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(5),
                     ),
                   ),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 500),
                     curve: Curves.easeOut,
-                    height: 8,
+                    height: 10,
                     width: barWidth.isNaN ? 0 : barWidth,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(5),
                       gradient: LinearGradient(
-                        colors: [color, color.withOpacity(0.5)],
+                        colors: [color, color.withOpacity(0.6)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),

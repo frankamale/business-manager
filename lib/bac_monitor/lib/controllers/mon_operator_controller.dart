@@ -1,9 +1,9 @@
 import 'package:get/get.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../services/account_manager.dart';
 
 class MonOperatorController extends GetxController {
-  final dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
   final AccountManager _accountManager = Get.find();
 
   var companyName = "Loading...".obs;
@@ -12,8 +12,9 @@ class MonOperatorController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadCompanyDetailsFromDb();
-    
+
+    _tryLoadCompanyDetails();
+
     // Listen to account changes and refresh company data
     ever(_accountManager.currentAccount, (UserAccount? account) {
       if (account != null) {
@@ -22,10 +23,27 @@ class MonOperatorController extends GetxController {
     });
   }
 
+  /// Try to load company details if database is ready
+  Future<void> _tryLoadCompanyDetails() async {
+    if (dbHelper.isDatabaseOpen) {
+      await loadCompanyDetailsFromDb();
+    } else {
+      print('MonOperatorController: Database not open yet, skipping initial load');
+    }
+  }
+
   /// Fetches the company details from the local database.
   Future<void> loadCompanyDetailsFromDb() async {
+    // Check if database is open before accessing
+    if (!dbHelper.isDatabaseOpen) {
+      print('MonOperatorController: Database not open, cannot load company details');
+      companyName.value = 'Loading...';
+      companyAddress.value = '';
+      return;
+    }
+
     try {
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
 
       final result = await db.query('company_details', limit: 1);
 

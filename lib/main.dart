@@ -40,7 +40,7 @@ void main() async {
 
   // POS Services
   Get.put(PosApiService());
-  Get.put(SalesSyncService());
+  Get.lazyPut<SalesSyncService>(() => SalesSyncService());
 
   // Monitor Services
   Get.put(MonitorApiService());

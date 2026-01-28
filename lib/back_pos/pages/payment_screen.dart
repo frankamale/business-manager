@@ -1,35 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../controllers/customer_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../services/print_service.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
 
 class PaymentScreen extends StatefulWidget {
-   final List<Map<String, dynamic>> cartItems;
-   final String? customer;
-   final String? reference;
-   final String? notes;
-   final String? salespersonId;
-   final String? servicePointId;
-   final bool isUpdateMode;
-   final String? existingSalesId;
-   final String? existingReceiptNumber;
+  final List<Map<String, dynamic>> cartItems;
+  final String? customer;
+  final String? reference;
+  final String? notes;
+  final String? salespersonId;
+  final String? servicePointId;
+  final bool isUpdateMode;
+  final String? existingSalesId;
+  final String? existingReceiptNumber;
 
-   const PaymentScreen({
-     super.key,
-     required this.cartItems,
-     this.customer,
-     this.reference,
-     this.notes,
-     this.salespersonId,
-     this.servicePointId,
-     this.isUpdateMode = false,
-     this.existingSalesId,
-     this.existingReceiptNumber,
-   });
+  const PaymentScreen({
+    super.key,
+    required this.cartItems,
+    this.customer,
+    this.reference,
+    this.notes,
+    this.salespersonId,
+    this.servicePointId,
+    this.isUpdateMode = false,
+    this.existingSalesId,
+    this.existingReceiptNumber,
+  });
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
@@ -38,7 +39,9 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final PaymentController _paymentController = Get.find<PaymentController>();
   final NumberFormat _numberFormat = NumberFormat('#,###', 'en_US');
-  final TextEditingController amountTenderedController = TextEditingController();
+  final TextEditingController amountTenderedController =
+      TextEditingController();
+  final CustomerController customerController = Get.find();
 
   String formatMoney(double amount) {
     return _numberFormat.format(amount.toInt());
@@ -109,16 +112,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final hasPayment = result['hasPayment'] as bool;
       final receiptnumber = result['receiptnumber'] as String;
       try {
-        final db = await DatabaseHelper().database;
+        final db = await UnifiedDatabaseHelper.instance.database;
         final maps = await db!.query(
           'sales_transactions',
           where: 'receiptnumber = ?',
           whereArgs: [receiptnumber],
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
+        String customerid = widget.customer ?? 'Cash Customer';
+        String customerName = 'Cash Customer';
 
-        String customerName = widget.customer ?? 'Cash Customer';
-        
+        final customer = customerController.getCustomerById(customerid!);
+        if (customer != null) {
+          customerName = customer.fullnames;
+        }
+
         // Get current user (cashier) for issuedBy field
         String cashierName = 'Cashier';
         final authController = Get.find<AuthController>();
@@ -169,7 +177,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
       } else {
         if (hasPayment) {
           Get.snackbar(
-            'Success', "Payment successful",
+            'Success',
+            "Payment successful",
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900],
@@ -177,7 +186,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
           );
         } else {
           Get.snackbar(
-            'Success', "Payment successful",
+            'Success',
+            "Payment successful",
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900],
@@ -225,38 +235,43 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Receipt Number
-                    if (!isKeyboardVisible) ...[
-                      Obx(() => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue[200]!),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              "Receipt: ",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              'REC-${_paymentController.receiptCounter.value.toString().padLeft(4, '0')}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
-                      const SizedBox(height: 12),
-                    ],
+                    // if (!isKeyboardVisible) ...[
+                    //   Obx(
+                    //     () => Container(
+                    //       padding: const EdgeInsets.symmetric(
+                    //         horizontal: 12,
+                    //         vertical: 10,
+                    //       ),
+                    //       decoration: BoxDecoration(
+                    //         color: Colors.blue[50],
+                    //         borderRadius: BorderRadius.circular(8),
+                    //         border: Border.all(color: Colors.blue[200]!),
+                    //       ),
+                    //       child: Row(
+                    //         mainAxisAlignment: MainAxisAlignment.center,
+                    //         children: [
+                    //           const Text(
+                    //             "Receipt: ",
+                    //             style: TextStyle(
+                    //               fontSize: 12,
+                    //               color: Colors.grey,
+                    //               fontWeight: FontWeight.w500,
+                    //             ),
+                    //           ),
+                    //           Text(
+                    //             'REC-${_paymentController.receiptCounter.value.toString().padLeft(4, '0')}',
+                    //             style: const TextStyle(
+                    //               fontSize: 16,
+                    //               fontWeight: FontWeight.bold,
+                    //               color: Colors.blue,
+                    //             ),
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ),
+                    //   const SizedBox(height: 12),
+                    // ],
 
                     // Amount Due
                     _buildAmountRow(
@@ -285,15 +300,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blue[300]!, width: 2),
+                          borderSide: BorderSide(
+                            color: Colors.blue[300]!,
+                            width: 2,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.blue[200]!, width: 2),
+                          borderSide: BorderSide(
+                            color: Colors.blue[200]!,
+                            width: 2,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                          borderSide: const BorderSide(
+                            color: Colors.blue,
+                            width: 2,
+                          ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
@@ -364,7 +388,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 3),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
                                         child: Text(

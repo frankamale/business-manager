@@ -3,10 +3,13 @@ import 'settings_page.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/service_point_controller.dart';
+import '../controllers/inventory_controller.dart';
+import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../models/service_point.dart';
 import '../config.dart';
 import '../services/api_services.dart';
+import '../utils/network_helper.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -21,9 +24,14 @@ class _HomepageState extends State<Homepage>
   late Animation<double> _fadeAnimation;
   final ServicePointController _servicePointController =
       Get.find<ServicePointController>();
+  final InventoryController _inventoryController =
+      Get.find<InventoryController>();
+  final CustomerController _customerController =
+      Get.find<CustomerController>();
   final AuthController authController = Get.find();
   final PosApiService _apiService = PosApiService();
   String _companyName = '';
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -80,6 +88,55 @@ class _HomepageState extends State<Homepage>
     } catch (e) {
       setState(() {
         _companyName = AppConfig.companyName;
+      });
+    }
+  }
+
+  Future<void> _refreshAllData() async {
+    if (_isRefreshing) return;
+
+    final hasNetwork = await NetworkHelper.hasConnection();
+    if (!hasNetwork) {
+      Get.snackbar(
+        'Offline',
+        'Cannot refresh without internet connection',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange.shade100,
+        colorText: Colors.orange.shade900,
+      );
+      return;
+    }
+
+    setState(() {
+      _isRefreshing = true;
+    });
+
+    try {
+      // Refresh all POS data in parallel
+      await Future.wait([
+        _inventoryController.syncInventoryFromAPI(),
+        _customerController.syncCustomersFromAPI(),
+        _servicePointController.syncServicePointsFromAPI(),
+      ]);
+
+      Get.snackbar(
+        'Success',
+        'Data refreshed successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade900,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to refresh some data',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade900,
+      );
+    } finally {
+      setState(() {
+        _isRefreshing = false;
       });
     }
   }
@@ -158,6 +215,23 @@ class _HomepageState extends State<Homepage>
             },
             tooltip: 'Settings',
           ),
+          _isRefreshing
+              ? const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _refreshAllData,
+                  tooltip: 'Refresh Inventory & Data',
+                ),
         ],
       ),
       body: FadeTransition(

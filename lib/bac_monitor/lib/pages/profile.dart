@@ -2,15 +2,29 @@ import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../additions/colors.dart';
+import '../controllers/mon_operator_controller.dart';
+import '../controllers/mon_salestrends_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../services/account_manager.dart';
+import '../services/api_services.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  bool _isReloading = false;
+  int _reloadProgress = 0;
+  int _reloadTotal = 0;
+  int _recordsLoaded = 0;
 
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.find();
+    final operatorController = Get.find<MonOperatorController>();
 
     return Obx(() {
       if (controller.isLoading.value) {
@@ -126,7 +140,7 @@ class ProfilePage extends StatelessWidget {
                     const SizedBox(height: 16),
                     // Name
                     Text(
-                      controller.userRole,
+                      operatorController.companyName.value,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -242,12 +256,230 @@ class ProfilePage extends StatelessWidget {
                   );
                 }
               }),
+
+              const SizedBox(height: 24),
+
+              // Data Management Section
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8.0, bottom: 12),
+                      child: Text(
+                        'Data Management',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    // _buildMenuItem(
+                    //   icon: Icons.cloud_download,
+                    //   title: 'Reload All Data',
+                    //   subtitle: 'Re-sync all sales from 2023',
+                    //   onTap: () => _showReloadConfirmDialog(controller),
+                    // ),
+                    const SizedBox(height: 8),
+                    _buildMenuItem(
+                      icon: Icons.logout,
+                      title: 'Logout',
+                      subtitle: 'Sign out of your account',
+                      iconColor: Colors.red,
+                      titleColor: Colors.red.shade300,
+                      onTap: controller.signOut,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 32),
             ],
           ),
         ),
       );
     });
   }
+
+  // void _showReloadConfirmDialog(ProfileController controller) {
+  //   Get.dialog(
+  //     AlertDialog(
+  //       title: const Text('Reload All Data?'),
+  //       content: const Text(
+  //         'This will re-download all sales data from September 2023 to now. '
+  //         'This may take several minutes depending on your connection speed.\n\n'
+  //         'Your existing data will be replaced.',
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Get.back(),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () {
+  //             Get.back();
+  //             _startReloadAllData();
+  //           },
+  //           style: ElevatedButton.styleFrom(
+  //             backgroundColor: PrimaryColors.brightYellow,
+  //             foregroundColor: PrimaryColors.darkBlue,
+  //           ),
+  //           child: const Text('Reload'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  // Future<void> _startReloadAllData() async {
+  //   setState(() {
+  //     _isReloading = true;
+  //     _reloadProgress = 0;
+  //     _reloadTotal = 0;
+  //     _recordsLoaded = 0;
+  //   });
+  //
+  //   // Show progress dialog
+  //   Get.dialog(
+  //     StatefulBuilder(
+  //       builder: (context, setDialogState) {
+  //         return PopScope(
+  //           canPop: false,
+  //           child: AlertDialog(
+  //             title: const Row(
+  //               children: [
+  //                 SizedBox(
+  //                   width: 24,
+  //                   height: 24,
+  //                   child: CircularProgressIndicator(strokeWidth: 2),
+  //                 ),
+  //                 SizedBox(width: 12),
+  //                 Text('Reloading Data'),
+  //               ],
+  //             ),
+  //             content: Column(
+  //               mainAxisSize: MainAxisSize.min,
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 Text(
+  //                   _reloadTotal > 0
+  //                       ? 'Month $_reloadProgress of $_reloadTotal...'
+  //                       : 'Preparing...',
+  //                 ),
+  //                 const SizedBox(height: 12),
+  //                 if (_reloadTotal > 0)
+  //                   LinearProgressIndicator(
+  //                     value: _reloadProgress / _reloadTotal,
+  //                   ),
+  //                 const SizedBox(height: 8),
+  //                 Text(
+  //                   '$_recordsLoaded records loaded',
+  //                   style: TextStyle(
+  //                     color: Colors.grey.shade600,
+  //                     fontSize: 12,
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         );
+  //       },
+  //     ),
+  //     barrierDismissible: false,
+  //   );
+  //
+  //   try {
+  //     final apiService = Get.find<MonitorApiService>();
+  //
+  //     final success = await apiService.reloadAllDataInBatches(
+  //       onProgress: (completed, total, records) {
+  //         setState(() {
+  //           _reloadProgress = completed;
+  //           _reloadTotal = total;
+  //           _recordsLoaded = records;
+  //         });
+  //         // Force dialog to rebuild
+  //         if (Get.isDialogOpen ?? false) {
+  //           Get.back();
+  //           Get.dialog(
+  //             PopScope(
+  //               canPop: false,
+  //               child: AlertDialog(
+  //                 title: const Row(
+  //                   children: [
+  //                     SizedBox(
+  //                       width: 24,
+  //                       height: 24,
+  //                       child: CircularProgressIndicator(strokeWidth: 2),
+  //                     ),
+  //                     SizedBox(width: 12),
+  //                     Text('Reloading Data'),
+  //                   ],
+  //                 ),
+  //                 content: Column(
+  //                   mainAxisSize: MainAxisSize.min,
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Text('Syncing Data...'),
+  //                     const SizedBox(height: 12),
+  //                     LinearProgressIndicator(
+  //                       value: _reloadProgress / _reloadTotal,
+  //                     ),
+  //                     const SizedBox(height: 8),
+  //
+  //
+  //                   ],
+  //                 ),
+  //               ),
+  //             ),
+  //             barrierDismissible: false,
+  //           );
+  //         }
+  //       },
+  //     );
+  //
+  //     // Close progress dialog
+  //     if (Get.isDialogOpen ?? false) {
+  //       Get.back();
+  //     }
+  //
+  //     // Refresh dashboard data
+  //     if (Get.isRegistered<MonSalesTrendsController>()) {
+  //       await Get.find<MonSalesTrendsController>().fetchAllData();
+  //     }
+  //
+  //     // Show result
+  //     Get.snackbar(
+  //       success ? 'Success' : 'Partial Success',
+  //       success
+  //           ? 'All data reloaded successfully ($_recordsLoaded records)'
+  //           : 'Data reloaded with some errors ($_recordsLoaded records)',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: success ? Colors.green.shade700 : Colors.orange.shade700,
+  //       colorText: Colors.white,
+  //     );
+  //   } catch (e) {
+  //     // Close progress dialog
+  //     if (Get.isDialogOpen ?? false) {
+  //       Get.back();
+  //     }
+  //
+  //     Get.snackbar(
+  //       'Error',
+  //       'Failed to reload data: $e',
+  //       snackPosition: SnackPosition.BOTTOM,
+  //       backgroundColor: Colors.red.shade700,
+  //       colorText: Colors.white,
+  //     );
+  //   } finally {
+  //     setState(() {
+  //       _isReloading = false;
+  //     });
+  //   }
+  // }
 
   Widget _buildMenuItem({
     required IconData icon,

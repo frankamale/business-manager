@@ -28,6 +28,7 @@ class _SalesListingState extends State<SalesListing> {
   final TextEditingController searchController = TextEditingController();
   final RxList<Map<String, dynamic>> filteredSales = <Map<String, dynamic>>[].obs;
   bool isSearching = false;
+  bool isUploadingAll = false;
 
   @override
   void initState() {
@@ -79,6 +80,206 @@ class _SalesListingState extends State<SalesListing> {
       searchController.clear();
     });
   }
+
+  Future<void> _uploadAllSales() async {
+    // Get all pending sales (not uploaded and not failed with permanent error)
+    final pendingSales = salesController.groupedSales.where((sale) {
+      final uploadStatus = sale['upload_status'] as String? ?? 'pending';
+      return uploadStatus == 'pending' || uploadStatus == 'failed';
+    }).toList();
+
+    if (pendingSales.isEmpty) {
+      Get.snackbar(
+        'No Pending Sales',
+        'All sales have already been uploaded',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.blue.shade700,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    setState(() {
+      isUploadingAll = true;
+    });
+
+    int successCount = 0;
+    int failedCount = 0;
+    List<String> failedReceipts = [];
+
+    // Show progress dialog
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Uploading Sales'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Uploading ${successCount + failedCount + 1} of ${pendingSales.length}...'),
+                SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (successCount + failedCount) / pendingSales.length,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Success: $successCount',
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
+                Text(
+                  'Failed: $failedCount',
+                  style: TextStyle(color: Colors.red.shade700),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      barrierDismissible: false,
+    );
+
+    // Upload each sale
+    for (var sale in pendingSales) {
+      final salesId = sale['salesId'] as String?;
+      final receiptNumber = sale['receiptnumber'] as String? ?? '';
+
+      if (salesId == null) {
+        failedCount++;
+        failedReceipts.add(receiptNumber);
+        continue;
+      }
+
+      try {
+        await salesController.uploadSaleToServer(salesId);
+        successCount++;
+      } catch (e) {
+        failedCount++;
+        failedReceipts.add('$receiptNumber: ${e.toString().split(':').last.trim()}');
+      }
+
+      // Update progress dialog
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+        Get.dialog(
+          AlertDialog(
+            title: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Uploading Sales'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Uploading ${successCount + failedCount + 1} of ${pendingSales.length}...'),
+                SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (successCount + failedCount) / pendingSales.length,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Success: $successCount',
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
+                Text(
+                  'Failed: $failedCount',
+                  style: TextStyle(color: Colors.red.shade700),
+                ),
+              ],
+            ),
+          ),
+          barrierDismissible: false,
+        );
+      }
+    }
+
+    // Close progress dialog
+    if (Get.isDialogOpen ?? false) {
+      Get.back();
+    }
+
+    setState(() {
+      isUploadingAll = false;
+    });
+
+    // Refresh the sales list
+    await salesController.loadSalesFromCache();
+
+    // Show summary dialog
+    Get.dialog(
+      AlertDialog(
+        title: Text('Upload Complete'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                SizedBox(width: 8),
+                Text('$successCount sales uploaded successfully'),
+              ],
+            ),
+            if (failedCount > 0) ...[
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.error, color: Colors.red.shade700, size: 20),
+                  SizedBox(width: 8),
+                  Text('$failedCount sales failed to upload'),
+                ],
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Failed receipts:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              SizedBox(height: 4),
+              Container(
+                constraints: BoxConstraints(maxHeight: 150),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: failedReceipts.map((r) => Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $r',
+                        style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                      ),
+                    )).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   bool _isCashierRole() {
     final currentUser = authController.currentUser.value;
     if (currentUser == null) return false;
@@ -115,14 +316,41 @@ class _SalesListingState extends State<SalesListing> {
         elevation: 0,
         actions: [
           if (!isSearching) ...[
-            IconButton(
-              icon: Icon(Icons.refresh),
-              onPressed: () async {
-                final salesSyncService = Get.find<SalesSyncService>();
-                await salesSyncService.manualSync();
-                await salesController.refreshSales();
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert),
+              tooltip: 'Options',
+              enabled: !isUploadingAll,
+              onSelected: (value) async {
+                if (value == 'refresh') {
+                  final salesSyncService = Get.find<SalesSyncService>();
+                  await salesSyncService.manualSync();
+                  await salesController.refreshSales();
+                } else if (value == 'upload_all') {
+                  await _uploadAllSales();
+                }
               },
-              tooltip: 'Sync with Server & Reload',
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'refresh',
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh, size: 20, color: Colors.blue.shade700),
+                      SizedBox(width: 12),
+                      Text('Refresh'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'upload_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.cloud_upload, size: 20, color: Colors.green.shade700),
+                      SizedBox(width: 12),
+                      Text('Upload All'),
+                    ],
+                  ),
+                ),
+              ],
             ),
             IconButton(
               icon: Icon(Icons.search),
