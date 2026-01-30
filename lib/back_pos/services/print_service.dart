@@ -504,6 +504,367 @@ class PrintService {
     );
   }
 
+  // Generate KOT (Kitchen Order Ticket) PDF
+  static Future<Uint8List> generateKotPdf({
+    required String receiptNumber,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    String? issuedBy,
+    String? notes,
+    String? tableNumber,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.roll80,
+        margin: pw.EdgeInsets.all(8),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      AppConfig.companyName,
+                      style: pw.TextStyle(
+
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      '*** KITCHEN ORDER ***',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 1),
+
+              // Order Info
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Order No:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(receiptNumber,
+                      style: pw.TextStyle(
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Date:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(_dateFormat.format(date),
+                      style: pw.TextStyle(fontSize: 12)),
+                ],
+              ),
+              if (tableNumber != null && tableNumber.isNotEmpty) ...[
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Table:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(tableNumber, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+              ],
+              pw.SizedBox(height: 2),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Waiter:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(issuedBy ?? 'Staff', style: pw.TextStyle(fontSize: 12)),
+                ],
+              ),
+              pw.SizedBox(height: 4),
+              pw.Divider(thickness: 1),
+
+              // Items Header
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text('Qty',
+                        style: pw.TextStyle(
+                            fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ),
+                  pw.Expanded(
+                    flex: 4,
+                    child: pw.Text('Item',
+                        style: pw.TextStyle(
+                            fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+              ),
+              pw.Divider(thickness: 0.5),
+
+              // Items List - Kitchen items only (filter by category if needed)
+              ...items.map((item) => pw.Column(
+                    children: [
+                      pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Expanded(
+                            flex: 1,
+                            child: pw.Text(
+                              item.quantity.toStringAsFixed(0),
+                              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 4,
+                            child: pw.Text(
+                              item.inventoryname,
+                              style: pw.TextStyle(fontSize: 12),
+                              maxLines: 2,
+                            ),
+                          ),
+                        ],
+                      ),
+                      pw.SizedBox(height: 4),
+                    ],
+                  )),
+
+              pw.Divider(thickness: 1),
+
+              if (notes != null && notes.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                pw.Text('Notes:', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                pw.Text(notes, style: pw.TextStyle(fontSize: 10)),
+                pw.Divider(thickness: 0.5),
+              ],
+
+              // Footer
+              pw.SizedBox(height: 8),
+              pw.Center(
+                child: pw.Text(
+                  'Printed: ${_dateFormat.format(DateTime.now())}',
+                  style: pw.TextStyle(fontSize: 9),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  // Print KOT
+  static Future<void> printKot({
+    required String receiptNumber,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    String? issuedBy,
+    String? notes,
+    String? tableNumber,
+  }) async {
+    final pdfBytes = await generateKotPdf(
+      receiptNumber: receiptNumber,
+      date: date,
+      items: items,
+      issuedBy: issuedBy,
+      notes: notes,
+      tableNumber: tableNumber,
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+    );
+  }
+
+  // Generate BOT (Bar Order Ticket) PDF
+  static Future<Uint8List> generateBotPdf({
+    required String receiptNumber,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    String? issuedBy,
+    String? notes,
+    String? tableNumber,
+  }) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.roll80,
+        margin: pw.EdgeInsets.all(8),
+        build: (context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              pw.Center(
+                child: pw.Column(
+                  children: [
+                    pw.Text(
+                      AppConfig.companyName,
+                      style: pw.TextStyle(
+                        fontSize: 16,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      '*** BAR ORDER ***',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Divider(thickness: 1),
+
+              // Order Info
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Order No:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(receiptNumber,
+                      style: pw.TextStyle(
+                          fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+              pw.SizedBox(height: 2),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Date:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(_dateFormat.format(date),
+                      style: pw.TextStyle(fontSize: 12)),
+                ],
+              ),
+              if (tableNumber != null && tableNumber.isNotEmpty) ...[
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Table:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(tableNumber, style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+              ],
+              pw.SizedBox(height: 2),
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Waiter:', style: pw.TextStyle(fontSize: 12)),
+                  pw.Text(issuedBy ?? 'Staff', style: pw.TextStyle(fontSize: 12)),
+                ],
+              ),
+              pw.SizedBox(height: 4),
+              pw.Divider(thickness: 1),
+
+              // Items Header
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    flex: 1,
+                    child: pw.Text('Qty',
+                        style: pw.TextStyle(
+                            fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ),
+                  pw.Expanded(
+                    flex: 4,
+                    child: pw.Text('Item',
+                        style: pw.TextStyle(
+                            fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+              ),
+              pw.Divider(thickness: 0.5),
+
+              // Items List - Bar items only (filter by category if needed)
+              ...items.map((item) => pw.Column(
+                    children: [
+                      pw.Row(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Expanded(
+                            flex: 1,
+                            child: pw.Text(
+                              item.quantity.toStringAsFixed(0),
+                              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                            ),
+                          ),
+                          pw.Expanded(
+                            flex: 4,
+                            child: pw.Text(
+                              item.inventoryname,
+                              style: pw.TextStyle(fontSize: 12),
+                              maxLines: 2,
+                            ),
+                          ),
+                        ],
+                      ),
+                      pw.SizedBox(height: 4),
+                    ],
+                  )),
+
+              pw.Divider(thickness: 1),
+
+              if (notes != null && notes.isNotEmpty) ...[
+                pw.SizedBox(height: 4),
+                pw.Text('Notes:', style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                pw.Text(notes, style: pw.TextStyle(fontSize: 10)),
+                pw.Divider(thickness: 0.5),
+              ],
+
+              // Footer
+              pw.SizedBox(height: 8),
+              pw.Center(
+                child: pw.Text(
+                  'Printed: ${_dateFormat.format(DateTime.now())}',
+                  style: pw.TextStyle(fontSize: 9),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+            ],
+          );
+        },
+      ),
+    );
+
+    return pdf.save();
+  }
+
+  // Print BOT
+  static Future<void> printBot({
+    required String receiptNumber,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    String? issuedBy,
+    String? notes,
+    String? tableNumber,
+  }) async {
+    final pdfBytes = await generateBotPdf(
+      receiptNumber: receiptNumber,
+      date: date,
+      items: items,
+      issuedBy: issuedBy,
+      notes: notes,
+      tableNumber: tableNumber,
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+    );
+  }
+
   // Share bill as PDF
   static Future<void> shareBill({
     required String receiptNumber,

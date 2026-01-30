@@ -475,11 +475,69 @@ class _SalesListingState extends State<SalesListing> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    IconButton(
-                      onPressed: () => _handlePrint(sale),
+                    PopupMenuButton<String>(
+                      onSelected: (value) => _handlePrintOption(value, sale),
+                      itemBuilder: (context) {
+                        final totalBalance = sale['totalBalance'] as double? ?? 0.0;
+                        final isPaid = totalBalance <= 0;
+                        return [
+                          PopupMenuItem(
+                            value: 'bill_receipt',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.receipt,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  isPaid ? 'Print Receipt' : 'Print Bill',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'kot',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.restaurant,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Print KOT',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'bot',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.local_bar,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Print BOT',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ];
+                      },
                       icon: Icon(Icons.print),
                       color: Colors.blue.shade600,
-                      tooltip: 'Print',
+                      tooltip: 'Print Options',
+                      padding: EdgeInsets.all(8),
                     ),
                     IconButton(
                       onPressed: () => _handleEdit(sale),
@@ -687,7 +745,7 @@ class _SalesListingState extends State<SalesListing> {
     );
   }
 
-  Future<void> _handlePrint(Map<String, dynamic> sale) async {
+  Future<void> _handlePrintOption(String option, Map<String, dynamic> sale) async {
     final salesController = Get.find<SalesController>();
 
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
@@ -716,7 +774,7 @@ class _SalesListingState extends State<SalesListing> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Preparing receipt...'),
+                  Text('Preparing to print...'),
                 ],
               ),
             ),
@@ -734,7 +792,7 @@ class _SalesListingState extends State<SalesListing> {
       if (saleTransactions.isEmpty) {
         Get.snackbar(
           'Error',
-          'No items found for this receipt',
+          'No items found for this order',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.shade700,
           colorText: Colors.white,
@@ -748,11 +806,12 @@ class _SalesListingState extends State<SalesListing> {
       final date = DateTime.fromMillisecondsSinceEpoch(firstTransaction.transactiondate);
       final notes = firstTransaction.remarks;
       final paymentMode = firstTransaction.paymentmode;
+      final reference = firstTransaction.purchaseordernumber ?? '';
 
-      String cashierName = 'Cashier';
+      String staffName = 'Staff';
       final currentUser = authController.currentUser.value;
       if (currentUser != null) {
-        cashierName = currentUser.staff ?? currentUser.name ?? 'Cashier';
+        staffName = currentUser.staff ?? currentUser.name ?? 'Staff';
       }
 
       // Calculate totals
@@ -763,112 +822,58 @@ class _SalesListingState extends State<SalesListing> {
         amountPaid += transaction.amountpaid;
       }
       final balance = totalAmount - amountPaid;
-
-      // Check if amount paid is 0 or null to determine print type
       final bool isUnpaid = amountPaid == 0 || amountPaid.isNaN;
-      
-      // Show print options dialog
-      await Get.dialog(
-        AlertDialog(
-          title: Text('Print Options'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.print, color: Colors.blue),
-                title: Text(isUnpaid ? 'Print Bill' : 'Print Receipt'),
-                subtitle: Text('Print to connected printer'),
-                onTap: () async {
-                  Get.back();
-                  try {
-                    if (isUnpaid) {
-                      await PrintService.printBill(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    } else {
-                      await PrintService.printReceipt(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        amountPaid: amountPaid,
-                        balance: balance,
-                        paymentMode: paymentMode,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    }
-                  } catch (e) {
-                    Get.snackbar(
-                      'Print Error',
-                      'Failed to print',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red.shade700,
-                      colorText: Colors.white,
-                    );
-                  }
-                },
-              ),
-              Divider(),
-              ListTile(
-                leading: Icon(Icons.share, color: Colors.green),
-                title: Text(isUnpaid ? 'Share Bill PDF' : 'Share Receipt PDF'),
-                subtitle: Text('Share as PDF file'),
-                onTap: () async {
-                  Get.back();
-                  try {
-                    if (isUnpaid) {
-                      await PrintService.shareBill(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    } else {
-                      await PrintService.shareReceipt(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        amountPaid: amountPaid,
-                        balance: balance,
-                        paymentMode: paymentMode,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    }
-                  } catch (e) {
-                    Get.snackbar(
-                      'Share Error',
-                      'Failed to share',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red.shade700,
-                      colorText: Colors.white,
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text('Cancel'),
-            ),
-          ],
-        ),
-      );
+
+      switch (option) {
+        case 'bill_receipt':
+          if (isUnpaid) {
+            await PrintService.printBill(
+              receiptNumber: receiptNumber,
+              customerName: customerName,
+              date: date,
+              items: saleTransactions,
+              totalAmount: totalAmount,
+              issuedBy: staffName,
+              notes: notes.isNotEmpty ? notes : null,
+            );
+          } else {
+            await PrintService.printReceipt(
+              receiptNumber: receiptNumber,
+              customerName: customerName,
+              date: date,
+              items: saleTransactions,
+              totalAmount: totalAmount,
+              amountPaid: amountPaid,
+              balance: balance,
+              paymentMode: paymentMode,
+              issuedBy: staffName,
+              notes: notes.isNotEmpty ? notes : null,
+            );
+          }
+          break;
+
+        case 'kot':
+          await PrintService.printKot(
+            receiptNumber: receiptNumber,
+            date: date,
+            items: saleTransactions,
+            issuedBy: staffName,
+            notes: notes.isNotEmpty ? notes : null,
+            tableNumber: reference.isNotEmpty ? reference : null,
+          );
+          break;
+
+        case 'bot':
+          await PrintService.printBot(
+            receiptNumber: receiptNumber,
+            date: date,
+            items: saleTransactions,
+            issuedBy: staffName,
+            notes: notes.isNotEmpty ? notes : null,
+            tableNumber: reference.isNotEmpty ? reference : null,
+          );
+          break;
+      }
     } catch (e) {
       // Close loading dialog if still open
       if (Get.isDialogOpen ?? false) {
@@ -876,8 +881,8 @@ class _SalesListingState extends State<SalesListing> {
       }
 
       Get.snackbar(
-        'Error',
-        'Failed to prepare receipt: $e',
+        'Print Error',
+        'Failed to print: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade700,
         colorText: Colors.white,

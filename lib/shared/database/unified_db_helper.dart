@@ -7,13 +7,7 @@ import '../../back_pos/models/sale_transaction.dart';
 import '../../back_pos/models/customer.dart';
 
 /// Unified Database Helper that combines POS and Monitor databases
-///
-/// Tables from POS (unchanged):
-/// - user, service_point, inventory, sales_transactions,
-///   cash_accounts, customers, sync_metadata, server_sales
-///
-/// Tables from Monitor (prefixed with mon_):
-/// - mon_service_points, company_details, mon_sales, mon_inventory
+
 class UnifiedDatabaseHelper {
   static final UnifiedDatabaseHelper _instance = UnifiedDatabaseHelper._internal();
 
