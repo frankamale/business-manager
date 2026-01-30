@@ -889,5 +889,4 @@ class MonitorApiService extends GetxService {
   Future<void> clearInitialSyncFlag() async {
     await secureStorage.delete(key: 'initial_sync_completed');
   }
-
 }
