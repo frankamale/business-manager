@@ -15,7 +15,9 @@ import 'payment_screen.dart';
 import 'settle_bill_screen.dart';
 
 class SalesListing extends StatefulWidget {
-  const SalesListing({super.key});
+  final ServicePoint? servicePoint;
+
+  const SalesListing({super.key, this.servicePoint});
 
   @override
   State<SalesListing> createState() => _SalesListingState();
@@ -33,8 +35,8 @@ class _SalesListingState extends State<SalesListing> {
   @override
   void initState() {
     super.initState();
-    // Load sales from cache when screen opens
-    salesController.loadSalesFromCache();
+    // Load sales from cache when screen opens, filtered by service point
+    salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
     filteredSales.assignAll(salesController.groupedSales);
     searchController.addListener(_filterSales);
 
@@ -220,7 +222,7 @@ class _SalesListingState extends State<SalesListing> {
     });
 
     // Refresh the sales list
-    await salesController.loadSalesFromCache();
+    await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
 
     // Show summary dialog
     Get.dialog(
@@ -290,7 +292,7 @@ class _SalesListingState extends State<SalesListing> {
 
     // Allow cashiers or if setting is enabled, also allow waiters
     return role == 'cashier' || role.toLowerCase().contains('cashier') || role.toLowerCase().contains('salesperson') ||
-           (allowAllUsersPayment && role == 'waiter');
+           (allowAllUsersPayment );
   }
 
   @override
@@ -1012,7 +1014,7 @@ class _SalesListingState extends State<SalesListing> {
              transition: Transition.rightToLeft,
            );
 
-           await salesController.loadSalesFromCache();
+           await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
          } else {
            // For non-uploaded sales, use the old flow
            try {
@@ -1131,7 +1133,7 @@ class _SalesListingState extends State<SalesListing> {
                transition: Transition.rightToLeft,
              );
 
-             await salesController.loadSalesFromCache();
+             await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
            } catch (e) {
              if (Get.isDialogOpen ?? false) {
                Get.back();
@@ -1225,9 +1227,9 @@ class _SalesListingState extends State<SalesListing> {
       // Get salesperson ID directly from first transaction
       final salespersonId = firstTransaction.salespersonid;
 
-      final servicePointController = Get.find<ServicePointController>();
-      ServicePoint? servicePoint;
-      if (firstTransaction.servicepointid != null) {
+      ServicePoint? servicePoint = widget.servicePoint;
+      if (servicePoint == null && firstTransaction.servicepointid != null) {
+        final servicePointController = Get.find<ServicePointController>();
         servicePoint = servicePointController.getServicePointById(firstTransaction.servicepointid!);
       }
 
@@ -1304,7 +1306,7 @@ class _SalesListingState extends State<SalesListing> {
         transition: Transition.rightToLeft,
       );
 
-      await salesController.loadSalesFromCache();
+      await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
     } catch (e) {
       if (Get.isDialogOpen ?? false) {
         Get.back();

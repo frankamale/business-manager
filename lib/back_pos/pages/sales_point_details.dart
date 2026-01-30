@@ -63,7 +63,7 @@ class SalesPointDetails extends StatelessWidget {
                 _actionButton(
                   "VIEW SALE ORDERS/BILLS",
                   Icons.list,
-                  SalesListing(),
+                  SalesListing(servicePoint: servicePoint),
                 ),
                 _actionButton(
                   "DAILY SUMMARY",

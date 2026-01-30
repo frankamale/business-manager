@@ -774,9 +774,14 @@ class UnifiedDatabaseHelper {
     await batch.commit(noResult: true);
   }
 
-  Future<List<SaleTransaction>> getSaleTransactions() async {
+  Future<List<SaleTransaction>> getSaleTransactions({String? servicePointId}) async {
     final db = database;
-    final maps = await db.query('sales_transactions', orderBy: 'transactiondate DESC');
+    final maps = await db.query(
+      'sales_transactions',
+      where: servicePointId != null ? 'servicepointid = ?' : null,
+      whereArgs: servicePointId != null ? [servicePointId] : null,
+      orderBy: 'transactiondate DESC',
+    );
     return maps.map((map) => SaleTransaction.fromMap(map)).toList();
   }
 
@@ -786,8 +791,10 @@ class UnifiedDatabaseHelper {
     return maps.map((map) => SaleTransaction.fromMap(map)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getGroupedSales() async {
+  Future<List<Map<String, dynamic>>> getGroupedSales({String? servicePointId}) async {
     final db = database;
+    final whereClause = servicePointId != null ? 'WHERE servicepointid = ?' : '';
+    final whereArgs = servicePointId != null ? [servicePointId] : <dynamic>[];
     return await db.rawQuery('''
       SELECT
         salesId,
@@ -808,9 +815,10 @@ class UnifiedDatabaseHelper {
         uploaded_at,
         upload_error
       FROM sales_transactions
+      $whereClause
       GROUP BY salesId
       ORDER BY transactiondate DESC
-    ''');
+    ''', whereArgs);
   }
 
   Future<List<SaleTransaction>> getSaleTransactionsByDateRange(int startDate, int endDate) async {
