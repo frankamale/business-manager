@@ -1,3 +1,4 @@
+import 'package:bac_pos/back_pos/pages/sales_listing.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -195,6 +196,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
           );
         }
       }
+      Get.to(SalesListing());
+
     } catch (e) {
       // Handle errors
       Get.snackbar(

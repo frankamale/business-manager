@@ -724,7 +724,7 @@ class _SalesListingState extends State<SalesListing> {
                     SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        uploadError,
+                        "Internet Error",
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.red.shade700,
