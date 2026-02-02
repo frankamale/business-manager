@@ -11,6 +11,7 @@ import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
 import '../back_pos/controllers/inventory_controller.dart';
+import '../client/auth/register.dart';
 import 'app_roots.dart';
 
 class UnifiedLoginScreen extends StatefulWidget {
@@ -101,8 +102,11 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           final roles = userData['roles'] as List<dynamic>?;
 
           // Determine if user is admin (monitor) or regular POS user
-          final isAdmin = roles != null &&
-              roles.any((role) => role.toString().toLowerCase().contains("admin"));
+          final isAdmin =
+              roles != null &&
+              roles.any(
+                (role) => role.toString().toLowerCase().contains("admin"),
+              );
           final targetSystem = isAdmin ? 'monitor' : 'pos';
 
           // Update account with correct system if needed
@@ -119,11 +123,20 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           }
 
           // Fire-and-forget: Store credentials for auto-fill (non-blocking)
-          _storeCredentialsSecurely(_usernameController.text, _passwordController.text);
+          _storeCredentialsSecurely(
+            _usernameController.text,
+            _passwordController.text,
+          );
 
           // Sync to monitor service if admin - MUST await for account switching to work
           if (isAdmin) {
-            await _syncToMonitorServiceAsync(token, companyId, userData, _usernameController.text, _passwordController.text);
+            await _syncToMonitorServiceAsync(
+              token,
+              companyId,
+              userData,
+              _usernameController.text,
+              _passwordController.text,
+            );
           }
 
           if (isAdmin) {
@@ -147,7 +160,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         }
       } catch (e) {
         setState(() {
-          _errorMessage = 'Network error: Please check your internet connection and try again.';
+          _errorMessage =
+              'Network error: Please check your internet connection and try again.';
         });
       } finally {
         setState(() {
@@ -158,7 +172,13 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   }
 
   /// Sync to monitor service - awaitable version for critical path
-  Future<void> _syncToMonitorServiceAsync(String token, String companyId, Map<String, dynamic> userData, String username, String password) async {
+  Future<void> _syncToMonitorServiceAsync(
+    String token,
+    String companyId,
+    Map<String, dynamic> userData,
+    String username,
+    String password,
+  ) async {
     await Future.wait([
       _monitorApiService.storeToken(token),
       _monitorApiService.storeCompanyId(companyId),
@@ -396,15 +416,12 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           ),
 
                           if (_errorMessage != null)
-
                             Text(
-
                               _errorMessage!,
 
                               style: TextStyle(color: Colors.red),
 
                               textAlign: TextAlign.center,
-
                             ),
 
                           const SizedBox(height: 12),
@@ -445,6 +462,30 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                       ),
                                     ),
                             ),
+                          ),
+                          SizedBox(height: 5),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                "New Customer?",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade800,
+                                ),
+                              ),
+                              SizedBox(width: 20),
+                              GestureDetector(
+                                onTap: () => Get.to(Register()),
+                                child: Text(
+                                  "register here",
+                                  style: TextStyle(
+                                    color: Colors.blue,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 24),
 
