@@ -12,6 +12,7 @@ import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
 import '../back_pos/controllers/inventory_controller.dart';
 import '../client/auth/register.dart';
+import '../shared/services/customer_auth_service.dart';
 import 'app_roots.dart';
 
 class UnifiedLoginScreen extends StatefulWidget {
@@ -29,6 +30,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.find<AuthController>();
+  final CustomerAuthService _customerAuthService = CustomerAuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
@@ -80,6 +82,11 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
   }
 
+  /// Check if password is purely numeric (customer PIN)
+  bool _isNumericPassword(String password) {
+    return password.isNotEmpty && RegExp(r'^\d+$').hasMatch(password);
+  }
+
   Future<void> _handleLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -88,85 +95,146 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       });
 
       try {
-        // Authenticate user - returns all needed data so we don't re-read
-        final loginResult = await _authController.serverLogin(
-          _usernameController.text,
-          _passwordController.text,
-        );
+        final password = _passwordController.text;
 
-        if (loginResult != null) {
-          // Extract data from login result (no storage reads needed)
-          final companyId = loginResult['companyId'] as String;
-          final token = loginResult['token'] as String;
-          final userData = loginResult['userData'] as Map<String, dynamic>;
-          final roles = userData['roles'] as List<dynamic>?;
-
-          // Determine if user is admin (monitor) or regular POS user
-          final isAdmin =
-              roles != null &&
-              roles.any(
-                (role) => role.toString().toLowerCase().contains("admin"),
-              );
-          final targetSystem = isAdmin ? 'monitor' : 'pos';
-
-          // Update account with correct system if needed
-          final currentAccount = _accountManager.currentAccount.value;
-          if (currentAccount != null && currentAccount.system != targetSystem) {
-            final updatedAccount = UserAccount(
-              id: currentAccount.id,
-              username: currentAccount.username,
-              system: targetSystem,
-              userData: {...currentAccount.userData, 'companyId': companyId},
-              lastLogin: DateTime.now(),
-            );
-            await _accountManager.setCurrentAccount(updatedAccount);
-          }
-
-          // Fire-and-forget: Store credentials for auto-fill (non-blocking)
-          _storeCredentialsSecurely(
-            _usernameController.text,
-            _passwordController.text,
-          );
-
-          // Sync to monitor service if admin - MUST await for account switching to work
-          if (isAdmin) {
-            await _syncToMonitorServiceAsync(
-              token,
-              companyId,
-              userData,
-              _usernameController.text,
-              _passwordController.text,
-            );
-          }
-
-          if (isAdmin) {
-            // Initialize monitor controllers (fast in-memory operations)
-            if (!Get.isRegistered<MonDashboardController>()) {
-              Get.put(MonDashboardController());
-            }
-            if (!Get.isRegistered<MonOperatorController>()) {
-              Get.put(MonOperatorController());
-            }
-            if (!Get.isRegistered<MonStoresController>()) {
-              Get.put(MonStoresController());
-            }
-            if (!Get.isRegistered<InventoryController>()) {
-              Get.put(InventoryController());
-            }
-            Get.offAll(() => const MonitorAppRoot());
-          } else {
-            Get.offAll(() => const PosAppRoot());
-          }
+        if (_isNumericPassword(password)) {
+          // Customer authentication flow (numeric PIN)
+          await _handleCustomerLogin();
+        } else {
+          // Existing staff/admin authentication flow
+          await _handleStaffLogin();
         }
       } catch (e) {
         setState(() {
-          _errorMessage =
-              'Network error: Please check your internet connection and try again.';
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
         });
       } finally {
         setState(() {
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  /// Handle customer authentication with numeric PIN
+  Future<void> _handleCustomerLogin() async {
+    final identifier = _usernameController.text.trim();
+    final pin = _passwordController.text;
+
+    // Check if bot credentials are configured
+    if (!await _customerAuthService.hasBotCredentials()) {
+      throw Exception(
+        'Customer login not configured. Please contact administrator.',
+      );
+    }
+
+    // 1. Authenticate bot and get token
+    final botToken = await _customerAuthService.getBotToken();
+
+    // 2. Fetch customers (memory only - not persisted)
+    final customers = await _customerAuthService.fetchCustomers(botToken);
+
+    // 3. Find customer by email, phone, or posusername
+    final customer = _customerAuthService.findCustomerByIdentifier(
+      customers,
+      identifier,
+    );
+
+    if (customer == null) {
+      throw Exception(
+        'Customer not found. Please check your email or phone number.',
+      );
+    }
+
+    // 4. Check if customer account is enabled
+    if (customer.posenabled != true) {
+      throw Exception(
+        'Customer account is not enabled. Please contact support.',
+      );
+    }
+
+    // 5. Validate PIN using bcrypt
+    if (!_customerAuthService.validateCustomerPin(customer, pin)) {
+      throw Exception('Invalid PIN. Please try again.');
+    }
+
+    // 6. Store credentials for auto-fill (fire-and-forget)
+    _storeCredentialsSecurely(identifier, pin);
+
+    // 7. Route to Client app
+    Get.offAll(() => const ClientAppRoot());
+  }
+
+  /// Handle staff/admin authentication (existing flow)
+  Future<void> _handleStaffLogin() async {
+    // Authenticate user - returns all needed data so we don't re-read
+    final loginResult = await _authController.serverLogin(
+      _usernameController.text,
+      _passwordController.text,
+    );
+
+    if (loginResult != null) {
+      // Extract data from login result (no storage reads needed)
+      final companyId = loginResult['companyId'] as String;
+      final token = loginResult['token'] as String;
+      final userData = loginResult['userData'] as Map<String, dynamic>;
+      final roles = userData['roles'] as List<dynamic>?;
+
+      // Determine if user is admin (monitor) or regular POS user
+      final isAdmin =
+          roles != null &&
+          roles.any(
+            (role) => role.toString().toLowerCase().contains("admin"),
+          );
+      final targetSystem = isAdmin ? 'monitor' : 'pos';
+
+      // Update account with correct system if needed
+      final currentAccount = _accountManager.currentAccount.value;
+      if (currentAccount != null && currentAccount.system != targetSystem) {
+        final updatedAccount = UserAccount(
+          id: currentAccount.id,
+          username: currentAccount.username,
+          system: targetSystem,
+          userData: {...currentAccount.userData, 'companyId': companyId},
+          lastLogin: DateTime.now(),
+        );
+        await _accountManager.setCurrentAccount(updatedAccount);
+      }
+
+      // Fire-and-forget: Store credentials for auto-fill (non-blocking)
+      _storeCredentialsSecurely(
+        _usernameController.text,
+        _passwordController.text,
+      );
+
+      // Sync to monitor service if admin - MUST await for account switching to work
+      if (isAdmin) {
+        await _syncToMonitorServiceAsync(
+          token,
+          companyId,
+          userData,
+          _usernameController.text,
+          _passwordController.text,
+        );
+      }
+
+      if (isAdmin) {
+        // Initialize monitor controllers (fast in-memory operations)
+        if (!Get.isRegistered<MonDashboardController>()) {
+          Get.put(MonDashboardController());
+        }
+        if (!Get.isRegistered<MonOperatorController>()) {
+          Get.put(MonOperatorController());
+        }
+        if (!Get.isRegistered<MonStoresController>()) {
+          Get.put(MonStoresController());
+        }
+        if (!Get.isRegistered<InventoryController>()) {
+          Get.put(InventoryController());
+        }
+        Get.offAll(() => const MonitorAppRoot());
+      } else {
+        Get.offAll(() => const PosAppRoot());
       }
     }
   }

@@ -21,6 +21,7 @@ import 'back_pos/services/sales_sync_service.dart';
 import 'back_pos/config.dart';
 import 'initialise/unified_login_screen.dart';
 import 'initialise/splashscreen.dart';
+import 'shared/services/customer_auth_service.dart';
 // Monitor Module imports
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
@@ -37,6 +38,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
+  // Initialize bot credentials from dart-define to secure storage
+  final customerAuthService = CustomerAuthService();
+  await customerAuthService.initBotCredentials();
 
   // POS Services
   Get.put(PosApiService());
