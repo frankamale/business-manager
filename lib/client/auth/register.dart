@@ -1,101 +1,22 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:uuid/uuid.dart';
+import 'package:get/get.dart';
 
 import '../../back_pos/config.dart';
+import '../controllers/register_controller.dart';
 
-class Register extends StatefulWidget {
+class Register extends StatelessWidget {
   Register({super.key});
 
-  @override
-  State<Register> createState() => _RegisterState();
-}
-
-class _RegisterState extends State<Register> {
-  final _formKey = GlobalKey<FormState>();
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController addressController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController challengeCodeController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
-  final TextEditingController tinController = TextEditingController();
-
-  bool _loading = false;
-  String _generatedCode = '';
-  String _userId = '';
-
-  String _generateRandomCode() {
-    final random = Random();
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const digits = '0123456789';
-
-    String letterPart = List.generate(3, (_) => letters[random.nextInt(letters.length)]).join();
-    String numberPart = List.generate(6, (_) => digits[random.nextInt(digits.length)]).join();
-
-    return '$letterPart-$numberPart';
-  }
-
-  Future<void> _generateChallengeCode() async {
-    if (emailController.text.isEmpty || nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your name and email first')),
-      );
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    _generatedCode = _generateRandomCode();
-    _userId = const Uuid().v4();
-
-    // Prefill the input with the letter prefix
-    final prefix = _generatedCode.substring(0, 4); // "ABC-"
-    challengeCodeController.text = prefix;
-
-    final uri = Uri.parse(
-      '${AppConfig.baseUrl}/getchallengecode/'
-      '?e=${Uri.encodeComponent(emailController.text)}'
-      '&f=${Uri.encodeComponent(nameController.text)}'
-      '&p=${Uri.encodeComponent(_generatedCode)}'
-      '&s=Account verification'
-      '&id=$_userId',
-    );
-
-    try {
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Challenge code sent to your email')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send code: ${response.statusCode}')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    } finally {
-      setState(() => _loading = false);
-    }
-  }
+  final RegisterController controller = Get.put(RegisterController());
 
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
-
-    void _registerAccount() {}
-
     final bool isSmallScreen = size.width < 600;
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: Scaffold(
         body: SafeArea(
           child: Container(
@@ -110,7 +31,6 @@ class _RegisterState extends State<Register> {
                 ],
               ),
             ),
-
             child: Center(
               widthFactor: double.infinity,
               child: SingleChildScrollView(
@@ -124,15 +44,14 @@ class _RegisterState extends State<Register> {
                   ),
                   child: Card(
                     elevation: 12,
-                    shadowColor: Colors.black.withOpacity(0.3),
+                    shadowColor: Colors.black.withValues(alpha: 0.3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),
                     child: Padding(
                       padding: EdgeInsets.all(isSmallScreen ? 32.0 : 48.0),
-
                       child: Form(
-                        key: _formKey,
+                        key: controller.formKey,
                         child: Column(
                           children: [
                             Hero(
@@ -165,91 +84,160 @@ class _RegisterState extends State<Register> {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            SizedBox(height: 15),
+                            const SizedBox(height: 15),
                             _TextField(
                               "Full Name",
-                              nameController,
+                              controller.nameController,
                               Icons.person_outline,
                             ),
-                            SizedBox(height: 15),
+                            const SizedBox(height: 15),
                             _TextField(
                               "Address",
-                              addressController,
+                              controller.addressController,
                               Icons.location_on_outlined,
                             ),
-                            SizedBox(height: 15),
-
-                            _NumberField(
-                              "Phone Number",
-                              phoneController,
-                              Icons.phone_outlined,
-                            ),
-                            SizedBox(height: 15),
-                            _TextField(
-                              "Email",
-                              emailController,
-                              Icons.email_outlined,
-                            ),
-                            SizedBox(height: 15),
-                            _TextField(
-                              "TIN",
-                              tinController,
-                              Icons.numbers_rounded,
-                            ),
-                            SizedBox(height: 15),
-
-                            //
-                            // _NumberField("Passcode", passwordController, Icons.lock_outline),
-                            // SizedBox(height: 15),
-                            //
-                            // _NumberField(
-                            //   "Confirm Passcode",
-                            //   confirmPasswordController,
-                            //   Icons.lock_outline,
-                            // ),
+                            const SizedBox(height: 15),
                             Row(
                               children: [
                                 Expanded(
                                   child: _NumberField(
-                                    "Challenge Code",
-                                    challengeCodeController,
-                                    Icons.qr_code_sharp,
+                                    "Phone Number",
+                                    controller.phoneController,
+                                    Icons.phone_outlined,
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                ElevatedButton(
-                                  onPressed: _loading ? null : _generateChallengeCode,
-                                  child: _loading
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        )
-                                      : const Text("Get Code"),
+                                SizedBox(
+                                  width: 130,
+                                  child: Obx(
+                                    () => DropdownButtonFormField<String>(
+                                      value: controller.selectedGender.value,
+                                      decoration: InputDecoration(
+                                        labelText: "Gender",
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: const BorderSide(color: Colors.blueGrey),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.blueGrey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.blue.shade700),
+                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(value: 'Male', child: Text('Male')),
+                                        DropdownMenuItem(value: 'Female', child: Text('Female')),
+                                      ],
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          controller.selectedGender.value = value;
+                                        }
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 25),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade700,
-                                  foregroundColor: Colors.white,
-                                  elevation: 4,
-                                  shadowColor: Colors.blue.withOpacity(0.5),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                            const SizedBox(height: 15),
+                            _TextField(
+                              "Email",
+                              controller.emailController,
+                              Icons.email_outlined,
+                            ),
+                            const SizedBox(height: 15),
+                            _TextField(
+                              "TIN",
+                              controller.tinController,
+                              Icons.numbers_rounded,
+                            ),
+                            const SizedBox(height: 15),
+                            _PasswordField(
+                              "Password",
+                              controller.passwordController,
+                              Icons.lock_outline,
+                            ),
+                            const SizedBox(height: 15),
+                            _PasswordField(
+                              "Confirm Password",
+                              controller.confirmPasswordController,
+                              Icons.lock_outline,
+                            ),
+                            const SizedBox(height: 15),
+                            Obx(
+                              () => Row(
+                                children: [
+                                  Expanded(
+                                    child: _TextField(
+                                      "Challenge Code",
+                                      controller.challengeCodeController,
+                                      Icons.qr_code_sharp,
+                                      enabled: controller.isCodeSent.value,
+                                    ),
                                   ),
-                                  disabledBackgroundColor: Colors.grey.shade300,
-                                ),
-                                onPressed: _loading ? null : _registerAccount,
-                                child: Text("Register Account"),
+                                  const SizedBox(width: 10),
+                                  ElevatedButton(
+                                    onPressed: controller.isLoading.value
+                                        ? null
+                                        : () => controller
+                                              .generateChallengeCode(),
+                                    child: controller.isLoading.value
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Text("Get Code"),
+                                  ),
+                                ],
                               ),
                             ),
-
+                            const SizedBox(height: 25),
+                            Obx(
+                              () => SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue.shade700,
+                                    foregroundColor: Colors.white,
+                                    elevation: 4,
+                                    shadowColor: Colors.blue.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    disabledBackgroundColor:
+                                        Colors.grey.shade300,
+                                  ),
+                                  onPressed: controller.isLoading.value
+                                      ? null
+                                      : () async {
+                                          final success = await controller
+                                              .registerAccount();
+                                          if (success) {
+                                            Get.back();
+                                          }
+                                        },
+                                  child: controller.isLoading.value
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text("Register Account"),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 24),
-
                             // Footer
                             Row(
                               children: [
@@ -302,18 +290,51 @@ class _RegisterState extends State<Register> {
 
   Widget _TextField(
     String label,
-    TextEditingController controller,
-    IconData icon,
-  ) {
+    TextEditingController textController,
+    IconData icon, {
+    bool enabled = true,
+  }) {
     return TextFormField(
-      controller: controller,
+      controller: textController,
+      enabled: enabled,
       keyboardType: TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.blue.shade900),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey),
+          borderSide: const BorderSide(color: Colors.blueGrey),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.blueGrey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.blue.shade700),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+    );
+  }
+
+  Widget _NumberField(
+    String label,
+    TextEditingController textController,
+    IconData icon,
+  ) {
+    return TextFormField(
+      controller: textController,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Colors.blue.shade900),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.blueGrey),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -327,20 +348,21 @@ class _RegisterState extends State<Register> {
     );
   }
 
-  Widget _NumberField(
+  Widget _PasswordField(
     String label,
-    TextEditingController controller,
+    TextEditingController textController,
     IconData icon,
   ) {
     return TextFormField(
-      controller: controller,
+      controller: textController,
       keyboardType: TextInputType.number,
+      obscureText: true,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.blue.shade900),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey),
+          borderSide: const BorderSide(color: Colors.blueGrey),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
