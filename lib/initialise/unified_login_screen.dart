@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:get_storage/get_storage.dart';
 
 import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
@@ -128,13 +129,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       );
     }
 
-    // 1. Authenticate bot and get token
     final botToken = await _customerAuthService.getBotToken();
 
-    // 2. Fetch customers (memory only - not persisted)
     final customers = await _customerAuthService.fetchCustomers(botToken);
 
-    // 3. Find customer by email, phone, or posusername
     final customer = _customerAuthService.findCustomerByIdentifier(
       customers,
       identifier,
@@ -158,10 +156,14 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       throw Exception('Invalid PIN. Please try again.');
     }
 
-    // 6. Store credentials for auto-fill (fire-and-forget)
+    // 6. Store customer data in GetStorage
+    final box = GetStorage();
+    await box.write('logged_in_customer', customer.toMap());
+    await box.write('is_customer_logged_in', true);
+
+    // 7. Store credentials for auto-fill (fire-and-forget)
     _storeCredentialsSecurely(identifier, pin);
 
-    // 7. Route to Client app
     Get.offAll(() => const ClientAppRoot());
   }
 
