@@ -140,7 +140,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
     if (customer == null) {
       throw Exception(
-        'Customer not found. Please check your email or phone number.',
+        'Wrong Username or Password. Please try again.',
       );
     }
 
