@@ -1,7 +1,5 @@
-
-
 class AppConfig {
-// authentication credentials
+  // authentication credentials
   static const String baseUrl = "http://52.30.142.12:8080/rest";
   static const String description = "We serve with pride";
 
@@ -15,7 +13,6 @@ class AppConfig {
 
   /// Copyright text
   static const String copyright = '© 2025 Komusoft Solutions';
-
 
   /// Primary color theme (used in gradients and branding)
   static const int primaryColorValue = 0xFF1976D2; // Blue shade 700
@@ -33,7 +30,6 @@ class AppConfig {
 
   /// Retry delay for failed connections (seconds)
   static const int retryDelaySeconds = 3;
-
 
   /// Enable/disable offline mode capabilities
   static const bool enableOfflineMode = true;

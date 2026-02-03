@@ -115,26 +115,49 @@ class Register extends StatelessWidget {
                                       decoration: InputDecoration(
                                         labelText: "Gender",
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: const BorderSide(color: Colors.blueGrey),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: const BorderSide(
+                                            color: Colors.blueGrey,
+                                          ),
                                         ),
                                         enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide(color: Colors.blueGrey.shade300),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Colors.blueGrey.shade300,
+                                          ),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(12),
-                                          borderSide: BorderSide(color: Colors.blue.shade700),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Colors.blue.shade700,
+                                          ),
                                         ),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 16,
+                                            ),
                                       ),
                                       items: const [
-                                        DropdownMenuItem(value: 'Male', child: Text('Male')),
-                                        DropdownMenuItem(value: 'Female', child: Text('Female')),
+                                        DropdownMenuItem(
+                                          value: 'Male',
+                                          child: Text('Male'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'Female',
+                                          child: Text('Female'),
+                                        ),
                                       ],
                                       onChanged: (value) {
                                         if (value != null) {
-                                          controller.selectedGender.value = value;
+                                          controller.selectedGender.value =
+                                              value;
                                         }
                                       },
                                     ),
@@ -180,6 +203,10 @@ class Register extends StatelessWidget {
                                   ),
                                   const SizedBox(width: 10),
                                   ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade700,
+
+                                    ),
                                     onPressed: controller.isLoading.value
                                         ? null
                                         : () => controller
@@ -192,7 +219,12 @@ class Register extends StatelessWidget {
                                               strokeWidth: 2,
                                             ),
                                           )
-                                        : const Text("Get Code"),
+                                        : const Text(
+                                            "Get Code",
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                   ),
                                 ],
                               ),
