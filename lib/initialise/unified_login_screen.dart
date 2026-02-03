@@ -156,10 +156,11 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       throw Exception('Invalid PIN. Please try again.');
     }
 
-    // 6. Store customer data in GetStorage
+    // 6. Store customer data in GetStorage for offline usage
     final box = GetStorage();
     await box.write('logged_in_customer', customer.toMap());
     await box.write('is_customer_logged_in', true);
+    await box.write('customer_login_timestamp', DateTime.now().millisecondsSinceEpoch);
 
     // 7. Store credentials for auto-fill (fire-and-forget)
     _storeCredentialsSecurely(identifier, pin);

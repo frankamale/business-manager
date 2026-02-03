@@ -3,6 +3,7 @@ import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:get_storage/get_storage.dart';
 import '../back_pos/utils/network_helper.dart';
 import 'app_roots.dart';
 import 'unified_login_screen.dart';
@@ -41,10 +42,24 @@ class ConnectivityController extends GetxController {
     super.onClose();
   }
 
+  // Session timeout for customers (48 hours in milliseconds)
+  static const int _customerSessionTimeout = 48 * 60 * 60 * 1000;
+
   Future<void> checkConnectivity() async {
     isLoading.value = true;
     hasError.value = false;
     _retryTimer?.cancel();
+
+    // Check for customer session first (works offline)
+    final customerSession = await _checkCustomerSession();
+    if (customerSession == 'valid') {
+      // Customer session is valid, go to client home
+      Get.offAll(() => const ClientAppRoot());
+      return;
+    } else if (customerSession == 'expired') {
+      // Session expired, continue to login
+      debugPrint('SplashScreen: Customer session expired after 48 hours');
+    }
 
     try {
       bool hasConnection = await NetworkHelper.hasConnection();
@@ -112,6 +127,48 @@ class ConnectivityController extends GetxController {
     _retryTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       checkConnectivity();
     });
+  }
+
+  /// Check customer session validity
+  /// Returns: 'valid' if logged in and not expired, 'expired' if session timed out, 'none' if not logged in
+  Future<String> _checkCustomerSession() async {
+    try {
+      final box = GetStorage();
+      final isCustomerLoggedIn = box.read('is_customer_logged_in') ?? false;
+
+      if (!isCustomerLoggedIn) {
+        return 'none';
+      }
+
+      final loginTimestamp = box.read('customer_login_timestamp');
+      if (loginTimestamp == null) {
+        // No timestamp, clear session and require re-login
+        await _clearCustomerSession(box);
+        return 'expired';
+      }
+
+      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      final elapsed = currentTime - loginTimestamp;
+
+      if (elapsed > _customerSessionTimeout) {
+        // Session expired (48 hours passed)
+        await _clearCustomerSession(box);
+        return 'expired';
+      }
+
+      // Session is valid
+      return 'valid';
+    } catch (e) {
+      debugPrint('SplashScreen: Error checking customer session - $e');
+      return 'none';
+    }
+  }
+
+  /// Clear customer session data
+  Future<void> _clearCustomerSession(GetStorage box) async {
+    await box.remove('logged_in_customer');
+    await box.remove('is_customer_logged_in');
+    await box.remove('customer_login_timestamp');
   }
 
   Future<Map<String, String?>> _getStoredCredentials() async {
