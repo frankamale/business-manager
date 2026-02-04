@@ -27,6 +27,7 @@ class ClientHome extends StatelessWidget {
         elevation: 0,
         actions: [
           PopupMenuButton<String>(
+
             icon: const Icon(Icons.more_vert),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -47,7 +48,11 @@ class ClientHome extends StatelessWidget {
                 value: 'reset_password',
                 child: Row(
                   children: [
-                    Icon(Icons.lock_reset, color: Colors.blue.shade700, size: 20),
+                    Icon(
+                      Icons.lock_reset,
+                      color: Colors.blue.shade700,
+                      size: 15,
+                    ),
                     const SizedBox(width: 12),
                     const Text('Reset Passcode'),
                   ],
@@ -58,9 +63,12 @@ class ClientHome extends StatelessWidget {
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, color: Colors.red.shade600, size: 20),
+                    Icon(Icons.logout, color: Colors.red.shade600, size: 15),
                     const SizedBox(width: 12),
-                    Text('Logout', style: TextStyle(color: Colors.red.shade600)),
+                    Text(
+                      'Logout',
+                      style: TextStyle(color: Colors.red.shade600),
+                    ),
                   ],
                 ),
               ),
@@ -214,8 +222,6 @@ class ClientHome extends StatelessWidget {
     }
     return 'C';
   }
-
-
 
   Widget _buildInfoCard({
     required IconData icon,
