@@ -9,6 +9,15 @@ android {
     namespace = "com.example.bac_pos"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
+    flavorDimensions += "company"
+
+    productFlavors {
+        create("komusoft"){
+            dimension = "company"
+            applicationId = "com.komusoft.businessmanager"
+            resValue("string", "app_name", "Business Manager")
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

@@ -1,12 +1,14 @@
+import 'package:bac_pos/flavors/flavor_config.dart';
+
 class AppConfig {
   // authentication credentials
   static const String baseUrl = "http://52.30.142.12:8080/rest";
   static const String description = "We serve with pride";
 
-  static const String appName = 'Business Manager';
+  static const String appName = FlavorConfig.appName;
 
   /// Company name displayed in the splash screen
-  static const String companyName = 'Komusoft Solutions';
+  static const String companyName = FlavorConfig.companyName;
 
   /// Edition/version info
   static const String edition = 'Uganda Edition';
