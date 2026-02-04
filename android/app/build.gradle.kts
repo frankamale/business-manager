@@ -18,6 +18,13 @@ android {
             resValue("string", "app_name", "Business Manager")
         }
     }
+    productFlavors {
+        create("sassy"){
+            dimension = "company"
+            applicationId = "com.sassy.businessmanager"
+            resValue("string", "app_name", "Sassy Dry Cleaners")
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
