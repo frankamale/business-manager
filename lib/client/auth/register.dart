@@ -10,6 +10,7 @@ class Register extends StatelessWidget {
   Register({super.key});
 
   final RegisterController controller = Get.put(RegisterController());
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +18,6 @@ class Register extends StatelessWidget {
     final bool isSmallScreen = size.width < 600;
 
     return Scaffold(
-
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -51,7 +51,7 @@ class Register extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.all(isSmallScreen ? 32.0 : 48.0),
                     child: Form(
-                      key: controller.formKey,
+                      key: _formKey,
                       child: Column(
                         children: [
                           Hero(

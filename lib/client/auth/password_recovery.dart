@@ -88,7 +88,7 @@ class PasswordRecovery extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          "Enter your email or phone number to find your account",
+          "Enter your email or phone number to continue",
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),

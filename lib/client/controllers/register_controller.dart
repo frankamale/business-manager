@@ -18,8 +18,6 @@ class RegisterController extends GetxController {
   final confirmPasswordController = TextEditingController();
   final challengeCodeController = TextEditingController();
 
-  final formKey = GlobalKey<FormState>();
-
   var isLoading = false.obs;
   var isCodeSent = false.obs;
   var selectedGender = 'Male'.obs;

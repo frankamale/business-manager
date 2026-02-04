@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../initialise/unified_login_screen.dart';
+import '../auth/reset_passcode.dart';
 
 class ClientHome extends StatelessWidget {
   const ClientHome({super.key});
@@ -25,9 +26,45 @@ class ClientHome extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _showLogoutDialog(context, box),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            offset: const Offset(0, 50),
+            onSelected: (value) {
+              switch (value) {
+                case 'reset_password':
+                  Get.to(() => ResetPasscode());
+                  break;
+                case 'logout':
+                  _showLogoutDialog(context, box);
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: 'reset_password',
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_reset, color: Colors.blue.shade700, size: 20),
+                    const SizedBox(width: 12),
+                    const Text('Reset Passcode'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.red.shade600, size: 20),
+                    const SizedBox(width: 12),
+                    Text('Logout', style: TextStyle(color: Colors.red.shade600)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
