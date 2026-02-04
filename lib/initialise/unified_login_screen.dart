@@ -139,9 +139,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     );
 
     if (customer == null) {
-      throw Exception(
-        'Wrong Username or Password. Please try again...',
-      );
+      throw Exception('Wrong Username or Password. Please try again...');
     }
 
     // 4. Check if customer account is enabled
@@ -160,7 +158,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     final box = GetStorage();
     await box.write('logged_in_customer', customer.toMap());
     await box.write('is_customer_logged_in', true);
-    await box.write('customer_login_timestamp', DateTime.now().millisecondsSinceEpoch);
+    await box.write(
+      'customer_login_timestamp',
+      DateTime.now().millisecondsSinceEpoch,
+    );
 
     // 7. Store credentials for auto-fill (fire-and-forget)
     _storeCredentialsSecurely(identifier, pin);
@@ -186,9 +187,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       // Determine if user is admin (monitor) or regular POS user
       final isAdmin =
           roles != null &&
-          roles.any(
-            (role) => role.toString().toLowerCase().contains("admin"),
-          );
+          roles.any((role) => role.toString().toLowerCase().contains("admin"));
       final targetSystem = isAdmin ? 'monitor' : 'pos';
 
       // Update account with correct system if needed
@@ -242,7 +241,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
   }
 
-  /// Sync to monitor service - awaitable version for critical path
+  /// Sync to monitor service
   Future<void> _syncToMonitorServiceAsync(
     String token,
     String companyId,
@@ -499,7 +498,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           // Sign In Button
                           SizedBox(
                             width: double.infinity,
-                            height: 56,
+                            height: 50,
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
@@ -534,30 +533,34 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                     ),
                             ),
                           ),
-                          SizedBox(height: 5),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                "New Customer?",
+                          SizedBox(height: 20),
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: () => Get.to(Register()),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade700,
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                                shadowColor: Colors.blue.withOpacity(0.5),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                disabledBackgroundColor: Colors.grey.shade300,
+                              ),
+                              child: const Text(
+                                'Register Account',
                                 style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade800,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
-                              SizedBox(width: 20),
-                              GestureDetector(
-                                onTap: () => Get.to(Register()),
-                                child: Text(
-                                  "register here",
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
+
                           const SizedBox(height: 24),
 
                           // Footer
