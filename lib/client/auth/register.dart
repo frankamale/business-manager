@@ -62,110 +62,145 @@ class Register extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          Text(
-                            "Register Customer Account",
-                            style: TextStyle(
-                              fontSize: 25,
-                              fontWeight: FontWeight.bold,
+                        Text(
+                              textAlign: TextAlign.center,
+                              "Register Account",
+                              style: TextStyle(
+
+                                fontSize: 25,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
+
                           const SizedBox(height: 15),
                           _TextField(
-                            "Full Name",
+                            "Full Name *",
                             controller.nameController,
                             Icons.person_outline,
-                          ),
-                          const SizedBox(height: 15),
-                          _TextField(
-                            "Address",
-                            controller.addressController,
-                            Icons.location_on_outlined,
                           ),
                           const SizedBox(height: 15),
                           Row(
                             children: [
                               Expanded(
                                 child: _NumberField(
-                                  "Phone Number",
+                                  "Phone Number *",
                                   controller.phoneController,
                                   Icons.phone_outlined,
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              SizedBox(
-                                width: 130,
-                                child: Obx(
-                                  () => DropdownButtonFormField<String>(
-                                    value: controller.selectedGender.value,
-                                    decoration: InputDecoration(
-                                      labelText: "Gender",
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: const BorderSide(
-                                          color: Colors.blueGrey,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(
-                                          color: Colors.blueGrey.shade300,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                        borderSide: BorderSide(
-                                          color: Colors.blue.shade700,
-                                        ),
-                                      ),
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 16,
-                                          ),
-                                    ),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'Male',
-                                        child: Text('Male'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'Female',
-                                        child: Text('Female'),
-                                      ),
-                                    ],
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        controller.selectedGender.value = value;
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                           const SizedBox(height: 15),
                           _TextField(
-                            "Email",
+                            "Email *",
                             controller.emailController,
                             Icons.email_outlined,
                           ),
+
                           const SizedBox(height: 15),
-                          _TextField(
-                            "TIN",
-                            controller.tinController,
-                            Icons.numbers_rounded,
+
+                          // Advanced toggle
+                          Obx(
+                            () => InkWell(
+                              onTap: () {
+                                controller.showAdvanced.value =
+                                    !controller.showAdvanced.value;
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Advanced",
+                                    style: TextStyle(
+                                      color: Colors.blue.shade700,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  Icon(
+                                    controller.showAdvanced.value
+                                        ? Icons.expand_less
+                                        : Icons.expand_more,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 15),
-                          _PasswordField(
-                            "Passcode",
-                            controller.passwordController,
-                            Icons.lock_outline,
-                          ),
-                          const SizedBox(height: 15),
-                          _PasswordField(
-                            "Confirm Passcode",
-                            controller.confirmPasswordController,
-                            Icons.lock_outline,
+
+                          // Advanced fields
+                          Obx(
+                            () => controller.showAdvanced.value
+                                ? Column(
+                                    children: [
+                                      const SizedBox(height: 15),
+                                      _TextField(
+                                        "Address",
+                                        controller.addressController,
+                                        Icons.location_on_outlined,
+                                      ),
+                                      const SizedBox(height: 15),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: DropdownButtonFormField<String>(
+                                          value:
+                                              controller.selectedGender.value,
+                                          decoration: InputDecoration(
+                                            labelText: "Gender",
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: const BorderSide(
+                                                color: Colors.blueGrey,
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: Colors.blueGrey.shade300,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: Colors.blue.shade700,
+                                              ),
+                                            ),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 16,
+                                            ),
+                                          ),
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 'Male',
+                                              child: Text('Male'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 'Female',
+                                              child: Text('Female'),
+                                            ),
+                                          ],
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              controller.selectedGender.value =
+                                                  value;
+                                            }
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: 15),
+                                      _TextField(
+                                        "TIN",
+                                        controller.tinController,
+                                        Icons.numbers_rounded,
+                                      ),
+                                    ],
+                                  )
+                                : const SizedBox.shrink(),
                           ),
                           const SizedBox(height: 15),
                           Obx(
@@ -405,10 +440,7 @@ class Register extends StatelessWidget {
                 Text(
                   "Your account has been created successfully!",
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -419,10 +451,7 @@ class Register extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue.shade700,
-                      ),
+                      Icon(Icons.info_outline, color: Colors.blue.shade700),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
