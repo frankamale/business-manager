@@ -140,7 +140,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
     if (customer == null) {
       throw Exception(
-        'Wrong Username or Password. Please try again.',
+        'Wrong Username or Password. Please try again...',
       );
     }
 
