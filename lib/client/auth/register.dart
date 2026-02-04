@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../back_pos/config.dart';
+import '../../initialise/unified_login_screen.dart';
 import '../controllers/register_controller.dart';
 
 class Register extends StatelessWidget {
@@ -171,13 +172,13 @@ class Register extends StatelessWidget {
                           ),
                           const SizedBox(height: 15),
                           _PasswordField(
-                            "Password",
+                            "Passcode",
                             controller.passwordController,
                             Icons.lock_outline,
                           ),
                           const SizedBox(height: 15),
                           _PasswordField(
-                            "Confirm Password",
+                            "Confirm Passcode",
                             controller.confirmPasswordController,
                             Icons.lock_outline,
                           ),
@@ -241,7 +242,7 @@ class Register extends StatelessWidget {
                                         final success = await controller
                                             .registerAccount();
                                         if (success) {
-                                          Get.back();
+                                          _showPendingApprovalDialog(context);
                                         }
                                       },
                                 child: controller.isLoading.value
@@ -391,6 +392,109 @@ class Register extends StatelessWidget {
           borderSide: BorderSide(color: Colors.blue.shade700),
         ),
       ),
+    );
+  }
+
+  void _showPendingApprovalDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.hourglass_top_rounded,
+                    size: 64,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "Registration Successful",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "Your account has been created successfully!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.blue.shade700,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          "Your account is pending approval. An administrator will review and activate your account shortly.",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Get.offAll(() => const UnifiedLoginScreen());
+                    },
+                    child: const Text(
+                      "Back to Login",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

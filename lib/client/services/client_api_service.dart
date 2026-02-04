@@ -3,9 +3,20 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../back_pos/config.dart';
+import '../../shared/services/customer_auth_service.dart';
 
 class ClientApiService {
   final String baseUrl = AppConfig.baseUrl;
+  final CustomerAuthService _customerAuthService = CustomerAuthService();
+
+  /// Get authorization headers with bot token
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await _customerAuthService.getBotToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
 
   /// Send challenge code to user's email
   /// Returns true if successful
@@ -25,10 +36,14 @@ class ClientApiService {
       '&id=$userId',
     );
 
-    final response = await http.get(uri);
+    final headers = await _getAuthHeaders();
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode == 200) {
       return json.decode(response.body);
+    } else if (response.statusCode == 401) {
+      await _customerAuthService.clearBotToken();
+      throw Exception('An error occurred');
     } else {
       throw Exception('Failed to send challenge code: ${response.statusCode}');
     }
@@ -47,10 +62,14 @@ class ClientApiService {
       '&s=${Uri.encodeComponent(subject)}',
     );
 
-    final response = await http.get(uri);
+    final headers = await _getAuthHeaders();
+    final response = await http.get(uri, headers: headers);
 
     if (response.statusCode == 200) {
       return json.decode(response.body);
+    } else if (response.statusCode == 401) {
+      await _customerAuthService.clearBotToken();
+      throw Exception('An error occurred');
     } else {
       throw Exception('Failed to reset password: ${response.statusCode}');
     }
@@ -89,14 +108,26 @@ class ClientApiService {
       'mode': 1,
     };
 
+    print('=== CREATE CUSTOMER REQUEST ===');
+    print('URL: $uri');
+    print('Body: ${json.encode(body)}');
+
+    final headers = await _getAuthHeaders();
     final response = await http.post(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: json.encode(body),
     );
 
+    print('=== CREATE CUSTOMER RESPONSE ===');
+    print('Status Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+
     if (response.statusCode == 200 || response.statusCode == 201) {
       return json.decode(response.body);
+    } else if (response.statusCode == 401) {
+      await _customerAuthService.clearBotToken();
+      throw Exception('An error occurred');
     } else {
       throw Exception('Failed to create customer: ${response.statusCode}');
     }

@@ -1,3 +1,4 @@
+import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -8,8 +9,9 @@ import '../controllers/password_recovery_controller.dart';
 class PasswordRecovery extends StatelessWidget {
   PasswordRecovery({super.key});
 
-  final PasswordRecoveryController controller =
-      Get.put(PasswordRecoveryController());
+  final PasswordRecoveryController controller = Get.put(
+    PasswordRecoveryController(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -82,19 +84,13 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           "Recover Your Account",
-          style: TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
           "Enter your email or phone number to find your account",
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 24),
         _buildTextField(
@@ -107,7 +103,9 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         _buildPrimaryButton(
           "Find Account",
-          controller.isLoading.value ? null : () => controller.lookupAndSendCode(),
+          controller.isLoading.value
+              ? null
+              : () => controller.lookupAndSendCode(),
         ),
         const SizedBox(height: 16),
         _buildBackToLoginButton(),
@@ -126,19 +124,13 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           "Verify Your Identity",
-          style: TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
           "Enter the verification code sent to your email",
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 24),
         _buildTextField(
@@ -151,11 +143,13 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         _buildPrimaryButton(
           "Verify Code",
-          controller.isLoading.value ? null : () {
-            if (controller.verifyChallengeCode()) {
-              // Code verified, controller will move to next step
-            }
-          },
+          controller.isLoading.value
+              ? null
+              : () {
+                  if (controller.verifyChallengeCode()) {
+                    // Code verified, controller will move to next step
+                  }
+                },
         ),
         const SizedBox(height: 12),
         Row(
@@ -189,19 +183,13 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           "Set New Passcode",
-          style: TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
           "Enter your new numeric passcode",
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 24),
         _buildPasswordField(
@@ -219,12 +207,15 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         _buildPrimaryButton(
           "Reset Passcode",
-          controller.isLoading.value ? null : () async {
-            final success = await controller.resetPassword();
-            if (success) {
-              Get.back();
-            }
-          },
+          controller.isLoading.value
+              ? null
+              : () async {
+                  final success = await controller.resetPassword();
+                  print("reset passcode success : $success");
+                  if (success) {
+                    Get.to(UnifiedLoginScreen());
+                  }
+                },
         ),
         const SizedBox(height: 12),
         TextButton.icon(
@@ -341,36 +332,38 @@ class PasswordRecovery extends StatelessWidget {
   Widget _buildPrimaryButton(String label, VoidCallback? onPressed) {
     return SizedBox(
       width: double.infinity,
-      child: Obx(() => ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue.shade700,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          shadowColor: Colors.blue.withValues(alpha: 0.5),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      child: Obx(
+        () => ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue.shade700,
+            foregroundColor: Colors.white,
+            elevation: 4,
+            shadowColor: Colors.blue.withValues(alpha: 0.5),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            disabledBackgroundColor: Colors.grey.shade300,
           ),
-          disabledBackgroundColor: Colors.grey.shade300,
+          onPressed: onPressed,
+          child: controller.isLoading.value
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
         ),
-        onPressed: onPressed,
-        child: controller.isLoading.value
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-      )),
+      ),
     );
   }
 
@@ -407,10 +400,7 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           AppConfig.copyright,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
     );
