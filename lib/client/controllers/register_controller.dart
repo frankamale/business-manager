@@ -21,6 +21,7 @@ class RegisterController extends GetxController {
   var isLoading = false.obs;
   var isCodeSent = false.obs;
   var selectedGender = 'Male'.obs;
+  var showAdvanced = false.obs;
 
   String _generatedCode = '';
   String _userId = '';
