@@ -7,6 +7,7 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/customer_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../models/service_point.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../services/api_services.dart';
 import '../utils/network_helper.dart';
@@ -195,7 +196,7 @@ class _HomepageState extends State<Homepage>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(100)),
               ),
-              child: Image.asset("assets/images/logo.png"),
+              child: const AppLogo(width: 40, height: 40),
             ),
             const SizedBox(width: 12),
             Text(

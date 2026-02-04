@@ -11,6 +11,7 @@ import '../controllers/sales_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/customer_controller.dart';
 import '../../shared/database/unified_db_helper.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../utils/network_helper.dart';
 import '../config.dart';
 
@@ -527,18 +528,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                         ],
                       ),
-                      child: Image.asset(
-                        "assets/images/logo.png",
-                        width: 100,
-                        height: 100,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.storefront_rounded,
-                            size: 120,
-                            color: Colors.blue.shade700,
-                          );
-                        },
-                      ),
+                      child: const AppLogo(width: 100, height: 100),
                     ),
                   ),
                 ),
