@@ -494,6 +494,16 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               textAlign: TextAlign.center,
                             ),
 
+                          SizedBox(height: 3),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () {},
+                                child: Text("Forgot Password?"),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 12),
                           // Sign In Button
                           SizedBox(
@@ -533,7 +543,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                     ),
                             ),
                           ),
-                          SizedBox(height: 20),
+
+                          SizedBox(height: 12),
 
                           SizedBox(
                             width: double.infinity,
@@ -541,7 +552,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             child: ElevatedButton(
                               onPressed: () => Get.to(Register()),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
+                                backgroundColor: Colors.blue.shade900,
                                 foregroundColor: Colors.white,
                                 elevation: 4,
                                 shadowColor: Colors.blue.withOpacity(0.5),
