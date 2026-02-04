@@ -422,12 +422,14 @@ class Register extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text(
-                  "Registration Successful",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
+                Center(
+                  child: Text(
+                    "Registration Successful",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -455,7 +457,7 @@ class Register extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          "Your account is pending approval. An administrator will review and activate your account shortly.",
+                          "An administrator will review and activate your account shortly.",
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.blue.shade800,

@@ -86,7 +86,7 @@ class ClientApiService {
     required String password,
     String gender = 'Male',
     String status = 'Active/In Use',
-    String statusId = '11111111-1111-1111-1111-111111111111',
+    String statusId = '00000000-0000-0000-0000-000000000000',
   }) async {
     final uri = Uri.parse('$baseUrl/bp/postcustomer');
 
