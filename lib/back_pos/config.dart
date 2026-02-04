@@ -10,6 +10,10 @@ class AppConfig {
   /// Company name displayed in the splash screen
   static const String companyName = FlavorConfig.companyName;
 
+  /// Logo path based on flavor
+  static String get logoPath => FlavorConfig.logoPath;
+  static const String fallbackLogoPath = FlavorConfig.fallbackLogoPath;
+
   /// Edition/version info
   static const String edition = 'Uganda Edition';
 

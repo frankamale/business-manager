@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../back_pos/config.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../controllers/password_recovery_controller.dart';
 
 class PasswordRecovery extends StatelessWidget {
@@ -232,24 +233,8 @@ class PasswordRecovery extends StatelessWidget {
   Widget _buildHeader(bool isSmallScreen) {
     return Hero(
       tag: 'logo',
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade50,
-          shape: BoxShape.circle,
-        ),
-        child: Image.asset(
-          "assets/images/logo.png",
-          width: isSmallScreen ? 80 : 100,
-          height: isSmallScreen ? 80 : 100,
-          errorBuilder: (context, error, stackTrace) {
-            return Icon(
-              Icons.storefront_rounded,
-              size: isSmallScreen ? 80 : 100,
-              color: Colors.blue.shade700,
-            );
-          },
-        ),
+      child: AppLogoCircle(
+        size: isSmallScreen ? 80 : 100,
       ),
     );
   }
@@ -378,24 +363,8 @@ class PasswordRecovery extends StatelessWidget {
   Widget _buildFooter(bool isSmallScreen) {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.blue.shade50,
-            shape: BoxShape.circle,
-          ),
-          child: Image.asset(
-            "assets/images/logo.png",
-            width: isSmallScreen ? 30 : 50,
-            height: isSmallScreen ? 30 : 50,
-            errorBuilder: (context, error, stackTrace) {
-              return Icon(
-                Icons.storefront_rounded,
-                size: isSmallScreen ? 30 : 50,
-                color: Colors.blue.shade700,
-              );
-            },
-          ),
+        AppLogoCircle(
+          size: isSmallScreen ? 30 : 50,
         ),
         const SizedBox(width: 10),
         Text(

@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_storage/get_storage.dart';
 import '../back_pos/utils/network_helper.dart';
+import '../shared/widgets/app_logo.dart';
 import 'app_roots.dart';
 import 'unified_login_screen.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
@@ -339,7 +340,7 @@ class _SplashScreenState extends State<SplashScreen> {
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/logo.png', width: 150, height: 150),
+              const AppLogo(width: 150, height: 150),
               const SizedBox(height: 20),
               if (controller.isLoading.value)
                 const CircularProgressIndicator()

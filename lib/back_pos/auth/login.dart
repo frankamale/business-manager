@@ -6,6 +6,7 @@ import '../../bac_monitor/lib/controllers/profile_controller.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../../bac_monitor/lib/services/api_services.dart' as monitor;
 import '../../bac_monitor/lib/services/account_manager.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../services/api_services.dart';
@@ -180,24 +181,8 @@ controller.signOut();
                             // Logo
                             Hero(
                               tag: 'logo',
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Image.asset(
-                                  "assets/images/logo.png",
-                                  width: isSmallScreen ? 100 : 120,
-                                  height: isSmallScreen ? 100 : 120,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.storefront_rounded,
-                                      size: isSmallScreen ? 100 : 120,
-                                      color: Colors.blue.shade700,
-                                    );
-                                  },
-                                ),
+                              child: AppLogoCircle(
+                                size: isSmallScreen ? 100 : 120,
                               ),
                             ),
                             const SizedBox(height: 24),

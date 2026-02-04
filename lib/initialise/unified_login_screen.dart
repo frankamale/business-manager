@@ -15,6 +15,7 @@ import '../back_pos/controllers/inventory_controller.dart';
 import '../client/auth/password_recovery.dart';
 import '../client/auth/register.dart';
 import '../shared/services/customer_auth_service.dart';
+import '../shared/widgets/app_logo.dart';
 import 'app_roots.dart';
 
 class UnifiedLoginScreen extends StatefulWidget {
@@ -349,24 +350,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           // Logo
                           Hero(
                             tag: 'logo',
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Image.asset(
-                                "assets/images/logo.png",
-                                width: isSmallScreen ? 100 : 120,
-                                height: isSmallScreen ? 100 : 120,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.storefront_rounded,
-                                    size: isSmallScreen ? 100 : 120,
-                                    color: Colors.blue.shade700,
-                                  );
-                                },
-                              ),
+                            child: AppLogoCircle(
+                              size: isSmallScreen ? 100 : 120,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -578,24 +563,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             children: [
                               Hero(
                                 tag: 'footer_logo',
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Image.asset(
-                                    "assets/images/logo.png",
-                                    width: isSmallScreen ? 30 : 50,
-                                    height: isSmallScreen ? 30 : 50,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.storefront_rounded,
-                                        size: isSmallScreen ? 30 : 50,
-                                        color: Colors.blue.shade700,
-                                      );
-                                    },
-                                  ),
+                                child: AppLogoCircle(
+                                  size: isSmallScreen ? 30 : 50,
                                 ),
                               ),
                               const SizedBox(width: 10),

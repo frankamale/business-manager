@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../back_pos/config.dart';
 import '../../initialise/unified_login_screen.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../controllers/register_controller.dart';
 
 class Register extends StatelessWidget {
@@ -56,24 +57,8 @@ class Register extends StatelessWidget {
                         children: [
                           Hero(
                             tag: 'logo',
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Image.asset(
-                                "assets/images/logo.png",
-                                width: isSmallScreen ? 100 : 120,
-                                height: isSmallScreen ? 100 : 120,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.storefront_rounded,
-                                    size: isSmallScreen ? 100 : 120,
-                                    color: Colors.blue.shade700,
-                                  );
-                                },
-                              ),
+                            child: AppLogoCircle(
+                              size: isSmallScreen ? 100 : 120,
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -264,24 +249,8 @@ class Register extends StatelessWidget {
                             children: [
                               Hero(
                                 tag: 'footer_logo',
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Image.asset(
-                                    "assets/images/logo.png",
-                                    width: isSmallScreen ? 30 : 50,
-                                    height: isSmallScreen ? 30 : 50,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.storefront_rounded,
-                                        size: isSmallScreen ? 30 : 50,
-                                        color: Colors.blue.shade700,
-                                      );
-                                    },
-                                  ),
+                                child: AppLogoCircle(
+                                  size: isSmallScreen ? 30 : 50,
                                 ),
                               ),
                               const SizedBox(width: 10),
