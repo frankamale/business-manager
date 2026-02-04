@@ -4,18 +4,16 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../initialise/unified_login_screen.dart';
 import '../auth/reset_passcode.dart';
+import '../controllers/client_home_controller.dart';
 
 class ClientHome extends StatelessWidget {
-  const ClientHome({super.key});
+  ClientHome({super.key});
+
+  final ClientHomeController controller = Get.put(ClientHomeController());
 
   @override
   Widget build(BuildContext context) {
     final box = GetStorage();
-    final customerData = box.read('logged_in_customer') ?? {};
-
-    final String fullName = customerData['fullnames'] ?? 'Customer';
-    final String email = customerData['email'] ?? '';
-    final String phone = customerData['phone1'] ?? '';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
@@ -97,7 +95,7 @@ class ClientHome extends StatelessWidget {
                     radius: 40,
                     backgroundColor: Colors.white,
                     child: Text(
-                      _getInitials(fullName),
+                      _getInitials(controller.fullName),
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -108,7 +106,7 @@ class ClientHome extends StatelessWidget {
                   const SizedBox(height: 12),
                   // Name
                   Text(
-                    fullName,
+                    controller.fullName,
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -118,7 +116,9 @@ class ClientHome extends StatelessWidget {
                   const SizedBox(height: 4),
                   // Email/Phone
                   Text(
-                    email.isNotEmpty ? email : phone,
+                    controller.email.isNotEmpty
+                        ? controller.email
+                        : controller.phone,
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white.withValues(alpha: 0.9),
@@ -130,7 +130,7 @@ class ClientHome extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Points Card
+            // OTP Card
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Container(
@@ -158,20 +158,114 @@ class ClientHome extends StatelessWidget {
                       style: TextStyle(fontSize: 16, color: Colors.white70),
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const SizedBox(width: 8),
-                        Text(
-                          "983 221",
-                          style: const TextStyle(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                    Obx(
+                      () => Text(
+                        controller.otp.value,
+                        style: const TextStyle(
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 4,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Obx(
+                      () => ElevatedButton.icon(
+                        onPressed: controller.isGenerating.value
+                            ? null
+                            : () => controller.generateOtp(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.blue.shade700,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                      ],
+                        icon: controller.isGenerating.value
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.refresh),
+                        label: const Text('Generate New OTP'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Bonus Points Card
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.amber.shade500, Colors.orange.shade600],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withValues(alpha: 0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.stars_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Bonus Points',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white70,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            controller.bonusPoints.toStringAsFixed(0),
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Colors.white54,
+                      size: 20,
                     ),
                   ],
                 ),
@@ -198,7 +292,7 @@ class ClientHome extends StatelessWidget {
                     child: _buildInfoCard(
                       icon: Icons.shopping_bag_outlined,
                       label: 'Status',
-                      value: customerData['status'] ?? 'Active',
+                      value: controller.status,
                       color: Colors.orange,
                     ),
                   ),
