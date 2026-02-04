@@ -14,13 +14,14 @@ class ClientApiService {
     required String fullName,
     required String code,
     required String userId,
+    String subject = 'Account verification',
   }) async {
     final uri = Uri.parse(
       '$baseUrl/getchallengecode/'
       '?e=${Uri.encodeComponent(email)}'
       '&f=${Uri.encodeComponent(fullName)}'
       '&p=${Uri.encodeComponent(code)}'
-      '&s=Account verification'
+      '&s=${Uri.encodeComponent(subject)}'
       '&id=$userId',
     );
 
@@ -30,6 +31,28 @@ class ClientApiService {
       return json.decode(response.body);
     } else {
       throw Exception('Failed to send challenge code: ${response.statusCode}');
+    }
+  }
+
+  /// Reset customer password
+  Future<Map<String, dynamic>> resetPassword({
+    required String userId,
+    required String newPassword,
+    String subject = 'password reset',
+  }) async {
+    final uri = Uri.parse(
+      '$baseUrl/password/'
+      '?t=$userId'
+      '&p=${Uri.encodeComponent(newPassword)}'
+      '&s=${Uri.encodeComponent(subject)}',
+    );
+
+    final response = await http.get(uri);
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to reset password: ${response.statusCode}');
     }
   }
 

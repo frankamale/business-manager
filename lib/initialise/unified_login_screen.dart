@@ -12,6 +12,7 @@ import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
 import '../back_pos/controllers/inventory_controller.dart';
+import '../client/auth/password_recovery.dart';
 import '../client/auth/register.dart';
 import '../shared/services/customer_auth_service.dart';
 import 'app_roots.dart';
@@ -493,18 +494,16 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
                               textAlign: TextAlign.center,
                             ),
-
-                          SizedBox(height: 3),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               TextButton(
-                                onPressed: () {},
+                                onPressed: () => Get.to(() => PasswordRecovery()),
                                 child: Text("Forgot Password?"),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 3),
                           // Sign In Button
                           SizedBox(
                             width: double.infinity,
