@@ -52,27 +52,27 @@ class FlavorColors {
     background: Color(0xFFF5F5F5),   // Colors.grey.shade100
   );
 
-  /// Sassy flavor - Add your colors here
-  /// Example with purple theme:
-  // static const sassy = FlavorColorPalette(
-  //   primary: Color(0xFF7B1FA2),      // Colors.purple.shade700
-  //   primaryDark: Color(0xFF6A1B9A),  // Colors.purple.shade800
-  //   secondary: Color(0xFF8E24AA),    // Colors.purple.shade600
-  //   tertiary: Color(0xFFAB47BC),     // Colors.purple.shade400
-  //   light: Color(0xFFBA68C8),        // Colors.purple.shade300
-  //   surface: Color(0xFFF3E5F5),      // Colors.purple.shade50
-  //   icon: Color(0xFF4A148C),         // Colors.purple.shade900
-  //   onPrimary: Colors.white,
-  //   background: Color(0xFFF5F5F5),   // Colors.grey.shade100
-  // );
+  // / Sassy flavor - Add your colors here
+  // / Example with purple theme:
+  static const sassy = FlavorColorPalette(
+    primary: Color(0xFF7B1FA2),      // Colors.purple.shade700
+    primaryDark: Color(0xFF6A1B9A),  // Colors.purple.shade800
+    secondary: Color(0xFF8E24AA),    // Colors.purple.shade600
+    tertiary: Color(0xFFAB47BC),     // Colors.purple.shade400
+    light: Color(0xFFBA68C8),        // Colors.purple.shade300
+    surface: Color(0xFFF3E5F5),      // Colors.purple.shade50
+    icon: Color(0xFF4A148C),         // Colors.purple.shade900
+    onPrimary: Colors.white,
+    background: Color(0xFFF5F5F5),   // Colors.grey.shade100
+  );
 
   /// Get the color palette for the current flavor
   static FlavorColorPalette get current {
     switch (FlavorConfig.flavorName) {
       case 'komusoft':
         return komusoft;
-      // case 'sassy':
-      //   return sassy;
+      case 'sassy':
+        return sassy;
       default:
         return komusoft;
     }
@@ -83,9 +83,8 @@ class FlavorColors {
     switch (flavorName) {
       case 'komusoft':
         return komusoft;
-      // case 'sassy':
-      //   re
-    //   turn sassy;
+      case 'sassy':
+        return sassy;
       default:
         return komusoft;
     }

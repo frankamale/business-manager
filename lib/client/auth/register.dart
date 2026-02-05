@@ -16,6 +16,7 @@ class Register extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: Container(
@@ -24,9 +25,9 @@ class Register extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.blue.shade300,
+              colorScheme.primary,
+              colorScheme.secondary,
+              colorScheme.tertiary,
             ],
           ),
         ),
@@ -44,7 +45,7 @@ class Register extends StatelessWidget {
                 ),
                 child: Card(
                   elevation: 12,
-                  shadowColor: Colors.black.withValues(alpha: 0.3),
+                  shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
@@ -67,11 +68,13 @@ class Register extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 25,
                               fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
                             ),
                           ),
 
                           const SizedBox(height: 15),
-                          _TextField(
+                          _buildTextField(
+                            context,
                             "Full Name *",
                             controller.nameController,
                             Icons.person_outline,
@@ -80,7 +83,8 @@ class Register extends StatelessWidget {
                           Row(
                             children: [
                               Expanded(
-                                child: _NumberField(
+                                child: _buildNumberField(
+                                  context,
                                   "Phone Number *",
                                   controller.phoneController,
                                   Icons.phone_outlined,
@@ -90,7 +94,8 @@ class Register extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 15),
-                          _TextField(
+                          _buildTextField(
+                            context,
                             "Email *",
                             controller.emailController,
                             Icons.email_outlined,
@@ -111,7 +116,7 @@ class Register extends StatelessWidget {
                                   Text(
                                     "Advanced",
                                     style: TextStyle(
-                                      color: Colors.blue.shade700,
+                                      color: colorScheme.primary,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -119,7 +124,7 @@ class Register extends StatelessWidget {
                                     controller.showAdvanced.value
                                         ? Icons.expand_less
                                         : Icons.expand_more,
-                                    color: Colors.blue.shade700,
+                                    color: colorScheme.primary,
                                   ),
                                 ],
                               ),
@@ -132,7 +137,8 @@ class Register extends StatelessWidget {
                                 ? Column(
                                     children: [
                                       const SizedBox(height: 15),
-                                      _TextField(
+                                      _buildTextField(
+                                        context,
                                         "Address",
                                         controller.addressController,
                                         Icons.location_on_outlined,
@@ -148,22 +154,22 @@ class Register extends StatelessWidget {
                                             border: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12),
-                                              borderSide: const BorderSide(
-                                                color: Colors.blueGrey,
+                                              borderSide: BorderSide(
+                                                color: colorScheme.outline,
                                               ),
                                             ),
                                             enabledBorder: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                               borderSide: BorderSide(
-                                                color: Colors.blueGrey.shade300,
+                                                color: colorScheme.outline,
                                               ),
                                             ),
                                             focusedBorder: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                               borderSide: BorderSide(
-                                                color: Colors.blue.shade700,
+                                                color: colorScheme.primary,
                                               ),
                                             ),
                                             contentPadding:
@@ -191,7 +197,8 @@ class Register extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 15),
-                                      _TextField(
+                                      _buildTextField(
+                                        context,
                                         "TIN",
                                         controller.tinController,
                                         Icons.numbers_rounded,
@@ -205,7 +212,8 @@ class Register extends StatelessWidget {
                             () => Row(
                               children: [
                                 Expanded(
-                                  child: _TextField(
+                                  child: _buildTextField(
+                                    context,
                                     "Challenge Code",
                                     controller.challengeCodeController,
                                     Icons.qr_code_sharp,
@@ -215,24 +223,23 @@ class Register extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue.shade700,
+                                    backgroundColor: colorScheme.primary,
+                                    foregroundColor: colorScheme.onPrimary,
                                   ),
                                   onPressed: controller.isLoading.value
                                       ? null
                                       : () =>
                                             controller.generateChallengeCode(),
                                   child: controller.isLoading.value
-                                      ? const SizedBox(
+                                      ? SizedBox(
                                           width: 20,
                                           height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
+                                            color: colorScheme.onPrimary,
                                           ),
                                         )
-                                      : const Text(
-                                          "Get Code",
-                                          style: TextStyle(color: Colors.white),
-                                        ),
+                                      : const Text("Get Code"),
                                 ),
                               ],
                             ),
@@ -243,16 +250,14 @@ class Register extends StatelessWidget {
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade700,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: colorScheme.primary,
+                                  foregroundColor: colorScheme.onPrimary,
                                   elevation: 4,
-                                  shadowColor: Colors.blue.withValues(
-                                    alpha: 0.5,
-                                  ),
+                                  shadowColor: colorScheme.shadow.withValues(alpha: 0.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  disabledBackgroundColor: Colors.grey.shade300,
+                                  disabledBackgroundColor: colorScheme.surfaceContainerHighest,
                                 ),
                                 onPressed: controller.isLoading.value
                                     ? null
@@ -264,12 +269,12 @@ class Register extends StatelessWidget {
                                         }
                                       },
                                 child: controller.isLoading.value
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 20,
                                         height: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: Colors.white,
+                                          color: colorScheme.onPrimary,
                                         ),
                                       )
                                     : const Text("Register Account"),
@@ -291,7 +296,7 @@ class Register extends StatelessWidget {
                                 AppConfig.copyright,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -309,64 +314,69 @@ class Register extends StatelessWidget {
     );
   }
 
-  Widget _TextField(
+  Widget _buildTextField(
+    BuildContext context,
     String label,
     TextEditingController textController,
     IconData icon, {
     bool enabled = true,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return TextFormField(
       controller: textController,
       enabled: enabled,
       keyboardType: TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.blue.shade900),
+        prefixIcon: Icon(icon, color: colorScheme.primary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueGrey),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey.shade300),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade700),
+          borderSide: BorderSide(color: colorScheme.primary),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
       ),
     );
   }
 
-  Widget _NumberField(
+  Widget _buildNumberField(
+    BuildContext context,
     String label,
     TextEditingController textController,
     IconData icon,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return TextFormField(
       controller: textController,
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.blue.shade900),
+        prefixIcon: Icon(icon, color: colorScheme.primary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueGrey),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey.shade300),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade700),
+          borderSide: BorderSide(color: colorScheme.primary),
         ),
       ),
     );
   }
-
 }

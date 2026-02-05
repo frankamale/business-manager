@@ -4,6 +4,7 @@ import 'package:get_storage/get_storage.dart';
 
 // Package imports for external dependencies
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'flavors/flavor_colors.dart';
 
 // POS Module imports
 import 'bac_monitor/lib/controllers/profile_controller.dart';
@@ -85,7 +86,7 @@ class MyApp extends StatelessWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: true,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(seedColor: FlavorColors.current.primary),
         useMaterial3: true,
       ),
       fallbackLocale: const Locale('en', 'US_store'),

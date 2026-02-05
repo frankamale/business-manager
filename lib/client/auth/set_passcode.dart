@@ -16,6 +16,7 @@ class SetPasscode extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: Container(
@@ -24,9 +25,9 @@ class SetPasscode extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.blue.shade300,
+              colorScheme.primary,
+              colorScheme.secondary,
+              colorScheme.tertiary,
             ],
           ),
         ),
@@ -43,7 +44,7 @@ class SetPasscode extends StatelessWidget {
                 ),
                 child: Card(
                   elevation: 12,
-                  shadowColor: Colors.black.withValues(alpha: 0.3),
+                  shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
@@ -60,21 +61,22 @@ class SetPasscode extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.green.shade50,
+                            color: colorScheme.primaryContainer,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.lock_outline,
                             size: 48,
-                            color: Colors.green.shade700,
+                            color: colorScheme.onPrimaryContainer,
                           ),
                         ),
                         const SizedBox(height: 24),
-                        const Text(
+                        Text(
                           "Set Your Passcode",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -83,12 +85,13 @@ class SetPasscode extends StatelessWidget {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: 32),
                         Obx(
                           () => _buildPasscodeField(
+                            context: context,
                             controller: controller.passwordController,
                             label: "Passcode",
                             hint: "Enter 4-6 digit passcode",
@@ -100,6 +103,7 @@ class SetPasscode extends StatelessWidget {
                         const SizedBox(height: 16),
                         Obx(
                           () => _buildPasscodeField(
+                            context: context,
                             controller: controller.confirmPasswordController,
                             label: "Confirm Passcode",
                             hint: "Re-enter your passcode",
@@ -109,24 +113,24 @@ class SetPasscode extends StatelessWidget {
                                     !controller.obscureConfirmPassword.value,
                           ),
                         ),
-                        Obx(() => _buildErrorMessage()),
+                        Obx(() => _buildErrorMessage(context)),
                         const SizedBox(height: 24),
                         Obx(
                           () => SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
-                                foregroundColor: Colors.white,
+                                backgroundColor: colorScheme.primary,
+                                foregroundColor: colorScheme.onPrimary,
                                 elevation: 4,
-                                shadowColor: Colors.blue.withValues(alpha: 0.5),
+                                shadowColor: colorScheme.shadow.withValues(alpha: 0.5),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                disabledBackgroundColor: Colors.grey.shade300,
+                                disabledBackgroundColor: colorScheme.surfaceContainerHighest,
                               ),
                               onPressed: controller.isLoading.value
                                   ? null
@@ -138,12 +142,12 @@ class SetPasscode extends StatelessWidget {
                                       }
                                     },
                               child: controller.isLoading.value
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white,
+                                        color: colorScheme.onPrimary,
                                       ),
                                     )
                                   : const Text(
@@ -157,14 +161,12 @@ class SetPasscode extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-
                         Row(
                           children: [
                             Hero(
                               tag: 'footer_logo',
-                              child: Image.asset(
-                                'assets/images/logo.png',
-                                height: isSmallScreen ? 30 : 50,
+                              child: AppLogoCircle(
+                                size: isSmallScreen ? 30 : 50,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -172,7 +174,7 @@ class SetPasscode extends StatelessWidget {
                               AppConfig.copyright,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade600,
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -190,12 +192,15 @@ class SetPasscode extends StatelessWidget {
   }
 
   Widget _buildPasscodeField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required String hint,
     required bool obscure,
     required VoidCallback onToggle,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -204,7 +209,7 @@ class SetPasscode extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
+            color: colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
@@ -216,21 +221,21 @@ class SetPasscode extends StatelessWidget {
           maxLength: 6,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.grey.shade400),
+            hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
             counterText: '',
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: colorScheme.surfaceContainerLow,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
+              borderSide: BorderSide(color: colorScheme.outline),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
+              borderSide: BorderSide(color: colorScheme.outline),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+              borderSide: BorderSide(color: colorScheme.primary, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -241,7 +246,7 @@ class SetPasscode extends StatelessWidget {
                 obscure
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
-                color: Colors.grey.shade500,
+                color: colorScheme.onSurfaceVariant,
               ),
               onPressed: onToggle,
             ),
@@ -251,7 +256,9 @@ class SetPasscode extends StatelessWidget {
     );
   }
 
-  Widget _buildErrorMessage() {
+  Widget _buildErrorMessage(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (controller.errorMessage.value.isEmpty) {
       return const SizedBox(height: 8);
     }
@@ -260,17 +267,17 @@ class SetPasscode extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.red.shade50,
+          color: colorScheme.errorContainer,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
-            Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+            Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: 20),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 controller.errorMessage.value,
-                style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                style: TextStyle(color: colorScheme.onErrorContainer, fontSize: 13),
               ),
             ),
           ],
@@ -280,10 +287,12 @@ class SetPasscode extends StatelessWidget {
   }
 
   void _showSuccessDialog(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -296,13 +305,13 @@ class SetPasscode extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
+                    color: colorScheme.tertiaryContainer,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.hourglass_top_rounded,
                     size: 64,
-                    color: Colors.orange.shade700,
+                    color: colorScheme.onTertiaryContainer,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -312,32 +321,32 @@ class SetPasscode extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
+                    color: colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   "Your account has been created successfully!",
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                  style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant),
                 ),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade700),
+                      Icon(Icons.info_outline, color: colorScheme.onPrimaryContainer),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           "An administrator will review and activate your account shortly.",
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.blue.shade800,
+                            color: colorScheme.onPrimaryContainer,
                           ),
                         ),
                       ),
@@ -349,15 +358,15 @@ class SetPasscode extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      foregroundColor: Colors.white,
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(dialogContext).pop();
                       Get.offAll(() => const UnifiedLoginScreen());
                     },
                     child: const Text(

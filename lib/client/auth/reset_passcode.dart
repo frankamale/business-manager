@@ -12,12 +12,14 @@ class ResetPasscode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Reset Passcode'),
-        backgroundColor: Colors.blue.shade700,
-        foregroundColor: Colors.white,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -27,7 +29,7 @@ class ResetPasscode extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.blue.shade700,
+                color: colorScheme.primary,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
@@ -39,22 +41,22 @@ class ResetPasscode extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: colorScheme.onPrimary.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.lock_outline,
                       size: 48,
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Change Your Passcode',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -63,7 +65,7 @@ class ResetPasscode extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: colorScheme.onPrimary.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -78,11 +80,11 @@ class ResetPasscode extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: colorScheme.shadow.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -97,11 +99,12 @@ class ResetPasscode extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Obx(() => _buildPasscodeField(
+                      context: context,
                       controller: controller.oldPasscodeController,
                       hint: 'Enter current passcode',
                       obscure: controller.obscureOld.value,
@@ -116,11 +119,12 @@ class ResetPasscode extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Obx(() => _buildPasscodeField(
+                      context: context,
                       controller: controller.newPasscodeController,
                       hint: 'Enter new passcode',
                       obscure: controller.obscureNew.value,
@@ -135,11 +139,12 @@ class ResetPasscode extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Obx(() => _buildPasscodeField(
+                      context: context,
                       controller: controller.confirmPasscodeController,
                       hint: 'Confirm new passcode',
                       obscure: controller.obscureConfirm.value,
@@ -156,14 +161,14 @@ class ResetPasscode extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.red.shade50,
+                            color: colorScheme.errorContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.error_outline,
-                                color: Colors.red.shade700,
+                                color: colorScheme.onErrorContainer,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
@@ -171,7 +176,7 @@ class ResetPasscode extends StatelessWidget {
                                 child: Text(
                                   controller.errorMessage.value,
                                   style: TextStyle(
-                                    color: Colors.red.shade700,
+                                    color: colorScheme.onErrorContainer,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -187,8 +192,8 @@ class ResetPasscode extends StatelessWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade700,
-                          foregroundColor: Colors.white,
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -201,16 +206,15 @@ class ResetPasscode extends StatelessWidget {
                                 final success = await controller.resetPasscode();
                                 if (success) {
                                   Get.to(ClientHome());
-
                                 }
                               },
                         child: controller.isLoading.value
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: Colors.white,
+                                  color: colorScheme.onPrimary,
                                 ),
                               )
                             : const Text(
@@ -235,7 +239,7 @@ class ResetPasscode extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: colorScheme.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -243,7 +247,7 @@ class ResetPasscode extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.lightbulb_outline,
-                      color: Colors.blue.shade700,
+                      color: colorScheme.onPrimaryContainer,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -256,7 +260,7 @@ class ResetPasscode extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade800,
+                              color: colorScheme.onPrimaryContainer,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -264,7 +268,7 @@ class ResetPasscode extends StatelessWidget {
                             'Choose a passcode that is easy for you to remember but hard for others to guess. Avoid using simple patterns like 1234.',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.blue.shade700,
+                              color: colorScheme.onPrimaryContainer,
                             ),
                           ),
                         ],
@@ -283,11 +287,14 @@ class ResetPasscode extends StatelessWidget {
   }
 
   Widget _buildPasscodeField({
+    required BuildContext context,
     required TextEditingController controller,
     required String hint,
     required bool obscure,
     required VoidCallback onToggle,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return TextField(
       controller: controller,
       obscureText: obscure,
@@ -295,26 +302,26 @@ class ResetPasscode extends StatelessWidget {
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey.shade400),
+        hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: colorScheme.surfaceContainerLow,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         suffixIcon: IconButton(
           icon: Icon(
             obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-            color: Colors.grey.shade500,
+            color: colorScheme.onSurfaceVariant,
           ),
           onPressed: onToggle,
         ),

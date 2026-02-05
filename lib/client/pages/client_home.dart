@@ -14,18 +14,18 @@ class ClientHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final box = GetStorage();
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text(AppConfig.companyName),
         centerTitle: true,
-        backgroundColor: Colors.blue.shade700,
-        foregroundColor: Colors.white,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 0,
         actions: [
           PopupMenuButton<String>(
-
             icon: const Icon(Icons.more_vert),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
@@ -48,7 +48,7 @@ class ClientHome extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.lock_reset,
-                      color: Colors.blue.shade700,
+                      color: colorScheme.primary,
                       size: 15,
                     ),
                     const SizedBox(width: 12),
@@ -61,11 +61,11 @@ class ClientHome extends StatelessWidget {
                 value: 'logout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, color: Colors.red.shade600, size: 15),
+                    Icon(Icons.logout, color: colorScheme.error, size: 15),
                     const SizedBox(width: 12),
                     Text(
                       'Logout',
-                      style: TextStyle(color: Colors.red.shade600),
+                      style: TextStyle(color: colorScheme.error),
                     ),
                   ],
                 ),
@@ -81,7 +81,7 @@ class ClientHome extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Colors.blue.shade700,
+                color: colorScheme.primary,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
@@ -93,13 +93,13 @@ class ClientHome extends StatelessWidget {
                   // Avatar
                   CircleAvatar(
                     radius: 40,
-                    backgroundColor: Colors.white,
+                    backgroundColor: colorScheme.onPrimary,
                     child: Text(
                       _getInitials(controller.fullName),
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade700,
+                        color: colorScheme.primary,
                       ),
                     ),
                   ),
@@ -107,10 +107,10 @@ class ClientHome extends StatelessWidget {
                   // Name
                   Text(
                     controller.fullName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: colorScheme.onPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -121,7 +121,7 @@ class ClientHome extends StatelessWidget {
                         : controller.phone,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.9),
+                      color: colorScheme.onPrimary.withValues(alpha: 0.9),
                     ),
                   ),
                 ],
@@ -138,14 +138,14 @@ class ClientHome extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.blue.shade600, Colors.blue.shade800],
+                    colors: [colorScheme.primary, colorScheme.primaryContainer],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withValues(alpha: 0.3),
+                      color: colorScheme.shadow.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -153,18 +153,21 @@ class ClientHome extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'OTP',
-                      style: TextStyle(fontSize: 16, color: Colors.white70),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: colorScheme.onPrimary.withValues(alpha: 0.7),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Obx(
                       () => Text(
                         controller.otp.value,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: colorScheme.onPrimary,
                           letterSpacing: 4,
                         ),
                       ),
@@ -176,8 +179,8 @@ class ClientHome extends StatelessWidget {
                             ? null
                             : () => controller.generateOtp(),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.blue.shade700,
+                          backgroundColor: colorScheme.onPrimary,
+                          foregroundColor: colorScheme.primary,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
                             vertical: 12,
@@ -281,6 +284,7 @@ class ClientHome extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _buildInfoCard(
+                      context: context,
                       icon: Icons.card_membership,
                       label: 'Member Since',
                       value: '2024',
@@ -290,6 +294,7 @@ class ClientHome extends StatelessWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: _buildInfoCard(
+                      context: context,
                       icon: Icons.shopping_bag_outlined,
                       label: 'Status',
                       value: controller.status,
@@ -318,19 +323,22 @@ class ClientHome extends StatelessWidget {
   }
 
   Widget _buildInfoCard({
+    required BuildContext context,
     required IconData icon,
     required String label,
     required String value,
     required Color color,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colorScheme.shadow.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -343,12 +351,16 @@ class ClientHome extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             label,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colorScheme.onSurface,
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -358,6 +370,8 @@ class ClientHome extends StatelessWidget {
   }
 
   void _showLogoutDialog(BuildContext context, GetStorage box) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -376,8 +390,8 @@ class ClientHome extends StatelessWidget {
               Get.offAll(() => const UnifiedLoginScreen());
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: colorScheme.error,
+              foregroundColor: colorScheme.onError,
             ),
             child: const Text('Logout'),
           ),
