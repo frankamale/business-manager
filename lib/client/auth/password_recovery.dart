@@ -18,6 +18,7 @@ class PasswordRecovery extends StatelessWidget {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: Container(
@@ -26,9 +27,9 @@ class PasswordRecovery extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.blue.shade300,
+              colorScheme.primary,
+              colorScheme.secondary,
+              colorScheme.tertiary,
             ],
           ),
         ),
@@ -46,13 +47,13 @@ class PasswordRecovery extends StatelessWidget {
                 ),
                 child: Card(
                   elevation: 12,
-                  shadowColor: Colors.black.withValues(alpha: 0.3),
+                  shadowColor: colorScheme.shadow.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Padding(
                     padding: EdgeInsets.all(isSmallScreen ? 32.0 : 48.0),
-                    child: Obx(() => _buildCurrentStep(isSmallScreen)),
+                    child: Obx(() => _buildCurrentStep(context, isSmallScreen)),
                   ),
                 ),
               ),
@@ -63,21 +64,23 @@ class PasswordRecovery extends StatelessWidget {
     );
   }
 
-  Widget _buildCurrentStep(bool isSmallScreen) {
+  Widget _buildCurrentStep(BuildContext context, bool isSmallScreen) {
     switch (controller.currentStep.value) {
       case 0:
-        return _buildIdentifierStep(isSmallScreen);
+        return _buildIdentifierStep(context, isSmallScreen);
       case 1:
-        return _buildCodeVerificationStep(isSmallScreen);
+        return _buildCodeVerificationStep(context, isSmallScreen);
       case 2:
-        return _buildNewPasswordStep(isSmallScreen);
+        return _buildNewPasswordStep(context, isSmallScreen);
       default:
-        return _buildIdentifierStep(isSmallScreen);
+        return _buildIdentifierStep(context, isSmallScreen);
     }
   }
 
   /// Step 1: Enter email or phone number
-  Widget _buildIdentifierStep(bool isSmallScreen) {
+  Widget _buildIdentifierStep(BuildContext context, bool isSmallScreen) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -85,24 +88,30 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           "Recover Your Account",
-          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 25,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           "Enter your email or phone number to continue",
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 24),
         _buildTextField(
+          context,
           "Email or Phone Number",
           controller.identifierController,
           Icons.person_search_outlined,
           keyboardType: TextInputType.emailAddress,
         ),
-        _buildErrorMessage(),
+        _buildErrorMessage(context),
         const SizedBox(height: 24),
         _buildPrimaryButton(
+          context,
           "Find Account",
           controller.isLoading.value
               ? null
@@ -111,13 +120,15 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 16),
         _buildBackToLoginButton(),
         const SizedBox(height: 24),
-        _buildFooter(isSmallScreen),
+        _buildFooter(context, isSmallScreen),
       ],
     );
   }
 
   /// Step 2: Enter verification code
-  Widget _buildCodeVerificationStep(bool isSmallScreen) {
+  Widget _buildCodeVerificationStep(BuildContext context, bool isSmallScreen) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -125,24 +136,30 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           "Verify Your Identity",
-          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 25,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           "Enter the verification code sent to your email",
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 24),
         _buildTextField(
+          context,
           "Verification Code",
           controller.challengeCodeController,
           Icons.verified_user_outlined,
           textCapitalization: TextCapitalization.characters,
         ),
-        _buildErrorMessage(),
+        _buildErrorMessage(context),
         const SizedBox(height: 24),
         _buildPrimaryButton(
+          context,
           "Verify Code",
           controller.isLoading.value
               ? null
@@ -170,13 +187,15 @@ class PasswordRecovery extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        _buildFooter(isSmallScreen),
+        _buildFooter(context, isSmallScreen),
       ],
     );
   }
 
   /// Step 3: Set new password
-  Widget _buildNewPasswordStep(bool isSmallScreen) {
+  Widget _buildNewPasswordStep(BuildContext context, bool isSmallScreen) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -184,29 +203,36 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           "Set New Passcode",
-          style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 25,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           "Enter your new numeric passcode",
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 14, color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 24),
         _buildPasswordField(
+          context,
           "New Passcode",
           controller.newPasswordController,
           Icons.lock_outline,
         ),
         const SizedBox(height: 16),
         _buildPasswordField(
+          context,
           "Confirm Passcode",
           controller.confirmPasswordController,
           Icons.lock_outline,
         ),
-        _buildErrorMessage(),
+        _buildErrorMessage(context),
         const SizedBox(height: 24),
         _buildPrimaryButton(
+          context,
           "Reset Passcode",
           controller.isLoading.value
               ? null
@@ -225,7 +251,7 @@ class PasswordRecovery extends StatelessWidget {
           label: const Text("Back"),
         ),
         const SizedBox(height: 24),
-        _buildFooter(isSmallScreen),
+        _buildFooter(context, isSmallScreen),
       ],
     );
   }
@@ -240,40 +266,46 @@ class PasswordRecovery extends StatelessWidget {
   }
 
   Widget _buildTextField(
+    BuildContext context,
     String label,
     TextEditingController textController,
     IconData icon, {
     TextInputType keyboardType = TextInputType.text,
     TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return TextFormField(
       controller: textController,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.blue.shade900),
+        prefixIcon: Icon(icon, color: colorScheme.primary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueGrey),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey.shade300),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade700),
+          borderSide: BorderSide(color: colorScheme.primary),
         ),
       ),
     );
   }
 
   Widget _buildPasswordField(
+    BuildContext context,
     String label,
     TextEditingController textController,
     IconData icon,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return TextFormField(
       controller: textController,
       keyboardType: TextInputType.number,
@@ -281,24 +313,26 @@ class PasswordRecovery extends StatelessWidget {
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.blue.shade900),
+        prefixIcon: Icon(icon, color: colorScheme.primary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueGrey),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey.shade300),
+          borderSide: BorderSide(color: colorScheme.outline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade700),
+          borderSide: BorderSide(color: colorScheme.primary),
         ),
       ),
     );
   }
 
-  Widget _buildErrorMessage() {
+  Widget _buildErrorMessage(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Obx(() {
       if (controller.errorMessage.value.isEmpty) {
         return const SizedBox(height: 8);
@@ -307,37 +341,39 @@ class PasswordRecovery extends StatelessWidget {
         padding: const EdgeInsets.only(top: 12),
         child: Text(
           controller.errorMessage.value,
-          style: const TextStyle(color: Colors.red),
+          style: TextStyle(color: colorScheme.error),
           textAlign: TextAlign.center,
         ),
       );
     });
   }
 
-  Widget _buildPrimaryButton(String label, VoidCallback? onPressed) {
+  Widget _buildPrimaryButton(BuildContext context, String label, VoidCallback? onPressed) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return SizedBox(
       width: double.infinity,
       child: Obx(
         () => ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue.shade700,
-            foregroundColor: Colors.white,
+            backgroundColor: colorScheme.primary,
+            foregroundColor: colorScheme.onPrimary,
             elevation: 4,
-            shadowColor: Colors.blue.withValues(alpha: 0.5),
+            shadowColor: colorScheme.shadow.withValues(alpha: 0.5),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            disabledBackgroundColor: Colors.grey.shade300,
+            disabledBackgroundColor: colorScheme.surfaceContainerHighest,
           ),
           onPressed: onPressed,
           child: controller.isLoading.value
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: colorScheme.onPrimary,
                   ),
                 )
               : Text(
@@ -360,7 +396,9 @@ class PasswordRecovery extends StatelessWidget {
     );
   }
 
-  Widget _buildFooter(bool isSmallScreen) {
+  Widget _buildFooter(BuildContext context, bool isSmallScreen) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Row(
       children: [
         AppLogoCircle(
@@ -369,7 +407,7 @@ class PasswordRecovery extends StatelessWidget {
         const SizedBox(width: 10),
         Text(
           AppConfig.copyright,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
         ),
       ],
     );
