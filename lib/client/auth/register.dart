@@ -62,15 +62,14 @@ class Register extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 24),
-                        Text(
-                              textAlign: TextAlign.center,
-                              "Register Account",
-                              style: TextStyle(
-
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
-                              ),
+                          Text(
+                            textAlign: TextAlign.center,
+                            "Register Account",
+                            style: TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
                             ),
+                          ),
 
                           const SizedBox(height: 15),
                           _TextField(
@@ -170,9 +169,9 @@ class Register extends StatelessWidget {
                                             ),
                                             contentPadding:
                                                 const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 16,
-                                            ),
+                                                  horizontal: 12,
+                                                  vertical: 16,
+                                                ),
                                           ),
                                           items: const [
                                             DropdownMenuItem(
@@ -426,16 +425,16 @@ class Register extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Center(
-                  child: Text(
-                    "Registration Successful",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                    ),
+                Text(
+                  textAlign: TextAlign.center,
+                  "Registration Successful",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade800,
                   ),
                 ),
+
                 const SizedBox(height: 16),
                 Text(
                   "Your account has been created successfully!",

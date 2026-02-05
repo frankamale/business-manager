@@ -60,18 +60,10 @@ class RegisterController extends GetxController {
     if (emailController.text.trim().isEmpty) {
       return 'Please enter your email';
     }
-    if (passwordController.text.isEmpty) {
-      return 'Please enter a password';
+     if (phoneController.text.trim().isEmpty) {
+      return 'Please enter your phone number';
     }
-    if (confirmPasswordController.text.isEmpty) {
-      return 'Please confirm your password';
-    }
-    if (passwordController.text != confirmPasswordController.text) {
-      return 'Passwords do not match';
-    }
-    if (passwordController.text.length < 4) {
-      return 'Password must be at least 4 digits';
-    }
+
     return null;
   }
 
