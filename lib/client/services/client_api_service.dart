@@ -84,6 +84,7 @@ class ClientApiService {
     required String phone,
     required String address,
     required String password,
+     String category = "Retail Customer(Bulk Purchase)",
     String gender = 'Male',
     String status = 'Active/In Use',
     String statusId = '00000000-0000-0000-0000-000000000000',
@@ -105,6 +106,7 @@ class ClientApiService {
       'address': address,
       'pospassword': password,
       'statusid': statusId,
+      category : "Retail Customer(Bulk Purchase)",
       'mode': 1,
     };
 

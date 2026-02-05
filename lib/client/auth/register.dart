@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../back_pos/config.dart';
-import '../../initialise/unified_login_screen.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../controllers/register_controller.dart';
+import 'set_passcode.dart';
 
 class Register extends StatelessWidget {
   Register({super.key});
@@ -261,7 +260,7 @@ class Register extends StatelessWidget {
                                         final success = await controller
                                             .registerAccount();
                                         if (success) {
-                                          _showPendingApprovalDialog(context);
+                                          Get.to(() => SetPasscode());
                                         }
                                       },
                                 child: controller.isLoading.value
@@ -370,130 +369,4 @@ class Register extends StatelessWidget {
     );
   }
 
-  Widget _PasswordField(
-    String label,
-    TextEditingController textController,
-    IconData icon,
-  ) {
-    return TextFormField(
-      controller: textController,
-      keyboardType: TextInputType.number,
-      obscureText: true,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.blue.shade900),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueGrey),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blueGrey.shade300),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.blue.shade700),
-        ),
-      ),
-    );
-  }
-
-  void _showPendingApprovalDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.hourglass_top_rounded,
-                    size: 64,
-                    color: Colors.orange.shade700,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  textAlign: TextAlign.center,
-                  "Registration Successful",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-                Text(
-                  "Your account has been created successfully!",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade700),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          "An administrator will review and activate your account shortly.",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.blue.shade800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue.shade700,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      Get.offAll(() => const UnifiedLoginScreen());
-                    },
-                    child: const Text(
-                      "Back to Login",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 }

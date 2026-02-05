@@ -358,7 +358,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
                           // Title
                           Text(
-                            "Welcome Back",
+                            "${AppConfig.companyName}",
                             style: TextStyle(
                               fontSize: isSmallScreen ? 28 : 32,
                               fontWeight: FontWeight.bold,
@@ -367,7 +367,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "${AppConfig.companyName}",
+                            "Business Manager",
                             style: TextStyle(
                               fontSize: isSmallScreen ? 14 : 16,
                               color: Colors.blue.shade600,
@@ -483,7 +483,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               TextButton(
-                                onPressed: () => Get.to(() => PasswordRecovery()),
+                                onPressed: () =>
+                                    Get.to(() => PasswordRecovery()),
                                 child: Text("Forgot Password?"),
                               ),
                             ],
@@ -563,8 +564,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             children: [
                               Hero(
                                 tag: 'footer_logo',
-                                child: AppLogoCircle(
-                                  size: isSmallScreen ? 30 : 50,
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  height: isSmallScreen ? 30 : 50,
                                 ),
                               ),
                               const SizedBox(width: 10),

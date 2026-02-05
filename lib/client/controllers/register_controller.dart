@@ -22,6 +22,9 @@ class RegisterController extends GetxController {
   var isCodeSent = false.obs;
   var selectedGender = 'Male'.obs;
   var showAdvanced = false.obs;
+  var errorMessage = ''.obs;
+  var obscurePassword = true.obs;
+  var obscureConfirmPassword = true.obs;
 
   String _generatedCode = '';
   String _userId = '';
@@ -112,7 +115,7 @@ class RegisterController extends GetxController {
     return enteredCode == _generatedCode;
   }
 
-  /// Register the customer account
+  /// Verify challenge code and create the account
   Future<bool> registerAccount() async {
     if (!isCodeSent.value) {
       Get.snackbar('Error', 'Please get a challenge code first',
@@ -134,6 +137,7 @@ class RegisterController extends GetxController {
       final firstName = nameParts.first;
       final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
+      // Create account without password first
       await _apiService.createCustomer(
         id: _userId,
         firstName: firstName,
@@ -141,16 +145,68 @@ class RegisterController extends GetxController {
         email: emailController.text.trim(),
         phone: phoneController.text.trim(),
         address: addressController.text.trim(),
-        password: passwordController.text,
+        password: '', // Empty password, will be set in next step
         gender: selectedGender.value,
+      );
+
+      return true;
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to create account: $e',
+          snackPosition: SnackPosition.BOTTOM);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Validate passcode
+  String? validatePasscode() {
+    final passcode = passwordController.text;
+    final confirmPasscode = confirmPasswordController.text;
+
+    if (passcode.isEmpty) {
+      return 'Please enter a passcode';
+    }
+    if (passcode.length < 4) {
+      return 'Passcode must be at least 4 digits';
+    }
+    if (passcode.length > 6) {
+      return 'Passcode must not exceed 6 digits';
+    }
+    if (confirmPasscode.isEmpty) {
+      return 'Please confirm your passcode';
+    }
+    if (passcode != confirmPasscode) {
+      return 'Passcodes do not match';
+    }
+    return null;
+  }
+
+  /// Set passcode using reset password endpoint
+  Future<bool> completeRegistration() async {
+    errorMessage.value = '';
+
+    final validationError = validatePasscode();
+    if (validationError != null) {
+      errorMessage.value = validationError;
+      return false;
+    }
+
+    isLoading.value = true;
+
+    try {
+      // Use reset password endpoint to set the passcode
+      await _apiService.resetPassword(
+        userId: _userId,
+        newPassword: passwordController.text,
+        subject: 'password set',
       );
 
       Get.snackbar('Success', 'Account created successfully!',
           snackPosition: SnackPosition.BOTTOM);
       return true;
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create account: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      errorMessage.value = 'Failed to set passcode: $e';
       return false;
     } finally {
       isLoading.value = false;
