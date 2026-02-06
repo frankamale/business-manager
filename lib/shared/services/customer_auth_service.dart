@@ -20,6 +20,8 @@ class CustomerAuthService {
   static const String _botUsernameKey = 'bot_username';
   static const String _botPasswordKey = 'bot_password';
   static const String _botTokenKey = 'bot_token';
+  static const String _botCompanyIdKey = 'bot_company_id';
+  static const String _botCompanyNameKey = 'bot_company_name';
 
   /// Initialize bot credentials from dart-define to secure storage (call on app start)
   Future<void> initBotCredentials() async {
@@ -93,6 +95,53 @@ class CustomerAuthService {
   /// Clear cached bot token (call when token expires)
   Future<void> clearBotToken() async {
     await _secureStorage.delete(key: _botTokenKey);
+  }
+
+  /// Fetch and store bot's company info from /rest/company/details
+  Future<void> fetchAndStoreBotCompanyInfo() async {
+    final token = await getBotToken();
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/company/details'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final companyId = data['company'] as String?;
+      final companyName = data['activeBranch']?['company']?['name'] as String?;
+
+      if (companyId != null) {
+        await _secureStorage.write(key: _botCompanyIdKey, value: companyId);
+      }
+      if (companyName != null) {
+        await _secureStorage.write(key: _botCompanyNameKey, value: companyName);
+      }
+    } else if (response.statusCode == 401) {
+      await clearBotToken();
+      throw Exception('Bot token expired');
+    } else {
+      throw Exception('Failed to fetch company details: ${response.statusCode}');
+    }
+  }
+
+  /// Get the stored bot company ID
+  Future<String?> getBotCompanyId() async {
+    return await _secureStorage.read(key: _botCompanyIdKey);
+  }
+
+  /// Get the stored bot company name
+  Future<String?> getBotCompanyName() async {
+    return await _secureStorage.read(key: _botCompanyNameKey);
+  }
+
+  /// Check if bot company info is stored
+  Future<bool> hasBotCompanyInfo() async {
+    final companyId = await _secureStorage.read(key: _botCompanyIdKey);
+    return companyId != null && companyId.isNotEmpty;
   }
 
   /// Fetch all customers using bot token (in-memory only)

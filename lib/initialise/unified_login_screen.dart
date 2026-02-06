@@ -186,6 +186,14 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       final userData = loginResult['userData'] as Map<String, dynamic>;
       final roles = userData['roles'] as List<dynamic>?;
 
+      // Validate company ID against bot's company (for flavored apps)
+      final botCompanyId = await _customerAuthService.getBotCompanyId();
+      if (botCompanyId != null && botCompanyId.isNotEmpty) {
+        if (companyId != botCompanyId) {
+          throw Exception('Wrong Username or Password');
+        }
+      }
+
       // Determine if user is admin (monitor) or regular POS user
       final isAdmin =
           roles != null &&

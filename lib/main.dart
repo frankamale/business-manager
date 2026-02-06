@@ -41,14 +41,21 @@ void main() async {
   await GetStorage.init();
 
   // Debug: Print flavor info
-  print('=== FLAVOR DEBUG ===');
   print('FlavorConfig.flavorName: ${FlavorConfig.flavorName}');
   print('FlavorColors.current.primary: ${FlavorColors.current.primary}');
-  print('====================');
 
   // Initialize bot credentials from dart-define to secure storage
   final customerAuthService = CustomerAuthService();
   await customerAuthService.initBotCredentials();
+
+  // Fetch and store bot's company info for flavor validation
+  try {
+    if (await customerAuthService.hasBotCredentials()) {
+      await customerAuthService.fetchAndStoreBotCompanyInfo();
+    }
+  } catch (e) {
+    print('Warning: Could not fetch bot company info: $e');
+  }
 
   // POS Services
   Get.put(PosApiService());
