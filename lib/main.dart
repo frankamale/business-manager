@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 // Package imports for external dependencies
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'flavors/flavor_colors.dart';
+import 'flavors/flavor_config.dart';
 
 // POS Module imports
 import 'bac_monitor/lib/controllers/profile_controller.dart';
@@ -38,6 +39,12 @@ import 'package:bac_pos/bac_monitor/lib/controllers/mon_sync_controller.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
+
+  // Debug: Print flavor info
+  print('=== FLAVOR DEBUG ===');
+  print('FlavorConfig.flavorName: ${FlavorConfig.flavorName}');
+  print('FlavorColors.current.primary: ${FlavorColors.current.primary}');
+  print('====================');
 
   // Initialize bot credentials from dart-define to secure storage
   final customerAuthService = CustomerAuthService();

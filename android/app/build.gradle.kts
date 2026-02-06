@@ -17,8 +17,6 @@ android {
             applicationId = "com.komusoft.businessmanager"
             resValue("string", "app_name", "Business Manager")
         }
-    }
-    productFlavors {
         create("sassy"){
             dimension = "company"
             applicationId = "com.sassy.businessmanager"
