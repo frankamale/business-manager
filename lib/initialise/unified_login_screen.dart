@@ -1,6 +1,7 @@
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/account_manager.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
@@ -124,6 +125,24 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     final identifier = _usernameController.text.trim();
     final pin = _passwordController.text;
 
+    // Try cached login first (valid for 24 hours)
+    final cachedCustomer = await _customerAuthService.validateCachedCustomerLogin(
+      identifier: identifier,
+      pin: pin,
+    );
+
+    if (cachedCustomer != null) {
+      // Cached login successful - use cached data
+      await _completeCustomerLogin(cachedCustomer, identifier, pin);
+      return;
+    }
+
+    // No valid cache - authenticate via bot/server
+    await _handleServerCustomerLogin(identifier, pin);
+  }
+
+  /// Handle customer login via server (bot authentication)
+  Future<void> _handleServerCustomerLogin(String identifier, String pin) async {
     // Check if bot credentials are configured
     if (!await _customerAuthService.hasBotCredentials()) {
       throw Exception(
@@ -132,7 +151,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
 
     final botToken = await _customerAuthService.getBotToken();
-
     final customers = await _customerAuthService.fetchCustomers(botToken);
 
     final customer = _customerAuthService.findCustomerByIdentifier(
@@ -144,19 +162,32 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       throw Exception('Wrong Username or Password. Please try again...');
     }
 
-    // 4. Check if customer account is enabled
+    // Check if customer account is enabled
     if (customer.posenabled != true) {
       throw Exception(
         'Customer account is not enabled. Please contact support.',
       );
     }
 
-    // 5. Validate PIN using bcrypt
+    // Validate PIN using bcrypt
     if (!_customerAuthService.validateCustomerPin(customer, pin)) {
       throw Exception('Invalid PIN. Please try again.');
     }
 
-    // 6. Store customer data in GetStorage for offline usage
+    // Cache the customer account for future logins (valid for 24 hours)
+    await _customerAuthService.cacheCustomerAccount(customer);
+
+    // Complete the login
+    await _completeCustomerLogin(customer, identifier, pin);
+  }
+
+  /// Complete customer login (shared by cached and server login)
+  Future<void> _completeCustomerLogin(
+    dynamic customer,
+    String identifier,
+    String pin,
+  ) async {
+    // Store customer data in GetStorage for offline usage
     final box = GetStorage();
     await box.write('logged_in_customer', customer.toMap());
     await box.write('is_customer_logged_in', true);
@@ -165,7 +196,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       DateTime.now().millisecondsSinceEpoch,
     );
 
-    // 7. Store credentials for auto-fill (fire-and-forget)
+    // Store credentials for auto-fill (fire-and-forget)
     _storeCredentialsSecurely(identifier, pin);
 
     Get.offAll(() => const ClientAppRoot());
@@ -173,11 +204,65 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
   /// Handle staff/admin authentication (existing flow)
   Future<void> _handleStaffLogin() async {
-    // Authenticate user - returns all needed data so we don't re-read
-    final loginResult = await _authController.serverLogin(
-      _usernameController.text,
-      _passwordController.text,
+    final username = _usernameController.text;
+    final password = _passwordController.text;
+
+    // Try cached login first (valid for 24 hours)
+    final cachedAccount = await _customerAuthService.validateCachedStaffLogin(
+      username: username,
+      password: password,
     );
+
+    if (cachedAccount != null) {
+      // Cached login successful - use cached data
+      await _handleCachedStaffLogin(cachedAccount, username, password);
+      return;
+    }
+
+    // No valid cache - authenticate with server
+    await _handleServerStaffLogin(username, password);
+  }
+
+  /// Handle login using cached account data
+  Future<void> _handleCachedStaffLogin(
+    Map<String, dynamic> cachedAccount,
+    String username,
+    String password,
+  ) async {
+    final companyId = cachedAccount['companyId'] as String;
+    final roles = cachedAccount['roles'] as List<dynamic>?;
+    final userData = cachedAccount['userData'] as Map<String, dynamic>? ?? {};
+
+    // Open database for the company
+    await UnifiedDatabaseHelper.instance.openForCompany(companyId);
+
+    // Determine if user is admin (monitor) or regular POS user
+    final isAdmin =
+        roles != null &&
+        roles.any((role) => role.toString().toLowerCase().contains("admin"));
+    final targetSystem = isAdmin ? 'monitor' : 'pos';
+
+    // Set up account manager
+    final account = UserAccount(
+      id: companyId,
+      username: username.toLowerCase(),
+      system: targetSystem,
+      userData: {...userData, 'companyId': companyId},
+      lastLogin: DateTime.now(),
+    );
+    await _accountManager.setCurrentAccount(account);
+
+    // Store credentials for auto-fill
+    _storeCredentialsSecurely(username, password);
+
+    // Navigate to appropriate screen
+    _navigateToHome(isAdmin);
+  }
+
+  /// Handle login via server authentication
+  Future<void> _handleServerStaffLogin(String username, String password) async {
+    // Authenticate user - returns all needed data so we don't re-read
+    final loginResult = await _authController.serverLogin(username, password);
 
     if (loginResult != null) {
       // Extract data from login result (no storage reads needed)
@@ -193,6 +278,15 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           throw Exception('Wrong Username or Password');
         }
       }
+
+      // Cache the account for future logins (valid for 24 hours)
+      await _customerAuthService.cacheStaffAccount(
+        username: username,
+        password: password,
+        companyId: companyId,
+        roles: roles ?? [],
+        userData: userData,
+      );
 
       // Determine if user is admin (monitor) or regular POS user
       final isAdmin =
@@ -214,10 +308,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       }
 
       // Fire-and-forget: Store credentials for auto-fill (non-blocking)
-      _storeCredentialsSecurely(
-        _usernameController.text,
-        _passwordController.text,
-      );
+      _storeCredentialsSecurely(username, password);
 
       // Sync to monitor service if admin - MUST await for account switching to work
       if (isAdmin) {
@@ -225,29 +316,35 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           token,
           companyId,
           userData,
-          _usernameController.text,
-          _passwordController.text,
+          username,
+          password,
         );
       }
 
-      if (isAdmin) {
-        // Initialize monitor controllers (fast in-memory operations)
-        if (!Get.isRegistered<MonDashboardController>()) {
-          Get.put(MonDashboardController());
-        }
-        if (!Get.isRegistered<MonOperatorController>()) {
-          Get.put(MonOperatorController());
-        }
-        if (!Get.isRegistered<MonStoresController>()) {
-          Get.put(MonStoresController());
-        }
-        if (!Get.isRegistered<InventoryController>()) {
-          Get.put(InventoryController());
-        }
-        Get.offAll(() => const MonitorAppRoot());
-      } else {
-        Get.offAll(() => const PosAppRoot());
+      // Navigate to appropriate screen
+      _navigateToHome(isAdmin);
+    }
+  }
+
+  /// Navigate to the appropriate home screen based on user role
+  void _navigateToHome(bool isAdmin) {
+    if (isAdmin) {
+      // Initialize monitor controllers (fast in-memory operations)
+      if (!Get.isRegistered<MonDashboardController>()) {
+        Get.put(MonDashboardController());
       }
+      if (!Get.isRegistered<MonOperatorController>()) {
+        Get.put(MonOperatorController());
+      }
+      if (!Get.isRegistered<MonStoresController>()) {
+        Get.put(MonStoresController());
+      }
+      if (!Get.isRegistered<InventoryController>()) {
+        Get.put(InventoryController());
+      }
+      Get.offAll(() => const MonitorAppRoot());
+    } else {
+      Get.offAll(() => const PosAppRoot());
     }
   }
 

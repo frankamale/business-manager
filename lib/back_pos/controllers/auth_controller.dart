@@ -250,8 +250,8 @@ class AuthController extends GetxController {
       // Check if error is due to invalid credentials (401)
       if (errorString.contains('401')) {
         Get.snackbar(
-          'Server Login Failed',
-          'Invalid server credentials',
+          ' Login Failed',
+          'Wrong Username or password',
           snackPosition: SnackPosition.BOTTOM,
         );
       } else {
