@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../../shared/services/customer_auth_service.dart';
 import '../services/client_api_service.dart';
 
 class ResetPasscodeController extends GetxController {
   final ClientApiService _apiService = ClientApiService();
+  final CustomerAuthService _customerAuthService = CustomerAuthService();
 
   final oldPasscodeController = TextEditingController();
   final newPasscodeController = TextEditingController();
@@ -94,6 +96,23 @@ class ResetPasscodeController extends GetxController {
         newPassword: newPasscode,
         subject: 'password reset',
       );
+
+      // Update local storage with new password hash
+      final newHash = BCrypt.hashpw(newPasscode, BCrypt.gensalt());
+      customerData['pospassword'] = newHash;
+      await box.write('logged_in_customer', customerData);
+
+      // Update cached customer account
+      final identifier = customerData['email'] ??
+          customerData['phone1'] ??
+          customerData['posusername'] ??
+          '';
+      if (identifier.isNotEmpty) {
+        await _customerAuthService.updateCachedCustomerPassword(
+          identifier: identifier,
+          newPassword: newPasscode,
+        );
+      }
 
       // Clear fields
       oldPasscodeController.clear();

@@ -187,6 +187,15 @@ class PasswordRecoveryController extends GetxController {
         subject: 'password reset',
       );
 
+      // Update cached customer password if exists
+      final identifier = identifierController.text.trim();
+      if (identifier.isNotEmpty) {
+        await _customerAuthService.updateCachedCustomerPassword(
+          identifier: identifier,
+          newPassword: newPassword,
+        );
+      }
+
       Get.snackbar(
         'Success',
         'Your passcode has been reset successfully',

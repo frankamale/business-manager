@@ -472,6 +472,66 @@ class CustomerAuthService {
     );
   }
 
+  /// Update cached customer's password hash after password change
+  Future<void> updateCachedCustomerPassword({
+    required String identifier,
+    required String newPassword,
+  }) async {
+    final accounts = await _getCachedCustomerAccounts();
+    final normalized = identifier.toLowerCase().trim();
+
+    for (int i = 0; i < accounts.length; i++) {
+      final data = accounts[i]['customerData'] as Map<String, dynamic>?;
+      if (data == null) continue;
+
+      if (data['email']?.toString().toLowerCase() == normalized ||
+          data['phone1'] == normalized ||
+          data['posusername']?.toString().toLowerCase() == normalized) {
+        // Generate new bcrypt hash
+        final newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+
+        // Update the password hash
+        data['pospassword'] = newHash;
+        accounts[i]['customerData'] = data;
+        accounts[i]['lastLogin'] = DateTime.now().millisecondsSinceEpoch;
+
+        // Save back to secure storage
+        await _secureStorage.write(
+          key: _cachedCustomerAccountsKey,
+          value: json.encode(accounts),
+        );
+        return;
+      }
+    }
+  }
+
+  /// Update cached staff account's password hash after password change
+  Future<void> updateCachedStaffPassword({
+    required String username,
+    required String newPassword,
+  }) async {
+    final accounts = await _getCachedStaffAccounts();
+
+    for (int i = 0; i < accounts.length; i++) {
+      if (accounts[i]['username']?.toString().toLowerCase() ==
+          username.toLowerCase()) {
+        // Generate new bcrypt hash
+        final newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+
+        // Update the password hash
+        accounts[i]['passwordHash'] = newHash;
+        accounts[i]['lastLogin'] = DateTime.now().millisecondsSinceEpoch;
+
+        // Save back to secure storage
+        await _secureStorage.write(
+          key: _cachedStaffAccountsKey,
+          value: json.encode(accounts),
+        );
+        return;
+      }
+    }
+  }
+
   /// Fetch all customers using bot token (in-memory only)
   Future<List<Customer>> fetchCustomers(String token) async {
     final response = await http.get(
