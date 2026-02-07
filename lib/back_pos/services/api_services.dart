@@ -584,4 +584,36 @@ class PosApiService extends GetxService {
       rethrow;
     }
   }
+
+  /// Change password for the currently logged in user
+  Future<Map<String, dynamic>> changePassword({
+    required String userId,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getAccessToken();
+
+      final uri = Uri.parse(
+        '$baseurl/password/'
+        '?t=$userId'
+        '&p=${Uri.encodeComponent(newPassword)}'
+        '&s=${Uri.encodeComponent('password change')}',
+      );
+
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to change password: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
