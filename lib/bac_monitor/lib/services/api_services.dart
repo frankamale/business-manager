@@ -396,12 +396,12 @@ class MonitorApiService extends GetxService {
     final dateFormatter = DateFormat('yyyy-MM-dd');
 
     try {
-      // debugPrint("ApiService: Starting to fetch all data...");
+      debugPrint("ApiService: Starting to fetch all data...");
 
       // Check if we already have sales in the database
       final hasSales = await _hasSalesInDb();
       if (hasSales) {
-        // debugPrint("ApiService: Sales already exist in database, skipping fetch");
+        debugPrint("ApiService: Sales already exist in database, skipping fetch");
         await setInitialSyncCompleted();
 
         if (Get.isRegistered<MonOperatorController>()) {
@@ -419,7 +419,7 @@ class MonitorApiService extends GetxService {
       // Service points is now OPTIONAL - don't fail if it returns 404
       try {
         servicePointsRes = await getWithAuth('/servicepoints');
-        // debugPrint("ApiService: Successfully fetched service points");
+        debugPrint("ApiService: Successfully fetched service points");
       } catch (e) {
         debugPrint(
           "ApiService: Service points endpoint failed (will continue without it) -> $e",
@@ -429,37 +429,37 @@ class MonitorApiService extends GetxService {
 
       try {
         companyDetailsRes = await getWithAuth('/company/details');
-        // debugPrint("ApiService: Successfully fetched company details");
+        debugPrint("ApiService: Successfully fetched company details");
       } catch (e) {
-        // debugPrint("ApiService: Failed to fetch /company/details -> $e");
+        debugPrint("ApiService: Failed to fetch /company/details -> $e");
         companyDetailsRes = null;
       }
 
       try {
         final endDate = dateFormatter.format(now);
-        // debugPrint("ApiService: Fetching sales from 2023-09-01 to $endDate");
+        debugPrint("ApiService: Fetching sales from 2023-09-01 to $endDate");
         salesRes = await getWithAuth(
           '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
         );
-        // debugPrint("ApiService: Successfully fetched sales reports");
+        debugPrint("ApiService: Successfully fetched sales reports");
       } catch (e) {
-        // debugPrint("ApiService: Failed to fetch sales -> $e");
+        debugPrint("ApiService: Failed to fetch sales -> $e");
         salesRes = null;
       }
 
       try {
         salesDetailsRes = await getWithAuth('/sales/?pagecount=0&pagesize=5000');
-        // debugPrint("ApiService: Successfully fetched sales details");
+        debugPrint("ApiService: Successfully fetched sales details");
       } catch (e) {
-        // debugPrint("ApiService: Failed to fetch /sales/ -> $e");
+        debugPrint("ApiService: Failed to fetch /sales/ -> $e");
         salesDetailsRes = null;
       }
 
       try {
         inventoryRes = await getWithAuth('/inventory/');
-        // debugPrint("ApiService: Successfully fetched inventory");
+        debugPrint("ApiService: Successfully fetched inventory");
       } catch (e) {
-        // debugPrint("ApiService: Failed to fetch /inventory -> $e");
+        debugPrint("ApiService: Failed to fetch /inventory -> $e");
         inventoryRes = null;
       }
 
@@ -469,7 +469,7 @@ class MonitorApiService extends GetxService {
         try {
           servicePointsData = json.decode(servicePointsRes.body);
         } catch (e) {
-          // debugPrint("ApiService: Failed to parse service points JSON -> $e");
+          debugPrint("ApiService: Failed to parse service points JSON -> $e");
         }
       }
 
@@ -478,7 +478,7 @@ class MonitorApiService extends GetxService {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
         } catch (e) {
-          // debugPrint("ApiService: Failed to parse company details JSON -> $e");
+          debugPrint("ApiService: Failed to parse company details JSON -> $e");
         }
       }
 
@@ -487,9 +487,9 @@ class MonitorApiService extends GetxService {
       if (salesRes != null && salesRes.body.isNotEmpty) {
         try {
           salesData = await compute(_decodeJsonList, salesRes.body);
-          // debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
+          debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
         } catch (e) {
-          // debugPrint("ApiService: Failed to parse sales JSON -> $e");
+          debugPrint("ApiService: Failed to parse sales JSON -> $e");
         }
       }
 
@@ -498,7 +498,7 @@ class MonitorApiService extends GetxService {
         try {
           salesDetailsData = await compute(_decodeJsonList, salesDetailsRes.body);
         } catch (e) {
-          // debugPrint("ApiService: Failed to parse sales details JSON -> $e");
+          debugPrint("ApiService: Failed to parse sales details JSON -> $e");
         }
       }
 
@@ -506,9 +506,9 @@ class MonitorApiService extends GetxService {
       if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
         try {
           inventoryData = await compute(_decodeJsonList, inventoryRes.body);
-          // debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
+          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
         } catch (e) {
-          // debugPrint("ApiService: Failed to parse inventory JSON -> $e");
+          debugPrint("ApiService: Failed to parse inventory JSON -> $e");
         }
       }
 

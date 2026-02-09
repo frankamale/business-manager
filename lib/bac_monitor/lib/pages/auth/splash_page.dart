@@ -238,10 +238,13 @@ class _SplashPageState extends State<SplashPage> {
       await _loadDataIntoControllers();
       debugPrint('SplashPage: Load data into controllers took ${stopwatch.elapsedMilliseconds}ms');
 
-      // STEP 9: Navigate to main screen
-      _updateStatus('Ready!');
+      // STEP 9: Navigate to main screen after the current frame completes
+      // Using WidgetsBinding to schedule navigation after the frame renders,
+      // keeping the progress indicator animating during the transition.
       debugPrint('SplashPage: Total initialization complete, navigating to BottomNav');
-      Get.offAll(() => const BottomNav());
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.offAll(() => const BottomNav());
+      });
 
     } catch (e) {
       debugPrint('SplashPage: Fatal error during initialization - $e');
