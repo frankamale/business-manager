@@ -41,19 +41,18 @@ class FlavorColors {
 
   /// Komusoft flavor - Blue theme (default)
   static const komusoft = FlavorColorPalette(
-    primary: Color(0xFF1976D2),      // Colors.blue.shade700
-    primaryDark: Color(0xFF1565C0),  // Colors.blue.shade800
-    secondary: Color(0xFF1E88E5),    // Colors.blue.shade600
-    tertiary: Color(0xFF42A5F5),     // Colors.blue.shade400
-    light: Color(0xFF64B5F6),        // Colors.blue.shade300
-    surface: Color(0xFFE3F2FD),      // Colors.blue.shade50
-    icon: Color(0xFF0D47A1),         // Colors.blue.shade900
+    primary: Color(0xFF1565C0),      // Blue 800 (strong brand blue)
+    primaryDark: Color(0xFF0D47A1),  // Blue 900 (deep/navy)
+    secondary: Color(0xFF1E88E5),    // Blue 600 (accent buttons/links)
+    tertiary: Color(0xFF42A5F5),     // Blue 400 (highlights)
+    light: Color(0xFF90CAF9),        // Blue 200 (soft backgrounds)
+    surface: Color(0xFFE3F2FD),      // Blue 50  (cards, subtle tint)
+    icon: Color(0xFF0D47A1),         // Blue 900 (icons/text emphasis)
     onPrimary: Colors.white,
-    background: Color(0xFFF5F5F5),   // Colors.grey.shade100
+    background: Color(0xFFF9FAFB),   // clean light grey background
   );
 
   // / Sassy flavor - Add your colors here
-  // / Example with purple theme:
   static const sassy = FlavorColorPalette(
     primary: Color(0xFF7B1FA2),      // Colors.purple.shade700
     primaryDark: Color(0xFF6A1B9A),  // Colors.purple.shade800

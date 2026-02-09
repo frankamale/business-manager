@@ -77,7 +77,8 @@ class CustomerAuthService {
     // Get bot credentials
     final credentials = await getBotCredentials();
     if (credentials['username'] == null || credentials['password'] == null) {
-      throw Exception('Bot credentials not configured');
+      print('Bot credentials not configured');
+      throw Exception('An error occurred');
     }
 
     // Authenticate
@@ -97,7 +98,8 @@ class CustomerAuthService {
       await _secureStorage.write(key: _botTokenKey, value: token);
       return token;
     } else {
-      throw Exception('Failed to authenticate bot: ${response.statusCode}');
+      print('Failed to authenticate bot: ${response.statusCode}');
+      throw Exception('An error occurred');
     }
   }
 
@@ -131,9 +133,11 @@ class CustomerAuthService {
       }
     } else if (response.statusCode == 401) {
       await clearBotToken();
-      throw Exception('Bot token expired');
+      throw Exception('An error occured');
     } else {
-      throw Exception('Failed to fetch company details: ${response.statusCode}');
+      print("Failed to company details ${response.statusCode}");
+
+      throw Exception('An error occurred');
     }
   }
 
@@ -548,9 +552,12 @@ class CustomerAuthService {
     } else if (response.statusCode == 401) {
       // Token expired, clear and retry
       await clearBotToken();
-      throw Exception('Bot token expired');
+      print("an error occurred $response.statusCode ");
+      throw Exception('An Error Occurred');
     } else {
-      throw Exception('Failed to fetch customers: ${response.statusCode}');
+      print("Failed to fetch customers: ${response.statusCode}");
+
+      throw Exception('An error occurred');
     }
   }
 
