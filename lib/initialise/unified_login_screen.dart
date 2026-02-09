@@ -1,6 +1,7 @@
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/account_manager.dart';
+import 'package:bac_pos/flavors/flavor_config.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,6 +16,7 @@ import '../bac_monitor/lib/controllers/mon_store_controller.dart';
 import '../back_pos/controllers/inventory_controller.dart';
 import '../client/auth/password_recovery.dart';
 import '../client/auth/register.dart';
+import '../flavors/flavor_colors.dart';
 import '../shared/services/customer_auth_service.dart';
 import '../shared/widgets/app_logo.dart';
 import 'app_roots.dart';
@@ -53,9 +55,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     super.initState();
     _loadUserRoles();
     _loadStoredCredentials();
-    // Note: We don't initialize company ID here because:
-    // 1. On fresh login, there's no company yet
-    // 2. AuthController.serverLogin handles opening the database after authentication
   }
 
   // Load stored credentials if they exist (for auto-fill or remember me functionality)
@@ -126,10 +125,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     final pin = _passwordController.text;
 
     // Try cached login first (valid for 24 hours)
-    final cachedCustomer = await _customerAuthService.validateCachedCustomerLogin(
-      identifier: identifier,
-      pin: pin,
-    );
+    final cachedCustomer = await _customerAuthService
+        .validateCachedCustomerLogin(identifier: identifier, pin: pin);
 
     if (cachedCustomer != null) {
       // Cached login successful - use cached data
@@ -414,6 +411,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: Container(
@@ -422,9 +420,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.cyan.shade300,
+              FlavorColors.current.primaryDark,
+              FlavorColors.current.secondary,
+              FlavorColors.current.primaryDark,
             ],
           ),
         ),
@@ -472,10 +470,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Business Manager",
+                            AppConfig.description,
                             style: TextStyle(
                               fontSize: isSmallScreen ? 14 : 16,
-                              color: Colors.blue.shade600,
+                              color: FlavorColors.current.primaryDark,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -489,7 +487,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               labelText: 'Username',
                               prefixIcon: Icon(
                                 Icons.person_outline_rounded,
-                                color: Colors.blue.shade700,
+                                color: FlavorColors.current.primaryDark,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -506,7 +504,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.blue.shade700,
+                                  color: FlavorColors.current.primaryDark,
                                   width: 2,
                                 ),
                               ),
@@ -531,7 +529,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               labelText: 'Password',
                               prefixIcon: Icon(
                                 Icons.lock_outline_rounded,
-                                color: Colors.blue.shade700,
+                                color: FlavorColors.current.primaryDark,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
@@ -561,7 +559,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.blue.shade700,
+                                  color: FlavorColors.current.primaryDark,
                                   width: 2,
                                 ),
                               ),
@@ -602,10 +600,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
-                                foregroundColor: Colors.white,
+                                backgroundColor: FlavorColors.current.primary,
+                                foregroundColor: FlavorColors.current.onPrimary,
                                 elevation: 4,
-                                shadowColor: Colors.blue.withOpacity(0.5),
+                                shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -642,10 +640,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             child: ElevatedButton(
                               onPressed: () => Get.to(Register()),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade900,
-                                foregroundColor: Colors.white,
+                                backgroundColor: FlavorColors.current.primaryDark,
+                                foregroundColor: FlavorColors.current.onPrimary,
                                 elevation: 4,
-                                shadowColor: Colors.blue.withOpacity(0.5),
+                                shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),

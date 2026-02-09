@@ -18,7 +18,8 @@ class RegisterController extends GetxController {
   final confirmPasswordController = TextEditingController();
   final challengeCodeController = TextEditingController();
 
-  var isLoading = false.obs;
+  var isGettingCode = false.obs;
+  var isRegistering = false.obs;
   var isCodeSent = false.obs;
   var selectedGender = 'Male'.obs;
   var showAdvanced = false.obs;
@@ -79,7 +80,7 @@ class RegisterController extends GetxController {
       return false;
     }
 
-    isLoading.value = true;
+    isGettingCode.value = true;
 
     try {
       _generatedCode = _generateRandomCode();
@@ -105,7 +106,7 @@ class RegisterController extends GetxController {
           snackPosition: SnackPosition.BOTTOM);
       return false;
     } finally {
-      isLoading.value = false;
+      isGettingCode.value = false;
     }
   }
 
@@ -129,7 +130,7 @@ class RegisterController extends GetxController {
       return false;
     }
 
-    isLoading.value = true;
+    isRegistering.value = true;
 
     try {
       // Split full name into first and last name
@@ -155,7 +156,7 @@ class RegisterController extends GetxController {
           snackPosition: SnackPosition.BOTTOM);
       return false;
     } finally {
-      isLoading.value = false;
+      isRegistering.value = false;
     }
   }
 
@@ -192,7 +193,7 @@ class RegisterController extends GetxController {
       return false;
     }
 
-    isLoading.value = true;
+    isRegistering.value = true;
 
     try {
       // Use reset password endpoint to set the passcode
@@ -209,7 +210,7 @@ class RegisterController extends GetxController {
       errorMessage.value = 'Failed to set passcode: $e';
       return false;
     } finally {
-      isLoading.value = false;
+      isRegistering.value = false;
     }
   }
 

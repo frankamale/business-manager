@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../back_pos/config.dart';
+import '../../flavors/flavor_colors.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../controllers/register_controller.dart';
 import 'set_passcode.dart';
@@ -25,9 +26,9 @@ class Register extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              colorScheme.primary,
-              colorScheme.secondary,
-              colorScheme.tertiary,
+              FlavorColors.current.primaryDark,
+              FlavorColors.current.secondary,
+              FlavorColors.current.primaryDark,
             ],
           ),
         ),
@@ -223,14 +224,14 @@ class Register extends StatelessWidget {
                                 const SizedBox(width: 10),
                                 ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: colorScheme.primary,
-                                    foregroundColor: colorScheme.onPrimary,
+                                    backgroundColor: FlavorColors.current.primaryDark,
+                                    foregroundColor: FlavorColors.current.onPrimary,
                                   ),
-                                  onPressed: controller.isLoading.value
+                                  onPressed: controller.isGettingCode.value
                                       ? null
                                       : () =>
                                             controller.generateChallengeCode(),
-                                  child: controller.isLoading.value
+                                  child: controller.isGettingCode.value
                                       ? SizedBox(
                                           width: 20,
                                           height: 20,
@@ -250,16 +251,19 @@ class Register extends StatelessWidget {
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: colorScheme.primary,
-                                  foregroundColor: colorScheme.onPrimary,
+                                  backgroundColor: FlavorColors.current.primaryDark,
+                                  foregroundColor: FlavorColors.current.onPrimary,
                                   elevation: 4,
-                                  shadowColor: colorScheme.shadow.withValues(alpha: 0.5),
+                                  shadowColor: colorScheme.shadow.withValues(
+                                    alpha: 0.5,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                                  disabledBackgroundColor:
+                                      colorScheme.surfaceContainerHighest,
                                 ),
-                                onPressed: controller.isLoading.value
+                                onPressed: controller.isRegistering.value
                                     ? null
                                     : () async {
                                         final success = await controller
@@ -268,13 +272,13 @@ class Register extends StatelessWidget {
                                           Get.to(() => SetPasscode());
                                         }
                                       },
-                                child: controller.isLoading.value
+                                child: controller.isRegistering.value
                                     ? SizedBox(
                                         width: 20,
                                         height: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: colorScheme.onPrimary,
+                                          color: FlavorColors.current.primaryDark,
                                         ),
                                       )
                                     : const Text("Register Account"),
@@ -321,30 +325,28 @@ class Register extends StatelessWidget {
     IconData icon, {
     bool enabled = true,
   }) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return TextFormField(
       controller: textController,
       enabled: enabled,
       keyboardType: TextInputType.text,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: colorScheme.primary),
+        prefixIcon: Icon(icon, color: FlavorColors.current.primaryDark),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
+          borderSide: BorderSide(color: FlavorColors.current.primaryDark),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
+          borderSide: BorderSide(color: FlavorColors.current.primaryDark),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary),
+          borderSide: BorderSide(color: FlavorColors.current.primaryDark),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outlineVariant),
+          borderSide: BorderSide(color: FlavorColors.current.primaryDark),
         ),
       ),
     );
@@ -356,25 +358,23 @@ class Register extends StatelessWidget {
     TextEditingController textController,
     IconData icon,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return TextFormField(
       controller: textController,
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: colorScheme.primary),
+        prefixIcon: Icon(icon, color: FlavorColors.current.primaryDark),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
+          borderSide: BorderSide(color: FlavorColors.current.primaryDark),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
+          borderSide: BorderSide(color: FlavorColors.current.primaryDark),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary),
+          borderSide: BorderSide(color: FlavorColors.current.primaryDark),
         ),
       ),
     );
