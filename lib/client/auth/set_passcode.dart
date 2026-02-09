@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 
 import '../../back_pos/config.dart';
-import '../../initialise/unified_login_screen.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../controllers/register_controller.dart';
+import 'account_pending_screen.dart';
 
 class SetPasscode extends StatelessWidget {
   SetPasscode({super.key});
@@ -138,7 +139,22 @@ class SetPasscode extends StatelessWidget {
                                       final success = await controller
                                           .completeRegistration();
                                       if (success) {
-                                        _showSuccessDialog(context);
+                                        final email = controller
+                                            .emailController.text
+                                            .trim();
+                                        final box = GetStorage();
+                                        await box.write(
+                                            'pending_registration', {
+                                          'email': email,
+                                          'name': controller
+                                              .nameController.text
+                                              .trim(),
+                                        });
+                                        Get.offAll(
+                                          () => AccountPendingScreen(
+                                            email: email,
+                                          ),
+                                        );
                                       }
                                     },
                               child: controller.isRegistering.value
@@ -286,103 +302,4 @@ class SetPasscode extends StatelessWidget {
     );
   }
 
-  void _showSuccessDialog(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.tertiaryContainer,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.hourglass_top_rounded,
-                    size: 64,
-                    color: colorScheme.onTertiaryContainer,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  textAlign: TextAlign.center,
-                  "Registration Successful",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  "Your account has been created successfully!",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: colorScheme.onPrimaryContainer),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          "An administrator will review and activate your account shortly.",
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                      Get.offAll(() => const UnifiedLoginScreen());
-                    },
-                    child: const Text(
-                      "Back to Login",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 }

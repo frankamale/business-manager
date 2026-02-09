@@ -15,6 +15,7 @@ import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
 import '../back_pos/controllers/inventory_controller.dart';
 import '../client/auth/password_recovery.dart';
+import '../client/auth/account_pending_screen.dart';
 import '../client/auth/register.dart';
 import '../flavors/flavor_colors.dart';
 import '../shared/services/customer_auth_service.dart';
@@ -39,6 +40,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   final CustomerAuthService _customerAuthService = CustomerAuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _hasPendingRegistration = false;
   String? _errorMessage;
 
   // Initialize secure storage for credentials
@@ -55,6 +57,17 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     super.initState();
     _loadUserRoles();
     _loadStoredCredentials();
+    _checkPendingRegistration();
+  }
+
+  void _checkPendingRegistration() {
+    final box = GetStorage();
+    final pending = box.read('pending_registration');
+    if (pending != null) {
+      setState(() {
+        _hasPendingRegistration = true;
+      });
+    }
   }
 
   // Load stored credentials if they exist (for auto-fill or remember me functionality)
@@ -161,9 +174,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
     // Check if customer account is enabled
     if (customer.posenabled != true) {
-      throw Exception(
-        'Customer account is not enabled. Please contact support.',
-      );
+      Get.to(() => AccountPendingScreen(email: customer.email));
+      return;
     }
 
     // Validate PIN using bcrypt
@@ -186,6 +198,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   ) async {
     // Store customer data in GetStorage for offline usage
     final box = GetStorage();
+    // Account is approved, clear pending registration flag
+    await box.remove('pending_registration');
     await box.write('logged_in_customer', customer.toMap());
     await box.write('is_customer_logged_in', true);
     await box.write(
@@ -638,7 +652,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: () => Get.to(Register()),
+                              onPressed: _hasPendingRegistration
+                                  ? null
+                                  : () => Get.to(Register()),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: FlavorColors.current.primaryDark,
                                 foregroundColor: FlavorColors.current.onPrimary,
@@ -659,6 +675,18 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               ),
                             ),
                           ),
+                          if (_hasPendingRegistration)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'A registration is pending approval on this device.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
 
                           const SizedBox(height: 24),
 
