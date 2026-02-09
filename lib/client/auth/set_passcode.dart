@@ -132,7 +132,7 @@ class SetPasscode extends StatelessWidget {
                                 ),
                                 disabledBackgroundColor: colorScheme.surfaceContainerHighest,
                               ),
-                              onPressed: controller.isLoading.value
+                              onPressed: controller.isRegistering.value
                                   ? null
                                   : () async {
                                       final success = await controller
@@ -141,7 +141,7 @@ class SetPasscode extends StatelessWidget {
                                         _showSuccessDialog(context);
                                       }
                                     },
-                              child: controller.isLoading.value
+                              child: controller.isRegistering.value
                                   ? SizedBox(
                                       width: 20,
                                       height: 20,

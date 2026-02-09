@@ -204,9 +204,6 @@ class Palettes {
   }
 }
 
-// ──────────────────────────────────────────────
-//  Company → palette assignment
-// ──────────────────────────────────────────────
 
 class FlavorColors {
   FlavorColors._();
@@ -215,9 +212,7 @@ class FlavorColors {
   static const Map<String, FlavorColorPalette> _companyPalettes = {
     'komusoft': Palettes.blue,
     'sassy': Palettes.purple,
-    // Add new companies here:
-    // 'acme': Palettes.red,
-    // 'greenleaf': Palettes.darkGreen,
+    'top_grade': Palettes.red,
   };
 
   /// Get the color palette for the current flavor/company

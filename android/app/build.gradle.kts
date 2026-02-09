@@ -12,15 +12,20 @@ android {
     flavorDimensions += "company"
 
     productFlavors {
-        create("komusoft"){
+        create("komusoft") {
             dimension = "company"
             applicationId = "com.komusoft.businessmanager"
             resValue("string", "app_name", "Business Manager")
         }
-        create("sassy"){
+        create("sassy") {
             dimension = "company"
             applicationId = "com.sassy.businessmanager"
             resValue("string", "app_name", "Sassy Dry Cleaners")
+        }
+        create("top_grade") {
+            dimension = "company"
+            applicationId = "com.nvuma.businessmanager"
+            resValue("string", "app_name", "Top Grade")
         }
     }
 
