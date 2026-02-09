@@ -291,8 +291,9 @@ class Register extends StatelessWidget {
                             children: [
                               Hero(
                                 tag: 'footer_logo',
-                                child: AppLogoCircle(
-                                  size: isSmallScreen ? 30 : 50,
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  height: isSmallScreen ? 30 : 50,
                                 ),
                               ),
                               const SizedBox(width: 10),

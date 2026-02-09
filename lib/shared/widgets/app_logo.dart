@@ -61,7 +61,7 @@ class AppLogoCircle extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: backgroundColor ?? Colors.blue.shade50,
+        color: backgroundColor ?? Colors.transparent,
         shape: BoxShape.circle,
       ),
       child: AppLogo(

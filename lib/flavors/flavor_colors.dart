@@ -181,6 +181,19 @@ class Palettes {
     onPrimary: Colors.white,
     background: Color(0xFFFFF5F7),
   );
+  static const white = FlavorColorPalette(
+    primary: Color(0xFFFFFFFF),       // Pure white
+    primaryDark: Color(0xFFF5F5F5),   // Slight grey for contrast
+    secondary: Color(0xFFE0E0E0),     // Light grey accents
+    tertiary: Color(0xFFBDBDBD),      // Medium grey for depth
+    light: Color(0xFFFFFFFF),         // Still white
+
+    surface: Color(0xFFF9F9F9),       // Soft surface white
+    icon: Color(0xFF212121),          // Dark icons for visibility
+
+    onPrimary: Color(0xFF212121),     // Dark text on white
+    background: Color(0xFFFFFFFF),    // Full white background
+  );
 
   /// All available palettes by name
   static const Map<String, FlavorColorPalette> all = {
@@ -212,7 +225,7 @@ class FlavorColors {
   static const Map<String, FlavorColorPalette> _companyPalettes = {
     'komusoft': Palettes.blue,
     'sassy': Palettes.purple,
-    'top_grade': Palettes.red,
+    'top_grade': Palettes.pink,
   };
 
   /// Get the color palette for the current flavor/company
