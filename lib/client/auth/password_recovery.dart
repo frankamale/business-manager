@@ -1,3 +1,4 @@
+import 'package:bac_pos/flavors/flavor_colors.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -27,9 +28,9 @@ class PasswordRecovery extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              colorScheme.primary,
-              colorScheme.secondary,
-              colorScheme.tertiary,
+              FlavorColors.current.primaryDark,
+              FlavorColors.current.secondary,
+              FlavorColors.current.primary,
             ],
           ),
         ),
@@ -281,10 +282,10 @@ class PasswordRecovery extends StatelessWidget {
       textCapitalization: textCapitalization,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: colorScheme.primary),
+        prefixIcon: Icon(icon, color: FlavorColors.current.primaryDark),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
+          borderSide: BorderSide(color: FlavorColors.current.secondary),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -292,7 +293,7 @@ class PasswordRecovery extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary),
+          borderSide: BorderSide(color:FlavorColors.current.primaryDark),
         ),
       ),
     );
@@ -313,10 +314,10 @@ class PasswordRecovery extends StatelessWidget {
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: colorScheme.primary),
+        prefixIcon: Icon(icon, color: FlavorColors.current.primaryDark),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.outline),
+          borderSide: BorderSide(color: FlavorColors.current.secondary),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -324,7 +325,7 @@ class PasswordRecovery extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: colorScheme.primary),
+          borderSide: BorderSide(color:FlavorColors.current.primaryDark),
         ),
       ),
     );
@@ -356,8 +357,8 @@ class PasswordRecovery extends StatelessWidget {
       child: Obx(
         () => ElevatedButton(
           style: ElevatedButton.styleFrom(
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
+            backgroundColor: FlavorColors.current.primary,
+            foregroundColor: FlavorColors.current.onPrimary,
             elevation: 4,
             shadowColor: colorScheme.shadow.withValues(alpha: 0.5),
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -392,7 +393,9 @@ class PasswordRecovery extends StatelessWidget {
     return TextButton.icon(
       onPressed: () => Get.back(),
       icon: const Icon(Icons.arrow_back),
-      label: const Text("Back to Login"),
+      label:  Text("Back to Login", style: TextStyle(color: FlavorColors.current.primaryDark),),
+
+
     );
   }
 

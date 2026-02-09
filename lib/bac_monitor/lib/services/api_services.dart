@@ -391,7 +391,7 @@ class MonitorApiService extends GetxService {
     }
   }
 
-  Future<void> fetchAndCacheAllData() async {
+  Future<void> fetchAndCacheAllData({bool force = false}) async {
     final now = DateTime.now();
     final dateFormatter = DateFormat('yyyy-MM-dd');
 
@@ -399,15 +399,17 @@ class MonitorApiService extends GetxService {
       debugPrint("ApiService: Starting to fetch all data...");
 
       // Check if we already have sales in the database
-      final hasSales = await _hasSalesInDb();
-      if (hasSales) {
-        debugPrint("ApiService: Sales already exist in database, skipping fetch");
-        await setInitialSyncCompleted();
+      if (!force) {
+        final hasSales = await _hasSalesInDb();
+        if (hasSales) {
+          debugPrint("ApiService: Sales already exist in database, skipping fetch");
+          await setInitialSyncCompleted();
 
-        if (Get.isRegistered<MonOperatorController>()) {
-          await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+          if (Get.isRegistered<MonOperatorController>()) {
+            await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+          }
+          return;
         }
-        return;
       }
 
       http.Response? servicePointsRes;

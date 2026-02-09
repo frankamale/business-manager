@@ -151,7 +151,7 @@ class _MoreState extends State<More> {
 
     try {
       final apiService = Get.find<MonitorApiService>();
-      await apiService.fetchAndCacheAllData();
+      await apiService.fetchAndCacheAllData(force: true);
 
       if (Get.isRegistered<MonKpiOverviewController>()) {
         await Get.find<MonKpiOverviewController>().fetchKpiData();
