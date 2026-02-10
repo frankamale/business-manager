@@ -225,7 +225,7 @@ class FlavorColors {
   static const Map<String, FlavorColorPalette> _companyPalettes = {
     'komusoft': Palettes.blue,
     'sassy': Palettes.purple,
-    'top_grade': Palettes.pink,
+    'top_grade': Palettes.orange,
   };
 
   /// Get the color palette for the current flavor/company

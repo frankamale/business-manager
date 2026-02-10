@@ -476,7 +476,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           // Title
                           Text(
                             "${AppConfig.companyName}",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
+
                               fontSize: isSmallScreen ? 28 : 32,
                               fontWeight: FontWeight.bold,
                               color: Colors.grey.shade800,
