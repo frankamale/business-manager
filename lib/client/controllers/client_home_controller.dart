@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../services/otp_generator.dart';
+
 class ClientHomeController extends GetxController {
   final box = GetStorage();
 
@@ -24,26 +26,18 @@ class ClientHomeController extends GetxController {
     generateOtp();
   }
 
-  /// Generate OTP based on timestamp and user ID
+  /// Generate OTP
   void generateOtp() {
     isGenerating.value = true;
 
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
     final userId = odoo_id.isNotEmpty ? odoo_id : fullName;
 
-    // Create a hash-like value from timestamp and userId
-    int hash = 0;
-    final combined = '$timestamp$userId';
-    for (int i = 0; i < combined.length; i++) {
-      hash = ((hash << 5) - hash + combined.codeUnitAt(i)) & 0xFFFFFFFF;
-    }
+    // Generate OTP using TOTP algorithm
+    final otpNumber = generateTOTP(uuid: userId);
 
-    // Convert to 6-digit OTP
-    final otpNumber = (hash.abs() % 1000000).toString().padLeft(6, '0');
-
-    // Format as "XXX XXX"
     otp.value = '${otpNumber.substring(0, 3)} ${otpNumber.substring(3)}';
 
     isGenerating.value = false;
   }
+
 }

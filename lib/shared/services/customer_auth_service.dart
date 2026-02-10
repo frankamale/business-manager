@@ -157,9 +157,6 @@ class CustomerAuthService {
     return companyId != null && companyId.isNotEmpty;
   }
 
-  // ============================================================
-  // STAFF ACCOUNT CACHING (for offline/faster login)
-  // ============================================================
 
   /// Cache a staff account after successful server login
   Future<void> cacheStaffAccount({
