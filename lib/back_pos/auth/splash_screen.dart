@@ -489,178 +489,173 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+
+    final size = MediaQuery.of(context).size;
+    final bool isSmallScreen = size.width < 600;
     return Scaffold(
-      body: Container(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.cyan.shade300,
-            ],
+      body: Center(
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade700,
+                Colors.blue.shade400,
+                Colors.cyan.shade300,
+              ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo with animations
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Container(
-                      margin: EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
+          child: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo with animations
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child:  Hero(
+                        tag: 'logo',
+                        child: AppLogoCircle(
+                          size: isSmallScreen ? 100 : 120,
+                        ),
                       ),
-                      child: const AppLogo(width: 100, height: 100),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-                // App Name
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Text(
-                    AppConfig.appName,
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
+                  // App Name
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Text(
+                      AppConfig.appName,
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Company Name
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Text(
+                      AppConfig.companyName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Loading Indicator or Error Icon
+                  if (!_hasError)
+                    const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 3,
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.error_outline,
+                      size: 40,
+                      color: Colors.red.shade200,
+                    ),
+                  const SizedBox(height: 20),
+
+                  // Status Message
+                  Text(
+                    _statusMessage,
+                    style: const TextStyle(
+                      fontSize: 14,
                       color: Colors.white,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Company Name
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Text(
-                    AppConfig.companyName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-                const SizedBox(height: 40),
 
-                // Loading Indicator or Error Icon
-                if (!_hasError)
-                  const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      strokeWidth: 3,
-                    ),
-                  )
-                else
-                  Icon(
-                    Icons.error_outline,
-                    size: 40,
-                    color: Colors.red.shade200,
-                  ),
-                const SizedBox(height: 20),
-
-                // Status Message
-                Text(
-                  _statusMessage,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-
-                // Error Buttons
-                if (_hasError) ...[
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _hasError = false;
-                        _isOfflineMode = false;
-                      });
-                      _authenticateApp();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry Connection'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-
-                  // Only show Continue Offline if cached data exists
-                  if (_isOfflineMode && _hasCachedData) ...[
-                    const SizedBox(height: 12),
-                    TextButton.icon(
+                  // Error Buttons
+                  if (_hasError) ...[
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
                       onPressed: () {
-                        _log('User clicked Continue Offline button');
-                        if (widget.nextScreen != null) {
-                          _log('Navigating to custom next screen (offline mode)');
-                          Get.off(() => widget.nextScreen!);
-                        } else {
-                          _log('Navigating to Login screen (offline mode)');
-                          Get.off(() => const Login());
-                        }
+                        setState(() {
+                          _hasError = false;
+                          _isOfflineMode = false;
+                        });
+                        _authenticateApp();
                       },
-                      icon: const Icon(Icons.offline_bolt, color: Colors.white),
-                      label: const Text('Continue Offline'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry Connection'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.blue,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,
                         ),
                       ),
                     ),
-                  ],
-                ],
-                const SizedBox(height: 40),
 
-                // Footer
-                const Spacer(),
-                Text(
-                  AppConfig.edition,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white60,
+                    // Only show Continue Offline if cached data exists
+                    if (_isOfflineMode && _hasCachedData) ...[
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () {
+                          _log('User clicked Continue Offline button');
+                          if (widget.nextScreen != null) {
+                            _log('Navigating to custom next screen (offline mode)');
+                            Get.off(() => widget.nextScreen!);
+                          } else {
+                            _log('Navigating to Login screen (offline mode)');
+                            Get.off(() => const Login());
+                          }
+                        },
+                        icon: const Icon(Icons.offline_bolt, color: Colors.white),
+                        label: const Text('Continue Offline'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+
+                  // Footer
+                  const SizedBox(
+                    height: 200,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppConfig.copyright,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white60,
+                  Text(
+                    AppConfig.edition,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white60,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    AppConfig.copyright,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white60,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),

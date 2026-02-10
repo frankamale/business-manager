@@ -30,8 +30,8 @@ class UnifiedLoginScreen extends StatefulWidget {
 }
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
-  PosApiService _apiService = PosApiService();
-  final MonitorApiService _monitorApiService = MonitorApiService();
+  PosApiService _apiService = Get.find<PosApiService>();
+  final MonitorApiService _monitorApiService = Get.find<MonitorApiService>();
   final AccountManager _accountManager = Get.find<AccountManager>();
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
@@ -265,6 +265,26 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
     // Store credentials for auto-fill
     _storeCredentialsSecurely(username, password);
+
+    // Sync to monitor service if admin (re-authenticate for fresh token)
+    if (isAdmin) {
+      try {
+        final loginResult = await _authController.serverLogin(username, password);
+        if (loginResult != null) {
+          final token = loginResult['token'] as String;
+          await _syncToMonitorServiceAsync(
+            token,
+            companyId,
+            userData,
+            username,
+            password,
+          );
+        }
+      } catch (e) {
+        // Offline or server error - store companyId for offline mode
+        await _monitorApiService.storeCompanyId(companyId);
+      }
+    }
 
     // Navigate to appropriate screen
     _navigateToHome(isAdmin);

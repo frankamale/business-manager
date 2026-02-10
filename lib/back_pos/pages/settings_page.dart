@@ -185,10 +185,12 @@ class SettingsPage extends StatelessWidget {
 }
 
 void _showChangePasswordDialog(BuildContext context, AuthController authController) {
+  final oldPasswordController = TextEditingController();
   final newPasswordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
   final formKey = GlobalKey<FormState>();
   final isLoading = ValueNotifier<bool>(false);
+  final obscureOld = ValueNotifier<bool>(true);
   final obscureNew = ValueNotifier<bool>(true);
   final obscureConfirm = ValueNotifier<bool>(true);
   final errorMessage = ValueNotifier<String>('');
@@ -220,6 +222,33 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                   },
                 ),
                 ValueListenableBuilder<bool>(
+                  valueListenable: obscureOld,
+                  builder: (context, obscure, child) {
+                    return TextFormField(
+                      controller: oldPasswordController,
+                      obscureText: obscure,
+                      decoration: InputDecoration(
+                        labelText: 'Old Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                          onPressed: () => obscureOld.value = !obscureOld.value,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your old password';
+                        }
+                        return null;
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                ValueListenableBuilder<bool>(
                   valueListenable: obscureNew,
                   builder: (context, obscure, child) {
                     return TextFormField(
@@ -240,8 +269,8 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                         if (value == null || value.isEmpty) {
                           return 'Please enter a new password';
                         }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
+                        if (value.length < 4) {
+                          return 'Password must be at least 4 characters';
                         }
                         return null;
                       },
@@ -282,6 +311,7 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
         actions: [
           TextButton(
             onPressed: () {
+              oldPasswordController.dispose();
               newPasswordController.dispose();
               confirmPasswordController.dispose();
               Navigator.of(dialogContext).pop();
@@ -313,8 +343,18 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                             throw Exception('User not logged in');
                           }
 
-                          // Call API to change password
+                          // Verify old password
                           final apiService = PosApiService();
+                          try {
+                            await apiService.adminSignIn(
+                              currentUser.username,
+                              oldPasswordController.text,
+                            );
+                          } catch (_) {
+                            throw Exception('Incorrect old password');
+                          }
+
+                          // Call API to change password
                           await apiService.changePassword(
                             userId: currentUser.id,
                             newPassword: newPasswordController.text,
@@ -337,6 +377,7 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                           }
 
                           // Close dialog and show success
+                          oldPasswordController.dispose();
                           newPasswordController.dispose();
                           confirmPasswordController.dispose();
                           Navigator.of(dialogContext).pop();

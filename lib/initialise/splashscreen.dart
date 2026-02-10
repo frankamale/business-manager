@@ -334,13 +334,20 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
+    final bool isSmallScreen = size.width < 600;
+
     return Scaffold(
       body: Center(
         child: Obx(() {
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const AppLogo(width: 150, height: 150),
+              Hero(
+                tag: 'logo',
+                child: AppLogoCircle(size: isSmallScreen ? 100 : 120),
+              ),
               const SizedBox(height: 20),
               if (controller.isLoading.value)
                 const CircularProgressIndicator()

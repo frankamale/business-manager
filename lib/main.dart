@@ -24,6 +24,7 @@ import 'back_pos/config.dart';
 import 'initialise/unified_login_screen.dart';
 import 'initialise/splashscreen.dart';
 import 'shared/services/customer_auth_service.dart';
+
 // Monitor Module imports
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
@@ -65,7 +66,6 @@ void main() async {
   Get.put(MonitorApiService());
   Get.put(AccountManager());
 
-
   Get.put(AuthController());
   Get.put(CustomerController());
   Get.put(InventoryController());
@@ -74,7 +74,6 @@ void main() async {
   Get.put(UserController());
   Get.put(SettingsController());
   Get.put(ServicePointController());
-
 
   Get.put(MonDashboardController());
   Get.put(MonGrossProfitController());
@@ -100,7 +99,10 @@ class MyApp extends StatelessWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: true,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: FlavorColors.current.primary),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: FlavorColors.current.primary,
+        ),
+
         useMaterial3: true,
       ),
       fallbackLocale: const Locale('en', 'US_store'),
