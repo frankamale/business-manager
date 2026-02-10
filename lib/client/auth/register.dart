@@ -227,7 +227,7 @@ class Register extends StatelessWidget {
                                     backgroundColor: FlavorColors.current.primaryDark,
                                     foregroundColor: FlavorColors.current.onPrimary,
                                   ),
-                                  onPressed: controller.isGettingCode.value
+                                  onPressed: controller.isCodeButtonDisabled
                                       ? null
                                       : () =>
                                             controller.generateChallengeCode(),
@@ -240,7 +240,9 @@ class Register extends StatelessWidget {
                                             color: colorScheme.onPrimary,
                                           ),
                                         )
-                                      : const Text("Get Code"),
+                                      : controller.cooldownSeconds.value > 0
+                                          ? Text("${controller.cooldownSeconds.value}s")
+                                          : const Text("Get Code"),
                                 ),
                               ],
                             ),

@@ -87,7 +87,7 @@ class ClientApiService {
      String category = "Retail Customer(Bulk Purchase)",
     String gender = 'Male',
     String status = 'Active/In Use',
-    String statusId = '00000000-0000-0000-0000-000000000000',
+    String statusId = "99999999-9999-9999-9999-999999999999",
   }) async {
     final uri = Uri.parse('$baseUrl/bp/postcustomer');
 

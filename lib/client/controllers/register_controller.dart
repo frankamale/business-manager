@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -26,12 +27,28 @@ class RegisterController extends GetxController {
   var errorMessage = ''.obs;
   var obscurePassword = true.obs;
   var obscureConfirmPassword = true.obs;
+  var cooldownSeconds = 0.obs;
 
   String _generatedCode = '';
   String _userId = '';
+  Timer? _cooldownTimer;
+
+  bool get isCodeButtonDisabled => isGettingCode.value || cooldownSeconds.value > 0;
+
+  void _startCooldown() {
+    cooldownSeconds.value = 15;
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      cooldownSeconds.value--;
+      if (cooldownSeconds.value <= 0) {
+        timer.cancel();
+      }
+    });
+  }
 
   @override
   void onClose() {
+    _cooldownTimer?.cancel();
     nameController.dispose();
     addressController.dispose();
     phoneController.dispose();
@@ -98,6 +115,7 @@ class RegisterController extends GetxController {
       );
 
       isCodeSent.value = true;
+      _startCooldown();
       Get.snackbar('Success', 'Challenge code sent to your email',
           snackPosition: SnackPosition.BOTTOM);
       return true;
