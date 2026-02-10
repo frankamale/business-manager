@@ -63,6 +63,8 @@ class SettingsController extends GetxController {
   }
 
   Future<bool> showAuthDialog() async {
+    usernameController.clear();
+    passwordController.clear();
     return await Get.dialog<bool>(
       AlertDialog(
         title: Text('Admin Authentication'),

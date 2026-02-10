@@ -21,7 +21,7 @@ class SettingsPage extends StatelessWidget {
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
 
-        title: const Text('Settings', style: TextStyle(color: Colors.white)), 
+        title: const Text('Settings', style: TextStyle(color: Colors.white)),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -69,7 +69,7 @@ class SettingsPage extends StatelessWidget {
                   final user = authController.currentUser.value;
                   final isAdmin = user != null &&
                                 user.role.toLowerCase().contains('admin');
-                  
+
                   if (isAdmin) {
                     return ListTile(
                       leading: const Icon(Icons.monitor),
@@ -81,7 +81,7 @@ class SettingsPage extends StatelessWidget {
                       },
                     );
                   } else {
-                    return Container(); 
+                    return Container();
                   }
                 }),
                  ListTile(
@@ -111,13 +111,13 @@ class SettingsPage extends StatelessWidget {
                     onChanged: (value) => settingsController.togglePriceEditing(value),
                   )),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: const Text('Change Password'),
-                  subtitle: const Text('Update your login password'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => _showChangePasswordDialog(context, authController),
-                ),
+                // ListTile(
+                //   leading: const Icon(Icons.lock_outline),
+                //   title: const Text('Change Password'),
+                //   subtitle: const Text('Update your login password'),
+                //   trailing: const Icon(Icons.arrow_forward_ios),
+                //   onTap: () => _showChangePasswordDialog(context, authController),
+                // ),
                 const ListTile(
                   leading: Icon(Icons.notifications),
                   title: Text('Notifications'),
@@ -154,7 +154,7 @@ class SettingsPage extends StatelessWidget {
                       title: const Text('Confirm Logout'),
                       content: const Text('Are you sure you want to logout?'),
                       actions: [
-                        
+
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: const Text('Cancel'),
@@ -228,7 +228,7 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                       controller: oldPasswordController,
                       obscureText: obscure,
                       decoration: InputDecoration(
-                        labelText: 'Old Password',
+                        labelText: 'Current POS Password',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
@@ -311,10 +311,10 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
         actions: [
           TextButton(
             onPressed: () {
+              Navigator.of(dialogContext).pop();
               oldPasswordController.dispose();
               newPasswordController.dispose();
               confirmPasswordController.dispose();
-              Navigator.of(dialogContext).pop();
             },
             child: const Text('Cancel'),
           ),
@@ -331,30 +331,26 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                         isLoading.value = true;
 
                         try {
-                          // Check network connectivity
-                          final hasNetwork = await NetworkHelper.hasConnection();
-                          if (!hasNetwork) {
-                            throw Exception('No internet connection. Please connect to the network and try again.');
-                          }
-
-                          // Get current user ID
+                          // Get current user
                           final currentUser = authController.currentUser.value;
                           if (currentUser == null) {
                             throw Exception('User not logged in');
                           }
 
-                          // Verify old password
-                          final apiService = PosApiService();
-                          try {
-                            await apiService.adminSignIn(
-                              currentUser.username,
-                              oldPasswordController.text,
-                            );
-                          } catch (_) {
+                          // Verify old password against pospassword
+                          final enteredPassword = int.tryParse(oldPasswordController.text);
+                          if (enteredPassword == null || enteredPassword != currentUser.pospassword) {
                             throw Exception('Incorrect old password');
                           }
 
+                          // Check network connectivity for API call
+                          final hasNetwork = await NetworkHelper.hasConnection();
+                          if (!hasNetwork) {
+                            throw Exception('No internet connection. Please connect to the network and try again.');
+                          }
+
                           // Call API to change password
+                          final apiService = PosApiService();
                           await apiService.changePassword(
                             userId: currentUser.id,
                             newPassword: newPasswordController.text,
@@ -377,10 +373,10 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                           }
 
                           // Close dialog and show success
+                          Navigator.of(dialogContext).pop();
                           oldPasswordController.dispose();
                           newPasswordController.dispose();
                           confirmPasswordController.dispose();
-                          Navigator.of(dialogContext).pop();
 
                           Get.snackbar(
                             'Success',
