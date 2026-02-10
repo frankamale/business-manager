@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'package:get/get.dart';
 import 'api_services.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../utils/network_helper.dart';
 
 class SalesSyncService extends GetxService {
   final PosApiService _apiService = Get.find<PosApiService>();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   Timer? _syncTimer;
   static const Duration _syncInterval = Duration(minutes: 3);

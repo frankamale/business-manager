@@ -1,12 +1,13 @@
 import 'package:get/get.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
+import 'package:bac_pos/back_pos/models/auth_response.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import '../../bac_monitor/lib/services/account_manager.dart';
 
 class AuthController extends GetxController {
-   final _dbHelper = DatabaseHelper();
+   final _dbHelper = UnifiedDatabaseHelper.instance;
    final _apiService = PosApiService();
    final AccountManager _accountManager = Get.find();
 
@@ -33,7 +34,6 @@ class AuthController extends GetxController {
       final roles = await _dbHelper.getAllRoles();
       userRoles.value = roles;
       isLoadingRoles.value = false;
-      print(userRoles);
     } catch (e) {
       isLoadingRoles.value = false;
     }
@@ -179,33 +179,42 @@ class AuthController extends GetxController {
     currentUser.value = null;
   }
 
- Future<bool> serverLogin(String username, String password, {bool closeDatabase = true}) async {
+ /// Server login that handles database switching for company-specific data
+  /// Returns login result with user data, or null on failure
+  /// closeDatabase: if true, closes any existing database before opening the new company's database
+  Future<Map<String, dynamic>?> serverLogin(String username, String password, {bool closeDatabase = true}) async {
     try {
       String usernameLower = username.toLowerCase();
       isLoggingIn.value = true;
-      
-      // Only close the database if explicitly requested (for new authentication)
+
+      // Close the existing database before new authentication (non-blocking if possible)
       if (closeDatabase) {
-        await DatabaseHelper.instance.close();
+        UnifiedDatabaseHelper.instance.close();
       }
 
       // Authenticate with server
-      await _apiService.adminSignIn(usernameLower, password);
+      final authResponse = await _apiService.adminSignIn(usernameLower, password);
 
-      // Store server credentials
-      await _apiService.saveServerCredentials(usernameLower, password);
+      // Save credentials in background (fire-and-forget)
+      _apiService.saveServerCredentials(usernameLower, password);
 
-      // Fetch and store company info
+      // Fetch company info (we need this)
       await _apiService.fetchAndStoreCompanyInfo();
 
       // Get company info
       final companyInfo = await _apiService.getCompanyInfo();
       final companyId = companyInfo['companyId']!;
 
-      // Save the current account in AccountManager
-      final token = await _apiService.getAccessToken();
-      final userData = await _apiService.getStoredUserData() ?? {};
-      final credentials = await _apiService.getServerCredentials();
+      // Open database for the new company
+      await _dbHelper.openForCompany(companyId);
+
+      // Build user data from auth response (no need to re-read from storage)
+      final userData = {
+        'userId': authResponse.id,
+        'username': authResponse.username,
+        'roles': authResponse.roles,
+        'accessToken': authResponse.accessToken,
+      };
 
       final account = UserAccount(
         id: companyId,
@@ -213,31 +222,48 @@ class AuthController extends GetxController {
         system: 'pos',
         userData: {
           ...userData,
-          'token': token,
+          'companyId': companyId,
+          'token': authResponse.accessToken,
           'credentials': {
-            'username': credentials['username'],
-            'password': credentials['password'],
+            'username': usernameLower,
+            'password': password,
           },
         },
         lastLogin: DateTime.now(),
       );
 
-      await _accountManager.addAccount(account);
+      // Set current account - must await to ensure account is set before navigation
       await _accountManager.setCurrentAccount(account);
 
-      // Open database for company
-      await _dbHelper.openForCompany(companyId);
+      isLoggingIn.value = false;
 
-      isLoggingIn.value = false;
-      return true;
+      // Return all data needed by caller so they don't need to re-read
+      return {
+        'companyId': companyId,
+        'token': authResponse.accessToken,
+        'userData': userData,
+        'username': usernameLower,
+        'password': password,
+      };
     } catch (e) {
-      Get.snackbar(
-        'Server Login Failed',
-        'Invalid server credentials',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      final errorString = e.toString();
+      // Check if error is due to invalid credentials (401)
+      if (errorString.contains('401')) {
+        Get.snackbar(
+          ' Login Failed',
+          'Wrong Username or password',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        // Network error or server unreachable
+        Get.snackbar(
+          'Connection Error',
+          'Please connect to mobile network',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
       isLoggingIn.value = false;
-      return false;
+      return null;
     }
   }
 }

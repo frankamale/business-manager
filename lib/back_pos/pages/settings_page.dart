@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../shared/services/customer_auth_service.dart';
 import '../auth/login.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/settings_controller.dart';
+import '../services/api_services.dart';
 import '../services/settings_service.dart';
+import '../utils/network_helper.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -18,7 +21,7 @@ class SettingsPage extends StatelessWidget {
         backgroundColor: Colors.blue,
         iconTheme: IconThemeData(color: Colors.white),
 
-        title: const Text('Settings', style: TextStyle(color: Colors.white)), 
+        title: const Text('Settings', style: TextStyle(color: Colors.white)),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -66,7 +69,7 @@ class SettingsPage extends StatelessWidget {
                   final user = authController.currentUser.value;
                   final isAdmin = user != null &&
                                 user.role.toLowerCase().contains('admin');
-                  
+
                   if (isAdmin) {
                     return ListTile(
                       leading: const Icon(Icons.monitor),
@@ -78,7 +81,7 @@ class SettingsPage extends StatelessWidget {
                       },
                     );
                   } else {
-                    return Container(); 
+                    return Container();
                   }
                 }),
                  ListTile(
@@ -108,6 +111,13 @@ class SettingsPage extends StatelessWidget {
                     onChanged: (value) => settingsController.togglePriceEditing(value),
                   )),
                 ),
+                // ListTile(
+                //   leading: const Icon(Icons.lock_outline),
+                //   title: const Text('Change Password'),
+                //   subtitle: const Text('Update your login password'),
+                //   trailing: const Icon(Icons.arrow_forward_ios),
+                //   onTap: () => _showChangePasswordDialog(context, authController),
+                // ),
                 const ListTile(
                   leading: Icon(Icons.notifications),
                   title: Text('Notifications'),
@@ -144,7 +154,7 @@ class SettingsPage extends StatelessWidget {
                       title: const Text('Confirm Logout'),
                       content: const Text('Are you sure you want to logout?'),
                       actions: [
-                        
+
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: const Text('Cancel'),
@@ -172,4 +182,226 @@ class SettingsPage extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showChangePasswordDialog(BuildContext context, AuthController authController) {
+  final oldPasswordController = TextEditingController();
+  final newPasswordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+  final isLoading = ValueNotifier<bool>(false);
+  final obscureOld = ValueNotifier<bool>(true);
+  final obscureNew = ValueNotifier<bool>(true);
+  final obscureConfirm = ValueNotifier<bool>(true);
+  final errorMessage = ValueNotifier<String>('');
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        title: const Text('Change Password'),
+        content: Form(
+          key: formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ValueListenableBuilder<String>(
+                  valueListenable: errorMessage,
+                  builder: (context, error, child) {
+                    if (error.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        error,
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: obscureOld,
+                  builder: (context, obscure, child) {
+                    return TextFormField(
+                      controller: oldPasswordController,
+                      obscureText: obscure,
+                      decoration: InputDecoration(
+                        labelText: 'Current POS Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                          onPressed: () => obscureOld.value = !obscureOld.value,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your old password';
+                        }
+                        return null;
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                ValueListenableBuilder<bool>(
+                  valueListenable: obscureNew,
+                  builder: (context, obscure, child) {
+                    return TextFormField(
+                      controller: newPasswordController,
+                      obscureText: obscure,
+                      decoration: InputDecoration(
+                        labelText: 'New Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                          onPressed: () => obscureNew.value = !obscureNew.value,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a new password';
+                        }
+                        if (value.length < 4) {
+                          return 'Password must be at least 4 characters';
+                        }
+                        return null;
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                ValueListenableBuilder<bool>(
+                  valueListenable: obscureConfirm,
+                  builder: (context, obscure, child) {
+                    return TextFormField(
+                      controller: confirmPasswordController,
+                      obscureText: obscure,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        suffixIcon: IconButton(
+                          icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                          onPressed: () => obscureConfirm.value = !obscureConfirm.value,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value != newPasswordController.text) {
+                          return 'Passwords do not match';
+                        }
+                        return null;
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              oldPasswordController.dispose();
+              newPasswordController.dispose();
+              confirmPasswordController.dispose();
+            },
+            child: const Text('Cancel'),
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: isLoading,
+            builder: (context, loading, child) {
+              return ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+
+                        errorMessage.value = '';
+                        isLoading.value = true;
+
+                        try {
+                          // Get current user
+                          final currentUser = authController.currentUser.value;
+                          if (currentUser == null) {
+                            throw Exception('User not logged in');
+                          }
+
+                          // Verify old password against pospassword
+                          final enteredPassword = int.tryParse(oldPasswordController.text);
+                          if (enteredPassword == null || enteredPassword != currentUser.pospassword) {
+                            throw Exception('Incorrect old password');
+                          }
+
+                          // Check network connectivity for API call
+                          final hasNetwork = await NetworkHelper.hasConnection();
+                          if (!hasNetwork) {
+                            throw Exception('No internet connection. Please connect to the network and try again.');
+                          }
+
+                          // Call API to change password
+                          final apiService = PosApiService();
+                          await apiService.changePassword(
+                            userId: currentUser.id,
+                            newPassword: newPasswordController.text,
+                          );
+
+                          // Update cached staff credentials
+                          final customerAuthService = CustomerAuthService();
+                          await customerAuthService.updateCachedStaffPassword(
+                            username: currentUser.username,
+                            newPassword: newPasswordController.text,
+                          );
+
+                          // Update stored server credentials
+                          final credentials = await apiService.getServerCredentials();
+                          if (credentials['username'] != null) {
+                            await apiService.saveServerCredentials(
+                              credentials['username']!,
+                              newPasswordController.text,
+                            );
+                          }
+
+                          // Close dialog and show success
+                          Navigator.of(dialogContext).pop();
+                          oldPasswordController.dispose();
+                          newPasswordController.dispose();
+                          confirmPasswordController.dispose();
+
+                          Get.snackbar(
+                            'Success',
+                            'Your password has been changed successfully',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.green.shade100,
+                          );
+                        } catch (e) {
+                          errorMessage.value = e.toString().replaceFirst('Exception: ', '');
+                        } finally {
+                          isLoading.value = false;
+                        }
+                      },
+                child: loading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Change Password'),
+              );
+            },
+          ),
+        ],
+      );
+    },
+  );
 }

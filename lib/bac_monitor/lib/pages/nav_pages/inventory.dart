@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../additions/colors.dart';
-import '../../db/db_helper.dart';
+import '../../../../shared/database/unified_db_helper.dart';
 import '../../models/inventory_data.dart';
 import '../../models/service_points.dart';
 import '../../widgets/inventory/data_table.dart';
@@ -17,7 +18,7 @@ class InventoryPage extends StatefulWidget {
 
 class _InventoryPageState extends State<InventoryPage>
     with SingleTickerProviderStateMixin {
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   List<MonitorInventoryItem> _allItems = [];
   List<MonitorInventoryItem> _filteredItems = [];
@@ -55,10 +56,10 @@ class _InventoryPageState extends State<InventoryPage>
 
   Future<void> _loadServicePoints() async {
     try {
-      final db = await _dbHelper.database;
+      final db = _dbHelper.database;
 
       final result = await db.query(
-        'service_points',
+        'mon_service_points',
         columns: ['id', 'name', 'facilityName', 'servicepointtype'],
         orderBy: 'facilityName ASC',
       );
@@ -86,8 +87,8 @@ class _InventoryPageState extends State<InventoryPage>
   Future<void> _loadInventoryFromDb() async {
     setState(() => _isLoading = true);
     try {
-      final db = await _dbHelper.database;
-      final List<Map<String, dynamic>> maps = await db.query('inventory');
+      final db = _dbHelper.database;
+      final List<Map<String, dynamic>> maps = await db.query('mon_inventory');
       _allItems = maps.map((map) => MonitorInventoryItem.fromJson(map)).toList();
       setState(() {
         _filteredItems = _getFilteredItems();
@@ -328,10 +329,10 @@ class _InventoryPageState extends State<InventoryPage>
         ),
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
-          sliver: SliverToBoxAdapter(
-            child: InventoryDataTable(items: _filteredItems, isServicesView: _selectedView == "Services"),
+          sliver:  SliverToBoxAdapter(
+              child: InventoryDataTable(items: _filteredItems, isServicesView: _selectedView == "Services"),
+            ),
           ),
-        ),
       ],
     );
   }

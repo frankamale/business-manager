@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/settings_service.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 
 class SettingsController extends GetxController {
   final SettingsService _settingsService = SettingsService();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   RxBool autoUploadEnabled = false.obs;
   RxBool paymentAccessForAllUsers = false.obs;
   RxBool priceEditingEnabled = false.obs;
@@ -63,6 +63,8 @@ class SettingsController extends GetxController {
   }
 
   Future<bool> showAuthDialog() async {
+    usernameController.clear();
+    passwordController.clear();
     return await Get.dialog<bool>(
       AlertDialog(
         title: Text('Admin Authentication'),

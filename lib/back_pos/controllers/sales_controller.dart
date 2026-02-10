@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/sale_transaction.dart';
 import 'package:bac_pos/back_pos/models/inventory_item.dart';
@@ -8,7 +8,7 @@ import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import 'payment_controller.dart';
 
 class SalesController extends GetxController {
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   final _apiService = PosApiService();
 
   // Reactive list of sale transactions
@@ -23,15 +23,19 @@ class SalesController extends GetxController {
     super.onInit();
   }
 
+  // Current service point ID for filtering
+  var currentServicePointId = Rxn<String>();
+
   // Load sales transactions from database (cache)
-  Future<void> loadSalesFromCache() async {
+  Future<void> loadSalesFromCache({String? servicePointId}) async {
     try {
       isLoadingSales.value = true;
+      currentServicePointId.value = servicePointId;
 
-      final transactions = await _dbHelper.getSaleTransactions();
+      final transactions = await _dbHelper.getSaleTransactions(servicePointId: servicePointId);
       salesTransactions.value = transactions;
 
-      final grouped = await _dbHelper.getGroupedSales();
+      final grouped = await _dbHelper.getGroupedSales(servicePointId: servicePointId);
       groupedSales.value = grouped;
 
       isLoadingSales.value = false;
@@ -41,8 +45,8 @@ class SalesController extends GetxController {
   }
 
   // Refresh sales from local cache only
-  Future<void> refreshSales() async {
-    await loadSalesFromCache();
+  Future<void> refreshSales({String? servicePointId}) async {
+    await loadSalesFromCache(servicePointId: servicePointId ?? currentServicePointId.value);
     Get.snackbar(
       'Success', "Refreshed successfully",
       snackPosition: SnackPosition.BOTTOM,
@@ -60,9 +64,9 @@ class SalesController extends GetxController {
   }
 
   // Get grouped sales (one entry per receipt)
-  Future<List<Map<String, dynamic>>> getGroupedSales() async {
+  Future<List<Map<String, dynamic>>> getGroupedSales({String? servicePointId}) async {
     try {
-      return await _dbHelper.getGroupedSales();
+      return await _dbHelper.getGroupedSales(servicePointId: servicePointId ?? currentServicePointId.value);
     } catch (e) {
       return [];
     }

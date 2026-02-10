@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../models/inventory_data.dart';
 
 class MonInventoryController extends GetxController {
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   var inventoryItems = [].obs;
   var isLoading = false.obs;
 
@@ -17,7 +17,7 @@ class MonInventoryController extends GetxController {
   Future<void> loadInventoryFromDb() async {
        try {
       isLoading.value = true;
-      final items = await _dbHelper.getAllInventoryItems();
+      final items = await _dbHelper.getMonInventoryItems();
       inventoryItems.assignAll(
         items.map((e) => MonitorInventoryItem.fromJson(e)).toList(),
       );

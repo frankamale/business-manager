@@ -4,7 +4,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:bac_pos/back_pos/models/customer.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/inventory_item.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import 'sales_controller.dart';
 import 'package:bac_pos/back_pos/services/settings_service.dart';
@@ -12,7 +12,7 @@ import 'package:bac_pos/back_pos/services/settings_service.dart';
 class PaymentController extends GetxController {
   final PosApiService _apiService = Get.find<PosApiService>();
   final SettingsService _settingsService = SettingsService();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   // Reactive state
   var isProcessing = false.obs;
@@ -227,7 +227,8 @@ class PaymentController extends GetxController {
 
     // Calculate totals
     final totalAmount = calculateTotalAmount(cartItems);
-    final paymentAmount = amountTendered;
+    // Cap payment at total amount - excess is change returned to customer, not recorded as payment
+    final paymentAmount = amountTendered > totalAmount ? totalAmount : amountTendered;
 
     // Create sale transaction for each line item
     final List<Map<String, dynamic>> saleTransactions = [];

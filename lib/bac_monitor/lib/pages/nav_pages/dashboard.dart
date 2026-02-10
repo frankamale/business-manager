@@ -63,7 +63,6 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
-    // Initialize controllers in proper order
     // DashboardController must be initialized first as other controllers depend on it
     Get.put(MonDashboardController());
     Get.put(MonOperatorController());

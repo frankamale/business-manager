@@ -10,7 +10,7 @@ import '../models/service_point.dart';
 import '../models/inventory_item.dart';
 import '../models/customer.dart';
 import '../models/sale_transaction.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../config.dart';
 
 class PosApiService extends GetxService {
@@ -21,7 +21,7 @@ class PosApiService extends GetxService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
-  DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   // Keys for secure storage
   static const String _tokenKey = 'access_token';
@@ -74,7 +74,6 @@ class PosApiService extends GetxService {
         headers: {'Content-Type': 'application/json'},
         body: requestBody,
       );
-      print(requestBody);
 
       if (response.statusCode == 200) {
         final authResponse = AuthResponse.fromJson(json.decode(response.body));
@@ -90,51 +89,36 @@ class PosApiService extends GetxService {
 
   // Save authentication data to secure storage
   Future<void> _saveAuthData(AuthResponse authResponse) async {
-    print(
-      'DEBUG: _saveAuthData called with token: ${authResponse.accessToken}',
-    );
-    await _secureStorage.write(key: _tokenKey, value: authResponse.accessToken);
-    await _secureStorage.write(key: _userIdKey, value: authResponse.id);
-    await _secureStorage.write(key: _usernameKey, value: authResponse.username);
-    await _secureStorage.write(
-      key: _rolesKey,
-      value: json.encode(authResponse.roles),
-    );
-
-    // Verify the token was actually stored
-    final savedToken = await _secureStorage.read(key: _tokenKey);
-    print('DEBUG: Verified saved token: $savedToken');
-
-    if (savedToken != authResponse.accessToken) {
-      print('ERROR: Token storage verification failed!');
-      throw Exception('Failed to verify token storage');
-    }
+    // Write all auth data in parallel to reduce GC pressure
+    await Future.wait([
+      _secureStorage.write(key: _tokenKey, value: authResponse.accessToken),
+      _secureStorage.write(key: _userIdKey, value: authResponse.id),
+      _secureStorage.write(key: _usernameKey, value: authResponse.username),
+      _secureStorage.write(key: _rolesKey, value: json.encode(authResponse.roles)),
+    ]);
   }
 
   // Save authentication data from map (for account switching)
   Future<void> saveAuthDataFromMap(Map<String, dynamic> authData) async {
-    await _secureStorage.write(key: _tokenKey, value: authData['accessToken']);
-    await _secureStorage.write(key: _userIdKey, value: authData['userId']);
-    await _secureStorage.write(key: _usernameKey, value: authData['username']);
+    // Collect all write operations
+    final writes = <Future<void>>[
+      _secureStorage.write(key: _tokenKey, value: authData['accessToken']),
+      _secureStorage.write(key: _userIdKey, value: authData['userId']),
+      _secureStorage.write(key: _usernameKey, value: authData['username']),
+    ];
     if (authData.containsKey('roles')) {
-      await _secureStorage.write(
-        key: _rolesKey,
-        value: json.encode(authData['roles']),
-      );
+      writes.add(_secureStorage.write(key: _rolesKey, value: json.encode(authData['roles'])));
     }
     if (authData.containsKey('isAdmin')) {
-      await _secureStorage.write(
-        key: _isAdminKey,
-        value: authData['isAdmin'].toString(),
-      );
+      writes.add(_secureStorage.write(key: _isAdminKey, value: authData['isAdmin'].toString()));
     }
+    // Execute all writes in parallel
+    await Future.wait(writes);
   }
 
   // Get stored access token
   Future<String?> getAccessToken() async {
-    final token = await _secureStorage.read(key: _tokenKey);
-    print('DEBUG: getAccessToken() retrieved token: $token');
-    return token;
+    return await _secureStorage.read(key: _tokenKey);
   }
 
   // Check if user is authenticated
@@ -145,19 +129,27 @@ class PosApiService extends GetxService {
 
   // Get stored user data
   Future<Map<String, dynamic>?> getStoredUserData() async {
-    final token = await _secureStorage.read(key: _tokenKey);
+    // Read all user data in parallel to reduce GC pressure
+    final results = await Future.wait([
+      _secureStorage.read(key: _tokenKey),
+      _secureStorage.read(key: _userIdKey),
+      _secureStorage.read(key: _usernameKey),
+      _secureStorage.read(key: _rolesKey),
+      _secureStorage.read(key: _isAdminKey),
+    ]);
 
+    final token = results[0];
     if (token == null) return null;
 
-    final userId = await _secureStorage.read(key: _userIdKey);
-    final username = await _secureStorage.read(key: _usernameKey);
-    final rolesJson = await _secureStorage.read(key: _rolesKey);
+    final userId = results[1];
+    final username = results[2];
+    final rolesJson = results[3];
+    final isAdminStr = results[4];
 
     List<String>? roles;
     if (rolesJson != null) {
       roles = List<String>.from(json.decode(rolesJson));
     }
-    final isAdminStr = await _secureStorage.read(key: _isAdminKey);
     final isAdmin = isAdminStr == 'true';
 
     return {
@@ -171,26 +163,35 @@ class PosApiService extends GetxService {
 
   // Clear authentication data (logout)
   Future<void> clearAuthData() async {
-    await _secureStorage.delete(key: _tokenKey);
-    await _secureStorage.delete(key: _userIdKey);
-    await _secureStorage.delete(key: _usernameKey);
-    await _secureStorage.delete(key: _rolesKey);
-    await _secureStorage.delete(key: _branchIdKey);
-    await _secureStorage.delete(key: _companyIdKey);
-    await _secureStorage.delete(key: _servicePointIdKey);
+    // Delete all auth data in parallel
+    await Future.wait([
+      _secureStorage.delete(key: _tokenKey),
+      _secureStorage.delete(key: _userIdKey),
+      _secureStorage.delete(key: _usernameKey),
+      _secureStorage.delete(key: _rolesKey),
+      _secureStorage.delete(key: _branchIdKey),
+      _secureStorage.delete(key: _companyIdKey),
+      _secureStorage.delete(key: _servicePointIdKey),
+    ]);
   }
 
   // Save server credentials
   Future<void> saveServerCredentials(String username, String password) async {
-    await _secureStorage.write(key: _serverUsernameKey, value: username);
-    await _secureStorage.write(key: _serverPasswordKey, value: password);
+    // Write both credentials in parallel
+    await Future.wait([
+      _secureStorage.write(key: _serverUsernameKey, value: username),
+      _secureStorage.write(key: _serverPasswordKey, value: password),
+    ]);
   }
 
   // Get stored server credentials
   Future<Map<String, String?>> getServerCredentials() async {
-    final username = await _secureStorage.read(key: _serverUsernameKey);
-    final password = await _secureStorage.read(key: _serverPasswordKey);
-    return {'username': username, 'password': password};
+    // Read both credentials in parallel
+    final results = await Future.wait([
+      _secureStorage.read(key: _serverUsernameKey),
+      _secureStorage.read(key: _serverPasswordKey),
+    ]);
+    return {'username': results[0], 'password': results[1]};
   }
 
   Future<List<Map<String, dynamic>>> fetchCashAccounts() async {
@@ -578,6 +579,38 @@ class PosApiService extends GetxService {
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
         throw Exception("Failed to fetch sales: ${response.statusCode}");
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Change password for the currently logged in user
+  Future<Map<String, dynamic>> changePassword({
+    required String userId,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getAccessToken();
+
+      final uri = Uri.parse(
+        '$baseurl/password/'
+        '?t=$userId'
+        '&p=${Uri.encodeComponent(newPassword)}'
+        '&s=${Uri.encodeComponent('password change')}',
+      );
+
+      final headers = <String, String>{'Content-Type': 'application/json'};
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(uri, headers: headers);
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        throw Exception('Failed to change password: ${response.statusCode}');
       }
     } catch (e) {
       rethrow;

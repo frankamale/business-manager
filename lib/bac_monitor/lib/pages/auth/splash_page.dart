@@ -4,14 +4,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import '../../../../back_pos/utils/network_helper.dart';
+import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_dashboard_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
 import '../../controllers/mon_inventory_controller.dart';
 import '../../controllers/mon_store_controller.dart';
 import '../../controllers/mon_sync_controller.dart';
+import '../../controllers/mon_kpi_overview_controller.dart';
+import '../../controllers/mon_gross_profit_controller.dart';
+import '../../controllers/mon_outstanding_payments_controller.dart';
+import '../../controllers/mon_salestrends_controller.dart';
+import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
-import '../../db/db_helper.dart';
+import '../../../../shared/database/unified_db_helper.dart';
 import '../bottom_nav.dart';
 
 class SplashPage extends StatefulWidget {
@@ -22,11 +28,9 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
   // Track offline mode
@@ -54,16 +58,10 @@ class _SplashPageState extends State<SplashPage> {
     try {
       final username = await _secureStorage.read(key: 'login_username');
       final password = await _secureStorage.read(key: 'login_password');
-      return {
-        'username': username,
-        'password': password,
-      };
+      return {'username': username, 'password': password};
     } catch (e) {
       debugPrint('SplashPage: Error retrieving stored credentials - $e');
-      return {
-        'username': null,
-        'password': null,
-      };
+      return {'username': null, 'password': null};
     }
   }
 
@@ -93,21 +91,30 @@ class _SplashPageState extends State<SplashPage> {
   /// Check if we have cached data in the database
   Future<bool> _hasCachedData() async {
     try {
-      final db = await _dbHelper.database;
+      final db = _dbHelper.database;
 
       // Check if we have any sales data
-      final salesCount = await db.rawQuery('SELECT COUNT(*) as count FROM sales');
+      final salesCount = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM mon_sales',
+      );
       final hasSales = (salesCount.first['count'] as int? ?? 0) > 0;
 
       // Check if we have service points
-      final servicePointsCount = await db.rawQuery('SELECT COUNT(*) as count FROM service_points');
-      final hasServicePoints = (servicePointsCount.first['count'] as int? ?? 0) > 0;
+      final servicePointsCount = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM mon_service_points',
+      );
+      final hasServicePoints =
+          (servicePointsCount.first['count'] as int? ?? 0) > 0;
 
       // Check if we have company details
-      final companyCount = await db.rawQuery('SELECT COUNT(*) as count FROM company_details');
+      final companyCount = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM company_details',
+      );
       final hasCompany = (companyCount.first['count'] as int? ?? 0) > 0;
 
-      debugPrint('SplashPage: Cached data check - Sales: $hasSales, ServicePoints: $hasServicePoints, Company: $hasCompany');
+      debugPrint(
+        'SplashPage: Cached data check - Sales: $hasSales, ServicePoints: $hasServicePoints, Company: $hasCompany',
+      );
 
       return hasSales && hasServicePoints && hasCompany;
     } catch (e) {
@@ -118,86 +125,168 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _initializeApp() async {
     debugPrint('SplashPage: Starting app initialization');
-
-    // Run splash delay in parallel with initialization
-    await Future.wait([
-      _initializeServicesAndDatabase(),
-      Future.delayed(const Duration(seconds: 2)),
-    ]);
+    await _initializeServicesAndDatabase();
   }
 
   Future<void> _initializeServicesAndDatabase() async {
     try {
+      final stopwatch = Stopwatch()..start();
+
       // STEP 1: Check network connectivity first
       _updateStatus('Checking network...');
       final isOnline = await NetworkHelper.hasConnection();
       _isOfflineMode = !isOnline;
-
-      if (_isOfflineMode) {
-        debugPrint('SplashPage: OFFLINE MODE DETECTED');
-        _updateStatus('Offline mode - Loading cached data...');
-      } else {
-        debugPrint('SplashPage: ONLINE MODE');
-        _updateStatus('Online - Syncing data...');
-      }
+      debugPrint(
+        'SplashPage: Network check took ${stopwatch.elapsedMilliseconds}ms - Online: $isOnline',
+      );
 
       // STEP 2: Initialize company ID FIRST (works offline)
       _updateStatus('Initializing company...');
+      stopwatch.reset();
       await _initializeCompanyIdOfflineSafe();
+      debugPrint(
+        'SplashPage: Company init took ${stopwatch.elapsedMilliseconds}ms',
+      );
 
       // STEP 3: Ensure database is properly opened for the company
       _updateStatus('Opening database...');
+      stopwatch.reset();
       await _ensureDatabaseIsOpen();
+      debugPrint(
+        'SplashPage: Database check took ${stopwatch.elapsedMilliseconds}ms',
+      );
 
       // STEP 4: Check credentials and token
       _updateStatus('Verifying credentials...');
+      stopwatch.reset();
       final hasValidCredentials = await _hasValidCredentials();
+      debugPrint(
+        'SplashPage: Credentials check took ${stopwatch.elapsedMilliseconds}ms',
+      );
 
       if (!hasValidCredentials) {
-        debugPrint('SplashPage: No valid credentials found, redirecting to login');
+        debugPrint(
+          'SplashPage: No valid credentials found, redirecting to login',
+        );
         Get.offAll(() => const UnifiedLoginScreen());
         return;
       }
 
       // STEP 5: Check if we have cached data (important for offline mode)
+      stopwatch.reset();
       final hasCachedData = await _hasCachedData();
+      debugPrint(
+        'SplashPage: Cached data check took ${stopwatch.elapsedMilliseconds}ms - Has data: $hasCachedData',
+      );
 
       if (_isOfflineMode && !hasCachedData) {
-        debugPrint('SplashPage: Offline mode with no cached data - need to go online first');
+        debugPrint(
+          'SplashPage: Offline mode with no cached data - need to go online first',
+        );
         _showOfflineNoDataDialog();
         return;
       }
 
       if (isOnline) {
         final apiService = Get.find<MonitorApiService>();
+        stopwatch.reset();
         final initialSyncDone = await apiService.isInitialSyncCompleted();
+        debugPrint(
+          'SplashPage: Initial sync check took ${stopwatch.elapsedMilliseconds}ms - Done: $initialSyncDone',
+        );
 
-        if (!initialSyncDone) {
-          _updateStatus('First time sync – downloading data...');
-          await apiService.fetchAndCacheAllData();
+        // IMPORTANT: Also check if company_details exists for THIS company's database
+        stopwatch.reset();
+        final companyDetails = await _dbHelper.getCompanyDetails();
+        final hasCompanyDetails =
+            companyDetails != null && companyDetails.isNotEmpty;
+        debugPrint(
+          'SplashPage: Company details check took ${stopwatch.elapsedMilliseconds}ms - Has: $hasCompanyDetails',
+        );
+
+        // Check if sync is needed (cache window: 30 minutes)
+        stopwatch.reset();
+        final syncNeeded = await apiService.isSyncNeeded(cacheMinutes: 30);
+        debugPrint(
+          'SplashPage: Sync needed check took ${stopwatch.elapsedMilliseconds}ms - Needed: $syncNeeded',
+        );
+
+        if (!initialSyncDone || !hasCompanyDetails) {
+          // Initial sync required - always sync
+          _updateStatus('Syncing company data...');
+          debugPrint(
+            'SplashPage: Full sync needed - initialSyncDone: $initialSyncDone, hasCompanyDetails: $hasCompanyDetails',
+          );
+
+          try {
+            stopwatch.reset();
+            await apiService.fetchAndCacheAllData();
+            debugPrint(
+              'SplashPage: Data fetch took ${stopwatch.elapsedMilliseconds}ms',
+            );
+          } catch (e) {
+            debugPrint(
+              'SplashPage: Initial sync failed, checking for cached data - $e',
+            );
+            final hasCachedData = await _hasCachedData();
+            if (!hasCachedData) {
+              throw Exception(
+                'Failed to sync data and no cached data available',
+              );
+            }
+          }
+        } else if (syncNeeded) {
+          // Sync cache expired (>30 minutes) - refresh data
+          _updateStatus('Refreshing data...');
+          debugPrint('SplashPage: Sync cache expired, refreshing data');
+
+          try {
+            stopwatch.reset();
+            await apiService.fetchAndCacheAllData();
+            debugPrint(
+              'SplashPage: Data refresh took ${stopwatch.elapsedMilliseconds}ms',
+            );
+          } catch (e) {
+            debugPrint(
+              'SplashPage: Data refresh failed, using cached data - $e',
+            );
+            // Continue with cached data - not a fatal error
+          }
         } else {
-          _updateStatus('Syncing recent sales...');
-          await apiService.syncRecentSales();
+          debugPrint(
+            'SplashPage: Sync cache valid (<30 min old), skipping data fetch',
+          );
         }
       } else {
         _updateStatus('Loading cached data...');
         await _loadCompanyDetailsOffline();
       }
 
-
       // STEP 7: Initialize controllers AFTER data is synced/loaded
       _updateStatus('Initializing app...');
+      stopwatch.reset();
       _initializeControllers();
+      debugPrint(
+        'SplashPage: Controllers init took ${stopwatch.elapsedMilliseconds}ms',
+      );
 
       // STEP 8: Load initial data from database into controllers
       _updateStatus('Loading data...');
+      stopwatch.reset();
       await _loadDataIntoControllers();
+      debugPrint(
+        'SplashPage: Load data into controllers took ${stopwatch.elapsedMilliseconds}ms',
+      );
 
-      // STEP 9: Navigate to main screen
-      _updateStatus('Ready!');
-      await Future.delayed(const Duration(milliseconds: 500));
-      Get.offAll(() => const BottomNav());
-
+      // STEP 9: Navigate to main screen after the current frame completes
+      // Using WidgetsBinding to schedule navigation after the frame renders,
+      // keeping the progress indicator animating during the transition.
+      debugPrint(
+        'SplashPage: Total initialization complete, navigating to BottomNav',
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Get.offAll(() => const BottomNav());
+      });
     } catch (e) {
       debugPrint('SplashPage: Fatal error during initialization - $e');
       _showErrorDialog(e.toString());
@@ -215,21 +304,32 @@ class _SplashPageState extends State<SplashPage> {
 
       if (storedCompanyId != null && storedCompanyId.isNotEmpty) {
         debugPrint('SplashPage: Using stored company ID: $storedCompanyId');
-        // Switch to the company database
-        await _dbHelper.switchCompany(storedCompanyId);
+
+        // Check if database is already open for this company
+        if (_dbHelper.isDatabaseOpen &&
+            _dbHelper.currentCompanyId == storedCompanyId) {
+          debugPrint(
+            'SplashPage: Database already open for company: $storedCompanyId',
+          );
+          return;
+        }
+
+        // Open database for the company
+        await _dbHelper.openForCompany(storedCompanyId);
+        debugPrint('SplashPage: Database opened for company: $storedCompanyId');
         return;
       }
 
-      // If no stored ID and we're online, try to fetch it
+      // If no stored ID and we're online, try to initialize via API service
       if (!_isOfflineMode) {
+        debugPrint('SplashPage: No stored company ID, initializing from API');
         await apiService.initializeCompanyId();
         final companyId = await apiService.getStoredCompanyId();
-        debugPrint('SplashPage: Company ID initialized: $companyId');
+        debugPrint('SplashPage: Company ID initialized from API: $companyId');
       } else {
         // Offline with no stored company ID - this is a problem
         throw Exception('No stored company ID available for offline mode');
       }
-
     } catch (e) {
       debugPrint('SplashPage: Error initializing company ID - $e');
 
@@ -244,17 +344,31 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _ensureDatabaseIsOpen() async {
     try {
-      // Force database to open for the current company
-      final db = await _dbHelper.database;
-      debugPrint('SplashPage: Database opened successfully');
+      // Check if database is open
+      if (!_dbHelper.isDatabaseOpen) {
+        debugPrint(
+          'SplashPage: Database not open, this should have been done in _initializeCompanyIdOfflineSafe',
+        );
+        throw Exception(
+          'Database was not opened during company initialization',
+        );
+      }
+
+      debugPrint(
+        'SplashPage: Database is open for company: ${_dbHelper.currentCompanyId}',
+      );
 
       // Verify we can query the database
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM service_points');
-      debugPrint('SplashPage: Database verification - service_points count: ${result.first['count']}');
-
+      final db = _dbHelper.database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM mon_service_points',
+      );
+      debugPrint(
+        'SplashPage: Database verification - service_points count: ${result.first['count']}',
+      );
     } catch (e) {
-      debugPrint('SplashPage: Error opening database - $e');
-      throw Exception('Failed to open database: $e');
+      debugPrint('SplashPage: Error verifying database - $e');
+      throw Exception('Failed to verify database: $e');
     }
   }
 
@@ -277,13 +391,14 @@ class _SplashPageState extends State<SplashPage> {
     try {
       final apiService = Get.find<MonitorApiService>();
 
-      debugPrint("SplashPage: Device is online. Syncing all data from server...");
+      debugPrint(
+        "SplashPage: Device is online. Syncing all data from server...",
+      );
       await apiService.fetchAndCacheAllData();
       debugPrint("SplashPage: Data sync completed successfully");
 
       // Load company details into operator controller
       await _loadCompanyDetailsOffline();
-
     } catch (e) {
       debugPrint("SplashPage: Error during sync - $e");
 
@@ -291,7 +406,9 @@ class _SplashPageState extends State<SplashPage> {
       final hasCachedData = await _hasCachedData();
 
       if (hasCachedData) {
-        debugPrint("SplashPage: Sync failed but we have cached data. Continuing...");
+        debugPrint(
+          "SplashPage: Sync failed but we have cached data. Continuing...",
+        );
         _isOfflineMode = true; // Switch to offline mode
         await _loadCompanyDetailsOffline();
       } else {
@@ -301,7 +418,9 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   void _initializeControllers() {
-    debugPrint('SplashPage: Initializing controllers (without triggering data fetch)');
+    debugPrint(
+      'SplashPage: Initializing controllers (without triggering data fetch)',
+    );
 
     // Only initialize essential non-data controllers
     if (!Get.isRegistered<MonDashboardController>()) {
@@ -319,22 +438,82 @@ class _SplashPageState extends State<SplashPage> {
       debugPrint('SplashPage: Loading data into controllers');
 
       // Initialize stores controller and load stores
+      MonStoresController storesController;
       if (!Get.isRegistered<MonStoresController>()) {
-        final storesController = Get.put(MonStoresController(), permanent: true);
-        await storesController.fetchAllStores();
+        storesController = Get.put(MonStoresController(), permanent: true);
+      } else {
+        storesController = Get.find<MonStoresController>();
+        // Reset and re-fetch for account switch
+        storesController.isInitialized.value = false;
       }
+      await storesController.fetchAllStores();
 
       // Initialize inventory controller and load inventory
+      MonInventoryController inventoryController;
       if (!Get.isRegistered<MonInventoryController>()) {
-        final inventoryController = Get.put(MonInventoryController(), permanent: true);
-        await inventoryController.loadInventoryFromDb();
+        inventoryController = Get.put(
+          MonInventoryController(),
+          permanent: true,
+        );
+      } else {
+        inventoryController = Get.find<MonInventoryController>();
+      }
+      // Always ensure inventory is loaded
+      await inventoryController.loadInventoryFromDb();
+
+      // Load company details into MonOperatorController
+      if (Get.isRegistered<MonOperatorController>()) {
+        await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
       }
 
-      debugPrint('SplashPage: Controllers loaded with data successfully');
+      // Load profile data into ProfileController
+      if (Get.isRegistered<ProfileController>()) {
+        await Get.find<ProfileController>().loadProfileData();
+      }
 
+      // Reset and refresh dashboard controllers for account switch
+      await _refreshDashboardControllers();
+
+      debugPrint('SplashPage: Controllers loaded with data successfully');
     } catch (e) {
       debugPrint('SplashPage: Error loading data into controllers - $e');
       // Continue anyway - data can be loaded later
+    }
+  }
+
+  /// Reset and refresh all dashboard controllers for account switch
+  Future<void> _refreshDashboardControllers() async {
+    debugPrint('SplashPage: Refreshing dashboard controllers');
+
+    // Reset and refresh KPI Overview Controller
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      final kpiController = Get.find<MonKpiOverviewController>();
+      kpiController.isInitialized.value = false;
+      await kpiController.fetchKpiData();
+      kpiController.isInitialized.value = true;
+      debugPrint('SplashPage: KPI controller refreshed');
+    }
+
+    // Refresh Gross Profit Controller (doesn't have isInitialized)
+    if (Get.isRegistered<MonGrossProfitController>()) {
+      final grossProfitController = Get.find<MonGrossProfitController>();
+      await grossProfitController.fetchGrossProfitData();
+      debugPrint('SplashPage: Gross profit controller refreshed');
+    }
+
+    // Refresh Outstanding Payments Controller (doesn't have isInitialized)
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      final outstandingController =
+          Get.find<MonOutstandingPaymentsController>();
+      await outstandingController.fetchOutstandingPaymentsData();
+      debugPrint('SplashPage: Outstanding payments controller refreshed');
+    }
+
+    // Refresh Sales Trends Controller (doesn't have isInitialized)
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      final salesTrendsController = Get.find<MonSalesTrendsController>();
+      await salesTrendsController.fetchAllData();
+      debugPrint('SplashPage: Sales trends controller refreshed');
     }
   }
 
@@ -344,7 +523,7 @@ class _SplashPageState extends State<SplashPage> {
         title: const Text('No Internet Connection'),
         content: const Text(
           'You are offline and there is no cached data available. '
-              'Please connect to the internet to sync data first.',
+          'Please connect to the internet to sync data first.',
         ),
         actions: [
           TextButton(
@@ -381,6 +560,8 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final bool isSmallScreen = size.width < 600;
     return Scaffold(
       appBar: AppBar(
         systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -392,10 +573,9 @@ class _SplashPageState extends State<SplashPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.storefront,
-              color: PrimaryColors.brightYellow,
-              size: 100,
+            Hero(
+              tag: 'logo',
+              child: AppLogoCircle(size: isSmallScreen ? 100 : 120),
             ),
             const SizedBox(height: 24),
             Obx(() {
@@ -432,21 +612,14 @@ class _SplashPageState extends State<SplashPage> {
             const SizedBox(height: 16),
             Text(
               _statusMessage,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             if (_isOfflineMode) ...[
               const SizedBox(height: 8),
               const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.cloud_off,
-                    color: Colors.orange,
-                    size: 16,
-                  ),
+                  Icon(Icons.cloud_off, color: Colors.orange, size: 16),
                   SizedBox(width: 8),
                   Text(
                     'Offline Mode',
@@ -489,11 +662,7 @@ class OfflineIndicator extends StatelessWidget {
           child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.cloud_off,
-                color: Colors.white,
-                size: 16,
-              ),
+              Icon(Icons.cloud_off, color: Colors.white, size: 16),
               SizedBox(width: 6),
               Text(
                 'Offline',

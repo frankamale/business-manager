@@ -15,7 +15,9 @@ import 'payment_screen.dart';
 import 'settle_bill_screen.dart';
 
 class SalesListing extends StatefulWidget {
-  const SalesListing({super.key});
+  final ServicePoint? servicePoint;
+
+  const SalesListing({super.key, this.servicePoint});
 
   @override
   State<SalesListing> createState() => _SalesListingState();
@@ -28,12 +30,13 @@ class _SalesListingState extends State<SalesListing> {
   final TextEditingController searchController = TextEditingController();
   final RxList<Map<String, dynamic>> filteredSales = <Map<String, dynamic>>[].obs;
   bool isSearching = false;
+  bool isUploadingAll = false;
 
   @override
   void initState() {
     super.initState();
-    // Load sales from cache when screen opens
-    salesController.loadSalesFromCache();
+    // Load sales from cache when screen opens, filtered by service point
+    salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
     filteredSales.assignAll(salesController.groupedSales);
     searchController.addListener(_filterSales);
 
@@ -79,6 +82,206 @@ class _SalesListingState extends State<SalesListing> {
       searchController.clear();
     });
   }
+
+  Future<void> _uploadAllSales() async {
+    // Get all pending sales (not uploaded and not failed with permanent error)
+    final pendingSales = salesController.groupedSales.where((sale) {
+      final uploadStatus = sale['upload_status'] as String? ?? 'pending';
+      return uploadStatus == 'pending' || uploadStatus == 'failed';
+    }).toList();
+
+    if (pendingSales.isEmpty) {
+      Get.snackbar(
+        'No Pending Sales',
+        'All sales have already been uploaded',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.blue.shade700,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    setState(() {
+      isUploadingAll = true;
+    });
+
+    int successCount = 0;
+    int failedCount = 0;
+    List<String> failedReceipts = [];
+
+    // Show progress dialog
+    Get.dialog(
+      StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Uploading Sales'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Uploading ${successCount + failedCount + 1} of ${pendingSales.length}...'),
+                SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (successCount + failedCount) / pendingSales.length,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Success: $successCount',
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
+                Text(
+                  'Failed: $failedCount',
+                  style: TextStyle(color: Colors.red.shade700),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      barrierDismissible: false,
+    );
+
+    // Upload each sale
+    for (var sale in pendingSales) {
+      final salesId = sale['salesId'] as String?;
+      final receiptNumber = sale['receiptnumber'] as String? ?? '';
+
+      if (salesId == null) {
+        failedCount++;
+        failedReceipts.add(receiptNumber);
+        continue;
+      }
+
+      try {
+        await salesController.uploadSaleToServer(salesId);
+        successCount++;
+      } catch (e) {
+        failedCount++;
+        failedReceipts.add('$receiptNumber: ${e.toString().split(':').last.trim()}');
+      }
+
+      // Update progress dialog
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+        Get.dialog(
+          AlertDialog(
+            title: Row(
+              children: [
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 12),
+                Text('Uploading Sales'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Uploading ${successCount + failedCount + 1} of ${pendingSales.length}...'),
+                SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: (successCount + failedCount) / pendingSales.length,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Success: $successCount',
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
+                Text(
+                  'Failed: $failedCount',
+                  style: TextStyle(color: Colors.red.shade700),
+                ),
+              ],
+            ),
+          ),
+          barrierDismissible: false,
+        );
+      }
+    }
+
+    // Close progress dialog
+    if (Get.isDialogOpen ?? false) {
+      Get.back();
+    }
+
+    setState(() {
+      isUploadingAll = false;
+    });
+
+    // Refresh the sales list
+    await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
+
+    // Show summary dialog
+    Get.dialog(
+      AlertDialog(
+        title: Text('Upload Complete'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
+                SizedBox(width: 8),
+                Text('$successCount sales uploaded successfully'),
+              ],
+            ),
+            if (failedCount > 0) ...[
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.error, color: Colors.red.shade700, size: 20),
+                  SizedBox(width: 8),
+                  Text('$failedCount sales failed to upload'),
+                ],
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Failed receipts:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              SizedBox(height: 4),
+              Container(
+                constraints: BoxConstraints(maxHeight: 150),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: failedReceipts.map((r) => Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $r',
+                        style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+                      ),
+                    )).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   bool _isCashierRole() {
     final currentUser = authController.currentUser.value;
     if (currentUser == null) return false;
@@ -89,7 +292,7 @@ class _SalesListingState extends State<SalesListing> {
 
     // Allow cashiers or if setting is enabled, also allow waiters
     return role == 'cashier' || role.toLowerCase().contains('cashier') || role.toLowerCase().contains('salesperson') ||
-           (allowAllUsersPayment && role == 'waiter');
+           (allowAllUsersPayment );
   }
 
   @override
@@ -115,14 +318,41 @@ class _SalesListingState extends State<SalesListing> {
         elevation: 0,
         actions: [
           if (!isSearching) ...[
-            IconButton(
-              icon: Icon(Icons.refresh),
-              onPressed: () async {
-                final salesSyncService = Get.find<SalesSyncService>();
-                await salesSyncService.manualSync();
-                await salesController.refreshSales();
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert),
+              tooltip: 'Options',
+              enabled: !isUploadingAll,
+              onSelected: (value) async {
+                if (value == 'refresh') {
+                  final salesSyncService = Get.find<SalesSyncService>();
+                  await salesSyncService.manualSync();
+                  await salesController.refreshSales();
+                } else if (value == 'upload_all') {
+                  await _uploadAllSales();
+                }
               },
-              tooltip: 'Sync with Server & Reload',
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'refresh',
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh, size: 20, color: Colors.blue.shade700),
+                      SizedBox(width: 12),
+                      Text('Refresh'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'upload_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.cloud_upload, size: 20, color: Colors.green.shade700),
+                      SizedBox(width: 12),
+                      Text('Upload All'),
+                    ],
+                  ),
+                ),
+              ],
             ),
             IconButton(
               icon: Icon(Icons.search),
@@ -245,11 +475,69 @@ class _SalesListingState extends State<SalesListing> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    IconButton(
-                      onPressed: () => _handlePrint(sale),
+                    PopupMenuButton<String>(
+                      onSelected: (value) => _handlePrintOption(value, sale),
+                      itemBuilder: (context) {
+                        final totalBalance = sale['totalBalance'] as double? ?? 0.0;
+                        final isPaid = totalBalance <= 0;
+                        return [
+                          PopupMenuItem(
+                            value: 'bill_receipt',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.receipt,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  isPaid ? 'Print Receipt' : 'Print Bill',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'kot',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.restaurant,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Print KOT',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'bot',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.local_bar,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Print BOT',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ];
+                      },
                       icon: Icon(Icons.print),
                       color: Colors.blue.shade600,
-                      tooltip: 'Print',
+                      tooltip: 'Print Options',
+                      padding: EdgeInsets.all(8),
                     ),
                     IconButton(
                       onPressed: () => _handleEdit(sale),
@@ -436,7 +724,7 @@ class _SalesListingState extends State<SalesListing> {
                     SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        uploadError,
+                        "Internet Error",
                         style: TextStyle(
                           fontSize: 10,
                           color: Colors.red.shade700,
@@ -457,7 +745,7 @@ class _SalesListingState extends State<SalesListing> {
     );
   }
 
-  Future<void> _handlePrint(Map<String, dynamic> sale) async {
+  Future<void> _handlePrintOption(String option, Map<String, dynamic> sale) async {
     final salesController = Get.find<SalesController>();
 
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
@@ -486,7 +774,7 @@ class _SalesListingState extends State<SalesListing> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Preparing receipt...'),
+                  Text('Preparing to print...'),
                 ],
               ),
             ),
@@ -504,7 +792,7 @@ class _SalesListingState extends State<SalesListing> {
       if (saleTransactions.isEmpty) {
         Get.snackbar(
           'Error',
-          'No items found for this receipt',
+          'No items found for this order',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red.shade700,
           colorText: Colors.white,
@@ -518,11 +806,12 @@ class _SalesListingState extends State<SalesListing> {
       final date = DateTime.fromMillisecondsSinceEpoch(firstTransaction.transactiondate);
       final notes = firstTransaction.remarks;
       final paymentMode = firstTransaction.paymentmode;
+      final reference = firstTransaction.purchaseordernumber ?? '';
 
-      String cashierName = 'Cashier';
+      String staffName = 'Staff';
       final currentUser = authController.currentUser.value;
       if (currentUser != null) {
-        cashierName = currentUser.staff ?? currentUser.name ?? 'Cashier';
+        staffName = currentUser.staff ?? currentUser.name ?? 'Staff';
       }
 
       // Calculate totals
@@ -533,112 +822,58 @@ class _SalesListingState extends State<SalesListing> {
         amountPaid += transaction.amountpaid;
       }
       final balance = totalAmount - amountPaid;
-
-      // Check if amount paid is 0 or null to determine print type
       final bool isUnpaid = amountPaid == 0 || amountPaid.isNaN;
-      
-      // Show print options dialog
-      await Get.dialog(
-        AlertDialog(
-          title: Text('Print Options'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.print, color: Colors.blue),
-                title: Text(isUnpaid ? 'Print Bill' : 'Print Receipt'),
-                subtitle: Text('Print to connected printer'),
-                onTap: () async {
-                  Get.back();
-                  try {
-                    if (isUnpaid) {
-                      await PrintService.printBill(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    } else {
-                      await PrintService.printReceipt(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        amountPaid: amountPaid,
-                        balance: balance,
-                        paymentMode: paymentMode,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    }
-                  } catch (e) {
-                    Get.snackbar(
-                      'Print Error',
-                      'Failed to print',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red.shade700,
-                      colorText: Colors.white,
-                    );
-                  }
-                },
-              ),
-              Divider(),
-              ListTile(
-                leading: Icon(Icons.share, color: Colors.green),
-                title: Text(isUnpaid ? 'Share Bill PDF' : 'Share Receipt PDF'),
-                subtitle: Text('Share as PDF file'),
-                onTap: () async {
-                  Get.back();
-                  try {
-                    if (isUnpaid) {
-                      await PrintService.shareBill(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    } else {
-                      await PrintService.shareReceipt(
-                        receiptNumber: receiptNumber,
-                        customerName: customerName,
-                        date: date,
-                        items: saleTransactions,
-                        totalAmount: totalAmount,
-                        amountPaid: amountPaid,
-                        balance: balance,
-                        paymentMode: paymentMode,
-                        issuedBy: cashierName,
-                        notes: notes.isNotEmpty ? notes : null,
-                      );
-                    }
-                  } catch (e) {
-                    Get.snackbar(
-                      'Share Error',
-                      'Failed to share',
-                      snackPosition: SnackPosition.BOTTOM,
-                      backgroundColor: Colors.red.shade700,
-                      colorText: Colors.white,
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Get.back(),
-              child: Text('Cancel'),
-            ),
-          ],
-        ),
-      );
+
+      switch (option) {
+        case 'bill_receipt':
+          if (isUnpaid) {
+            await PrintService.printBill(
+              receiptNumber: receiptNumber,
+              customerName: customerName,
+              date: date,
+              items: saleTransactions,
+              totalAmount: totalAmount,
+              issuedBy: staffName,
+              notes: notes.isNotEmpty ? notes : null,
+            );
+          } else {
+            await PrintService.printReceipt(
+              receiptNumber: receiptNumber,
+              customerName: customerName,
+              date: date,
+              items: saleTransactions,
+              totalAmount: totalAmount,
+              amountPaid: amountPaid,
+              balance: balance,
+              paymentMode: paymentMode,
+              issuedBy: staffName,
+              notes: notes.isNotEmpty ? notes : null,
+            );
+          }
+          break;
+
+        case 'kot':
+          await PrintService.printKot(
+            receiptNumber: receiptNumber,
+            date: date,
+            items: saleTransactions,
+            issuedBy: staffName,
+            notes: notes.isNotEmpty ? notes : null,
+            tableNumber: reference.isNotEmpty ? reference : null,
+          );
+          break;
+
+        case 'bot':
+          await PrintService.printBot(
+            receiptNumber: receiptNumber,
+            date: date,
+            items: saleTransactions,
+            issuedBy: staffName,
+            notes: notes.isNotEmpty ? notes : null,
+            tableNumber: reference.isNotEmpty ? reference : null,
+          );
+          break;
+      }
     } catch (e) {
       // Close loading dialog if still open
       if (Get.isDialogOpen ?? false) {
@@ -646,8 +881,8 @@ class _SalesListingState extends State<SalesListing> {
       }
 
       Get.snackbar(
-        'Error',
-        'Failed to prepare receipt: $e',
+        'Print Error',
+        'Failed to print: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade700,
         colorText: Colors.white,
@@ -784,7 +1019,7 @@ class _SalesListingState extends State<SalesListing> {
              transition: Transition.rightToLeft,
            );
 
-           await salesController.loadSalesFromCache();
+           await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
          } else {
            // For non-uploaded sales, use the old flow
            try {
@@ -903,7 +1138,7 @@ class _SalesListingState extends State<SalesListing> {
                transition: Transition.rightToLeft,
              );
 
-             await salesController.loadSalesFromCache();
+             await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
            } catch (e) {
              if (Get.isDialogOpen ?? false) {
                Get.back();
@@ -997,9 +1232,9 @@ class _SalesListingState extends State<SalesListing> {
       // Get salesperson ID directly from first transaction
       final salespersonId = firstTransaction.salespersonid;
 
-      final servicePointController = Get.find<ServicePointController>();
-      ServicePoint? servicePoint;
-      if (firstTransaction.servicepointid != null) {
+      ServicePoint? servicePoint = widget.servicePoint;
+      if (servicePoint == null && firstTransaction.servicepointid != null) {
+        final servicePointController = Get.find<ServicePointController>();
         servicePoint = servicePointController.getServicePointById(firstTransaction.servicepointid!);
       }
 
@@ -1076,7 +1311,7 @@ class _SalesListingState extends State<SalesListing> {
         transition: Transition.rightToLeft,
       );
 
-      await salesController.loadSalesFromCache();
+      await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
     } catch (e) {
       if (Get.isDialogOpen ?? false) {
         Get.back();

@@ -10,7 +10,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../services/print_service.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
 
 class PosScreen extends StatefulWidget {
@@ -291,7 +291,7 @@ class _PosScreenState extends State<PosScreen> {
         amountTendered: 0,
       );
       if (result['success'] == true) {
-        final db = await DatabaseHelper().database;
+        final db = await UnifiedDatabaseHelper.instance.database;
         final maps = await db!.query(
           'sales_transactions',
           where: 'receiptnumber = ?',
@@ -426,7 +426,7 @@ class _PosScreenState extends State<PosScreen> {
  
        if (result['success'] == true) {
          // Get the sale transactions for printing
-         final db = await DatabaseHelper().database;
+         final db = await UnifiedDatabaseHelper.instance.database;
          final maps = await db!.query(
            'sales_transactions',
            where: 'receiptnumber = ?',

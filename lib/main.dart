@@ -4,6 +4,8 @@ import 'package:get_storage/get_storage.dart';
 
 // Package imports for external dependencies
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'flavors/flavor_colors.dart';
+import 'flavors/flavor_config.dart';
 
 // POS Module imports
 import 'bac_monitor/lib/controllers/profile_controller.dart';
@@ -21,6 +23,8 @@ import 'back_pos/services/sales_sync_service.dart';
 import 'back_pos/config.dart';
 import 'initialise/unified_login_screen.dart';
 import 'initialise/splashscreen.dart';
+import 'shared/services/customer_auth_service.dart';
+
 // Monitor Module imports
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
@@ -37,15 +41,30 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
+  // Debug: Print flavor info
+  print('FlavorConfig.flavorName: ${FlavorConfig.flavorName}');
+  print('FlavorColors.current.primary: ${FlavorColors.current.primary}');
+
+  // Initialize bot credentials from dart-define to secure storage
+  final customerAuthService = CustomerAuthService();
+  await customerAuthService.initBotCredentials();
+
+  // Fetch and store bot's company info for flavor validation
+  try {
+    if (await customerAuthService.hasBotCredentials()) {
+      await customerAuthService.fetchAndStoreBotCompanyInfo();
+    }
+  } catch (e) {
+    print('Warning: Could not fetch bot company info: $e');
+  }
 
   // POS Services
   Get.put(PosApiService());
-  Get.put(SalesSyncService());
+  Get.lazyPut<SalesSyncService>(() => SalesSyncService());
 
   // Monitor Services
   Get.put(MonitorApiService());
   Get.put(AccountManager());
-
 
   Get.put(AuthController());
   Get.put(CustomerController());
@@ -55,7 +74,6 @@ void main() async {
   Get.put(UserController());
   Get.put(SettingsController());
   Get.put(ServicePointController());
-
 
   Get.put(MonDashboardController());
   Get.put(MonGrossProfitController());
@@ -81,7 +99,10 @@ class MyApp extends StatelessWidget {
       title: AppConfig.appName,
       debugShowCheckedModeBanner: true,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: FlavorColors.current.primary,
+        ),
+
         useMaterial3: true,
       ),
       fallbackLocale: const Locale('en', 'US_store'),

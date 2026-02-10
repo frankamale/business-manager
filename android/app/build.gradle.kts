@@ -9,6 +9,25 @@ android {
     namespace = "com.example.bac_pos"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
+    flavorDimensions += "company"
+
+    productFlavors {
+        create("komusoft") {
+            dimension = "company"
+            applicationId = "com.komusoft.businessmanager"
+            resValue("string", "app_name", "Business Manager")
+        }
+        create("sassy") {
+            dimension = "company"
+            applicationId = "com.sassy.businessmanager"
+            resValue("string", "app_name", "Sassy Dry Cleaners")
+        }
+        create("top_grade") {
+            dimension = "company"
+            applicationId = "com.nvuma.businessmanager"
+            resValue("string", "app_name", "Top Grade")
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

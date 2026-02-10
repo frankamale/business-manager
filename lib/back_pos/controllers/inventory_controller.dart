@@ -1,11 +1,11 @@
 import 'package:get/get.dart';
-import 'package:bac_pos/back_pos/database/db_helper.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/inventory_item.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class InventoryController extends GetxController {
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
   final _apiService = PosApiService();
 
   // Reactive list of inventory items
@@ -50,7 +50,7 @@ class InventoryController extends GetxController {
       final items = await _apiService.fetchInventory();
 
       // Save inventory to database
-      await _dbHelper.insertInventoryItems(items);
+      await _dbHelper.insertInventoryItemModels(items);
 
       // Update sync metadata
       await _dbHelper.updateSyncMetadata('inventory', 'success', items.length);

@@ -2,7 +2,11 @@ import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../bac_monitor/lib/db/db_helper.dart';
+import '../../bac_monitor/lib/controllers/profile_controller.dart';
+import '../../shared/database/unified_db_helper.dart';
+import '../../bac_monitor/lib/services/api_services.dart' as monitor;
+import '../../bac_monitor/lib/services/account_manager.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../services/api_services.dart';
@@ -19,9 +23,12 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.put(AuthController());
   final PosApiService _apiService = PosApiService();
+  final ProfileController controller = Get.find();
+
   String? selectedItem;
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isLoading2 = false;
   String _companyName = '';
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -110,6 +117,23 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     }
   }
 
+  /// Logout current account and navigate to unified login screen
+  Future<void> _logoutAndGoToServerLogin() async {
+    try {
+      setState(() {
+        _isLoading2 = true;
+      });
+controller.signOut();
+      print('DEBUG: Login._logoutAndGoToServerLogin() - Starting logout');
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      print(e);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -157,24 +181,8 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             // Logo
                             Hero(
                               tag: 'logo',
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Image.asset(
-                                  "assets/images/logo.png",
-                                  width: isSmallScreen ? 100 : 120,
-                                  height: isSmallScreen ? 100 : 120,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Icon(
-                                      Icons.storefront_rounded,
-                                      size: isSmallScreen ? 100 : 120,
-                                      color: Colors.blue.shade700,
-                                    );
-                                  },
-                                ),
+                              child: AppLogoCircle(
+                                size: isSmallScreen ? 100 : 120,
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -186,7 +194,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                   : "${AppConfig.companyName} ",
 
                               style: TextStyle(
-                                fontSize: isSmallScreen ? 28 : 32,
+                                fontSize: isSmallScreen ? 23 : 25,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.grey.shade800,
                               ),
@@ -355,11 +363,12 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 18),
                             GestureDetector(
-                              onTap: () => {Get.to(UnifiedLoginScreen())},
-
+                              onTap: _isLoading2 ? null : _logoutAndGoToServerLogin,
                               child: Text(
                                 "Login with server credentials",
-                                style: TextStyle(color: Colors.blue),
+                                style: TextStyle(
+                                  color: _isLoading2 ? Colors.grey : Colors.blue,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),

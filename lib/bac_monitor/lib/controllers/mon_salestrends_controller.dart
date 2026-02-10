@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../models/dashboard.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
 class MonSalesTrendsController extends GetxController {
   final MonDashboardController dateController = Get.find();
-  final dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
 
   var salesData = <SalesDataPoint>[].obs;
   var isLoadingSales = true.obs;
@@ -150,13 +150,13 @@ class MonSalesTrendsController extends GetxController {
 
   Future<void> fetchRawSalesData(DateTimeRange dateRange) async {
     try {
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final startMillis = dateRange.start.millisecondsSinceEpoch;
       final endMillis = dateRange.end.millisecondsSinceEpoch;
 
       print("Fetching raw sales data from ${dateRange.start} to ${dateRange.end}");
       final result = await db.query(
-        'sales',
+        'mon_sales',
         where: 'transactiondate >= ? AND transactiondate <= ?',
         whereArgs: [startMillis, endMillis],
       );
@@ -175,7 +175,7 @@ class MonSalesTrendsController extends GetxController {
     try {
       isLoadingSales.value = true;
       hasErrorSales.value = false;
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final startDate = dateRange.start;
       final endDate = dateRange.end;
       // Add 1 to include both start and end dates
@@ -302,7 +302,7 @@ class MonSalesTrendsController extends GetxController {
       }
 
       final query =
-          ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM sales WHERE transactiondate >= ? AND transactiondate <= ? GROUP BY date, salesId) GROUP BY date ''';
+          ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM mon_sales WHERE transactiondate >= ? AND transactiondate <= ? GROUP BY date, salesId) GROUP BY date ''';
 
       print("Executing SQL query for aggregation type: ${aggregationType.value}");
       print("Query: $query");
@@ -362,7 +362,7 @@ class MonSalesTrendsController extends GetxController {
     try {
       isLoadingStores.value = true;
       hasErrorStores.value = false;
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final startMillis = dateRange.start.millisecondsSinceEpoch;
       final endMillis = dateRange.end.millisecondsSinceEpoch;
 
@@ -370,8 +370,8 @@ class MonSalesTrendsController extends GetxController {
         SELECT
           sp.name as storeName,
           COALESCE(SUM(grouped_amount), 0) as total
-        FROM service_points sp
-        LEFT JOIN (SELECT sourcefacility, salesId, SUM(amount) as grouped_amount FROM sales WHERE transactiondate >= ? AND transactiondate <= ? GROUP BY sourcefacility, salesId) s ON sp.name = s.sourcefacility
+        FROM mon_service_points sp
+        LEFT JOIN (SELECT sourcefacility, salesId, SUM(amount) as grouped_amount FROM mon_sales WHERE transactiondate >= ? AND transactiondate <= ? GROUP BY sourcefacility, salesId) s ON sp.name = s.sourcefacility
         WHERE sp.stores = 1
         GROUP BY sp.id, sp.name
         ORDER BY total DESC

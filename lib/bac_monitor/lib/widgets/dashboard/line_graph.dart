@@ -67,18 +67,18 @@ class SalesTrendLineGraph extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) => _leftTitles(value, meta),
-              reservedSize: 48,
+              reservedSize: 50,
               interval: maxY / 5,
             ),
             axisNameWidget: const Text(
-              'Sales (UGX)',
+              'Amount (UGX)',
               style: TextStyle(
                 color: Colors.white70,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            axisNameSize: 20,
+            axisNameSize: 18,
           ),
           topTitles: const AxisTitles(
             sideTitles: SideTitles(showTitles: false),
@@ -90,20 +90,21 @@ class SalesTrendLineGraph extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               getTitlesWidget: (value, meta) => _bottomTitles(value, meta),
-              reservedSize: 45,
+              reservedSize: 42,
               interval: _getBottomTitleInterval(),
             ),
             axisNameWidget: const Text(
-              'Period',
+              'Time Period',
               style: TextStyle(
                 color: Colors.white70,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            axisNameSize: 20,
+            axisNameSize: 18,
           ),
         ),
+        minY: 0,
         maxY: maxY,
         lineTouchData: _lineTouchData(),
         clipData: const FlClipData.none(),
@@ -252,8 +253,6 @@ class SalesTrendLineGraph extends StatelessWidget {
   }
 
   LineTouchData _lineTouchData() {
-    final compactFormatter = NumberFormat.compact(locale: 'en_US');
-
     return LineTouchData(
       enabled: true,
       handleBuiltInTouches: false,
@@ -264,12 +263,25 @@ class SalesTrendLineGraph extends StatelessWidget {
         fitInsideVertically: true,
         getTooltipItems: (List<LineBarSpot> touchedSpots) {
           return touchedSpots.map((barSpot) {
+            // Format with appropriate suffix
+            String formattedValue;
+            final value = barSpot.y;
+            if (value >= 1000000000) {
+              formattedValue = '${(value / 1000000000).toStringAsFixed(1)}B';
+            } else if (value >= 1000000) {
+              formattedValue = '${(value / 1000000).toStringAsFixed(1)}M';
+            } else if (value >= 1000) {
+              formattedValue = '${(value / 1000).toStringAsFixed(1)}K';
+            } else {
+              formattedValue = NumberFormat('#,###').format(value);
+            }
+
             return LineTooltipItem(
-              compactFormatter.format(barSpot.y),
+              formattedValue,
               const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
-                fontSize: 10,
+                fontSize: 11,
               ),
               textAlign: TextAlign.center,
             );
@@ -405,19 +417,40 @@ class SalesTrendLineGraph extends StatelessWidget {
   }
 
   Widget _leftTitles(double value, TitleMeta meta) {
-    // Don't show label at the very top
+    // Don't show label at the very top to avoid overlap
     if (value == meta.max) return const Text('');
 
-    // Only show labels at interval boundaries
-    if ((value % (meta.max / 5)).abs() > 0.01) return const Text('');
+    // Calculate interval
+    final interval = meta.max / 5;
 
-    final formatter = NumberFormat.compact(locale: 'en_US');
-    final text = formatter.format(value);
+    // Show 0 baseline and labels at interval boundaries
+    final isZero = value == 0;
+    final isAtInterval = interval > 0 && (value % interval).abs() < (interval * 0.01);
+
+    if (!isZero && !isAtInterval) return const Text('');
+
+    String text;
+    if (value == 0) {
+      text = '0';
+    } else if (value >= 1000000000) {
+      text = '${(value / 1000000000).toStringAsFixed(value >= 10000000000 ? 0 : 1)}B';
+    } else if (value >= 1000000) {
+      text = '${(value / 1000000).toStringAsFixed(value >= 10000000 ? 0 : 1)}M';
+    } else if (value >= 1000) {
+      text = '${(value / 1000).toStringAsFixed(value >= 10000 ? 0 : 1)}K';
+    } else {
+      text = value.toStringAsFixed(0);
+    }
+
     return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
+      padding: const EdgeInsets.only(right: 4.0),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white70, fontSize: 10),
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
         textAlign: TextAlign.right,
       ),
     );

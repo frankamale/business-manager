@@ -4,9 +4,20 @@ import 'dart:convert';
 import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:sqflite/sqflite.dart';
 import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
+
+/// Top-level function for isolate-based JSON decoding
+/// Must be top-level or static for compute() to work
+List<dynamic> _decodeJsonList(String jsonString) {
+  return json.decode(jsonString) as List<dynamic>;
+}
+
+Map<String, dynamic> _decodeJsonMap(String jsonString) {
+  return json.decode(jsonString) as Map<String, dynamic>;
+}
 
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
@@ -16,7 +27,7 @@ class MonitorApiService extends GetxService {
     ),
   );
 
-  final _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
  String? _cachedToken;
   String? cachedCompanyId;
   bool _isInitialized = false;
@@ -29,14 +40,14 @@ class MonitorApiService extends GetxService {
     }
 
     _cachedToken = await secureStorage.read(key: "access_token");
-    print('DEBUG: MonitorApiService.getStoredToken() retrieved and cached token');
+    // print('DEBUG: MonitorApiService.getStoredToken() retrieved and cached token');
     return _cachedToken;
   }
 
   Future<void> storeToken(String token) async {
     await secureStorage.write(key: 'access_token', value: token);
     _cachedToken = token; 
-    print('DEBUG: MonitorApiService.storeToken() stored token');
+    // print('DEBUG: MonitorApiService.storeToken() stored token');
   }
 
   Future<String?> getStoredCode() async {
@@ -44,10 +55,10 @@ class MonitorApiService extends GetxService {
   }
 
   Future<void> storeCode(String code) async {
-    print('DEBUG: MonitorApiService.storeCode() called with code: $code');
+    // print('DEBUG: MonitorApiService.storeCode() called with code: $code');
     await secureStorage.write(key: 'persistent_code', value: code);
     final savedCode = await secureStorage.read(key: 'persistent_code');
-    print('DEBUG: MonitorApiService.storeCode() verified saved code: $savedCode');
+    // print('DEBUG: MonitorApiService.storeCode() verified saved code: $savedCode');
   }
 
   Future<void> storeUserData(Map<String, dynamic> data) async {
@@ -120,13 +131,13 @@ class MonitorApiService extends GetxService {
   Future<void> initializeCompanyId() async {
     // If already initialized, return immediately
     if (_isInitialized && cachedCompanyId != null) {
-      print('DEBUG: MonitorApiService.initializeCompanyId() - Already initialized, skipping');
+      // print('DEBUG: MonitorApiService.initializeCompanyId() - Already initialized, skipping');
       return;
     }
 
     // If initialization is in progress, wait for it
     if (_initializationFuture != null) {
-      print('DEBUG: MonitorApiService.initializeCompanyId() - Initialization in progress, waiting...');
+      // print('DEBUG: MonitorApiService.initializeCompanyId() - Initialization in progress, waiting...');
       await _initializationFuture;
       return;
     }
@@ -139,68 +150,63 @@ class MonitorApiService extends GetxService {
 
   Future<void> _performInitialization() async {
     try {
-      print('DEBUG: MonitorApiService._performInitialization() - Starting company ID initialization');
+      // print('DEBUG: MonitorApiService._performInitialization() - Starting company ID initialization');
 
-      // Try to get from cache first
+      // Try to get from cache/storage first
       final cachedId = await getStoredCompanyId();
-      if (cachedId != null && cachedId.isNotEmpty) {
-        print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
-        cachedCompanyId = cachedId;
-        _isInitialized = true;
+      if (cachedId != null && cachedId.isNotEmpty && cachedId != 'default_offline_company') {
+        // print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
 
-        // Switch to company database
-        if (cachedId != 'default_offline_company') {
-          try {
-            await _dbHelper.switchCompany(cachedId);
-            print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $cachedId');
-          } catch (e) {
-            print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
-          }
+        // Check if database is already open for this company
+        if (_dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == cachedId) {
+          // print('DEBUG: MonitorApiService._performInitialization() - Database already open for company: $cachedId');
+          cachedCompanyId = cachedId;
+          _isInitialized = true;
+          return;
         }
+
+        // Switch to company database (without fetching data - caller will handle that)
+        await switchCompany(cachedId, fetchData: false);
         return;
       }
 
       // If not cached, fetch from API
+      // print('DEBUG: MonitorApiService._performInitialization() - No cached company ID, fetching from API');
       final companyId = await _fetchCompanyIdOnce();
-      print('DEBUG: MonitorApiService._performInitialization() - Company ID initialized: $companyId');
+      // print('DEBUG: MonitorApiService._performInitialization() - Company ID fetched: $companyId');
 
       // Switch to the company's database if we have a valid company ID
-      if (companyId != null && companyId.isNotEmpty && companyId != 'default_offline_company') {
-        try {
-          await _dbHelper.switchCompany(companyId);
-          print('DEBUG: MonitorApiService._performInitialization() - Switched to company database: $companyId');
-        } catch (e) {
-          print('ERROR: MonitorApiService._performInitialization() - Failed to switch company database: $e');
-        }
+      if (companyId.isNotEmpty && companyId != 'default_offline_company') {
+        await switchCompany(companyId, fetchData: false);
       }
 
-      _isInitialized = true;
     } catch (e) {
-      print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
+      // print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
       _isInitialized = false;
+      rethrow;
     }
   }
 
   /// Fetch company ID from API (internal method, only called once)
   Future<String> _fetchCompanyIdOnce() async {
     try {
-      print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Starting company ID fetch');
+      // print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Starting company ID fetch');
       final response = await getWithAuth('/company/details');
       final companyDetails = json.decode(response.body);
-      print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Company details response received');
+      // print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Company details response received');
 
       if (companyDetails.containsKey('company')) {
         final companyId = companyDetails['company'];
-        print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Found company ID: $companyId');
+        // print('DEBUG: MonitorApiService._fetchCompanyIdOnce() - Found company ID: $companyId');
         await storeCompanyId(companyId.toString());
         return companyId.toString();
       } else {
-        print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Company ID not found in company details');
+        // print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Company ID not found in company details');
         throw Exception('Company ID not found in company details');
       }
     } catch (e) {
-      print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Failed to fetch company ID: $e');
-      debugPrint("ApiService: Failed to fetch company ID -> $e");
+      // print('ERROR: MonitorApiService._fetchCompanyIdOnce() - Failed to fetch company ID: $e');
+      // debugPrint("ApiService: Failed to fetch company ID -> $e");
       throw Exception('Failed to fetch company ID: $e');
     }
   }
@@ -221,7 +227,7 @@ class MonitorApiService extends GetxService {
     }
 
     // If not available, this is an error - initialization should have been called
-    print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Company ID not initialized!');
+    // print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Company ID not initialized!');
     throw Exception('Company ID not initialized. Call initializeCompanyId() first.');
   }
 
@@ -231,40 +237,40 @@ class MonitorApiService extends GetxService {
         bool useToken = true,
       }) async {
     try {
-      print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint');
+      // print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint');
       final headers = {'Content-Type': 'application/json'};
       if (useToken) {
         final token = await getStoredToken();
         if (token != null) {
           headers['Authorization'] = 'Bearer $token';
         } else {
-          print('ERROR: MonitorApiService.post() - Authentication token not found.');
+          // print('ERROR: MonitorApiService.post() - Authentication token not found.');
           throw Exception('Authentication token not found.');
         }
       }
-      print('DEBUG: MonitorApiService.post() - Making POST request to $_baseUrl$endpoint');
+      // print('DEBUG: MonitorApiService.post() - Making POST request to $_baseUrl$endpoint');
       final response = await http.post(
         Uri.parse('$_baseUrl$endpoint'),
         headers: headers,
         body: jsonEncode(data),
       );
-      print('DEBUG: MonitorApiService.post() - Received response with status: ${response.statusCode}');
+      // print('DEBUG: MonitorApiService.post() - Received response with status: ${response.statusCode}');
       return _handleResponse(response);
     } catch (e) {
-      print('ERROR: MonitorApiService.post() - Network error: $e');
+      // print('ERROR: MonitorApiService.post() - Network error: $e');
       throw Exception('Network error: $e');
     }
   }
 
   Future<void> login(String email, String password) async {
-    print("login begin ----- ");
+    // print("login begin ----- ");
 
     final response = await post('/auth/signin', {
       'username': email.trim().toLowerCase(),
       'password': password.trim(),
     }, useToken: false);
-    print("next .....");
-    print(response);
+    // print("next .....");
+    // print(response);
     if (response.containsKey('accessToken')) {
       await storeToken(response['accessToken']);
 
@@ -279,7 +285,7 @@ class MonitorApiService extends GetxService {
       // Store server credentials for re-authentication
       await saveServerCredentials(email, password);
 
-      print("login success ----- authentication completed");
+      // print("login success ----- authentication completed");
 
       await storeCode(DateTime.now().millisecondsSinceEpoch.toString());
     } else {
@@ -302,28 +308,53 @@ class MonitorApiService extends GetxService {
   }
 
   Future<void> logout() async {
-    Get.find<MonSyncController>().onClose();
-    await Get.delete<MonSyncController>(force: true);
+    // print('DEBUG: MonitorApiService.logout() - Starting logout');
 
-    // Close all database instances on logout
-    await _dbHelper.closeAllDatabases();
+    // Stop sync controller if registered
+    try {
+      if (Get.isRegistered<MonSyncController>()) {
+        Get.find<MonSyncController>().onClose();
+        await Get.delete<MonSyncController>(force: true);
+      }
+    } catch (e) {
+      // print('DEBUG: MonitorApiService.logout() - Error stopping sync controller: $e');
+    }
 
+    // Close database instance on logout
+    await _dbHelper.close();
+    // print('DEBUG: MonitorApiService.logout() - Database closed');
+
+    // Clear all secure storage keys
     await secureStorage.delete(key: 'access_token');
     await secureStorage.delete(key: 'user_data');
+    await secureStorage.delete(key: 'user_role');
     await secureStorage.delete(key: 'persistent_code');
     await secureStorage.delete(key: 'last_sync_timestamp');
     await secureStorage.delete(key: 'company_id');
+    await secureStorage.delete(key: 'initial_sync_completed');
 
-    // Clear cache
+    // Clear all cached values - IMPORTANT: must be done AFTER storage is cleared
     _cachedToken = null;
     cachedCompanyId = null;
     _isInitialized = false;
+    _initializationFuture = null;
+
+    // print('DEBUG: MonitorApiService.logout() - Logout completed, all state cleared');
   }
 
   /// Switch to a different company
   /// This will update the stored company ID and switch the database
-  Future<void> switchCompany(String newCompanyId) async {
+  /// Set fetchData to false to skip data fetching (useful when you'll fetch separately)
+  Future<void> switchCompany(String newCompanyId, {bool fetchData = true}) async {
     try {
+      // print('DEBUG: MonitorApiService.switchCompany() - Switching to company: $newCompanyId (current: $cachedCompanyId)');
+
+      // Check if we're already on this company
+      if (cachedCompanyId == newCompanyId && _dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == newCompanyId) {
+        // print('DEBUG: MonitorApiService.switchCompany() - Already on company $newCompanyId, skipping');
+        return;
+      }
+
       // Store the new company ID and update cache
       await storeCompanyId(newCompanyId);
       cachedCompanyId = newCompanyId;
@@ -331,32 +362,61 @@ class MonitorApiService extends GetxService {
       // Switch to the new company's database
       await _dbHelper.switchCompany(newCompanyId);
 
-      debugPrint("ApiService: Successfully switched to company: $newCompanyId");
+      // Mark as initialized since we now have a valid company
+      _isInitialized = true;
 
-      await clearInitialSyncFlag();
-      await fetchAndCacheAllData();
+      // print('DEBUG: MonitorApiService.switchCompany() - Successfully switched to company: $newCompanyId');
+
+      if (fetchData) {
+        await clearInitialSyncFlag();
+        await fetchAndCacheAllData();
+      }
     } catch (e) {
-      debugPrint("ApiService: Failed to switch company: $e");
+      // print('ERROR: MonitorApiService.switchCompany() - Failed to switch company: $e');
       rethrow;
     }
   }
 
-  Future<void> fetchAndCacheAllData() async {
+  /// Check if we already have sales data in the database
+  Future<bool> _hasSalesInDb() async {
+    try {
+      final db = _dbHelper.database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_sales');
+      final count = result.first['count'] as int? ?? 0;
+      // debugPrint("ApiService: Found $count sales records in database");
+      return count > 0;
+    } catch (e) {
+      // debugPrint("ApiService: Error checking sales count -> $e");
+      return false;
+    }
+  }
+
+  Future<void> fetchAndCacheAllData({bool force = false}) async {
     final now = DateTime.now();
     final dateFormatter = DateFormat('yyyy-MM-dd');
-    final currentDate = dateFormatter.format(now);
 
     try {
       debugPrint("ApiService: Starting to fetch all data...");
+
+      // Check if we already have sales in the database
+      if (!force) {
+        final hasSales = await _hasSalesInDb();
+        if (hasSales) {
+          debugPrint("ApiService: Sales already exist in database, skipping fetch");
+          await setInitialSyncCompleted();
+
+          if (Get.isRegistered<MonOperatorController>()) {
+            await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
+          }
+          return;
+        }
+      }
 
       http.Response? servicePointsRes;
       http.Response? companyDetailsRes;
       http.Response? salesRes;
       http.Response? salesDetailsRes;
       http.Response? inventoryRes;
-      
-      // Log the start of data fetching process
-      debugPrint("ApiService: Starting data fetching process - online mode");
 
       // Service points is now OPTIONAL - don't fail if it returns 404
       try {
@@ -366,64 +426,46 @@ class MonitorApiService extends GetxService {
         debugPrint(
           "ApiService: Service points endpoint failed (will continue without it) -> $e",
         );
-        servicePointsRes = null; // Explicitly set to null to continue
+        servicePointsRes = null;
       }
 
       try {
-        debugPrint("ApiService: Attempting to fetch company details from API");
         companyDetailsRes = await getWithAuth('/company/details');
-        debugPrint("ApiService: Successfully fetched company details with status: ${companyDetailsRes.statusCode}");
-        debugPrint("ApiService: Company details response body: ${companyDetailsRes.body}");
+        debugPrint("ApiService: Successfully fetched company details");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /company/details -> $e");
-        // In offline mode, we can continue without fresh company details
         companyDetailsRes = null;
       }
 
       try {
         final endDate = dateFormatter.format(now);
-        debugPrint("ApiService: Attempting to fetch sales reports from 2023-09-01 to $endDate");
+        debugPrint("ApiService: Fetching sales from 2023-09-01 to $endDate");
         salesRes = await getWithAuth(
           '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
         );
-        debugPrint(
-          "ApiService: Successfully fetched sales reports with status: ${salesRes.statusCode}",
-        );
-        debugPrint("ApiService: Sales reports response body length: ${salesRes.body.length}");
+        debugPrint("ApiService: Successfully fetched sales reports");
       } catch (e) {
-        debugPrint("ApiService: Failed to fetch /reports/sales -> $e");
-        // In offline mode, we can continue without fresh sales data
+        debugPrint("ApiService: Failed to fetch sales -> $e");
         salesRes = null;
       }
 
       try {
-        // Fetch sales details with salesperson and payment info
-        debugPrint("ApiService: Attempting to fetch sales details");
-        salesDetailsRes = await getWithAuth(
-          '/sales/?pagecount=0&pagesize=5000',
-        );
-        debugPrint("ApiService: Successfully fetched sales details with status: ${salesDetailsRes.statusCode}");
-        debugPrint("ApiService: Sales details response body length: ${salesDetailsRes.body.length}");
+        salesDetailsRes = await getWithAuth('/sales/?pagecount=0&pagesize=5000');
+        debugPrint("ApiService: Successfully fetched sales details");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /sales/ -> $e");
         salesDetailsRes = null;
       }
 
       try {
-        debugPrint("ApiService: Attempting to fetch inventory");
         inventoryRes = await getWithAuth('/inventory/');
-        debugPrint("ApiService: Successfully fetched inventory with status: ${inventoryRes.statusCode}");
-        debugPrint("ApiService: Inventory response body length: ${inventoryRes.body.length}");
+        debugPrint("ApiService: Successfully fetched inventory");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /inventory -> $e");
         inventoryRes = null;
       }
 
-      // In offline mode, we don't require any endpoints to succeed
-      // We'll work with whatever data we can get
-      debugPrint("ApiService: Proceeding with available data (offline mode tolerant)");
-
-      // Parse service points only if available and has valid body
+      // Parse responses - use compute() for large datasets to avoid main thread blocking
       List<dynamic> servicePointsData = [];
       if (servicePointsRes != null && servicePointsRes.body.isNotEmpty) {
         try {
@@ -437,36 +479,26 @@ class MonitorApiService extends GetxService {
       if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
-          debugPrint("ApiService: Parsed company details successfully");
         } catch (e) {
           debugPrint("ApiService: Failed to parse company details JSON -> $e");
-          // In offline mode, we can continue with empty company details
-          companyDetailsData = {};
         }
-      } else if (companyDetailsRes != null) {
-        debugPrint("ApiService: Company details response is empty");
-        companyDetailsData = {};
       }
 
+      // Parse large datasets on isolate to prevent GC pressure on main thread
       List<dynamic> salesData = [];
       if (salesRes != null && salesRes.body.isNotEmpty) {
         try {
-          salesData = json.decode(salesRes.body);
-          debugPrint("ApiService: Parsed ${salesData.length} sales records");
+          salesData = await compute(_decodeJsonList, salesRes.body);
+          debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales JSON -> $e");
-          // In offline mode, we can continue with empty sales data
-          salesData = [];
         }
-      } else if (salesRes != null) {
-        debugPrint("ApiService: Sales response is empty");
-        salesData = [];
       }
 
       List<dynamic> salesDetailsData = [];
       if (salesDetailsRes != null && salesDetailsRes.body.isNotEmpty) {
         try {
-          salesDetailsData = json.decode(salesDetailsRes.body);
+          salesDetailsData = await compute(_decodeJsonList, salesDetailsRes.body);
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales details JSON -> $e");
         }
@@ -475,113 +507,185 @@ class MonitorApiService extends GetxService {
       List<dynamic> inventoryData = [];
       if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
         try {
-          inventoryData = json.decode(inventoryRes.body);
-          debugPrint(
-            "ApiService: Parsed ${inventoryData.length} inventory items",
-          );
+          inventoryData = await compute(_decodeJsonList, inventoryRes.body);
+          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
         } catch (e) {
-          debugPrint(
-            "ApiService: Failed to parse inventory JSON (will continue without it) -> $e",
-          );
+          debugPrint("ApiService: Failed to parse inventory JSON -> $e");
         }
-      } else if (inventoryRes != null) {
-        debugPrint(
-          "ApiService: Inventory response is empty (will continue without it)",
-        );
       }
 
-      final db = await _dbHelper.database;
-      debugPrint("ApiService: Database connection established, starting transaction");
-      
+      final db = _dbHelper.database;
+
+      // Use transaction with batch for optimal performance
+      // Batch reduces Dart-to-Native FFI overhead by executing all inserts in one go
       await db.transaction((txn) async {
-        // Only clear tables if we have new data to insert
-        bool hasDataToInsert = companyDetailsData.isNotEmpty ||
-                              salesData.isNotEmpty ||
-                              inventoryData.isNotEmpty ||
-                              servicePointsData.isNotEmpty;
-        
-        if (hasDataToInsert) {
-          debugPrint("ApiService: Clearing old data before inserting fresh data");
-          await txn.delete('service_points');
-          await txn.delete('company_details');
-          await txn.delete('sales');
-        }
+        // Clear old data
+        await txn.delete('mon_service_points');
+        await txn.delete('company_details');
+        await txn.delete('mon_sales');
 
+        // Insert inventory using batch
         if (inventoryData.isNotEmpty) {
-          debugPrint(
-            "ApiService: Inserting ${inventoryData.length} inventory items",
-          );
+          // debugPrint("ApiService: Batch inserting ${inventoryData.length} inventory items");
+          final inventoryBatch = txn.batch();
           for (final item in inventoryData) {
-            await _dbHelper.insertInventoryItem(item, db: txn);
+            inventoryBatch.insert('mon_inventory', {
+              'id': item['id'],
+              'ipdid': item['ipdid'],
+              'code': item['code'],
+              'externalserial': item['externalserial'],
+              'name': item['name'],
+              'category': item['category'],
+              'price': item['price'],
+              'packsize': item['packsize'],
+              'packaging': item['packaging'],
+              'packagingid': item['packagingid'],
+              'soldfrom': item['soldfrom'],
+              'shortform': item['shortform'],
+              'packagingcode': item['packagingcode'],
+              'efris': item['efris'] == true ? 1 : 0,
+              'efrisid': item['efrisid'],
+              'measurmentunitidefris': item['measurmentunitidefris'],
+              'measurmentunit': item['measurmentunit'],
+              'measurmentunitid': item['measurmentunitid'],
+              'vatcategoryid': item['vatcategoryid'],
+              'branchid': item['branchid'],
+              'companyid': item['companyid'],
+              'downloadlink': item['downloadlink'],
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
           }
-        } else {
-          debugPrint("ApiService: No inventory data available, skipping insertion");
+          await inventoryBatch.commit(noResult: true);
         }
 
-        // Only insert company details if we have valid data
+        // Insert company details (single record, no batch needed)
         if (companyDetailsData.isNotEmpty) {
-          await _dbHelper.insertCompanyDetails(companyDetailsData, db: txn);
-        } else {
-          debugPrint("ApiService: No company details data available, skipping insertion");
+          await txn.insert('company_details', {
+            'branch': companyDetailsData['branch'],
+            'company': companyDetailsData['company'],
+            'userCode': companyDetailsData['userCode'],
+            'currentBranchName': companyDetailsData['currentBranchName'],
+            'currentBranchCode': companyDetailsData['currentBranchCode'],
+            'activeBranchName': companyDetailsData['activeBranch']?['name'],
+            'activeBranchAddress': companyDetailsData['activeBranch']?['address'],
+            'activeBranchPrimaryEmail': companyDetailsData['activeBranch']?['primaryEmail'],
+            'activeBranchCode': companyDetailsData['activeBranch']?['code'],
+            'efrisEnabled': companyDetailsData['efrisEnabled'] == true ? 1 : 0,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
 
-        // Only insert service points if data is available
+        // Insert service points using batch
         if (servicePointsData.isNotEmpty) {
-          debugPrint(
-            "ApiService: Inserting ${servicePointsData.length} service points",
-          );
-          for (final item in servicePointsData) {
-            await _dbHelper.insertServicePoint(item, db: txn);
+          // debugPrint("ApiService: Batch inserting ${servicePointsData.length} service points");
+          final spBatch = txn.batch();
+          for (final sp in servicePointsData) {
+            spBatch.insert('mon_service_points', {
+              'id': sp['id'],
+              'name': sp['name'],
+              'code': sp['code'],
+              'branch': sp['branch'],
+              'company': sp['company'],
+              'mainServicePoint': sp['mainServicePoint'] == true ? 1 : 0,
+              'stores': sp['stores'] == true ? 1 : 0,
+              'sales': sp['sales'] == true ? 1 : 0,
+              'production': sp['production'] == true ? 1 : 0,
+              'booking': sp['booking'] == true ? 1 : 0,
+              'servicePointTypeId': sp['servicePointTypeId'],
+              'departmentid': sp['departmentid'],
+              'facilityName': sp['name'],
+              'facilityCode': sp['facility']?['code'],
+              'fullName': sp['fullName'],
+              'servicepointtype': sp['servicepointtype'],
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
           }
-        } else {
-          debugPrint("ApiService: No service points data available, skipping insertion");
+          await spBatch.commit(noResult: true);
         }
 
-        for (final item in salesData) {
-          await _dbHelper.insertSale(item, db: txn);
-        }
-
-        // Update with salesperson and payment info from sales details
-        for (final detail in salesDetailsData) {
-          if (detail['id'] != null) {
-            await txn.update(
-              'sales',
-              {
-                'salesperson': detail['salesperson'],
-                'paymentmode': detail['paymentmode'],
-              },
-              where: 'salesId = ?',
-              whereArgs: [detail['id']],
-            );
+        // Insert sales using batch - this is the big one (4000+ records)
+        if (salesData.isNotEmpty) {
+          // debugPrint("ApiService: Batch inserting ${salesData.length} sales records");
+          final salesBatch = txn.batch();
+          for (final sale in salesData) {
+            salesBatch.insert('mon_sales', {
+              'id': sale['id'],
+              'purchaseordernumber': sale['purchaseordernumber'],
+              'internalrefno': sale['internalrefno'],
+              'issuedby': sale['issuedby'],
+              'receiptnumber': sale['receiptnumber'],
+              'receivedby': sale['receivedby'],
+              'remarks': sale['remarks'],
+              'transactiondate': sale['transactiondate'],
+              'costcentre': sale['costcentre'],
+              'destinationbp': sale['destinationbp'],
+              'paymentmode': sale['paymentmode'],
+              'sourcefacility': sale['sourcefacility'],
+              'genno': sale['genno'],
+              'paymenttype': sale['paymenttype'],
+              'validtill': sale['validtill'],
+              'currency': sale['currency'],
+              'quantity': sale['quantity'],
+              'unitquantity': sale['unitquantity'],
+              'amount': sale['amount'],
+              'amountpaid': sale['amountpaid'],
+              'balance': sale['balance'],
+              'sellingprice': sale['sellingprice'],
+              'costprice': sale['costprice'],
+              'sellingprice_original': sale['sellingprice_original'],
+              'inventoryname': sale['inventoryname'],
+              'category': sale['category'],
+              'subcategory': sale['subcategory'],
+              'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
+              'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
+              'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
+              'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
+              'patron': sale['patron'],
+              'department': sale['department'],
+              'packsize': sale['packsize'],
+              'packaging': sale['packaging'],
+              'complimentaryid': sale['complimentaryid'],
+              'salesId': sale['salesId'],
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
           }
+          await salesBatch.commit(noResult: true);
         }
 
-        if (hasDataToInsert) {
-          await _dbHelper.mapSalesToServicePoints(db: txn);
+        // Update sales with salesperson/payment info using batch
+        if (salesDetailsData.isNotEmpty) {
+          // debugPrint("ApiService: Batch updating ${salesDetailsData.length} sales with details");
+          final updateBatch = txn.batch();
+          for (final detail in salesDetailsData) {
+            if (detail['id'] != null) {
+              updateBatch.update(
+                'mon_sales',
+                {
+                  'salesperson': detail['salesperson'],
+                  'paymentmode': detail['paymentmode'],
+                },
+                where: 'salesId = ?',
+                whereArgs: [detail['id']],
+              );
+            }
+          }
+          await updateBatch.commit(noResult: true);
         }
+
       });
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-      debugPrint(
-        "ApiService: All data fetched successfully, and local DB updated.",
-      );
-      debugPrint("ApiService: Data fetching and caching completed successfully in online mode");
+      await setInitialSyncCompleted();
+      // debugPrint("ApiService: All data fetched and cached successfully");
 
       if (Get.isRegistered<MonOperatorController>()) {
         await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
       }
     } catch (e) {
-      debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");
+      // debugPrint("ApiService: fetchAndCacheAllData() failed -> $e");
       rethrow;
     }
-    await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-    await setInitialSyncCompleted();
-
   }
 
   Future<void> syncRecentSales() async {
     try {
-      debugPrint("ApiService: Starting recent sales sync...");
+      // debugPrint("ApiService: Starting recent sales sync...");
       final now = DateTime.now();
 
       final lastSyncTimestamp =
@@ -595,15 +699,23 @@ class MonitorApiService extends GetxService {
       final startDate = dateFormatter.format(lastSyncDate);
       final endDate = dateFormatter.format(now);
 
-      debugPrint("ApiService: Syncing from $startDate to $endDate.");
+      // debugPrint("ApiService: Syncing from $startDate to $endDate.");
 
       final response = await getWithAuth(
         '/sales/reports/transaction/detail?startDate=$startDate&endDate=$endDate',
       );
 
-      final List<dynamic> salesData = json.decode(response.body);
+      // Parse on isolate to prevent GC pressure
+      final List<dynamic> salesData = await compute(_decodeJsonList, response.body);
 
-      // Also fetch sales details for salesperson info
+      // Early return if no sales data - skip all database operations
+      if (salesData.isEmpty) {
+        // debugPrint("ApiService: No new sales to sync, skipping database operations.");
+        await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
+        return;
+      }
+
+      // Only fetch sales details if we have sales data to process
       http.Response? salesDetailsRes;
       try {
         salesDetailsRes = await getWithAuth(
@@ -616,10 +728,10 @@ class MonitorApiService extends GetxService {
       }
 
       final List<dynamic> salesDetailsData = salesDetailsRes != null
-          ? json.decode(salesDetailsRes.body)
+          ? await compute(_decodeJsonList, salesDetailsRes.body)
           : [];
 
-      final db = await _dbHelper.database;
+      final db = _dbHelper.database;
 
       final startOfDayToClear = DateTime(
         lastSyncDate.year,
@@ -629,24 +741,68 @@ class MonitorApiService extends GetxService {
       final startOfDayMillis = startOfDayToClear.millisecondsSinceEpoch;
 
       debugPrint(
-        "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting updates.",
+        "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting ${salesData.length} new records.",
       );
 
+      // Use transaction with batch for optimal performance
       await db.transaction((txn) async {
         await txn.delete(
-          'sales',
+          'mon_sales',
           where: 'transactiondate >= ?',
           whereArgs: [startOfDayMillis],
         );
-        for (final item in salesData) {
-          await _dbHelper.insertSale(item, db: txn);
-        }
 
-        // Update with salesperson and payment info from sales details
+        // Batch insert sales
+        final salesBatch = txn.batch();
+        for (final sale in salesData) {
+          salesBatch.insert('mon_sales', {
+            'id': sale['id'],
+            'purchaseordernumber': sale['purchaseordernumber'],
+            'internalrefno': sale['internalrefno'],
+            'issuedby': sale['issuedby'],
+            'receiptnumber': sale['receiptnumber'],
+            'receivedby': sale['receivedby'],
+            'remarks': sale['remarks'],
+            'transactiondate': sale['transactiondate'],
+            'costcentre': sale['costcentre'],
+            'destinationbp': sale['destinationbp'],
+            'paymentmode': sale['paymentmode'],
+            'sourcefacility': sale['sourcefacility'],
+            'genno': sale['genno'],
+            'paymenttype': sale['paymenttype'],
+            'validtill': sale['validtill'],
+            'currency': sale['currency'],
+            'quantity': sale['quantity'],
+            'unitquantity': sale['unitquantity'],
+            'amount': sale['amount'],
+            'amountpaid': sale['amountpaid'],
+            'balance': sale['balance'],
+            'sellingprice': sale['sellingprice'],
+            'costprice': sale['costprice'],
+            'sellingprice_original': sale['sellingprice_original'],
+            'inventoryname': sale['inventoryname'],
+            'category': sale['category'],
+            'subcategory': sale['subcategory'],
+            'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
+            'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
+            'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
+            'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
+            'patron': sale['patron'],
+            'department': sale['department'],
+            'packsize': sale['packsize'],
+            'packaging': sale['packaging'],
+            'complimentaryid': sale['complimentaryid'],
+            'salesId': sale['salesId'],
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+        await salesBatch.commit(noResult: true);
+
+        // Batch update with salesperson and payment info
+        final updateBatch = txn.batch();
         for (final detail in salesDetailsData) {
           if (detail['id'] != null) {
-            await txn.update(
-              'sales',
+            updateBatch.update(
+              'mon_sales',
               {
                 'salesperson': detail['salesperson'],
                 'paymentmode': detail['paymentmode'],
@@ -656,8 +812,7 @@ class MonitorApiService extends GetxService {
             );
           }
         }
-
-        await _dbHelper.mapSalesToServicePoints(db: txn);
+        await updateBatch.commit(noResult: true);
       });
 
       debugPrint(
@@ -666,34 +821,46 @@ class MonitorApiService extends GetxService {
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
     } catch (e) {
-      debugPrint("ApiService: Error during recent sales sync: $e");
+      // debugPrint("ApiService: Error during recent sales sync: $e");
     }
   }
 
-  Future<http.Response> getWithAuth(String endpoint) async {
+  Future<http.Response> getWithAuth(String endpoint, {Duration? timeout}) async {
     final token = await getStoredToken();
 
     if (token == null) {
-      print('ERROR: MonitorApiService.getWithAuth() - Authentication token not found for GET request.');
+      // print('ERROR: MonitorApiService.getWithAuth() - Authentication token not found for GET request.');
       throw Exception('Authentication token not found for GET request.');
     }
 
-    final response = await http.get(
-      Uri.parse('$_baseUrl$endpoint'),
-      headers: {
+    final client = http.Client();
+    try {
+      final request = http.Request('GET', Uri.parse('$_baseUrl$endpoint'));
+      request.headers.addAll({
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
-      },
-    );
+      });
 
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      debugPrint("ApiService: Successfully fetched data from $endpoint");
-      return response;
-    } else {
-      _handleResponse(response);
-      throw Exception(
-        'Failed to load data from $endpoint: ${response.statusCode}',
+      final streamedResponse = await client.send(request).timeout(
+        timeout ?? const Duration(minutes: 5),
+        onTimeout: () {
+          throw Exception('Request timeout for $endpoint');
+        },
       );
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        // debugPrint("ApiService: Successfully fetched data from $endpoint");
+        return response;
+      } else {
+        _handleResponse(response);
+        throw Exception(
+          'Failed to load data from $endpoint: ${response.statusCode}',
+        );
+      }
+    } finally {
+      client.close();
     }
   }
 
@@ -706,8 +873,22 @@ class MonitorApiService extends GetxService {
     return value == 'true';
   }
 
+  /// Check if data sync is needed based on 30-minute cache window
+  /// Returns true if sync is needed, false if recent sync exists
+  Future<bool> isSyncNeeded({int cacheMinutes = 30}) async {
+    final lastSyncTimestamp = await getStoredLastSyncTimestamp();
+    if (lastSyncTimestamp == null) {
+      return true; // No previous sync, need to sync
+    }
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final cacheWindowMs = cacheMinutes * 60 * 1000;
+    final timeSinceLastSync = now - lastSyncTimestamp;
+
+    return timeSinceLastSync > cacheWindowMs;
+  }
+
   Future<void> clearInitialSyncFlag() async {
     await secureStorage.delete(key: 'initial_sync_completed');
   }
-
 }

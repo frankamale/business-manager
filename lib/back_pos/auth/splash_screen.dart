@@ -10,7 +10,8 @@ import '../controllers/inventory_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../controllers/payment_controller.dart';
 import '../controllers/customer_controller.dart';
-import '../database/db_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
+import '../../shared/widgets/app_logo.dart';
 import '../utils/network_helper.dart';
 import '../config.dart';
 
@@ -29,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   final PosApiService _apiService = PosApiService();
-  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
 
   String _statusMessage = 'Initializing...';
   bool _hasError = false;
@@ -186,6 +187,10 @@ class _SplashScreenState extends State<SplashScreen>
       _log('authenticateApp: Initializing POS data');
       await _initializePosData();
 
+      // Ensure database is open before smart sync
+      _log('authenticateApp: Ensuring database is open for smart sync');
+      await _ensureDatabaseIsOpenForSmartSync();
+
       // Smart data loading
       _log('authenticateApp: Starting smart data sync');
       await _loadDataWithSmartSync();
@@ -308,6 +313,9 @@ class _SplashScreenState extends State<SplashScreen>
           // Database is not open, so open it
           await _dbHelper.openForCompany(companyId);
           _log('ensureDatabaseIsOpen: Database opened successfully');
+          _log("---------------------------------------");
+          _log("Failed to open");
+          _log("---------------------------------------");
         }
       } else {
         _log('ensureDatabaseIsOpen: No company ID found, skipping database open');
@@ -315,6 +323,50 @@ class _SplashScreenState extends State<SplashScreen>
     } catch (e) {
       _log('ensureDatabaseIsOpen: Error checking company info - $e', level: 'ERROR');
       // If we can't get company info, we can't open the database
+    }
+  }
+
+  /// Ensure database is open specifically for smart sync process
+  /// This is a more robust version that guarantees database is open
+  Future<void> _ensureDatabaseIsOpenForSmartSync() async {
+    _log('ensureDatabaseIsOpenForSmartSync: Ensuring database is open for smart sync');
+
+    try {
+      // Check if we have company info stored
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId'];
+
+      if (companyId != null && companyId.isNotEmpty) {
+        _log('ensureDatabaseIsOpenForSmartSync: Company ID found: $companyId');
+
+        // Check if database is already open
+        if (!_dbHelper.isDatabaseOpen) {
+          _log('ensureDatabaseIsOpenForSmartSync: Database is not open, opening it now');
+          await _dbHelper.openForCompany(companyId);
+          _log('ensureDatabaseIsOpenForSmartSync: Database opened successfully');
+        } else {
+          _log('ensureDatabaseIsOpenForSmartSync: Database is already open');
+        }
+      } else {
+        _log('ensureDatabaseIsOpenForSmartSync: No company ID found, cannot open database', level: 'WARN');
+        // This is a critical error for smart sync
+        throw Exception('No company ID available for database initialization');
+      }
+    } catch (e) {
+      _log('ensureDatabaseIsOpenForSmartSync: Error - $e', level: 'ERROR');
+      // Re-throw to ensure the calling code knows database couldn't be opened
+      throw Exception('Failed to ensure database is open: $e');
+    }
+  }
+
+  /// Safe wrapper for checking cached data that handles database errors gracefully
+  Future<bool> _checkCachedDataSafely(String dataType) async {
+    try {
+      return await _dbHelper.hasCachedData(dataType);
+    } catch (e) {
+      _log('checkCachedDataSafely: Error checking cached data for $dataType - $e', level: 'ERROR');
+      // If we can't check cached data, assume no cache exists
+      return false;
     }
   }
 
@@ -338,7 +390,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading users...';
     });
     _log('loadDataWithSmartSync: Step 1 - Loading users');
-    final hasUsers = await _dbHelper.hasCachedData('users');
+    final hasUsers = await _checkCachedDataSafely('users');
     _log('loadDataWithSmartSync: Cached users exist = $hasUsers');
 
     if (!hasUsers && hasNetwork) {
@@ -358,7 +410,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading service points...';
     });
     _log('loadDataWithSmartSync: Step 2 - Loading service points');
-    final hasServicePoints = await _dbHelper.hasCachedData('service_points');
+    final hasServicePoints = await _checkCachedDataSafely('service_points');
     _log('loadDataWithSmartSync: Cached service points exist = $hasServicePoints');
 
     if (!hasServicePoints && hasNetwork) {
@@ -378,7 +430,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading inventory...';
     });
     _log('loadDataWithSmartSync: Step 3 - Loading inventory');
-    final hasInventory = await _dbHelper.hasCachedData('inventory');
+    final hasInventory = await _checkCachedDataSafely('inventory');
     _log('loadDataWithSmartSync: Cached inventory exists = $hasInventory');
 
     if (hasNetwork) {
@@ -406,7 +458,7 @@ class _SplashScreenState extends State<SplashScreen>
       _statusMessage = 'Loading customers...';
     });
     _log('loadDataWithSmartSync: Step 5 - Loading customers');
-    final hasCustomers = await _dbHelper.hasCachedData('customers');
+    final hasCustomers = await _checkCachedDataSafely('customers');
     _log('loadDataWithSmartSync: Cached customers exist = $hasCustomers');
 
     if (hasNetwork) {
@@ -437,190 +489,173 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+
+    final size = MediaQuery.of(context).size;
+    final bool isSmallScreen = size.width < 600;
     return Scaffold(
-      body: Container(
-        padding: EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.cyan.shade300,
-            ],
+      body: Center(
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blue.shade700,
+                Colors.blue.shade400,
+                Colors.cyan.shade300,
+              ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo with animations
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
+          child: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo with animations
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child:  Hero(
+                        tag: 'logo',
+                        child: AppLogoCircle(
+                          size: isSmallScreen ? 100 : 120,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // App Name
+                  FadeTransition(
                     opacity: _fadeAnimation,
-                    child: Container(
-                      margin: EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
+                    child: Text(
+                      AppConfig.appName,
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
                         color: Colors.white,
-                        shape: BoxShape.circle,
-
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Image.asset(
-                        "assets/images/logo.png",
-                        width: 120,
-                        height: 120,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.storefront_rounded,
-                            size: 120,
-                            color: Colors.blue.shade700,
-                          );
-                        },
+                        letterSpacing: 2,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 40),
+                  const SizedBox(height: 8),
 
-                // App Name
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Text(
-                    AppConfig.appName,
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
+                  // Company Name
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Text(
+                      AppConfig.companyName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // Loading Indicator or Error Icon
+                  if (!_hasError)
+                    const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 3,
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.error_outline,
+                      size: 40,
+                      color: Colors.red.shade200,
+                    ),
+                  const SizedBox(height: 20),
+
+                  // Status Message
+                  Text(
+                    _statusMessage,
+                    style: const TextStyle(
+                      fontSize: 14,
                       color: Colors.white,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // Company Name
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Text(
-                    AppConfig.companyName,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-                const SizedBox(height: 60),
 
-                // Loading Indicator or Error Icon
-                if (!_hasError)
-                  const SizedBox(
-                    width: 40,
-                    height: 40,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      strokeWidth: 3,
-                    ),
-                  )
-                else
-                  Icon(
-                    Icons.error_outline,
-                    size: 40,
-                    color: Colors.red.shade200,
-                  ),
-                const SizedBox(height: 20),
-
-                // Status Message
-                Text(
-                  _statusMessage,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-
-                // Error Buttons
-                if (_hasError) ...[
-                  const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      _log('User clicked Retry Connection button');
-                      setState(() {
-                        _hasError = false;
-                        _isOfflineMode = false;
-                      });
-                      _authenticateApp();
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry Connection'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-
-                  // Only show Continue Offline if cached data exists
-                  if (_isOfflineMode && _hasCachedData) ...[
-                    const SizedBox(height: 12),
-                    TextButton.icon(
+                  // Error Buttons
+                  if (_hasError) ...[
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
                       onPressed: () {
-                        _log('User clicked Continue Offline button');
-                        if (widget.nextScreen != null) {
-                          _log('Navigating to custom next screen (offline mode)');
-                          Get.off(() => widget.nextScreen!);
-                        } else {
-                          _log('Navigating to Login screen (offline mode)');
-                          Get.off(() => const Login());
-                        }
+                        setState(() {
+                          _hasError = false;
+                          _isOfflineMode = false;
+                        });
+                        _authenticateApp();
                       },
-                      icon: const Icon(Icons.offline_bolt, color: Colors.white),
-                      label: const Text('Continue Offline'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.white,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry Connection'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.blue,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,
                         ),
                       ),
                     ),
-                  ],
-                ],
-                const SizedBox(height: 40),
 
-                // Footer
-                const Spacer(),
-                Text(
-                  AppConfig.edition,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white60,
+                    // Only show Continue Offline if cached data exists
+                    if (_isOfflineMode && _hasCachedData) ...[
+                      const SizedBox(height: 12),
+                      TextButton.icon(
+                        onPressed: () {
+                          _log('User clicked Continue Offline button');
+                          if (widget.nextScreen != null) {
+                            _log('Navigating to custom next screen (offline mode)');
+                            Get.off(() => widget.nextScreen!);
+                          } else {
+                            _log('Navigating to Login screen (offline mode)');
+                            Get.off(() => const Login());
+                          }
+                        },
+                        icon: const Icon(Icons.offline_bolt, color: Colors.white),
+                        label: const Text('Continue Offline'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+
+                  // Footer
+                  const SizedBox(
+                    height: 200,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  AppConfig.copyright,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white60,
+                  Text(
+                    AppConfig.edition,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white60,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    AppConfig.copyright,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white60,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
         ),

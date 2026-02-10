@@ -12,7 +12,7 @@ class MonSyncController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    startPeriodicSync();
+    // Don't auto-start sync timer - let user trigger it manually or call startPeriodicSync()
   }
 
   void startPeriodicSync() {
@@ -29,6 +29,20 @@ class MonSyncController extends GetxController {
       }
       debugPrint("UI controllers refreshed after sync.");
     });
+  }
+
+  /// Trigger a one-time sync manually
+  Future<void> syncNow() async {
+    debugPrint("Manual sync triggered.");
+    await _apiService.syncRecentSales();
+
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      await Get.find<MonKpiOverviewController>().fetchKpiData();
+    }
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      await Get.find<MonSalesTrendsController>().fetchAllData();
+    }
+    debugPrint("Manual sync completed.");
   }
 
   @override

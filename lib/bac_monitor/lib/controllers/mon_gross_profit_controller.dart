@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import '../db/db_helper.dart';
+import '../../../shared/database/unified_db_helper.dart';
 import '../models/trend_direction.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
@@ -8,7 +8,7 @@ import 'mon_dashboard_controller.dart';
 class MonGrossProfitController extends GetxController {
   // Controllers and database instance
   final MonDashboardController dateController = Get.find();
-  final dbHelper = DatabaseHelper();
+  final dbHelper = UnifiedDatabaseHelper.instance;
 
   // Reactive state variables
   var isLoading = true.obs;
@@ -34,7 +34,7 @@ class MonGrossProfitController extends GetxController {
       isLoading.value = true;
       hasError.value = false;
 
-      final db = await dbHelper.database;
+      final db = dbHelper.database;
       final now = DateTime.now();
       DateTime startDate;
       DateTime endDate;
@@ -100,9 +100,9 @@ class MonGrossProfitController extends GetxController {
       final prevEndMillis = prevEndDate.millisecondsSinceEpoch;
 
       // SQL Queries
-      const salesQuery = 'SELECT SUM(amount) as total FROM sales WHERE transactiondate BETWEEN ? AND ?';
-      const cogsQuery = 'SELECT SUM(costprice * quantity) as total FROM sales WHERE transactiondate BETWEEN ? AND ?';
-      const currencyQuery = 'SELECT currency FROM sales LIMIT 1';
+      const salesQuery = 'SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
+      const cogsQuery = 'SELECT SUM(costprice * quantity) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
+      const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
 
       // Execute queries
       final currentSalesResult = await db.rawQuery(salesQuery, [startMillis, endMillis]);

@@ -1,16 +1,25 @@
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/account_manager.dart';
+import 'package:bac_pos/flavors/flavor_config.dart';
+import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:get_storage/get_storage.dart';
 
 import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
 import '../back_pos/controllers/inventory_controller.dart';
+import '../client/auth/password_recovery.dart';
+import '../client/auth/account_pending_screen.dart';
+import '../client/auth/register.dart';
+import '../flavors/flavor_colors.dart';
+import '../shared/services/customer_auth_service.dart';
+import '../shared/widgets/app_logo.dart';
 import 'app_roots.dart';
 
 class UnifiedLoginScreen extends StatefulWidget {
@@ -21,15 +30,17 @@ class UnifiedLoginScreen extends StatefulWidget {
 }
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
-  PosApiService _apiService = PosApiService();
-  final MonitorApiService _monitorApiService = MonitorApiService();
+  PosApiService _apiService = Get.find<PosApiService>();
+  final MonitorApiService _monitorApiService = Get.find<MonitorApiService>();
   final AccountManager _accountManager = Get.find<AccountManager>();
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.find<AuthController>();
+  final CustomerAuthService _customerAuthService = CustomerAuthService();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _hasPendingRegistration = false;
   String? _errorMessage;
 
   // Initialize secure storage for credentials
@@ -46,7 +57,17 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     super.initState();
     _loadUserRoles();
     _loadStoredCredentials();
-    _initializeCompanyId();
+    _checkPendingRegistration();
+  }
+
+  void _checkPendingRegistration() {
+    final box = GetStorage();
+    final pending = box.read('pending_registration');
+    if (pending != null) {
+      setState(() {
+        _hasPendingRegistration = true;
+      });
+    }
   }
 
   // Load stored credentials if they exist (for auto-fill or remember me functionality)
@@ -55,14 +76,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       final credentials = await _getStoredCredentials();
       if (credentials['username'] != null &&
           credentials['username']!.isNotEmpty) {
-        // Auto-fill username if credentials are stored
         _usernameController.text = credentials['username']!;
-        // Note: For security, we don't auto-fill password, but we could indicate
-        // that credentials are remembered
-        print('Loaded stored username: ${credentials['username']}');
       }
     } catch (e) {
-      print('Error loading stored credentials: $e');
+      // Ignore - not critical for login
     }
   }
 
@@ -73,18 +90,17 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   }
 
   Future<void> _loadUserRoles() async {
-    await _authController.loadUserRoles();
+    // This may fail if database isn't open yet, which is fine for login screen
+    try {
+      await _authController.loadUserRoles();
+    } catch (e) {
+      // Expected on fresh login - ignore
+    }
   }
 
-  Future<void> _initializeCompanyId() async {
-    try {
-      print('Initializing company ID during app startup');
-      await _monitorApiService.initializeCompanyId();
-      print('Company ID initialized successfully during startup');
-    } catch (e) {
-      print('Warning: Failed to initialize company ID during startup: $e');
-      // Don't fail the app startup if company ID initialization fails
-    }
+  /// Check if password is purely numeric (customer PIN)
+  bool _isNumericPassword(String password) {
+    return password.isNotEmpty && RegExp(r'^\d+$').hasMatch(password);
   }
 
   Future<void> _handleLogin() async {
@@ -95,80 +111,18 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       });
 
       try {
-        // Authenticate user
-        final success = await _authController.serverLogin(
-          _usernameController.text,
-          _passwordController.text,
-        );
+        final password = _passwordController.text;
 
-        if (success) {
-          // Store credentials securely after successful authentication
-          await _storeCredentialsSecurely(
-            _usernameController.text,
-            _passwordController.text,
-          );
-
-          // Initialize company ID for Monitor API service
-          try {
-            await _monitorApiService.initializeCompanyId();
-            print('Company ID initialized successfully');
-          } catch (e) {
-            print('Warning: Failed to initialize company ID: $e');
-          }
-
-          final Map<String, dynamic>? data = await _apiService
-              .getStoredUserData();
-          final List<dynamic>? roles = data?['roles'];
-          print(roles);
-
-          // Save account for current system
-          final system =
-              (roles != null &&
-                  roles.any(
-                    (role) => role.toString().toLowerCase().contains("admin"),
-                  ))
-              ? 'monitor'
-              : 'pos';
-
-          if (data != null) {
-            final account = UserAccount(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              username: data['username'] ?? _usernameController.text,
-              system: system,
-              userData: data,
-              lastLogin: DateTime.now(),
-            );
-            await _accountManager.addAccount(account);
-            await _accountManager.setCurrentAccount(account);
-          }
-
-          if (roles != null &&
-              roles.any(
-                (role) => role.toString().toLowerCase().contains("admin"),
-              )) {
-            if (!Get.isRegistered<MonDashboardController>()) {
-              Get.put(MonDashboardController());
-            }
-            if (!Get.isRegistered<MonOperatorController>()) {
-              Get.put(MonOperatorController());
-            }
-            if (!Get.isRegistered<MonStoresController>()) {
-              Get.put(MonStoresController());
-            }
-            if (!Get.isRegistered<InventoryController>()) {
-              Get.put(InventoryController());
-            }
-            // Redirect to Monitor app splash screen
-            Get.offAll(() => const MonitorAppRoot());
-          } else {
-            Get.offAll(() => const PosAppRoot());
-          }
+        if (_isNumericPassword(password)) {
+          // Customer authentication flow (numeric PIN)
+          await _handleCustomerLogin();
+        } else {
+          // Existing staff/admin authentication flow
+          await _handleStaffLogin();
         }
       } catch (e) {
-        // Handle login error
-        print('Login error: $e');
         setState(() {
-          _errorMessage = 'Network error: Please check your internet connection and try again.';
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
         });
       } finally {
         setState(() {
@@ -178,63 +132,311 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
   }
 
-  // Store credentials securely using FlutterSecureStorage
-  Future<void> _storeCredentialsSecurely(
+  /// Handle customer authentication with numeric PIN
+  Future<void> _handleCustomerLogin() async {
+    final identifier = _usernameController.text.trim();
+    final pin = _passwordController.text;
+
+    // Try cached login first (valid for 24 hours)
+    final cachedCustomer = await _customerAuthService
+        .validateCachedCustomerLogin(identifier: identifier, pin: pin);
+
+    if (cachedCustomer != null) {
+      // Cached login successful - use cached data
+      await _completeCustomerLogin(cachedCustomer, identifier, pin);
+      return;
+    }
+
+    // No valid cache - authenticate via bot/server
+    await _handleServerCustomerLogin(identifier, pin);
+  }
+
+  /// Handle customer login via server (bot authentication)
+  Future<void> _handleServerCustomerLogin(String identifier, String pin) async {
+    // Check if bot credentials are configured
+    if (!await _customerAuthService.hasBotCredentials()) {
+      throw Exception(
+        'Customer login not configured. Please contact administrator.',
+      );
+    }
+
+    final botToken = await _customerAuthService.getBotToken();
+    final customers = await _customerAuthService.fetchCustomers(botToken);
+
+    final customer = _customerAuthService.findCustomerByIdentifier(
+      customers,
+      identifier,
+    );
+
+    if (customer == null) {
+      throw Exception('Wrong Username or Password. Please try again...');
+    }
+
+    // Check if customer account is enabled
+    if (customer.posenabled != true) {
+      Get.to(() => AccountPendingScreen(email: customer.email));
+      return;
+    }
+
+    // Validate PIN using bcrypt
+    if (!_customerAuthService.validateCustomerPin(customer, pin)) {
+      throw Exception('Invalid PIN. Please try again.');
+    }
+
+    // Cache the customer account for future logins (valid for 24 hours)
+    await _customerAuthService.cacheCustomerAccount(customer);
+
+    // Complete the login
+    await _completeCustomerLogin(customer, identifier, pin);
+  }
+
+  /// Complete customer login (shared by cached and server login)
+  Future<void> _completeCustomerLogin(
+    dynamic customer,
+    String identifier,
+    String pin,
+  ) async {
+    // Store customer data in GetStorage for offline usage
+    final box = GetStorage();
+    // Account is approved, clear pending registration flag
+    await box.remove('pending_registration');
+    await box.write('logged_in_customer', customer.toMap());
+    await box.write('is_customer_logged_in', true);
+    await box.write(
+      'customer_login_timestamp',
+      DateTime.now().millisecondsSinceEpoch,
+    );
+
+    // Store credentials for auto-fill (fire-and-forget)
+    _storeCredentialsSecurely(identifier, pin);
+
+    Get.offAll(() => const ClientAppRoot());
+  }
+
+  /// Handle staff/admin authentication (existing flow)
+  Future<void> _handleStaffLogin() async {
+    final username = _usernameController.text;
+    final password = _passwordController.text;
+
+    // Try cached login first (valid for 24 hours)
+    final cachedAccount = await _customerAuthService.validateCachedStaffLogin(
+      username: username,
+      password: password,
+    );
+
+    if (cachedAccount != null) {
+      // Cached login successful - use cached data
+      await _handleCachedStaffLogin(cachedAccount, username, password);
+      return;
+    }
+
+    // No valid cache - authenticate with server
+    await _handleServerStaffLogin(username, password);
+  }
+
+  /// Handle login using cached account data
+  Future<void> _handleCachedStaffLogin(
+    Map<String, dynamic> cachedAccount,
     String username,
     String password,
   ) async {
-    try {
-      // Store username and password securely
-      await _secureStorage.write(key: _usernameKey, value: username);
-      await _secureStorage.write(key: _passwordKey, value: password);
+    final companyId = cachedAccount['companyId'] as String;
+    final roles = cachedAccount['roles'] as List<dynamic>?;
+    final userData = cachedAccount['userData'] as Map<String, dynamic>? ?? {};
 
-      // Verify that credentials were stored successfully
-      final storedUsername = await _secureStorage.read(key: _usernameKey);
-      final storedPassword = await _secureStorage.read(key: _passwordKey);
+    // Open database for the company
+    await UnifiedDatabaseHelper.instance.openForCompany(companyId);
 
-      if (storedUsername == username && storedPassword == password) {
-        print('Credentials stored securely successfully');
-      } else {
-        print('Warning: Credential storage verification failed');
+    // Determine if user is admin (monitor) or regular POS user
+    final isAdmin =
+        roles != null &&
+        roles.any((role) => role.toString().toLowerCase().contains("admin"));
+    final targetSystem = isAdmin ? 'monitor' : 'pos';
+
+    // Set up account manager
+    final account = UserAccount(
+      id: companyId,
+      username: username.toLowerCase(),
+      system: targetSystem,
+      userData: {...userData, 'companyId': companyId},
+      lastLogin: DateTime.now(),
+    );
+    await _accountManager.setCurrentAccount(account);
+
+    // Store credentials for auto-fill
+    _storeCredentialsSecurely(username, password);
+
+    // Sync to monitor service if admin (re-authenticate for fresh token)
+    if (isAdmin) {
+      try {
+        final loginResult = await _authController.serverLogin(username, password);
+        if (loginResult != null) {
+          final token = loginResult['token'] as String;
+          await _syncToMonitorServiceAsync(
+            token,
+            companyId,
+            userData,
+            username,
+            password,
+          );
+        }
+      } catch (e) {
+        // Offline or server error - store companyId for offline mode
+        await _monitorApiService.storeCompanyId(companyId);
       }
-    } catch (e) {
-      print('Error storing credentials securely: $e');
     }
+
+    // Navigate to appropriate screen
+    _navigateToHome(isAdmin);
+  }
+
+  /// Handle login via server authentication
+  Future<void> _handleServerStaffLogin(String username, String password) async {
+    // Authenticate user - returns all needed data so we don't re-read
+    final loginResult = await _authController.serverLogin(username, password);
+
+    if (loginResult != null) {
+      // Extract data from login result (no storage reads needed)
+      final companyId = loginResult['companyId'] as String;
+      final token = loginResult['token'] as String;
+      final userData = loginResult['userData'] as Map<String, dynamic>;
+      final roles = userData['roles'] as List<dynamic>?;
+
+      // Validate company ID against bot's company (for flavored apps)
+      final botCompanyId = await _customerAuthService.getBotCompanyId();
+      if (botCompanyId != null && botCompanyId.isNotEmpty) {
+        if (companyId != botCompanyId) {
+          throw Exception('Wrong Username or Password');
+        }
+      }
+
+      // Cache the account for future logins (valid for 24 hours)
+      await _customerAuthService.cacheStaffAccount(
+        username: username,
+        password: password,
+        companyId: companyId,
+        roles: roles ?? [],
+        userData: userData,
+      );
+
+      // Determine if user is admin (monitor) or regular POS user
+      final isAdmin =
+          roles != null &&
+          roles.any((role) => role.toString().toLowerCase().contains("admin"));
+      final targetSystem = isAdmin ? 'monitor' : 'pos';
+
+      // Update account with correct system if needed
+      final currentAccount = _accountManager.currentAccount.value;
+      if (currentAccount != null && currentAccount.system != targetSystem) {
+        final updatedAccount = UserAccount(
+          id: currentAccount.id,
+          username: currentAccount.username,
+          system: targetSystem,
+          userData: {...currentAccount.userData, 'companyId': companyId},
+          lastLogin: DateTime.now(),
+        );
+        await _accountManager.setCurrentAccount(updatedAccount);
+      }
+
+      // Fire-and-forget: Store credentials for auto-fill (non-blocking)
+      _storeCredentialsSecurely(username, password);
+
+      // Sync to monitor service if admin - MUST await for account switching to work
+      if (isAdmin) {
+        await _syncToMonitorServiceAsync(
+          token,
+          companyId,
+          userData,
+          username,
+          password,
+        );
+      }
+
+      // Navigate to appropriate screen
+      _navigateToHome(isAdmin);
+    }
+  }
+
+  /// Navigate to the appropriate home screen based on user role
+  void _navigateToHome(bool isAdmin) {
+    if (isAdmin) {
+      // Initialize monitor controllers (fast in-memory operations)
+      if (!Get.isRegistered<MonDashboardController>()) {
+        Get.put(MonDashboardController());
+      }
+      if (!Get.isRegistered<MonOperatorController>()) {
+        Get.put(MonOperatorController());
+      }
+      if (!Get.isRegistered<MonStoresController>()) {
+        Get.put(MonStoresController());
+      }
+      if (!Get.isRegistered<InventoryController>()) {
+        Get.put(InventoryController());
+      }
+      Get.offAll(() => const MonitorAppRoot());
+    } else {
+      Get.offAll(() => const PosAppRoot());
+    }
+  }
+
+  /// Sync to monitor service
+  Future<void> _syncToMonitorServiceAsync(
+    String token,
+    String companyId,
+    Map<String, dynamic> userData,
+    String username,
+    String password,
+  ) async {
+    await Future.wait([
+      _monitorApiService.storeToken(token),
+      _monitorApiService.storeCompanyId(companyId),
+      _monitorApiService.storeUserData({...userData, 'companyId': companyId}),
+      _monitorApiService.saveServerCredentials(username, password),
+    ]);
+  }
+
+  // Store credentials securely using FlutterSecureStorage (fire-and-forget)
+  void _storeCredentialsSecurely(String username, String password) {
+    Future.wait([
+      _secureStorage.write(key: _usernameKey, value: username),
+      _secureStorage.write(key: _passwordKey, value: password),
+    ]);
   }
 
   Future<Map<String, String?>> _getStoredCredentials() async {
     try {
-      final username = await _secureStorage.read(key: _usernameKey);
-      final password = await _secureStorage.read(key: _passwordKey);
-      return {'username': username, 'password': password};
+      final results = await Future.wait([
+        _secureStorage.read(key: _usernameKey),
+        _secureStorage.read(key: _passwordKey),
+      ]);
+      return {'username': results[0], 'password': results[1]};
     } catch (e) {
-      print('Error retrieving stored credentials: $e');
       return {'username': null, 'password': null};
     }
   }
 
   // Clear stored credentials (for logout or security purposes)
   Future<void> _clearStoredCredentials() async {
-    try {
-      await _secureStorage.delete(key: _usernameKey);
-      await _secureStorage.delete(key: _passwordKey);
-      print('Stored credentials cleared successfully');
-    } catch (e) {
-      print('Error clearing stored credentials: $e');
-    }
+    await Future.wait([
+      _secureStorage.delete(key: _usernameKey),
+      _secureStorage.delete(key: _passwordKey),
+    ]);
   }
 
   // Check if credentials are stored securely
   Future<bool> _hasStoredCredentials() async {
     try {
-      final username = await _secureStorage.read(key: _usernameKey);
-      final password = await _secureStorage.read(key: _passwordKey);
+      final results = await Future.wait([
+        _secureStorage.read(key: _usernameKey),
+        _secureStorage.read(key: _passwordKey),
+      ]);
+      final username = results[0];
+      final password = results[1];
       return username != null &&
           username.isNotEmpty &&
           password != null &&
           password.isNotEmpty;
     } catch (e) {
-      print('Error checking stored credentials: $e');
       return false;
     }
   }
@@ -243,6 +445,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: Container(
@@ -251,9 +454,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.cyan.shade300,
+              FlavorColors.current.primaryDark,
+              FlavorColors.current.secondary,
+              FlavorColors.current.primaryDark,
             ],
           ),
         ),
@@ -284,32 +487,18 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           // Logo
                           Hero(
                             tag: 'logo',
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Image.asset(
-                                "assets/images/logo.png",
-                                width: isSmallScreen ? 100 : 120,
-                                height: isSmallScreen ? 100 : 120,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.storefront_rounded,
-                                    size: isSmallScreen ? 100 : 120,
-                                    color: Colors.blue.shade700,
-                                  );
-                                },
-                              ),
+                            child: AppLogoCircle(
+                              size: isSmallScreen ? 100 : 120,
                             ),
                           ),
                           const SizedBox(height: 24),
 
                           // Title
                           Text(
-                            "Welcome Back",
+                            "${AppConfig.companyName}",
+                            textAlign: TextAlign.center,
                             style: TextStyle(
+
                               fontSize: isSmallScreen ? 28 : 32,
                               fontWeight: FontWeight.bold,
                               color: Colors.grey.shade800,
@@ -317,10 +506,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "${AppConfig.companyName}",
+                            AppConfig.description,
                             style: TextStyle(
                               fontSize: isSmallScreen ? 14 : 16,
-                              color: Colors.blue.shade600,
+                              color: FlavorColors.current.primaryDark,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -334,7 +523,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               labelText: 'Username',
                               prefixIcon: Icon(
                                 Icons.person_outline_rounded,
-                                color: Colors.blue.shade700,
+                                color: FlavorColors.current.primaryDark,
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -351,7 +540,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.blue.shade700,
+                                  color: FlavorColors.current.primaryDark,
                                   width: 2,
                                 ),
                               ),
@@ -376,7 +565,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               labelText: 'Password',
                               prefixIcon: Icon(
                                 Icons.lock_outline_rounded,
-                                color: Colors.blue.shade700,
+                                color: FlavorColors.current.primaryDark,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
@@ -406,7 +595,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.blue.shade700,
+                                  color: FlavorColors.current.primaryDark,
                                   width: 2,
                                 ),
                               ),
@@ -422,29 +611,35 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           ),
 
                           if (_errorMessage != null)
-
                             Text(
-
                               _errorMessage!,
 
                               style: TextStyle(color: Colors.red),
 
                               textAlign: TextAlign.center,
-
                             ),
-
-                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () =>
+                                    Get.to(() => PasswordRecovery()),
+                                child: Text("Forgot Password?"),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
                           // Sign In Button
                           SizedBox(
                             width: double.infinity,
-                            height: 56,
+                            height: 50,
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade700,
-                                foregroundColor: Colors.white,
+                                backgroundColor: FlavorColors.current.primary,
+                                foregroundColor: FlavorColors.current.onPrimary,
                                 elevation: 4,
-                                shadowColor: Colors.blue.withOpacity(0.5),
+                                shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -472,6 +667,49 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                     ),
                             ),
                           ),
+
+                          SizedBox(height: 12),
+
+                          SizedBox(
+                            width: double.infinity,
+                            height: 50,
+                            child: ElevatedButton(
+                              onPressed: _hasPendingRegistration
+                                  ? null
+                                  : () => Get.to(Register()),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: FlavorColors.current.primaryDark,
+                                foregroundColor: FlavorColors.current.onPrimary,
+                                elevation: 4,
+                                shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                disabledBackgroundColor: Colors.grey.shade300,
+                              ),
+                              child: const Text(
+                                'Register Account',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_hasPendingRegistration)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                'A registration is pending approval on this device.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+
                           const SizedBox(height: 24),
 
                           // Footer
@@ -479,24 +717,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             children: [
                               Hero(
                                 tag: 'footer_logo',
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Image.asset(
-                                    "assets/images/logo.png",
-                                    width: isSmallScreen ? 30 : 50,
-                                    height: isSmallScreen ? 30 : 50,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(
-                                        Icons.storefront_rounded,
-                                        size: isSmallScreen ? 30 : 50,
-                                        color: Colors.blue.shade700,
-                                      );
-                                    },
-                                  ),
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  height: isSmallScreen ? 30 : 50,
                                 ),
                               ),
                               const SizedBox(width: 10),

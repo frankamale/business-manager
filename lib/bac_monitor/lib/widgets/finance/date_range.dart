@@ -301,29 +301,31 @@ class _DateRangePickerState extends State<DateRangePicker> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(bottom: 12.0),
-                child: Text(
-                  'Select a Period',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12.0),
+                  child: Text(
+                    'Select a Period',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
-              ),
-              const Divider(color: Colors.white24, height: 1),
-              _buildOptionTile('Today', DateRange.today),
-              _buildOptionTile('Yesterday', DateRange.yesterday),
-              _buildOptionTile('Last 7 Days', DateRange.last7Days),
-              _buildOptionTile('Month to Date', DateRange.monthToDate),
-              _buildOptionTile('Custom Range...', DateRange.custom),
-            ],
+                const Divider(color: Colors.white24, height: 1),
+                _buildOptionTile('Today', DateRange.today),
+                _buildOptionTile('Yesterday', DateRange.yesterday),
+                _buildOptionTile('Last 7 Days', DateRange.last7Days),
+                _buildOptionTile('Month to Date', DateRange.monthToDate),
+                _buildOptionTile('Custom Range...', DateRange.custom),
+              ],
+            ),
           ),
         );
       },
