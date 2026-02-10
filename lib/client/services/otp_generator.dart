@@ -1,42 +1,29 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
-String generateTOTP({
-  required String uuid,
-  int digits = 6,
-  int stepSeconds = 30,
-}) {
-  // Current Unix time in seconds
-  final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+const String _secretKey = '9350286c-9fe9-4907-a70a-77442095ccbb';
 
-  // Time counter (changes every 30s)
-  final counter = timestamp ~/ stepSeconds;
+String generateTOTP({required String clientName}) {
+  final now = DateTime.now();
 
-  // Convert UUID to bytes (secret key)
-  final key = utf8.encode(uuid.replaceAll("-", ""));
+  // Round to 30-minute interval: 0 if minutes < 31, 30 otherwise
+  final roundedMinute = now.minute < 31 ? 0 : 30;
+  final rounded = DateTime(now.year, now.month, now.day, now.hour, roundedMinute);
 
-  // Convert counter to 8-byte buffer (big endian)
-  final counterBytes = ByteData(8)..setInt64(0, counter);
+  // Format as "yyyy-MM-dd HH:mm"
+  final formatted =
+      '${rounded.year.toString().padLeft(4, '0')}-'
+      '${rounded.month.toString().padLeft(2, '0')}-'
+      '${rounded.day.toString().padLeft(2, '0')} '
+      '${rounded.hour.toString().padLeft(2, '0')}:'
+      '${rounded.minute.toString().padLeft(2, '0')}';
 
-  // Generate HMAC-SHA1 hash
-  final hmacSha1 = Hmac(sha1, key);
-  final hash = hmacSha1.convert(counterBytes.buffer.asUint8List()).bytes;
+  // Concatenate: clientName + secretKey + formattedTime
+  final input = '$clientName$_secretKey$formatted';
 
-  // Dynamic truncation
-  final offset = hash.last & 0x0F;
+  // MD5 hash
+  final hash = md5.convert(utf8.encode(input)).toString();
 
-  final binaryCode =
-  ((hash[offset] & 0x7F) << 24) |
-  ((hash[offset + 1] & 0xFF) << 16) |
-  ((hash[offset + 2] & 0xFF) << 8) |
-  (hash[offset + 3] & 0xFF);
-
-  // OTP value
-  final otp = binaryCode % (pow10(digits));
-
-  return otp.toString().padLeft(digits, '0');
+  // First 4 characters of the hex hash
+  return hash.substring(0, 4).toUpperCase();
 }
-
-// Helper: 10^digits
-int pow10(int n) => List.filled(n, 0).fold(1, (a, b) => a * 10);

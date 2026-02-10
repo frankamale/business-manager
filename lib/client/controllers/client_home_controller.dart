@@ -30,12 +30,7 @@ class ClientHomeController extends GetxController {
   void generateOtp() {
     isGenerating.value = true;
 
-    final userId = odoo_id.isNotEmpty ? odoo_id : fullName;
-
-    // Generate OTP using TOTP algorithm
-    final otpNumber = generateTOTP(uuid: userId);
-
-    otp.value = '${otpNumber.substring(0, 3)} ${otpNumber.substring(3)}';
+    otp.value = generateTOTP(clientName: fullName);
 
     isGenerating.value = false;
   }
