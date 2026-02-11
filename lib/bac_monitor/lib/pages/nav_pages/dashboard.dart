@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
 import '../../components/dashboard/kpi_overview.dart';
 import '../../components/dashboard/sales_trends.dart';
@@ -83,7 +83,8 @@ class _DashboardState extends State<Dashboard> {
       await Get.find<MonGrossProfitController>();
     }
     if (Get.isRegistered<MonOutstandingPaymentsController>()) {
-      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
+      await Get.find<MonOutstandingPaymentsController>()
+          .fetchOutstandingPaymentsData();
     }
     if (Get.isRegistered<MonSalesTrendsController>()) {
       await Get.find<MonSalesTrendsController>().fetchAllData();
@@ -96,6 +97,9 @@ class _DashboardState extends State<Dashboard> {
   @override
   Widget build(BuildContext context) {
     final operatorController = Get.find<MonOperatorController>();
+    final size = MediaQuery.of(context).size;
+
+    final bool isSmallScreen = size.width < 600;
 
     return Scaffold(
       backgroundColor: PrimaryColors.darkBlue,
@@ -136,14 +140,8 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ),
               leading: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: CircleAvatar(
-                  backgroundColor: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: Image.asset('assets/images/logo.jpeg'),
-                  ),
-                ),
+                padding: const EdgeInsets.only(left: 20.0),
+                child: AppLogo(width: 100, height: 100),
               ),
               actions: [
                 Padding(
@@ -178,9 +176,15 @@ class _DashboardState extends State<Dashboard> {
                       Obx(() {
                         final controller = Get.find<MonGrossProfitController>();
                         // Then in the Obx block:
-                        final grossProfitValue = _parseCompactNumber(controller.grossProfit.value);
-                        final totalSalesValue = _parseCompactNumber(controller.totalSales.value);
-                        final cogsValue = _parseCompactNumber(controller.cogs.value);
+                        final grossProfitValue = _parseCompactNumber(
+                          controller.grossProfit.value,
+                        );
+                        final totalSalesValue = _parseCompactNumber(
+                          controller.totalSales.value,
+                        );
+                        final cogsValue = _parseCompactNumber(
+                          controller.cogs.value,
+                        );
 
                         // Calculate previous period profit based on trend
                         final trendPercent =
@@ -209,16 +213,20 @@ class _DashboardState extends State<Dashboard> {
                       }),
                       const SizedBox(height: 24),
                       Obx(() {
-                        final controller = Get.find<MonOutstandingPaymentsController>();
-                        final dashboardController = Get.find<MonDashboardController>();
+                        final controller =
+                            Get.find<MonOutstandingPaymentsController>();
+                        final dashboardController =
+                            Get.find<MonDashboardController>();
                         final periodLabel = _getPeriodLabel(
                           dashboardController.selectedRange.value,
                           dashboardController.customRange.value,
                         );
 
                         return OutstandingPaymentsCard(
-                          outstandingSelectedPeriod: controller.outstandingSelectedPeriod.value,
-                          outstandingSelectedPeriodTrend: controller.outstandingSelectedPeriodTrend.value,
+                          outstandingSelectedPeriod:
+                              controller.outstandingSelectedPeriod.value,
+                          outstandingSelectedPeriodTrend:
+                              controller.outstandingSelectedPeriodTrend.value,
                           outstandingMTD: controller.outstandingMTD.value,
                           outstandingYTD: controller.outstandingYTD.value,
                           periodLabel: periodLabel,
@@ -227,7 +235,8 @@ class _DashboardState extends State<Dashboard> {
                       const SizedBox(height: 24),
                       // Expenses Card
                       Obx(() {
-                        final dashboardController = Get.find<MonDashboardController>();
+                        final dashboardController =
+                            Get.find<MonDashboardController>();
                         final periodLabel = _getPeriodLabel(
                           dashboardController.selectedRange.value,
                           dashboardController.customRange.value,
@@ -238,16 +247,20 @@ class _DashboardState extends State<Dashboard> {
                           nonStockExpenses: 0.0,
                           periodLabel: periodLabel,
                           onStockExpensesTap: () {
-                            Get.to(() => ExpensesDetailPage(
-                              expenseType: 'stock',
-                              periodLabel: periodLabel,
-                            ));
+                            Get.to(
+                              () => ExpensesDetailPage(
+                                expenseType: 'stock',
+                                periodLabel: periodLabel,
+                              ),
+                            );
                           },
                           onNonStockExpensesTap: () {
-                            Get.to(() => ExpensesDetailPage(
-                              expenseType: 'non-stock',
-                              periodLabel: periodLabel,
-                            ));
+                            Get.to(
+                              () => ExpensesDetailPage(
+                                expenseType: 'non-stock',
+                                periodLabel: periodLabel,
+                              ),
+                            );
                           },
                         );
                       }),
