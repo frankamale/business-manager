@@ -10,6 +10,7 @@ import '../models/service_point.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../services/api_services.dart';
+import '../../flavors/flavor_colors.dart';
 import '../utils/network_helper.dart';
 
 class Homepage extends StatefulWidget {
@@ -167,7 +168,7 @@ class _HomepageState extends State<Homepage>
     if (lowerType.contains('hardware'))
       return [Colors.orange.shade400, Colors.orange.shade700];
     if (lowerType.contains('shop'))
-      return [Colors.blue.shade400, Colors.blue.shade700];
+      return [FlavorColors.current.tertiary, FlavorColors.current.primaryDark];
     return [Colors.teal.shade400, Colors.teal.shade700];
   }
 
@@ -183,10 +184,10 @@ class _HomepageState extends State<Homepage>
         : 1;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: FlavorColors.current.background,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: FlavorColors.current.primaryDark,
         foregroundColor: Colors.white,
         centerTitle: true,
         title: Row(
@@ -257,7 +258,7 @@ class _HomepageState extends State<Homepage>
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF151b50),
+                          color: FlavorColors.current.primaryDark,
                         ),
                       ),
                     ],

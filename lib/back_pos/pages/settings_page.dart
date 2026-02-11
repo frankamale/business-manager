@@ -7,6 +7,7 @@ import '../controllers/settings_controller.dart';
 import '../services/api_services.dart';
 import '../services/settings_service.dart';
 import '../utils/network_helper.dart';
+import '../../flavors/flavor_colors.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -18,7 +19,7 @@ class SettingsPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        backgroundColor: FlavorColors.current.primary,
         iconTheme: IconThemeData(color: Colors.white),
 
         title: const Text('Settings', style: TextStyle(color: Colors.white)),

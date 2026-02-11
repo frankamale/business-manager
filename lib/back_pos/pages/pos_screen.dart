@@ -12,6 +12,7 @@ import '../controllers/settings_controller.dart';
 import '../services/print_service.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
+import '../../flavors/flavor_colors.dart';
 
 class PosScreen extends StatefulWidget {
   final String? existingSalesId;
@@ -508,12 +509,12 @@ class _PosScreenState extends State<PosScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: FlavorColors.current.surface,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.inventory_2,
-                  color: Colors.blue[700],
+                  color: FlavorColors.current.primaryDark,
                   size: 25,
                 ),
               ),
@@ -631,7 +632,7 @@ class _PosScreenState extends State<PosScreen> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: FlavorColors.current.primary,
       ),
       body: SafeArea(
         child: Column(
@@ -852,7 +853,7 @@ class _PosScreenState extends State<PosScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: FlavorColors.current.surface,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(8),
                           topRight: Radius.circular(8),
@@ -1085,7 +1086,7 @@ class _PosScreenState extends State<PosScreen> {
                           onPressed: () => Navigator.of(context).pop(),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Colors.blue[700],
+                            backgroundColor: FlavorColors.current.primaryDark,
                             foregroundColor: Colors.white,
                             elevation: 2,
                             shape: RoundedRectangleBorder(
@@ -1220,7 +1221,7 @@ class _PosScreenState extends State<PosScreen> {
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+                                          borderSide: BorderSide(color: FlavorColors.current.primaryDark, width: 2),
                                         ),
                                         filled: true,
                                         fillColor: Colors.grey[50],

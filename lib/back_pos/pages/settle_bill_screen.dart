@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../services/print_service.dart';
 import '../models/sale_transaction.dart';
+import '../../flavors/flavor_colors.dart';
 
 class SettleBillScreen extends StatefulWidget {
   final String salesId;
@@ -190,7 +191,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
       appBar: AppBar(
         title: const Text('Settle Bill', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: FlavorColors.current.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: isLoading
@@ -223,7 +224,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
                                   children: [
                                     const Text('Receipt', style: TextStyle(fontSize: 12, color: Colors.grey)),
                                     const SizedBox(height: 4),
-                                    Text(widget.receiptNumber, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue)),
+                                    Text(widget.receiptNumber, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: FlavorColors.current.primary)),
                                   ],
                                 ),
                                 Column(

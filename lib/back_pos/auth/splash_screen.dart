@@ -14,6 +14,7 @@ import '../../shared/database/unified_db_helper.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../utils/network_helper.dart';
 import '../config.dart';
+import '../../flavors/flavor_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget? nextScreen;
@@ -501,9 +502,9 @@ class _SplashScreenState extends State<SplashScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.blue.shade700,
-                Colors.blue.shade400,
-                Colors.cyan.shade300,
+                FlavorColors.current.primaryDark,
+                FlavorColors.current.tertiary,
+                FlavorColors.current.light,
               ],
             ),
           ),
@@ -599,7 +600,7 @@ class _SplashScreenState extends State<SplashScreen>
                       label: const Text('Retry Connection'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: Colors.blue,
+                        foregroundColor: FlavorColors.current.primary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,
