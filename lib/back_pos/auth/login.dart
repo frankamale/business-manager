@@ -148,7 +148,6 @@ controller.signOut();
             end: Alignment.bottomRight,
             colors: [
               FlavorColors.current.primaryDark,
-              // FlavorColors.current.tertiary,
               FlavorColors.current.light,
               FlavorColors.current.primaryDark,
 

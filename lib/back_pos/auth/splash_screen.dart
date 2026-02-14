@@ -280,13 +280,15 @@ class _SplashScreenState extends State<SplashScreen>
 
       // Fetch cash accounts from API
       _log('initializePosData: Fetching cash accounts from API');
-      final cashAccounts = await _apiService.fetchCashAccounts();
-
-      // Store in local DB
-      await _dbHelper.insertCashAccounts(cashAccounts);
-      _log(
-        'initializePosData: Cash accounts cached successfully (${cashAccounts.length})',
-      );
+      try {
+        final cashAccounts = await _apiService.fetchCashAccounts();
+        await _dbHelper.insertCashAccounts(cashAccounts);
+        _log(
+          'initializePosData: Cash accounts cached successfully (${cashAccounts.length})',
+        );
+      } catch (e) {
+        _log('initializePosData: API fetch failed ($e), using cached cash accounts', level: 'WARN');
+      }
     } catch (e, stackTrace) {
       _log('initializePosData: Error - $e', level: 'ERROR');
       _log('initializePosData: StackTrace - $stackTrace', level: 'ERROR');
@@ -435,9 +437,17 @@ class _SplashScreenState extends State<SplashScreen>
     _log('loadDataWithSmartSync: Cached inventory exists = $hasInventory');
 
     if (hasNetwork) {
-      _log('loadDataWithSmartSync: Syncing inventory from API (network available)');
-      await inventoryController.syncInventoryFromAPI();
-      _log('loadDataWithSmartSync: Inventory synced successfully from API');
+      try {
+        _log('loadDataWithSmartSync: Syncing inventory from API (network available)');
+        await inventoryController.syncInventoryFromAPI();
+        _log('loadDataWithSmartSync: Inventory synced successfully from API');
+      } catch (e) {
+        _log('loadDataWithSmartSync: API sync failed ($e), falling back to cache', level: 'WARN');
+        if (hasInventory) {
+          await inventoryController.loadInventoryFromCache();
+          _log('loadDataWithSmartSync: Inventory loaded from cache after API failure');
+        }
+      }
     } else if (hasInventory) {
       _log('loadDataWithSmartSync: Loading inventory from cache (offline mode)');
       await inventoryController.loadInventoryFromCache();
