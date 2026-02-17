@@ -1291,6 +1291,7 @@ class _SalesListingState extends State<SalesListing> {
           'price': transaction.sellingprice,
           'amount': transaction.amount,
           'item': inventoryItem,
+          'complimentary': transaction.complimentaryid > 0,
         });
       }
 

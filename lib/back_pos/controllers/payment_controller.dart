@@ -148,6 +148,7 @@ class PaymentController extends GetxController {
         "remarks": item['notes'] ?? "",
         "transactionstatusid": 1,
         "sellingprice_original": inventoryItem.price.toInt(),
+        "complimentaryid": item['complimentary'] == true ? 1 : 0,
       };
     }).toList();
 
@@ -283,7 +284,7 @@ class PaymentController extends GetxController {
         'department': '',
         'packsize': inventoryItem.packsize.toInt(),
         'packaging': inventoryItem.packaging,
-        'complimentaryid': 0,
+        'complimentaryid': item['complimentary'] == true ? 1 : 0,
         'salesId': saleId,
         'upload_status': 'pending',
         'uploaded_at': null,

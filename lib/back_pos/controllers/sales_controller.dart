@@ -166,6 +166,7 @@ class SalesController extends GetxController {
           "remarks": "",
           "transactionstatusid": 1,
           "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
+          "complimentaryid": transaction.complimentaryid,
         };
       }).toList();
 
