@@ -161,7 +161,7 @@ class AccountPendingScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      "Contact your company administrator or help desk for support.",
+                                      "Contact ${AppConfig.companyName} help desk for support. Or call (+256) 705 344 416",
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: colorScheme.onSecondaryContainer,

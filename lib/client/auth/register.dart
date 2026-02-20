@@ -255,7 +255,7 @@ class Register extends StatelessWidget {
                                           value:
                                               controller.selectedService.value,
                                           decoration: InputDecoration(
-                                            labelText: "Service",
+                                            labelText: "Category",
                                             border: OutlineInputBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12),
