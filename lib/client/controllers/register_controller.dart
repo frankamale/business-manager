@@ -169,6 +169,7 @@ class RegisterController extends GetxController {
         gender: selectedGender.value,
         service: selectedService.value,
         activationrequired:1,
+        subcategoryid: null,
       );
       return true;
     } catch (e) {
