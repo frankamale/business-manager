@@ -86,12 +86,22 @@ class ClientApiService {
     required String password,
     required int service,
     required int activationrequired,
-     String category = "Retail Customer(Bulk Purchase)",
+    String category = "Retail Customer(Bulk Purchase)",
     String gender = 'Male',
     String status = 'Active/In Use',
     String statusId = "99999999-9999-9999-9999-999999999999",
   }) async {
-    final uri = Uri.parse('$baseUrl/bp/postcustomer');
+    String endpoint;
+
+    if (service == 2) {
+      endpoint = "bp/vendor";
+    } else if (service == 3) {
+      endpoint = "bp/staff";
+    } else {
+      endpoint = "bp/postcustomer";
+    }
+
+    final uri = Uri.parse('$baseUrl/$endpoint');
 
     final body = {
       'id': id,
@@ -108,9 +118,8 @@ class ClientApiService {
       'address': address,
       'pospassword': password,
       'statusid': statusId,
-      category : "Retail Customer(Bulk Purchase)",
-      service:service,
-      activationrequired:activationrequired,
+      // "category" : "Retail Customer(Bulk Purchase)",
+      "activationrequired": activationrequired,
       'mode': 1,
     };
 

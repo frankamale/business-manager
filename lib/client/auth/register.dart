@@ -292,6 +292,10 @@ class Register extends StatelessWidget {
                                               value: 2,
                                               child: Text('Vendor'),
                                             ),
+                                            DropdownMenuItem(
+                                              value: 3,
+                                              child: Text('Staff'),
+                                            ),
                                           ],
                                           onChanged: (value) {
                                             if (value != null) {

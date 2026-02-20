@@ -170,7 +170,6 @@ class RegisterController extends GetxController {
         service: selectedService.value,
         activationrequired:1,
       );
-
       return true;
     } catch (e) {
       Get.snackbar('Error', 'Failed to create account: $e',
