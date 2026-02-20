@@ -23,6 +23,7 @@ class RegisterController extends GetxController {
   var isRegistering = false.obs;
   var isCodeSent = false.obs;
   var selectedGender = 'Male'.obs;
+  var selectedService = 1.obs;
   var showAdvanced = false.obs;
   var errorMessage = ''.obs;
   var obscurePassword = true.obs;
@@ -166,6 +167,8 @@ class RegisterController extends GetxController {
         address: addressController.text.trim(),
         password: '', // Empty password, will be set in next step
         gender: selectedGender.value,
+        service: selectedService.value,
+        activationrequired:1,
       );
 
       return true;

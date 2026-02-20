@@ -269,7 +269,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     // Sync to monitor service if admin (re-authenticate for fresh token)
     if (isAdmin) {
       try {
-        final loginResult = await _authController.serverLogin(username, password);
+        final loginResult = await _authController.serverLogin(
+          username,
+          password,
+        );
         if (loginResult != null) {
           final token = loginResult['token'] as String;
           await _syncToMonitorServiceAsync(
@@ -491,17 +494,16 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               size: isSmallScreen ? 100 : 120,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 15),
 
                           // Title
                           Text(
                             "${AppConfig.companyName}",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-
-                              fontSize: isSmallScreen ? 28 : 32,
+                              fontSize: isSmallScreen ? 25 : 29,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey.shade800,
+                              color: FlavorColors.current.primaryPlus,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -639,7 +641,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                 backgroundColor: FlavorColors.current.primary,
                                 foregroundColor: FlavorColors.current.onPrimary,
                                 elevation: 4,
-                                shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
+                                shadowColor: FlavorColors.current.primaryDark
+                                    .withOpacity(0.5),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -678,10 +681,12 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                   ? null
                                   : () => Get.to(Register()),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: FlavorColors.current.primaryDark,
+                                backgroundColor:
+                                    FlavorColors.current.primaryDark,
                                 foregroundColor: FlavorColors.current.onPrimary,
                                 elevation: 4,
-                                shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
+                                shadowColor: FlavorColors.current.primaryDark
+                                    .withOpacity(0.5),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),

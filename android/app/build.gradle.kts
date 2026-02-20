@@ -27,6 +27,11 @@ android {
             applicationId = "com.nvuma.businessmanager"
             resValue("string", "app_name", "Top Grade")
         }
+     create("mega") {
+            dimension = "company"
+            applicationId = "com.mega.businessmanager"
+            resValue("string", "app_name", "Standard Supermarket")
+        }
     }
 
     compileOptions {
