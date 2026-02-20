@@ -418,7 +418,8 @@ class CustomerAuthService {
     final customer = Customer.fromMap(customerData);
 
     // Check if customer account is enabled
-    if (customer.posenabled != true) {
+    if (customer.statusid !=  "00000000-0000-0000-0000-000000000000") {
+      print("Customer not activated");
       return null;
     }
 

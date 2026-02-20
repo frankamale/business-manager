@@ -173,7 +173,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     }
 
     // Check if customer account is enabled
-    if (customer.posenabled != true) {
+    if (customer.statusid != "00000000-0000-0000-0000-000000000000") {
       Get.to(() => AccountPendingScreen(email: customer.email));
       return;
     }
@@ -182,7 +182,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     if (!_customerAuthService.validateCustomerPin(customer, pin)) {
       throw Exception('Invalid PIN. Please try again.');
     }
-
+ 
     // Cache the customer account for future logins (valid for 24 hours)
     await _customerAuthService.cacheCustomerAccount(customer);
 
