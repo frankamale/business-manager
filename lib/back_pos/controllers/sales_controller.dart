@@ -187,6 +187,14 @@ class SalesController extends GetxController {
         "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
         "lineItems": lineItems,
         "saleActionId": 1,
+        "efris": 0,
+        "efriscode": "",
+        "efrisinvoiceid": "",
+        "efrisstatus": "",
+        "qrcode": "",
+        "efrismessage": "",
+        "taxamount": "",
+        "taxrate": "",
       };
 
       // Create or update sale on server
@@ -266,7 +274,8 @@ class SalesController extends GetxController {
             servicePointId: servicePointId,
             customerId: customerId,
             companyId: companyId,
-            currencyid: null, 
+            currencyid: null,
+            categoryid: "44444444-1111-1111-1111-111111111111",
           );
 
           // Log the payment payload being sent to server

@@ -169,6 +169,8 @@ class PaymentController extends GetxController {
       "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
       "lineItems": lineItems,
       "saleActionId": 1,
+      "categoryid": "44444444-1111-1111-1111-111111111111",
+
     };
   }
 
@@ -181,6 +183,7 @@ class PaymentController extends GetxController {
     required String? customerId,
     required String? companyId,
     required String? currencyid,
+    required String? categoryid,
   }) async {
     const uuid = Uuid();
 
@@ -189,6 +192,7 @@ class PaymentController extends GetxController {
     return {
       "id": uuid.v4(),
       "currencyid": cashAccount['currency_id'],
+      "categoryid": "44444444-1111-1111-1111-111111111111",
       "referenceid": saleId,
       "servicepointid": servicePointId,
       "transactiontypeid": 1,
@@ -204,6 +208,7 @@ class PaymentController extends GetxController {
       "bp": customerId ?? "",
       "direction": 1,
       "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+
     };
   }
 
@@ -576,6 +581,8 @@ class PaymentController extends GetxController {
         customerId: customerId,
         companyId: transactionData['companyId'],
         currencyid : transactionData['currencyid'],
+        categoryid: "44444444-1111-1111-1111-111111111111",
+
       );
 
       // Log the payment payload being sent to server

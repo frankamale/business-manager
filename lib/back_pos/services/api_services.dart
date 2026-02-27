@@ -489,6 +489,7 @@ class PosApiService extends GetxService {
   Future<Map<String, dynamic>> createPayment(
     Map<String, dynamic> paymentData,
   ) async {
+
     try {
       final token = await getAccessToken();
 

@@ -368,6 +368,7 @@ class _PosScreenState extends State<PosScreen> {
         salespersonId: selectedSalespersonId,
         servicePointId: widget.servicePoint?.id,
         amountTendered: 0,
+
       );
       if (result['success'] == true) {
         final db = await UnifiedDatabaseHelper.instance.database;
@@ -501,6 +502,7 @@ class _PosScreenState extends State<PosScreen> {
          notes: notesController.text,
          salespersonId: selectedSalespersonId,
          servicePointId: widget.servicePoint?.id,
+
        );
  
        if (result['success'] == true) {
