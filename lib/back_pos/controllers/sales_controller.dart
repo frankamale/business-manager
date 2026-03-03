@@ -184,7 +184,7 @@ class SalesController extends GetxController {
         "servicepointid": servicePointId,
         "salespersonid": salespersonId,
         "modeid": 2,
-        "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+        "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
         "lineItems": lineItems,
         "saleActionId": 1,
         "efris": 0,

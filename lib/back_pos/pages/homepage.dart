@@ -199,13 +199,13 @@ class _HomepageState extends State<Homepage>
               ),
               child: const AppLogo(width: 40, height: 40),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Text(
                 _companyName.isNotEmpty
                     ? "$_companyName "
                     : "${AppConfig.companyName} ",
 
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ],
         ),
@@ -221,8 +221,8 @@ class _HomepageState extends State<Homepage>
               ? const Padding(
                   padding: EdgeInsets.all(12.0),
                   child: SizedBox(
-                    width: 24,
-                    height: 24,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Colors.white,
