@@ -2,6 +2,7 @@
 // OPTIMIZED MonKpiOverviewController
 // ============================================================
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
@@ -49,6 +50,15 @@ class MonKpiOverviewController extends GetxController {
         fetchKpiData();
       }
     });
+  }
+
+
+  // Inside MonKpiOverviewController
+  var userRole = "".obs;
+
+  Future<void> loadUserRole() async {
+    const storage = FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true));
+    userRole.value = await storage.read(key: "user_role") ?? "";
   }
 
   /// Call this manually when the UI is ready
