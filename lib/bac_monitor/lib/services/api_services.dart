@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:sqflite/sqflite.dart';
+import '../../../back_pos/services/api_services.dart';
 import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
 import '../../../shared/database/unified_db_helper.dart';
@@ -22,13 +23,11 @@ Map<String, dynamic> _decodeJsonMap(String jsonString) {
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
   final _dbHelper = UnifiedDatabaseHelper.instance;
- String? _cachedToken;
+  String? _cachedToken;
   String? cachedCompanyId;
   bool _isInitialized = false;
 
@@ -46,7 +45,7 @@ class MonitorApiService extends GetxService {
 
   Future<void> storeToken(String token) async {
     await secureStorage.write(key: 'access_token', value: token);
-    _cachedToken = token; 
+    _cachedToken = token;
     // print('DEBUG: MonitorApiService.storeToken() stored token');
   }
 
@@ -63,9 +62,11 @@ class MonitorApiService extends GetxService {
 
   Future<void> storeUserData(Map<String, dynamic> data) async {
     await secureStorage.write(key: 'user_data', value: jsonEncode(data));
-    
+
     // Also store user role separately for easier access
-    if (data.containsKey('roles') && data['roles'] is List && data['roles'].isNotEmpty) {
+    if (data.containsKey('roles') &&
+        data['roles'] is List &&
+        data['roles'].isNotEmpty) {
       final userRole = data['roles'].first.toString();
       await secureStorage.write(key: 'user_role', value: userRole);
     }
@@ -85,11 +86,16 @@ class MonitorApiService extends GetxService {
   }
 
   Future<void> storeLastSyncTimestamp(int timestamp) async {
-    await secureStorage.write(key: 'last_sync_timestamp', value: timestamp.toString());
+    await secureStorage.write(
+      key: 'last_sync_timestamp',
+      value: timestamp.toString(),
+    );
   }
 
   Future<int?> getStoredLastSyncTimestamp() async {
-    final timestampString = await secureStorage.read(key: 'last_sync_timestamp');
+    final timestampString = await secureStorage.read(
+      key: 'last_sync_timestamp',
+    );
     return timestampString != null ? int.parse(timestampString) : null;
   }
 
@@ -119,10 +125,7 @@ class MonitorApiService extends GetxService {
   Future<Map<String, String?>> getServerCredentials() async {
     final username = await secureStorage.read(key: 'server_username');
     final password = await secureStorage.read(key: 'server_password');
-    return {
-      'username': username,
-      'password': password,
-    };
+    return {'username': username, 'password': password};
   }
 
   /// Initialize company ID during app startup
@@ -154,11 +157,14 @@ class MonitorApiService extends GetxService {
 
       // Try to get from cache/storage first
       final cachedId = await getStoredCompanyId();
-      if (cachedId != null && cachedId.isNotEmpty && cachedId != 'default_offline_company') {
+      if (cachedId != null &&
+          cachedId.isNotEmpty &&
+          cachedId != 'default_offline_company') {
         // print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
 
         // Check if database is already open for this company
-        if (_dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == cachedId) {
+        if (_dbHelper.isDatabaseOpen &&
+            _dbHelper.currentCompanyId == cachedId) {
           // print('DEBUG: MonitorApiService._performInitialization() - Database already open for company: $cachedId');
           cachedCompanyId = cachedId;
           _isInitialized = true;
@@ -179,7 +185,6 @@ class MonitorApiService extends GetxService {
       if (companyId.isNotEmpty && companyId != 'default_offline_company') {
         await switchCompany(companyId, fetchData: false);
       }
-
     } catch (e) {
       // print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
       _isInitialized = false;
@@ -228,14 +233,16 @@ class MonitorApiService extends GetxService {
 
     // If not available, this is an error - initialization should have been called
     // print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Company ID not initialized!');
-    throw Exception('Company ID not initialized. Call initializeCompanyId() first.');
+    throw Exception(
+      'Company ID not initialized. Call initializeCompanyId() first.',
+    );
   }
 
   Future<Map<String, dynamic>> post(
-      String endpoint,
-      Map<String, dynamic> data, {
-        bool useToken = true,
-      }) async {
+    String endpoint,
+    Map<String, dynamic> data, {
+    bool useToken = true,
+  }) async {
     try {
       // print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint');
       final headers = {'Content-Type': 'application/json'};
@@ -345,12 +352,17 @@ class MonitorApiService extends GetxService {
   /// Switch to a different company
   /// This will update the stored company ID and switch the database
   /// Set fetchData to false to skip data fetching (useful when you'll fetch separately)
-  Future<void> switchCompany(String newCompanyId, {bool fetchData = true}) async {
+  Future<void> switchCompany(
+    String newCompanyId, {
+    bool fetchData = true,
+  }) async {
     try {
       // print('DEBUG: MonitorApiService.switchCompany() - Switching to company: $newCompanyId (current: $cachedCompanyId)');
 
       // Check if we're already on this company
-      if (cachedCompanyId == newCompanyId && _dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == newCompanyId) {
+      if (cachedCompanyId == newCompanyId &&
+          _dbHelper.isDatabaseOpen &&
+          _dbHelper.currentCompanyId == newCompanyId) {
         // print('DEBUG: MonitorApiService.switchCompany() - Already on company $newCompanyId, skipping');
         return;
       }
@@ -381,7 +393,9 @@ class MonitorApiService extends GetxService {
   Future<bool> _hasSalesInDb() async {
     try {
       final db = _dbHelper.database;
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_sales');
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM mon_sales',
+      );
       final count = result.first['count'] as int? ?? 0;
       // debugPrint("ApiService: Found $count sales records in database");
       return count > 0;
@@ -402,7 +416,9 @@ class MonitorApiService extends GetxService {
       if (!force) {
         final hasSales = await _hasSalesInDb();
         if (hasSales) {
-          debugPrint("ApiService: Sales already exist in database, skipping fetch");
+          debugPrint(
+            "ApiService: Sales already exist in database, skipping fetch",
+          );
           await setInitialSyncCompleted();
 
           if (Get.isRegistered<MonOperatorController>()) {
@@ -430,6 +446,27 @@ class MonitorApiService extends GetxService {
       }
 
       try {
+        debugPrint("ApiService: Starting to fetch customers from /bp/customers endpoint");
+        final posApiService = PosApiService();
+        final customers = await posApiService.fetchCustomers();
+        debugPrint(
+          "ApiService: Successfully fetched ${customers.length} customers from API",
+        );
+
+        // Save to database
+        debugPrint("ApiService: Deleting existing customers from database...");
+        await _dbHelper.deleteAllCustomers();
+        debugPrint("ApiService: Inserting ${customers.length} customers into database...");
+        await _dbHelper.insertCustomers(customers);
+        
+        // Verify the save
+        final savedCount = await _dbHelper.getCustomerCount();
+        debugPrint("ApiService: Verified $savedCount customers saved to database successfully");
+      } catch (e) {
+        debugPrint("ApiService: Failed to fetch customers -> $e");
+      }
+
+      try {
         companyDetailsRes = await getWithAuth('/company/details');
         debugPrint("ApiService: Successfully fetched company details");
       } catch (e) {
@@ -450,7 +487,9 @@ class MonitorApiService extends GetxService {
       }
 
       try {
-        salesDetailsRes = await getWithAuth('/sales/?pagecount=0&pagesize=5000');
+        salesDetailsRes = await getWithAuth(
+          '/sales/?pagecount=0&pagesize=5000',
+        );
         debugPrint("ApiService: Successfully fetched sales details");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /sales/ -> $e");
@@ -489,7 +528,9 @@ class MonitorApiService extends GetxService {
       if (salesRes != null && salesRes.body.isNotEmpty) {
         try {
           salesData = await compute(_decodeJsonList, salesRes.body);
-          debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
+          debugPrint(
+            "ApiService: Parsed ${salesData.length} sales records (isolate)",
+          );
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales JSON -> $e");
         }
@@ -498,7 +539,10 @@ class MonitorApiService extends GetxService {
       List<dynamic> salesDetailsData = [];
       if (salesDetailsRes != null && salesDetailsRes.body.isNotEmpty) {
         try {
-          salesDetailsData = await compute(_decodeJsonList, salesDetailsRes.body);
+          salesDetailsData = await compute(
+            _decodeJsonList,
+            salesDetailsRes.body,
+          );
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales details JSON -> $e");
         }
@@ -508,7 +552,9 @@ class MonitorApiService extends GetxService {
       if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
         try {
           inventoryData = await compute(_decodeJsonList, inventoryRes.body);
-          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
+          debugPrint(
+            "ApiService: Parsed ${inventoryData.length} inventory items (isolate)",
+          );
         } catch (e) {
           debugPrint("ApiService: Failed to parse inventory JSON -> $e");
         }
@@ -566,8 +612,10 @@ class MonitorApiService extends GetxService {
             'currentBranchName': companyDetailsData['currentBranchName'],
             'currentBranchCode': companyDetailsData['currentBranchCode'],
             'activeBranchName': companyDetailsData['activeBranch']?['name'],
-            'activeBranchAddress': companyDetailsData['activeBranch']?['address'],
-            'activeBranchPrimaryEmail': companyDetailsData['activeBranch']?['primaryEmail'],
+            'activeBranchAddress':
+                companyDetailsData['activeBranch']?['address'],
+            'activeBranchPrimaryEmail':
+                companyDetailsData['activeBranch']?['primaryEmail'],
             'activeBranchCode': companyDetailsData['activeBranch']?['code'],
             'efrisEnabled': companyDetailsData['efrisEnabled'] == true ? 1 : 0,
           }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -634,9 +682,15 @@ class MonitorApiService extends GetxService {
               'category': sale['category'],
               'subcategory': sale['subcategory'],
               'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
-              'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
-              'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
-              'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
+              'printed': (sale['printed'] == 1 || sale['printed'] == true)
+                  ? 1
+                  : 0,
+              'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true)
+                  ? 1
+                  : 0,
+              'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true)
+                  ? 1
+                  : 0,
               'patron': sale['patron'],
               'department': sale['department'],
               'packsize': sale['packsize'],
@@ -667,7 +721,6 @@ class MonitorApiService extends GetxService {
           }
           await updateBatch.commit(noResult: true);
         }
-
       });
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
@@ -690,7 +743,7 @@ class MonitorApiService extends GetxService {
 
       final lastSyncTimestamp =
           (await getStoredLastSyncTimestamp()) ??
-              now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
+          now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
       final lastSyncDate = DateTime.fromMillisecondsSinceEpoch(
         lastSyncTimestamp,
       );
@@ -706,7 +759,10 @@ class MonitorApiService extends GetxService {
       );
 
       // Parse on isolate to prevent GC pressure
-      final List<dynamic> salesData = await compute(_decodeJsonList, response.body);
+      final List<dynamic> salesData = await compute(
+        _decodeJsonList,
+        response.body,
+      );
 
       // Early return if no sales data - skip all database operations
       if (salesData.isEmpty) {
@@ -784,9 +840,15 @@ class MonitorApiService extends GetxService {
             'category': sale['category'],
             'subcategory': sale['subcategory'],
             'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
-            'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
-            'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
-            'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
+            'printed': (sale['printed'] == 1 || sale['printed'] == true)
+                ? 1
+                : 0,
+            'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true)
+                ? 1
+                : 0,
+            'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true)
+                ? 1
+                : 0,
             'patron': sale['patron'],
             'department': sale['department'],
             'packsize': sale['packsize'],
@@ -825,7 +887,10 @@ class MonitorApiService extends GetxService {
     }
   }
 
-  Future<http.Response> getWithAuth(String endpoint, {Duration? timeout}) async {
+  Future<http.Response> getWithAuth(
+    String endpoint, {
+    Duration? timeout,
+  }) async {
     final token = await getStoredToken();
 
     if (token == null) {
@@ -841,12 +906,14 @@ class MonitorApiService extends GetxService {
         'Authorization': 'Bearer $token',
       });
 
-      final streamedResponse = await client.send(request).timeout(
-        timeout ?? const Duration(minutes: 5),
-        onTimeout: () {
-          throw Exception('Request timeout for $endpoint');
-        },
-      );
+      final streamedResponse = await client
+          .send(request)
+          .timeout(
+            timeout ?? const Duration(minutes: 5),
+            onTimeout: () {
+              throw Exception('Request timeout for $endpoint');
+            },
+          );
 
       final response = await http.Response.fromStream(streamedResponse);
 

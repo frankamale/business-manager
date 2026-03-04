@@ -1,3 +1,4 @@
+import 'package:bac_pos/back_pos/controllers/customer_controller.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,6 +30,7 @@ class SplashPage extends StatefulWidget {
 
 class _SplashPageState extends State<SplashPage> {
   final _dbHelper = UnifiedDatabaseHelper.instance;
+
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
@@ -195,7 +197,6 @@ class _SplashPageState extends State<SplashPage> {
           'SplashPage: Initial sync check took ${stopwatch.elapsedMilliseconds}ms - Done: $initialSyncDone',
         );
 
-        // IMPORTANT: Also check if company_details exists for THIS company's database
         stopwatch.reset();
         final companyDetails = await _dbHelper.getCompanyDetails();
         final hasCompanyDetails =
@@ -469,6 +470,21 @@ class _SplashPageState extends State<SplashPage> {
       // Load profile data into ProfileController
       if (Get.isRegistered<ProfileController>()) {
         await Get.find<ProfileController>().loadProfileData();
+      }
+
+      if (Get.isRegistered<CustomerController>()) {
+        final customerController = Get.find<CustomerController>();
+        debugPrint('SplashPage: Loading customers from cache...');
+        await customerController.loadCustomersFromCache();
+        debugPrint('SplashPage: Loaded ${customerController.customers.length} customers from cache');
+        
+        // Only sync if online
+        if (!_isOfflineMode) {
+          debugPrint('SplashPage: Syncing customers from API...');
+          await customerController.syncCustomersFromAPI();
+          debugPrint('SplashPage: Synced ${customerController.customers.length} customers from API');
+        }
+        debugPrint('SplashPage: Customers loaded successfully - Total: ${customerController.customers.length}');
       }
 
       // Reset and refresh dashboard controllers for account switch

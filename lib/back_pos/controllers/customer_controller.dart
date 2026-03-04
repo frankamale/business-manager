@@ -17,7 +17,7 @@ class CustomerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Don't load on init - will be handled by splash screen
+
   }
 
   // Load customers from cache (database)
@@ -36,6 +36,7 @@ class CustomerController extends GetxController {
       isLoadingCustomers.value = true;
 
       final fetchedCustomers = await _apiService.fetchCustomers();
+      print("Fth ustomrs");
 
       // Save to database
       await _dbHelper.deleteAllCustomers();

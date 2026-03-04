@@ -482,7 +482,6 @@ class UnifiedDatabaseHelper {
       )
     ''');
 
-    // ========== INDEXES ==========
 
     // POS indexes
     await db.execute('CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)');
