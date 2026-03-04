@@ -147,13 +147,7 @@ class MonKpiOverviewController extends GetxController {
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           }
           break;
-        default:
-          startDate = now.subtract(const Duration(days: 6));
-          startDate = DateTime(startDate.year, startDate.month, startDate.day);
-          prevStartDate = startDate.subtract(const Duration(days: 7));
-          prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
-          break;
-      }
+        }
 
       final startMillis = startDate.millisecondsSinceEpoch;
       final endMillis = endDate.millisecondsSinceEpoch;
@@ -172,7 +166,7 @@ class MonKpiOverviewController extends GetxController {
           'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
 
-      final customerQuery = 'SELECT COUNT(*) as count FROM customers';
+      final customerQuery = 'SELECT COUNT(*) as count FROM customers WHERE statusid == ?';
 
       // Execute all queries in parallel
       final results = await Future.wait([
@@ -186,7 +180,7 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(basketQuery, [prevStartMillis, prevEndMillis]),
         db.rawQuery(totalStoresQuery),
         db.rawQuery(currencyQuery),
-        db.rawQuery(customerQuery),
+        db.rawQuery(customerQuery, ["00000000-0000-0000-0000-000000000000"]),
       ]);
 
       final currentSales = (results[0].first['total'] as num? ?? 0.0)
