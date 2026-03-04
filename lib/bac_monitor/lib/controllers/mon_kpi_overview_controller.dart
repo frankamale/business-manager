@@ -53,17 +53,14 @@ class MonKpiOverviewController extends GetxController {
     });
   }
 
-
   // Inside MonKpiOverviewController
   var userRole = "".obs;
 
-
-
-
   Future<void> loadUserRole() async {
-    const storage = FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true));
+    const storage = FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    );
     userRole.value = await storage.read(key: "user_role") ?? "";
-
   }
 
   /// Call this manually when the UI is ready
@@ -101,8 +98,16 @@ class MonKpiOverviewController extends GetxController {
           prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           break;
         case DateRange.yesterday:
-          startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
-          endDate = DateTime(now.year, now.month, now.day).subtract(const Duration(milliseconds: 1));
+          startDate = DateTime(
+            now.year,
+            now.month,
+            now.day,
+          ).subtract(const Duration(days: 1));
+          endDate = DateTime(
+            now.year,
+            now.month,
+            now.day,
+          ).subtract(const Duration(milliseconds: 1));
           prevStartDate = startDate.subtract(const Duration(days: 1));
           prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           break;
@@ -118,7 +123,11 @@ class MonKpiOverviewController extends GetxController {
           endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
           final prevMonth = DateTime(now.year, now.month - 1, 1);
           prevStartDate = prevMonth;
-          prevEndDate = DateTime(now.year, now.month, 1).subtract(const Duration(milliseconds: 1));
+          prevEndDate = DateTime(
+            now.year,
+            now.month,
+            1,
+          ).subtract(const Duration(milliseconds: 1));
           break;
         case DateRange.custom:
           if (customRange != null) {
@@ -129,7 +138,11 @@ class MonKpiOverviewController extends GetxController {
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           } else {
             startDate = now.subtract(const Duration(days: 6));
-            startDate = DateTime(startDate.year, startDate.month, startDate.day);
+            startDate = DateTime(
+              startDate.year,
+              startDate.month,
+              startDate.day,
+            );
             prevStartDate = startDate.subtract(const Duration(days: 7));
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           }
@@ -159,8 +172,7 @@ class MonKpiOverviewController extends GetxController {
           'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
 
-      final customerQuery = "SELECT COUNT(*) FROM customers";
-
+      final customerQuery = 'SELECT COUNT(*) as count FROM customers';
 
       // Execute all queries in parallel
       final results = await Future.wait([
@@ -177,7 +189,8 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(customerQuery),
       ]);
 
-      final currentSales = (results[0].first['total'] as num? ?? 0.0).toDouble();
+      final currentSales = (results[0].first['total'] as num? ?? 0.0)
+          .toDouble();
       final prevSales = (results[1].first['total'] as num? ?? 0.0).toDouble();
       final currentTransactions = results[2].first['count'] as int? ?? 0;
       final prevTransactions = results[3].first['count'] as int? ?? 0;
@@ -221,19 +234,25 @@ class MonKpiOverviewController extends GetxController {
       salesTrend.value = percentFormatter.format(salesTrendValue);
       salesTrendDirection.value = salesTrendValue > 0.001
           ? TrendDirection.up
-          : (salesTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
+          : (salesTrendValue < -0.001
+                ? TrendDirection.down
+                : TrendDirection.none);
 
       totalTransactions.value = fullNumberFormatter.format(currentTransactions);
       transactionsTrend.value = percentFormatter.format(transactionsTrendValue);
       transactionsTrendDirection.value = transactionsTrendValue > 0.001
           ? TrendDirection.up
-          : (transactionsTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
+          : (transactionsTrendValue < -0.001
+                ? TrendDirection.down
+                : TrendDirection.none);
 
       activeTotalStores.value = '$currentActiveStores / $totalStores';
       storesTrend.value = percentFormatter.format(storesTrendValue);
       storesTrendDirection.value = storesTrendValue > 0.001
           ? TrendDirection.up
-          : (storesTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
+          : (storesTrendValue < -0.001
+                ? TrendDirection.down
+                : TrendDirection.none);
 
       activeMembers.value = "$totalCustomers";
       print("Total customers $totalCustomers");
@@ -241,8 +260,9 @@ class MonKpiOverviewController extends GetxController {
       basketTrend.value = percentFormatter.format(basketTrendValue);
       basketTrendDirection.value = basketTrendValue > 0.001
           ? TrendDirection.up
-          : (basketTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
-
+          : (basketTrendValue < -0.001
+                ? TrendDirection.down
+                : TrendDirection.none);
     } catch (e) {
       hasError.value = true;
       print("Error fetching KPI data: $e");
