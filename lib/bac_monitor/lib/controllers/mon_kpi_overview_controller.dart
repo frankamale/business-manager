@@ -25,6 +25,7 @@ class MonKpiOverviewController extends GetxController {
   var transactionsTrend = "0%".obs;
   var transactionsTrendDirection = TrendDirection.none.obs;
   var activeTotalStores = "0 / 0".obs;
+  var activeMembers = "0".obs;
   var storesTrend = "0%".obs;
   var storesTrendDirection = TrendDirection.none.obs;
   var avgBasketSize = "0".obs;
@@ -56,9 +57,13 @@ class MonKpiOverviewController extends GetxController {
   // Inside MonKpiOverviewController
   var userRole = "".obs;
 
+
+
+
   Future<void> loadUserRole() async {
     const storage = FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: true));
     userRole.value = await storage.read(key: "user_role") ?? "";
+
   }
 
   /// Call this manually when the UI is ready
@@ -154,6 +159,9 @@ class MonKpiOverviewController extends GetxController {
           'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
 
+      final customerQuery = "SELECT COUNT(*) FROM customers";
+
+
       // Execute all queries in parallel
       final results = await Future.wait([
         db.rawQuery(salesQuery, [startMillis, endMillis]),
@@ -166,6 +174,7 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(basketQuery, [prevStartMillis, prevEndMillis]),
         db.rawQuery(totalStoresQuery),
         db.rawQuery(currencyQuery),
+        db.rawQuery(customerQuery),
       ]);
 
       final currentSales = (results[0].first['total'] as num? ?? 0.0).toDouble();
@@ -204,6 +213,10 @@ class MonKpiOverviewController extends GetxController {
           ? (currentBasket - prevBasket) / prevBasket
           : (currentBasket > 0 ? 1.0 : 0.0);
 
+      final customerCount = results[10].first['count'] as int? ?? 0;
+      print(customerCount);
+      final totalCustomers = fullNumberFormatter.format(customerCount);
+
       totalSales.value = compactFormatter.format(currentSales);
       salesTrend.value = percentFormatter.format(salesTrendValue);
       salesTrendDirection.value = salesTrendValue > 0.001
@@ -222,6 +235,7 @@ class MonKpiOverviewController extends GetxController {
           ? TrendDirection.up
           : (storesTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
 
+      activeMembers.value = "$totalCustomers";
       avgBasketSize.value = compactFormatter.format(currentBasket);
       basketTrend.value = percentFormatter.format(basketTrendValue);
       basketTrendDirection.value = basketTrendValue > 0.001

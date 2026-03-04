@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../widgets/dashboard/kpi_card.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 
 class KpiOverviewSection extends StatefulWidget {
@@ -31,7 +30,10 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
   Widget build(BuildContext context) {
 
     return Obx(() {
-      final isGym = controller.userRole.value.contains("FG");
+      controller.loadUserRole();
+      final isGym = controller.userRole.value.toLowerCase().contains("fg");
+      print(controller.userRole.value);
+      print(isGym);
       final isLoading = controller.isLoading.value;
 
       return Skeletonizer(
@@ -53,7 +55,7 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
               unit: controller.unit.value,
             ),
             KpiCard(
-              title: isGym? "Avg. Membership Duration" : "Avg. Basket Size",
+              title: isGym? "Avg. Revenue" : "Avg. Basket Size",
               value: controller.avgBasketSize.value,
               trendValue: controller.basketTrend.value,
               trendDirection: controller.basketTrendDirection.value,
@@ -67,7 +69,7 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
             ),
             KpiCard(
               title: isGym? "Active Members" : "Active / Total Stores",
-              value: controller.activeTotalStores.value,
+              value: isGym? controller.activeMembers.value : controller.activeTotalStores.value,
               trendValue: controller.storesTrend.value,
               trendDirection: controller.storesTrendDirection.value,
             ),
