@@ -236,6 +236,7 @@ class MonKpiOverviewController extends GetxController {
           : (storesTrendValue < -0.001 ? TrendDirection.down : TrendDirection.none);
 
       activeMembers.value = "$totalCustomers";
+      print("Total customers $totalCustomers");
       avgBasketSize.value = compactFormatter.format(currentBasket);
       basketTrend.value = percentFormatter.format(basketTrendValue);
       basketTrendDirection.value = basketTrendValue > 0.001

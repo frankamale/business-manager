@@ -487,6 +487,14 @@ class _SplashPageState extends State<SplashPage> {
         debugPrint('SplashPage: Customers loaded successfully - Total: ${customerController.customers.length}');
       }
 
+      // Print customer count from KPI controller after data is loaded
+      if (Get.isRegistered<MonKpiOverviewController>()) {
+        final kpiController = Get.find<MonKpiOverviewController>();
+        // Trigger KPI data fetch to populate activeMembers
+        await kpiController.fetchKpiData();
+        print("Total customers \${kpiController.activeMembers.value}");
+      }
+
       // Reset and refresh dashboard controllers for account switch
       await _refreshDashboardControllers();
 
