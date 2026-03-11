@@ -177,7 +177,6 @@ class PaymentController extends GetxController {
       "lineItems": lineItems,
       "saleActionId": 1,
       "categoryid": "44444444-1111-1111-1111-111111111111",
-
     };
   }
 

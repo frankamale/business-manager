@@ -276,8 +276,7 @@ class MonitorApiService extends GetxService {
       'username': email.trim().toLowerCase(),
       'password': password.trim(),
     }, useToken: false);
-    // print("next .....");
-    // print(response);
+
     if (response.containsKey('accessToken')) {
       await storeToken(response['accessToken']);
 
