@@ -91,6 +91,7 @@ flutter:
    - assets/flavors/sassy/
    - assets/flavors/top_grade/
    - assets/flavors/mega/
+   - assets/flavors/fitzone/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

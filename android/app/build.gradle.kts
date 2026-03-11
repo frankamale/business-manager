@@ -32,6 +32,11 @@ android {
             applicationId = "com.mega.businessmanager"
             resValue("string", "app_name", "Standard Supermarket")
         }
+        create("fitzone") {
+            dimension = "company"
+            applicationId = "com.fitzone.businessmanager"
+            resValue("string", "app_name", "Fitzone Gym")
+        }
     }
 
     compileOptions {
