@@ -181,6 +181,7 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(totalStoresQuery),
         db.rawQuery(currencyQuery),
         db.rawQuery(customerQuery, ["00000000-0000-0000-0000-000000000000"]),
+
       ]);
 
       final currentSales = (results[0].first['total'] as num? ?? 0.0)
