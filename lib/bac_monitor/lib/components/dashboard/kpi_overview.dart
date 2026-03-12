@@ -55,11 +55,11 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
               unit: controller.unit.value,
             ),
             KpiCard(
-              title: isGym? "Avg. Revenue" : "Avg. Basket Size",
+              title: isGym? "Inventory Sales" : "Avg. Basket Size",
               value: controller.avgBasketSize.value,
               trendValue: controller.basketTrend.value,
               trendDirection: controller.basketTrendDirection.value,
-              unit: controller.unit.value,
+              unit: isGym? controller.unit.value : null,
             ),
             KpiCard(
               title: isGym? "Total walk-ins" : "Total Transactions",

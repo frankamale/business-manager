@@ -164,6 +164,16 @@ class MonKpiOverviewController extends GetxController {
           'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
       const prevSubscriptionQuery =
           'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
+      // Query for inventory sales - amount from non-subscription transactions (for gym mode)
+      const inventorySalesQuery =
+          'SELECT SUM(amount) as total FROM mon_sales WHERE category != "Subscription" AND transactiondate BETWEEN ? AND ?';
+      const prevInventorySalesQuery =
+          'SELECT SUM(amount) as total FROM mon_sales WHERE category != "Subscription" AND transactiondate BETWEEN ? AND ?';
+      // Query for subscription revenue - amount from subscription transactions (for gym mode)
+      const subscriptionRevenueQuery =
+          'SELECT SUM(amount) as total FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
+      const prevSubscriptionRevenueQuery =
+          'SELECT SUM(amount) as total FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
       const activeStoresQuery =
           'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
       const basketQuery =
@@ -189,6 +199,10 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(customerQuery, ["00000000-0000-0000-0000-000000000000"]),
         db.rawQuery(subscriptionQuery, [startMillis, endMillis]),
         db.rawQuery(prevSubscriptionQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(inventorySalesQuery, [startMillis, endMillis]),
+        db.rawQuery(prevInventorySalesQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(subscriptionRevenueQuery, [startMillis, endMillis]),
+        db.rawQuery(prevSubscriptionRevenueQuery, [prevStartMillis, prevEndMillis]),
       ]);
 
       final currentSales = (results[0].first['total'] as num? ?? 0.0)
@@ -205,6 +219,14 @@ class MonKpiOverviewController extends GetxController {
       // Subscription counts for gym mode
       final currentSubscriptions = results[11].first['count'] as int? ?? 0;
       final prevSubscriptions = results[12].first['count'] as int? ?? 0;
+
+      // Inventory sales for gym mode (non-subscription transactions)
+      final currentInventorySales = (results[13].first['total'] as num? ?? 0.0).toDouble();
+      final prevInventorySales = (results[14].first['total'] as num? ?? 0.0).toDouble();
+
+      // Subscription revenue for gym mode
+      final currentSubscriptionRevenue = (results[15].first['total'] as num? ?? 0.0).toDouble();
+      final prevSubscriptionRevenue = (results[16].first['total'] as num? ?? 0.0).toDouble();
 
       // Check if user is gym (role contains 'fg')
       final isGym = userRole.value.toLowerCase().contains('fg');
@@ -244,7 +266,7 @@ class MonKpiOverviewController extends GetxController {
       final prevDisplayTransactions = isGym ? prevSubscriptions : prevTransactions;
       final transactionsTrendValue = prevDisplayTransactions > 0
           ? (displayTransactions - prevDisplayTransactions) / prevDisplayTransactions
-          : (displayTransactions > 0 ? 1.0 : 0.0);
+          : (displayTransactions > 0 ? 1.0 : 0.0); 
 
       totalSales.value = compactFormatter.format(currentSales);
       salesTrend.value = percentFormatter.format(salesTrendValue);
@@ -263,20 +285,36 @@ class MonKpiOverviewController extends GetxController {
                 : TrendDirection.none);
 
       activeTotalStores.value = '$currentActiveStores / $totalStores';
-      storesTrend.value = percentFormatter.format(storesTrendValue);
-      storesTrendDirection.value = storesTrendValue > 0.001
+      storesTrend.value = percentFormatter.format(storesTrendForGym);
+      storesTrendDirection.value = storesTrendForGym > 0.001
           ? TrendDirection.up
-          : (storesTrendValue < -0.001
+          : (storesTrendForGym < -0.001
                 ? TrendDirection.down
                 : TrendDirection.none);
 
-      activeMembers.value = "$totalCustomers";
+      // For gym mode: use inventory sales instead of avg basket size
+      final displayBasket = isGym ? currentInventorySales : currentBasket;
+      final prevDisplayBasket = isGym ? prevInventorySales : prevBasket;
+      final displayBasketTrendValue = prevDisplayBasket > 0
+          ? (displayBasket - prevDisplayBasket) / prevDisplayBasket
+          : (displayBasket > 0 ? 1.0 : 0.0);
+
+      // For gym mode: use subscription revenue instead of customer count
+      final displayActiveMembers = isGym 
+          ? compactFormatter.format(currentSubscriptionRevenue) 
+          : "$totalCustomers";
+      final subscriptionTrendValue = prevSubscriptionRevenue > 0
+          ? (currentSubscriptionRevenue - prevSubscriptionRevenue) / prevSubscriptionRevenue
+          : (currentSubscriptionRevenue > 0 ? 1.0 : 0.0);
+      final storesTrendForGym = isGym ? subscriptionTrendValue : storesTrendValue;
+
+      activeMembers.value = displayActiveMembers;
       print("Total customers $totalCustomers");
-      avgBasketSize.value = compactFormatter.format(currentBasket);
-      basketTrend.value = percentFormatter.format(basketTrendValue);
-      basketTrendDirection.value = basketTrendValue > 0.001
+      avgBasketSize.value = compactFormatter.format(displayBasket);
+      basketTrend.value = percentFormatter.format(displayBasketTrendValue);
+      basketTrendDirection.value = displayBasketTrendValue > 0.001
           ? TrendDirection.up
-          : (basketTrendValue < -0.001
+          : (displayBasketTrendValue < -0.001
                 ? TrendDirection.down
                 : TrendDirection.none);
     } catch (e) {
