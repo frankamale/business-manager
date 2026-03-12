@@ -69,10 +69,11 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
             ),
 
             KpiCard(
-              title: isGym? "Active Members" : "Active / Total Stores",
+              title: isGym? "Subscriptions" : "Active / Total Stores",
               value: isGym? controller.activeMembers.value : controller.activeTotalStores.value,
               trendValue: controller.storesTrend.value,
               trendDirection: controller.storesTrendDirection.value,
+              unit: isGym? controller.unit.value : null,
             ),
           ],
         ),

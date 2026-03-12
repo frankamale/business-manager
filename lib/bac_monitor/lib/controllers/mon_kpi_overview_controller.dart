@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../models/trend_direction.dart';
-import '../widgets/finance/date_range.dart';
+import '../widgets/finance/date_range.dart'; 
 import 'mon_dashboard_controller.dart';
 
 class MonKpiOverviewController extends GetxController {
@@ -148,7 +148,7 @@ class MonKpiOverviewController extends GetxController {
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           }
           break;
-        }
+      }
 
       final startMillis = startDate.millisecondsSinceEpoch;
       final endMillis = endDate.millisecondsSinceEpoch;
@@ -266,31 +266,23 @@ class MonKpiOverviewController extends GetxController {
       final prevDisplayTransactions = isGym ? prevSubscriptions : prevTransactions;
       final transactionsTrendValue = prevDisplayTransactions > 0
           ? (displayTransactions - prevDisplayTransactions) / prevDisplayTransactions
-          : (displayTransactions > 0 ? 1.0 : 0.0); 
+          : (displayTransactions > 0 ? 1.0 : 0.0);
 
       totalSales.value = compactFormatter.format(currentSales);
       salesTrend.value = percentFormatter.format(salesTrendValue);
       salesTrendDirection.value = salesTrendValue > 0.001
           ? TrendDirection.up
           : (salesTrendValue < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
+          ? TrendDirection.down
+          : TrendDirection.none);
 
       totalTransactions.value = fullNumberFormatter.format(displayTransactions);
       transactionsTrend.value = percentFormatter.format(transactionsTrendValue);
       transactionsTrendDirection.value = transactionsTrendValue > 0.001
           ? TrendDirection.up
           : (transactionsTrendValue < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
-
-      activeTotalStores.value = '$currentActiveStores / $totalStores';
-      storesTrend.value = percentFormatter.format(storesTrendForGym);
-      storesTrendDirection.value = storesTrendForGym > 0.001
-          ? TrendDirection.up
-          : (storesTrendForGym < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
+          ? TrendDirection.down
+          : TrendDirection.none);
 
       // For gym mode: use inventory sales instead of avg basket size
       final displayBasket = isGym ? currentInventorySales : currentBasket;
@@ -300,13 +292,9 @@ class MonKpiOverviewController extends GetxController {
           : (displayBasket > 0 ? 1.0 : 0.0);
 
       // For gym mode: use subscription revenue instead of customer count
-      final displayActiveMembers = isGym 
-          ? compactFormatter.format(currentSubscriptionRevenue) 
+      final displayActiveMembers = isGym
+          ? compactFormatter.format(currentSubscriptionRevenue)
           : "$totalCustomers";
-      final subscriptionTrendValue = prevSubscriptionRevenue > 0
-          ? (currentSubscriptionRevenue - prevSubscriptionRevenue) / prevSubscriptionRevenue
-          : (currentSubscriptionRevenue > 0 ? 1.0 : 0.0);
-      final storesTrendForGym = isGym ? subscriptionTrendValue : storesTrendValue;
 
       activeMembers.value = displayActiveMembers;
       print("Total customers $totalCustomers");
@@ -315,8 +303,8 @@ class MonKpiOverviewController extends GetxController {
       basketTrendDirection.value = displayBasketTrendValue > 0.001
           ? TrendDirection.up
           : (displayBasketTrendValue < -0.001
-                ? TrendDirection.down
-                : TrendDirection.none);
+          ? TrendDirection.down
+          : TrendDirection.none);
     } catch (e) {
       hasError.value = true;
       print("Error fetching KPI data: $e");
