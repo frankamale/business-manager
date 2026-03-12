@@ -22,6 +22,7 @@ class MonKpiOverviewController extends GetxController {
   var salesTrend = "0%".obs;
   var salesTrendDirection = TrendDirection.none.obs;
   var totalTransactions = "0".obs;
+  var subscriptionCount = "0".obs;
   var transactionsTrend = "0%".obs;
   var transactionsTrendDirection = TrendDirection.none.obs;
   var activeTotalStores = "0 / 0".obs;
@@ -158,6 +159,11 @@ class MonKpiOverviewController extends GetxController {
           'SELECT SUM(total) as total FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)';
       const transactionsQuery =
           'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
+      // Query for subscription count (for gym mode)
+      const subscriptionQuery =
+          'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
+      const prevSubscriptionQuery =
+          'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
       const activeStoresQuery =
           'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
       const basketQuery =
@@ -181,6 +187,8 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(totalStoresQuery),
         db.rawQuery(currencyQuery),
         db.rawQuery(customerQuery, ["00000000-0000-0000-0000-000000000000"]),
+        db.rawQuery(subscriptionQuery, [startMillis, endMillis]),
+        db.rawQuery(prevSubscriptionQuery, [prevStartMillis, prevEndMillis]),
       ]);
 
       final currentSales = (results[0].first['total'] as num? ?? 0.0)
@@ -193,6 +201,13 @@ class MonKpiOverviewController extends GetxController {
       final currentBasket = (results[6].first['avg'] as num? ?? 0.0).toDouble();
       final prevBasket = (results[7].first['avg'] as num? ?? 0.0).toDouble();
       final totalStores = results[8].first['total'] as int? ?? 0;
+
+      // Subscription counts for gym mode
+      final currentSubscriptions = results[11].first['count'] as int? ?? 0;
+      final prevSubscriptions = results[12].first['count'] as int? ?? 0;
+
+      // Check if user is gym (role contains 'fg')
+      final isGym = userRole.value.toLowerCase().contains('fg');
 
       String currency = 'UGX';
       if (results[9].isNotEmpty) {
@@ -210,9 +225,6 @@ class MonKpiOverviewController extends GetxController {
       final salesTrendValue = prevSales > 0
           ? (currentSales - prevSales) / prevSales
           : (currentSales > 0 ? 1.0 : 0.0);
-      final transactionsTrendValue = prevTransactions > 0
-          ? (currentTransactions - prevTransactions) / prevTransactions
-          : (currentTransactions > 0 ? 1.0 : 0.0);
       final storesTrendValue = prevActiveStores > 0
           ? (currentActiveStores - prevActiveStores) / prevActiveStores
           : (currentActiveStores > 0 ? 1.0 : 0.0);
@@ -224,6 +236,16 @@ class MonKpiOverviewController extends GetxController {
       print(customerCount);
       final totalCustomers = fullNumberFormatter.format(customerCount);
 
+      // Store subscription count
+      subscriptionCount.value = fullNumberFormatter.format(currentSubscriptions);
+
+      // Calculate transactions trend (use subscription data for gym mode)
+      final displayTransactions = isGym ? currentSubscriptions : currentTransactions;
+      final prevDisplayTransactions = isGym ? prevSubscriptions : prevTransactions;
+      final transactionsTrendValue = prevDisplayTransactions > 0
+          ? (displayTransactions - prevDisplayTransactions) / prevDisplayTransactions
+          : (displayTransactions > 0 ? 1.0 : 0.0);
+
       totalSales.value = compactFormatter.format(currentSales);
       salesTrend.value = percentFormatter.format(salesTrendValue);
       salesTrendDirection.value = salesTrendValue > 0.001
@@ -232,7 +254,7 @@ class MonKpiOverviewController extends GetxController {
                 ? TrendDirection.down
                 : TrendDirection.none);
 
-      totalTransactions.value = fullNumberFormatter.format(currentTransactions);
+      totalTransactions.value = fullNumberFormatter.format(displayTransactions);
       transactionsTrend.value = percentFormatter.format(transactionsTrendValue);
       transactionsTrendDirection.value = transactionsTrendValue > 0.001
           ? TrendDirection.up
