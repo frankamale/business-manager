@@ -17,6 +17,9 @@ class StoreOverview extends StatelessWidget {
     final kpiTrendController = Get.find<MonStoreKpiTrendController>();
 
     return Obx(() {
+      // Check if user role contains 'fg' (gym)
+      final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
+      
       if (controller.isFetchingKpisAndCharts.value) {
         return const Padding(
           padding: EdgeInsets.only(top: 100.0),
@@ -43,7 +46,7 @@ class StoreOverview extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildKpiCard(
-                    title: 'Total Sales',
+                    title: isGym ? 'Total Revenue' : 'Total Sales',
                     value: kpiTrendController.totalSales.value,
                     unit: kpiTrendController.unit.value,
                     trend: kpiTrendController.salesTrend.value,
@@ -51,21 +54,30 @@ class StoreOverview extends StatelessWidget {
                         kpiTrendController.salesTrendDirection.value,
                   ),
                   _buildKpiCard(
-                    title: 'Transactions',
-                    value: kpiTrendController.totalTransactions.value,
+                    title: isGym ? 'Total Walk Ins' : 'Transactions',
+                    value: isGym 
+                        ? kpiTrendController.totalWalkIns.value.toString()
+                        : kpiTrendController.totalTransactions.value,
                     trend: kpiTrendController.transactionsTrend.value,
                     trendDirection:
                         kpiTrendController.transactionsTrendDirection.value,
                   ),
                   _buildKpiCard(
-                    title: 'Avg. Basket Size',
-                    value: kpiTrendController.avgBasketSize.value,
-                    unit: kpiTrendController.unit.value,
+                    title: isGym ? 'Daily Subs' : 'Avg. Basket Size',
+                    value: isGym
+                        ? kpiTrendController.dailySubs.value.toString()
+                        : kpiTrendController.avgBasketSize.value,
+                    unit: isGym ? '' : kpiTrendController.unit.value,
                     trend: kpiTrendController.basketTrend.value,
                     trendDirection:
                         kpiTrendController.basketTrendDirection.value,
                   ),
-                  _buildKpiCard(title: 'Staff on Duty', value: '0'),
+                  _buildKpiCard(
+                    title: isGym ? 'Monthly Subs' : 'Staff on Duty',
+                    value: isGym
+                        ? kpiTrendController.monthlySubs.value.toString()
+                        : '0',
+                  ),
                 ],
               ),
               const SizedBox(height: 10),

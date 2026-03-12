@@ -28,13 +28,27 @@ class MonStoreKpiTrendController extends GetxController {
   var basketTrendDirection = TrendDirection.none.obs;
   var unit = "UGX".obs;
 
+  // Gym-specific KPIs
+  var totalWalkIns = "0".obs;
+  var dailySubs = "0".obs;
+  var monthlySubs = "0".obs;
+  var userRole = "".obs;
+
   @override
   void onInit() {
     super.onInit(); 
+    _loadUserRole();
     fetchKpiTrendData();
     ever(storesController.selectedStore, (_) => fetchKpiTrendData());
     ever(storesController.selectedDateRange, (_) => fetchKpiTrendData());
     ever(storesController.customDateRange, (_) => fetchKpiTrendData());
+  }
+
+  Future<void> _loadUserRole() async {
+    const storage = FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    );
+    userRole.value = await storage.read(key: "user_role") ?? "";
   }
 
   Future<void> fetchKpiTrendData() async {
@@ -129,6 +143,17 @@ class MonStoreKpiTrendController extends GetxController {
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
 
+      // Gym-specific subscription queries
+      final subscriptionQuery = isAllStores
+          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND transactiondate BETWEEN ? AND ?'
+          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+      final dailySubQuery = isAllStores
+          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND transactiondate BETWEEN ? AND ?'
+          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+      final monthlySubQuery = isAllStores
+          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND transactiondate BETWEEN ? AND ?'
+          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+
       final argsCurrent = isAllStores
           ? [startMillis, endMillis]
           : [storeName, startMillis, endMillis];
@@ -151,6 +176,33 @@ class MonStoreKpiTrendController extends GetxController {
       final prevBasketResult = await db.rawQuery(basketQuery, argsPrev);
       final totalStoresResult = await db.rawQuery(totalStoresQuery);
       final currencyResult = await db.rawQuery(currencyQuery);
+
+      // Execute gym-specific subscription queries
+      final argsCurrentWithCategory = isAllStores
+          ? ['Subscription', startMillis, endMillis]
+          : ['Subscription', storeName, startMillis, endMillis];
+      final argsPrevWithCategory = isAllStores
+          ? ['Subscription', prevStartMillis, prevEndMillis]
+          : ['Subscription', storeName, prevStartMillis, prevEndMillis];
+      final argsCurrentWithSubcategory = isAllStores
+          ? ['Subscription', 'Daily', startMillis, endMillis]
+          : ['Subscription', 'Daily', storeName, startMillis, endMillis];
+      final argsPrevWithSubcategory = isAllStores
+          ? ['Subscription', 'Daily', prevStartMillis, prevEndMillis]
+          : ['Subscription', 'Daily', storeName, prevStartMillis, prevEndMillis];
+      final argsCurrentMonthly = isAllStores
+          ? ['Subscription', 'Monthly', startMillis, endMillis]
+          : ['Subscription', 'Monthly', storeName, startMillis, endMillis];
+      final argsPrevMonthly = isAllStores
+          ? ['Subscription', 'Monthly', prevStartMillis, prevEndMillis]
+          : ['Subscription', 'Monthly', storeName, prevStartMillis, prevEndMillis];
+
+      final currentSubscriptionResult = await db.rawQuery(subscriptionQuery, argsCurrentWithCategory);
+      final prevSubscriptionResult = await db.rawQuery(subscriptionQuery, argsPrevWithCategory);
+      final currentDailySubResult = await db.rawQuery(dailySubQuery, argsCurrentWithSubcategory);
+      final prevDailySubResult = await db.rawQuery(dailySubQuery, argsPrevWithSubcategory);
+      final currentMonthlySubResult = await db.rawQuery(monthlySubQuery, argsCurrentMonthly);
+      final prevMonthlySubResult = await db.rawQuery(monthlySubQuery, argsPrevMonthly);
 
       // print('DEBUG: Current Sales Result: $currentSalesResult');
       // print('DEBUG: Prev Sales Result: $prevSalesResult');
@@ -183,6 +235,19 @@ class MonStoreKpiTrendController extends GetxController {
 
       unit.value = currency;
 
+      // Extract gym-specific subscription values
+      final currentSubscriptions = currentSubscriptionResult.first['count'] as int? ?? 0;
+      final prevSubscriptions = prevSubscriptionResult.first['count'] as int? ?? 0;
+      final currentDailySubs = currentDailySubResult.first['count'] as int? ?? 0;
+      final prevDailySubs = prevDailySubResult.first['count'] as int? ?? 0;
+      final currentMonthlySubs = currentMonthlySubResult.first['count'] as int? ?? 0;
+      final prevMonthlySubs = prevMonthlySubResult.first['count'] as int? ?? 0;
+
+      // Update gym-specific observables
+      totalWalkIns.value = currentSubscriptions.toString();
+      dailySubs.value = currentDailySubs.toString();
+      monthlySubs.value = currentMonthlySubs.toString();
+
       final compactFormatter = NumberFormat.compact();
       final fullNumberFormatter = NumberFormat('#,##0');
 
@@ -191,6 +256,11 @@ class MonStoreKpiTrendController extends GetxController {
       final transactionsTrendValue = (currentTransactions - prevTransactions) / (prevTransactions.abs() + epsilon);
       final storesTrendValue = (currentActiveStores - prevActiveStores) / (prevActiveStores.abs() + epsilon);
       final basketTrendValue = (currentBasket - prevBasket) / (prevBasket.abs() + epsilon);
+
+      // Gym-specific trend calculations
+      final walkInsTrendValue = (currentSubscriptions - prevSubscriptions) / (prevSubscriptions.abs() + epsilon);
+      final dailySubsTrendValue = (currentDailySubs - prevDailySubs) / (prevDailySubs.abs() + epsilon);
+      final monthlySubsTrendValue = (currentMonthlySubs - prevMonthlySubs) / (prevMonthlySubs.abs() + epsilon);
 
       // Helper to format trend as percentage
       String formatTrendPercent(double value) {
@@ -227,6 +297,21 @@ class MonStoreKpiTrendController extends GetxController {
       basketTrendDirection.value = basketTrendValue > 0.01
           ? TrendDirection.up
           : (basketTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+
+      // Gym-specific KPI trends
+      final isGym = userRole.value.toLowerCase().contains('fg');
+      if (isGym) {
+        // For gym, use subscription counts
+        transactionsTrend.value = formatTrendPercent(walkInsTrendValue);
+        transactionsTrendDirection.value = walkInsTrendValue > 0.01
+            ? TrendDirection.up
+            : (walkInsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+        
+        basketTrend.value = formatTrendPercent(dailySubsTrendValue);
+        basketTrendDirection.value = dailySubsTrendValue > 0.01
+            ? TrendDirection.up
+            : (dailySubsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+      }
 
       // print('DEBUG: Final KPI Values - Total Sales: ${totalSales.value}, Transactions: ${totalTransactions.value}, Active Stores: ${activeTotalStores.value}, Avg Basket: ${avgBasketSize.value}');
       // print('DEBUG: Trends - Sales: ${salesTrend.value}, Transactions: ${transactionsTrend.value}, Stores: ${storesTrend.value}, Basket: ${basketTrend.value}');
