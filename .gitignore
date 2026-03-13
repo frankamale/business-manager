@@ -34,6 +34,7 @@ migrate_working_dir/
 .pub/
 /build/
 /.claude/
+/plans
 
 # Symbolication related
 app.*.symbols
