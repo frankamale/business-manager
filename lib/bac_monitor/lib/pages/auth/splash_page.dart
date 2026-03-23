@@ -431,6 +431,8 @@ class _SplashPageState extends State<SplashPage> {
     if (!Get.isRegistered<MonSyncController>()) {
       Get.put(MonSyncController(), permanent: true);
     }
+    // Start periodic background sync for sales data
+    Get.find<MonSyncController>().startPeriodicSync();
   }
 
   /// Load data into controllers AFTER database is ready
