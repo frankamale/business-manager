@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../additions/colors.dart';
 import '../../components/store/storeOverview.dart';
 import '../../controllers/mon_store_controller.dart';
+import '../../controllers/mon_store_kpi_controller.dart';
 import '../../models/store.dart';
 import '../../widgets/finance/date_range.dart';
 
@@ -17,11 +18,13 @@ class Stores extends StatefulWidget {
 
 class _StoresState extends State<Stores> {
   late final MonStoresController controller;
+  late final MonStoreKpiTrendController kpiController;
 
   @override
   void initState() {
     super.initState();
     controller = Get.put(MonStoresController());
+    kpiController = Get.put(MonStoreKpiTrendController());
     // Ensure stores are fetched when page loads
     _loadStores();
   }

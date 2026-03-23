@@ -44,11 +44,15 @@ class MonStoreKpiTrendController extends GetxController {
     ever(storesController.customDateRange, (_) => fetchKpiTrendData());
   }
 
-  Future<void> _loadUserRole() async {
+  Future<void> loadUserRole() async {
     const storage = FlutterSecureStorage(
       aOptions: AndroidOptions(encryptedSharedPreferences: true),
     );
     userRole.value = await storage.read(key: "user_role") ?? "";
+  }
+
+  Future<void> _loadUserRole() async {
+    await loadUserRole();
   }
 
   Future<void> fetchKpiTrendData() async {

@@ -66,6 +66,12 @@ class SalesPointDetails extends StatelessWidget {
                   Icons.list,
                   SalesListing(servicePoint: servicePoint),
                 ),
+
+                _actionButton(
+                  "EXPENSES",
+                  Icons.dashboard_outlined,
+                  DailySummary(),
+                ),
                 _actionButton(
                   "DAILY SUMMARY",
                   Icons.dashboard_outlined,
