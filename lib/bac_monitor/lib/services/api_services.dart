@@ -9,6 +9,7 @@ import '../../../back_pos/services/api_services.dart';
 import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
 import '../../../shared/database/unified_db_helper.dart';
+import '../../../shared/services/token_refresh_interceptor.dart';
 
 /// Top-level function for isolate-based JSON decoding
 /// Must be top-level or static for compute() to work
@@ -32,6 +33,24 @@ class MonitorApiService extends GetxService {
   bool _isInitialized = false;
 
   Future<void>? _initializationFuture;
+
+  // Token refresh interceptor for automatic token refresh on 401 errors
+  late final TokenRefreshInterceptor _tokenRefreshInterceptor;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _tokenRefreshInterceptor = TokenRefreshInterceptor(
+      baseUrl: _baseUrl,
+      secureStorage: secureStorage,
+    );
+  }
+
+  @override
+  void onClose() {
+    _tokenRefreshInterceptor.close();
+    super.onClose();
+  }
 
   Future<String?> getStoredToken() async {
     if (_cachedToken != null) {
@@ -890,43 +909,28 @@ class MonitorApiService extends GetxService {
     String endpoint, {
     Duration? timeout,
   }) async {
-    final token = await getStoredToken();
+    final request = http.Request('GET', Uri.parse('$_baseUrl$endpoint'));
+    request.headers['Content-Type'] = 'application/json';
 
-    if (token == null) {
-      // print('ERROR: MonitorApiService.getWithAuth() - Authentication token not found for GET request.');
-      throw Exception('Authentication token not found for GET request.');
-    }
-
-    final client = http.Client();
-    try {
-      final request = http.Request('GET', Uri.parse('$_baseUrl$endpoint'));
-      request.headers.addAll({
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      });
-
-      final streamedResponse = await client
-          .send(request)
-          .timeout(
-            timeout ?? const Duration(minutes: 5),
-            onTimeout: () {
-              throw Exception('Request timeout for $endpoint');
-            },
-          );
-
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        // debugPrint("ApiService: Successfully fetched data from $endpoint");
-        return response;
-      } else {
-        _handleResponse(response);
-        throw Exception(
-          'Failed to load data from $endpoint: ${response.statusCode}',
+    final streamedResponse = await _tokenRefreshInterceptor
+        .send(request)
+        .timeout(
+          timeout ?? const Duration(minutes: 5),
+          onTimeout: () {
+            throw Exception('Request timeout for $endpoint');
+          },
         );
-      }
-    } finally {
-      client.close();
+
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      // debugPrint("ApiService: Successfully fetched data from $endpoint");
+      return response;
+    } else {
+      _handleResponse(response);
+      throw Exception(
+        'Failed to load data from $endpoint: ${response.statusCode}',
+      );
     }
   }
 
