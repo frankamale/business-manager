@@ -1,4 +1,5 @@
 import 'package:bac_pos/back_pos/pages/daily_summary.dart';
+import 'package:bac_pos/back_pos/pages/expenses_page.dart';
 import 'package:bac_pos/back_pos/pages/pos_screen.dart';
 import 'package:bac_pos/back_pos/pages/sales_listing.dart';
 import 'package:bac_pos/back_pos/pages/settings_page.dart';
@@ -70,7 +71,7 @@ class SalesPointDetails extends StatelessWidget {
                 _actionButton(
                   "EXPENSES",
                   Icons.dashboard_outlined,
-                  DailySummary(),
+                  ExpensesPage(servicePoint: servicePoint),
                 ),
                 _actionButton(
                   "DAILY SUMMARY",
