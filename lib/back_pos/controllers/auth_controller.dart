@@ -7,8 +7,8 @@ import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import '../../bac_monitor/lib/services/account_manager.dart';
 
 class AuthController extends GetxController {
-   final _dbHelper = UnifiedDatabaseHelper.instance;
-   final _apiService = PosApiService();
+  final _dbHelper = UnifiedDatabaseHelper.instance;
+  final PosApiService _apiService = Get.find<PosApiService>();
    final AccountManager _accountManager = Get.find();
 
   // Reactive list of user roles
@@ -247,6 +247,8 @@ class AuthController extends GetxController {
       };
     } catch (e) {
       final errorString = e.toString();
+      // print('Server Login Error: $errorString');
+
       // Check if error is due to invalid credentials (401)
       if (errorString.contains('401')) {
         Get.snackbar(
@@ -255,11 +257,12 @@ class AuthController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
         );
       } else {
-        // Network error or server unreachable
+        // Network error or server unreachable - show actual error
         Get.snackbar(
           'Connection Error',
-          'Please connect to mobile network',
+          'An error occured',
           snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 5),
         );
       }
       isLoggingIn.value = false;
