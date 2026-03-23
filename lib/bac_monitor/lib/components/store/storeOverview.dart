@@ -17,7 +17,8 @@ class StoreOverview extends StatelessWidget {
     final kpiTrendController = Get.find<MonStoreKpiTrendController>();
 
     return Obx(() {
-      // Check if user role contains 'fg' (gym)
+      // Load user role and check if user role contains 'fg' (gym)
+      kpiTrendController.loadUserRole();
       final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
       
       if (controller.isFetchingKpisAndCharts.value) {
