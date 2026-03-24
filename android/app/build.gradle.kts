@@ -37,6 +37,11 @@ android {
             applicationId = "com.fitzone.businessmanager"
             resValue("string", "app_name", "Fitzone Gym")
         }
+        create("wise_farmer") {
+            dimension = "company"
+            applicationId = "com.wise_farmer.businessmanager"
+            resValue("string", "app_name", "Wize Farmer")
+        }
     }
 
     compileOptions {
