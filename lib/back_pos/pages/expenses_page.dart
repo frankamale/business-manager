@@ -25,7 +25,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
   @override
   void initState() {
     super.initState();
-    // Register the controllers if not already registered
     if (!Get.isRegistered<ExpensesController>()) {
       Get.put(ExpensesController());
     }
@@ -58,7 +57,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
     final descriptionController = TextEditingController();
     final amountController = TextEditingController();
     String selectedCategory = ExpenseCategory.other;
-    String? selectedSubject; // stores user ID
+    String? selectedSubject;
 
     showDialog(
       context: context,
@@ -70,7 +69,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Title (new field)
                 TextField(
                   controller: titleController,
                   decoration: const InputDecoration(
@@ -79,7 +77,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 2. Description (existing)
                 TextField(
                   controller: descriptionController,
                   decoration: const InputDecoration(
@@ -88,7 +85,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 3. Subject (new - user dropdown)
                 Obx(() => DropdownButtonFormField<String>(
                   value: selectedSubject,
                   decoration: const InputDecoration(
@@ -106,7 +102,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   },
                 )),
                 const SizedBox(height: 16),
-                // 4. Amount (existing, moved to 4th)
                 TextField(
                   controller: amountController,
                   keyboardType: TextInputType.number,
@@ -117,7 +112,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // 5. Category (existing, moved to 5th)
                 DropdownButtonFormField<String>(
                   value: selectedCategory,
                   decoration: const InputDecoration(
@@ -330,19 +324,12 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                     child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: color.withOpacity(0.2),
-                        child: Icon(
-                          _getCategoryIcon(expense.category),
-                          color: color,
-                        ),
-                      ),
                       title: Text(
                         expense.title.isNotEmpty ? expense.title : 'Untitled Expense',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       subtitle: Text(
-                        '${_getUserName(expense.subject)} • ${expense.category} • ${_dateFormatter.format(expense.date)}',
+                        '${_getUserName(expense.subject)} • ${expense.category}',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 12,
@@ -351,14 +338,28 @@ class _ExpensesPageState extends State<ExpensesPage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            _currencyFormatter.format(expense.amount),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: color,
-                            ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                _currencyFormatter.format(expense.amount),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: color,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _dateFormatter.format(expense.date),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           IconButton(
                             icon: const Icon(Icons.delete_outline, color: Colors.red),
                             onPressed: () => _showDeleteConfirmation(expense),
@@ -383,7 +384,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   IconData _getCategoryIcon(String category) {
-    switch (category) {
+    switch (category) {x
       case ExpenseCategory.food:
         return Icons.restaurant;
       case ExpenseCategory.transport:
@@ -405,7 +406,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
     }
   }
 
-  // Helper method to get user name from user ID
   String _getUserName(String? userId) {
     if (userId == null || userId.isEmpty) {
       return 'No Subject';
