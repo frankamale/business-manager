@@ -31,7 +31,7 @@ class _HomepageState extends State<Homepage>
   final CustomerController _customerController =
       Get.find<CustomerController>();
   final AuthController authController = Get.find();
-  final PosApiService _apiService = PosApiService();
+  final PosApiService _apiService = Get.find<PosApiService>();
   String _companyName = '';
   bool _isRefreshing = false;
 
@@ -131,11 +131,12 @@ class _HomepageState extends State<Homepage>
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Failed to refresh some data',
+        'Failed to refresh some data $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade900,
       );
+      print(" error : $e");
     } finally {
       setState(() {
         _isRefreshing = false;
@@ -276,6 +277,8 @@ class _HomepageState extends State<Homepage>
                     }
 
                     final servicePoints = _servicePointController.servicePoints;
+
+                    print("service point controller : ${servicePoints.length}");
 
                     if (servicePoints.isEmpty) {
                       return Center(

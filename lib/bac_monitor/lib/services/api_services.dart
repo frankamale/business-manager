@@ -465,7 +465,7 @@ class MonitorApiService extends GetxService {
 
       try {
         debugPrint("ApiService: Starting to fetch customers from /bp/customers endpoint");
-        final posApiService = PosApiService();
+        final posApiService = Get.find<PosApiService>();
         final customers = await posApiService.fetchCustomers();
         debugPrint(
           "ApiService: Successfully fetched ${customers.length} customers from API",

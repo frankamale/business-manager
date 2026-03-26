@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  final PosApiService _apiService = PosApiService();
+  final PosApiService _apiService = Get.find<PosApiService>();
   final _dbHelper = UnifiedDatabaseHelper.instance;
 
   String _statusMessage = 'Initializing...';

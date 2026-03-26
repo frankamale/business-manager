@@ -351,7 +351,7 @@ void _showChangePasswordDialog(BuildContext context, AuthController authControll
                           }
 
                           // Call API to change password
-                          final apiService = PosApiService();
+                          final apiService = Get.find<PosApiService>();
                           await apiService.changePassword(
                             userId: currentUser.id,
                             newPassword: newPasswordController.text,

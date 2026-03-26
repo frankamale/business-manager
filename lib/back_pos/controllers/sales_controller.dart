@@ -9,7 +9,7 @@ import 'payment_controller.dart';
 
 class SalesController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
-  final _apiService = PosApiService();
+  final _apiService = Get.find<PosApiService>();
 
   // Reactive list of sale transactions
   var salesTransactions = <SaleTransaction>[].obs;

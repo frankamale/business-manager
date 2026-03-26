@@ -23,7 +23,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.put(AuthController());
-  final PosApiService _apiService = PosApiService();
+  final PosApiService _apiService = Get.find<PosApiService>();
   final ProfileController controller = Get.find();
 
   String? selectedItem;
