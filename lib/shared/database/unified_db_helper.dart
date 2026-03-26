@@ -5,6 +5,7 @@ import '../../back_pos/models/service_point.dart';
 import '../../back_pos/models/inventory_item.dart';
 import '../../back_pos/models/sale_transaction.dart';
 import '../../back_pos/models/customer.dart';
+import '../../back_pos/models/expense.dart';
 
 /// Unified Database Helper that combines POS and Monitor databases
 
@@ -482,6 +483,20 @@ class UnifiedDatabaseHelper {
       )
     ''');
 
+    // Expenses table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS expenses (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        amount REAL NOT NULL,
+        category TEXT NOT NULL,
+        date INTEGER NOT NULL,
+        servicePointId TEXT,
+        subject TEXT
+      )
+    ''');
+
 
     // POS indexes
     await db.execute('CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)');
@@ -747,6 +762,56 @@ class UnifiedDatabaseHelper {
     final db = database;
     final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM inventory'));
     return count ?? 0;
+  }
+
+  // ========================================================================
+  // EXPENSE METHODS
+  // ========================================================================
+
+  Future<int> insertExpense(Expense expense) async {
+    final db = database;
+    return await db.insert('expenses', expense.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<Expense>> getExpenses() async {
+    final db = database;
+    final maps = await db.query('expenses', orderBy: 'date DESC');
+    return maps.map((map) => Expense.fromMap(map)).toList();
+  }
+
+  Future<List<Expense>> getExpensesByServicePoint(String servicePointId) async {
+    final db = database;
+    final maps = await db.query(
+      'expenses',
+      where: 'servicePointId = ?',
+      whereArgs: [servicePointId],
+      orderBy: 'date DESC',
+    );
+    return maps.map((map) => Expense.fromMap(map)).toList();
+  }
+
+  Future<int> updateExpense(Expense expense) async {
+    final db = database;
+    return await db.update(
+      'expenses',
+      expense.toMap(),
+      where: 'id = ?',
+      whereArgs: [expense.id],
+    );
+  }
+
+  Future<int> deleteExpense(String id) async {
+    final db = database;
+    return await db.delete(
+      'expenses',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteAllExpenses() async {
+    final db = database;
+    await db.delete('expenses');
   }
 
   // ========================================================================

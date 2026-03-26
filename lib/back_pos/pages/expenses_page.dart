@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
 import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
+import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 import 'package:bac_pos/back_pos/models/service_point.dart';
 import 'package:bac_pos/flavors/flavor_colors.dart';
 
@@ -17,17 +18,24 @@ class ExpensesPage extends StatefulWidget {
 
 class _ExpensesPageState extends State<ExpensesPage> {
   late final ExpensesController _expensesController;
+  late final UserController _userController;
   final _currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX ');
   final _dateFormatter = DateFormat('MMM dd, yyyy');
 
   @override
   void initState() {
     super.initState();
-    // Register the controller if not already registered
+    // Register the controllers if not already registered
     if (!Get.isRegistered<ExpensesController>()) {
       Get.put(ExpensesController());
     }
     _expensesController = Get.find<ExpensesController>();
+
+    if (!Get.isRegistered<UserController>()) {
+      Get.put(UserController());
+    }
+    _userController = Get.find<UserController>();
+    _userController.fetchUsers();
   }
 
   Color _getColorForServicePoint() {
@@ -46,9 +54,11 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   void _showAddExpenseDialog() {
+    final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     final amountController = TextEditingController();
     String selectedCategory = ExpenseCategory.other;
+    String? selectedSubject; // stores user ID
 
     showDialog(
       context: context,
@@ -60,6 +70,16 @@ class _ExpensesPageState extends State<ExpensesPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 1. Title (new field)
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 2. Description (existing)
                 TextField(
                   controller: descriptionController,
                   decoration: const InputDecoration(
@@ -68,6 +88,25 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // 3. Subject (new - user dropdown)
+                Obx(() => DropdownButtonFormField<String>(
+                  value: selectedSubject,
+                  decoration: const InputDecoration(
+                    labelText: 'Subject',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _userController.users.map((user) {
+                    return DropdownMenuItem(
+                      value: user.id,
+                      child: Text(user.name),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() => selectedSubject = value);
+                  },
+                )),
+                const SizedBox(height: 16),
+                // 4. Amount (existing, moved to 4th)
                 TextField(
                   controller: amountController,
                   keyboardType: TextInputType.number,
@@ -78,6 +117,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                // 5. Category (existing, moved to 5th)
                 DropdownButtonFormField<String>(
                   value: selectedCategory,
                   decoration: const InputDecoration(
@@ -106,8 +146,18 @@ class _ExpensesPageState extends State<ExpensesPage> {
             ),
             FilledButton(
               onPressed: () {
+                final title = titleController.text.trim();
                 final description = descriptionController.text.trim();
                 final amountText = amountController.text.trim();
+
+                if (title.isEmpty) {
+                  Get.snackbar(
+                    'Error',
+                    'Please enter a title',
+                    snackPosition: SnackPosition.BOTTOM,
+                  );
+                  return;
+                }
 
                 if (description.isEmpty) {
                   Get.snackbar(
@@ -129,7 +179,9 @@ class _ExpensesPageState extends State<ExpensesPage> {
                 }
 
                 _expensesController.addExpense(
+                  title: title,
                   description: description,
+                  subject: selectedSubject,
                   amount: amount,
                   category: selectedCategory,
                   servicePointId: widget.servicePoint?.id,
@@ -286,11 +338,11 @@ class _ExpensesPageState extends State<ExpensesPage> {
                         ),
                       ),
                       title: Text(
-                        expense.description,
+                        expense.title.isNotEmpty ? expense.title : 'Untitled Expense',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                       subtitle: Text(
-                        '${expense.category} • ${_dateFormatter.format(expense.date)}',
+                        '${_getUserName(expense.subject)} • ${expense.category} • ${_dateFormatter.format(expense.date)}',
                         style: TextStyle(
                           color: Colors.grey.shade600,
                           fontSize: 12,
@@ -351,5 +403,14 @@ class _ExpensesPageState extends State<ExpensesPage> {
       default:
         return Icons.receipt;
     }
+  }
+
+  // Helper method to get user name from user ID
+  String _getUserName(String? userId) {
+    if (userId == null || userId.isEmpty) {
+      return 'No Subject';
+    }
+    final user = _userController.users.firstWhereOrNull((u) => u.id == userId);
+    return user?.name ?? 'Unknown User';
   }
 }
