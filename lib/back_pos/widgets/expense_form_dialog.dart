@@ -7,23 +7,29 @@ import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 class ExpenseFormDialog extends StatefulWidget {
   final ExpensesController expensesController;
   final String? servicePointId;
+  final Color color;
 
   const ExpenseFormDialog({
     super.key,
     required this.expensesController,
+    required this.color,
     this.servicePointId,
   });
 
   static Future<void> show({
     required BuildContext context,
     required ExpensesController expensesController,
+    required Color color,
     String? servicePointId,
   }) {
-    return showDialog(
+    return showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => ExpenseFormDialog(
         expensesController: expensesController,
         servicePointId: servicePointId,
+        color: color,
       ),
     );
   }
@@ -40,6 +46,10 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   String _selectedCategory = ExpenseCategory.other;
   String? _selectedSubject;
 
+  String? _titleError;
+  String? _descriptionError;
+  String? _amountError;
+
   @override
   void initState() {
     super.initState();
@@ -54,44 +64,36 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     super.dispose();
   }
 
+  bool get _isValid =>
+      _titleController.text.trim().isNotEmpty &&
+          _descriptionController.text.trim().isNotEmpty &&
+          (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
+
   void _submitForm() {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
-    final amountText = _amountController.text.trim();
+    final amount = double.tryParse(_amountController.text.trim());
 
+    bool hasError = false;
     if (title.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter a title',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
+      setState(() => _titleError = 'Please enter a title');
+      hasError = true;
     }
-
     if (description.isEmpty) {
-      Get.snackbar(
-        'Error',
-        'Please enter a description',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
+      setState(() => _descriptionError = 'Please enter a description');
+      hasError = true;
     }
-
-    final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      Get.snackbar(
-        'Error',
-        'Please enter a valid amount',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
+      setState(() => _amountError = 'Please enter a valid amount');
+      hasError = true;
     }
+    if (hasError) return;
 
     widget.expensesController.addExpense(
       title: title,
       description: description,
       subject: _selectedSubject,
-      amount: amount,
+      amount: amount!,
       category: _selectedCategory,
       servicePointId: widget.servicePointId,
     );
@@ -101,92 +103,281 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add Expense'),
-      content: SingleChildScrollView(
+    final color = widget.color;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Title field
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(),
+            // Handle bar
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.add_card_outlined, color: color, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'New Expense',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade900,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Colors.grey.shade500),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                      padding: const EdgeInsets.all(6),
+                      minimumSize: const Size(32, 32),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
-            // Description field
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(),
+            // Amount — hero field
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: color.withOpacity(0.2)),
+                ),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'UGX',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: color.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _amountController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: color,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '0.00',
+                          hintStyle: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: color.withOpacity(0.3),
+                          ),
+                          border: InputBorder.none,
+                        ),
+                        onChanged: (_) => setState(() => _amountError = null),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            // Subject dropdown
-            Obx(() => DropdownButtonFormField<String>(
-              value: _selectedSubject,
-              decoration: const InputDecoration(
-                labelText: 'Subject',
-                border: OutlineInputBorder(),
+            if (_amountError != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 24, top: 4),
+                child: Text(_amountError!,
+                    style:
+                    const TextStyle(color: Colors.red, fontSize: 12)),
               ),
-              items: _userController.users.map((user) {
-                return DropdownMenuItem(
-                  value: user.id,
-                  child: Text(user.name),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() => _selectedSubject = value);
-              },
-            )),
             const SizedBox(height: 16),
-            // Amount field
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Amount',
-                border: OutlineInputBorder(),
-                prefixText: 'UGX ',
+            Divider(height: 1, color: Colors.grey.shade100),
+            const SizedBox(height: 16),
+            // Fields
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  _buildField(
+                    controller: _titleController,
+                    icon: Icons.label_outline,
+                    label: 'Title',
+                    errorText: _titleError,
+                    color: color,
+                    onChanged: (_) => setState(() => _titleError = null),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildField(
+                    controller: _descriptionController,
+                    icon: Icons.notes_outlined,
+                    label: 'Description',
+                    errorText: _descriptionError,
+                    color: color,
+                    onChanged: (_) =>
+                        setState(() => _descriptionError = null),
+                  ),
+                  const SizedBox(height: 12),
+                  Obx(() => _buildDropdown<String>(
+                    icon: Icons.person_outline,
+                    label: 'Subject',
+                    value: _selectedSubject,
+                    color: color,
+                    items: _userController.users
+                        .map((user) => DropdownMenuItem(
+                      value: user.id,
+                      child: Text(user.name),
+                    ))
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _selectedSubject = value),
+                  )),
+                  const SizedBox(height: 12),
+                  _buildDropdown<String>(
+                    icon: Icons.category_outlined,
+                    label: 'Category',
+                    value: _selectedCategory,
+                    color: color,
+                    items: ExpenseCategory.all
+                        .map((c) => DropdownMenuItem(
+                      value: c,
+                      child: Text(c),
+                    ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedCategory = value);
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            // Category dropdown
-            DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
+            const SizedBox(height: 24),
+            // Save button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: _isValid ? color : Colors.grey.shade300,
+                  foregroundColor:
+                  _isValid ? Colors.white : Colors.grey.shade500,
+                  minimumSize: const Size(double.infinity, 52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                onPressed: _isValid ? _submitForm : null,
+                child: const Text(
+                  'Save Expense',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
               ),
-              items: ExpenseCategory.all.map((category) {
-                return DropdownMenuItem(
-                  value: category,
-                  child: Text(category),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedCategory = value);
-                }
-              },
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required IconData icon,
+    required String label,
+    required Color color,
+    String? errorText,
+    void Function(String)? onChanged,
+  }) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 18, color: Colors.grey.shade500),
+        errorText: errorText,
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
-        FilledButton(
-          onPressed: _submitForm,
-          child: const Text('Add'),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
-      ],
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: color, width: 1.5),
+        ),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      ),
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required IconData icon,
+    required String label,
+    required T? value,
+    required Color color,
+    required List<DropdownMenuItem<T>> items,
+    required void Function(T?) onChanged,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, size: 18, color: Colors.grey.shade500),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade200),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: color, width: 1.5),
+        ),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      ),
+      items: items,
+      onChanged: onChanged,
     );
   }
 }

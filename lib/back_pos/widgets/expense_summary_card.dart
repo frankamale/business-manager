@@ -60,7 +60,7 @@ class ExpenseSummaryCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 currencyFormatter.format(todayExpenses),
-                const TextStyle(
+                style:  TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                 ),
