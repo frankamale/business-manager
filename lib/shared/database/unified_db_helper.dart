@@ -515,9 +515,22 @@ class UnifiedDatabaseHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Future migrations will be handled here
-    // Add missing index for existing databases
+    // Migrate expenses table for existing databases (added in version 2)
     if (oldVersion < 2) {
+      // Create expenses table if it doesn't exist (for databases created before version 2)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS expenses (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT,
+          amount REAL NOT NULL,
+          category TEXT NOT NULL,
+          date INTEGER NOT NULL,
+          servicePointId TEXT,
+          subject TEXT
+        )
+      ''');
+      // Also add the missing index for existing databases
       await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
     }
   }
