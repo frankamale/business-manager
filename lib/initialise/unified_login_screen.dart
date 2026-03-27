@@ -4,6 +4,7 @@ import 'package:bac_pos/bac_monitor/lib/services/account_manager.dart';
 import 'package:bac_pos/flavors/flavor_config.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
@@ -182,7 +183,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     if (!_customerAuthService.validateCustomerPin(customer, pin)) {
       throw Exception('Invalid PIN. Please try again.');
     }
- 
+
     // Cache the customer account for future logins (valid for 24 hours)
     await _customerAuthService.cacheCustomerAccount(customer);
 
@@ -620,14 +621,16 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
                               textAlign: TextAlign.center,
                             ),
+
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                              TextButton(
-                                onPressed: () =>
-                                    Get.to(() => PasswordRecovery()),
-                                child: Text("Forgot Password?"),
-                              ),
+                              if (appFlavor != "bac")
+                                TextButton(
+                                  onPressed: () =>
+                                      Get.to(() => PasswordRecovery()),
+                                  child: Text("Forgot Password?"),
+                                ),
                             ],
                           ),
                           const SizedBox(height: 3),
@@ -673,35 +676,37 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
                           SizedBox(height: 12),
 
-                          SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: _hasPendingRegistration
-                                  ? null
-                                  : () => Get.to(Register()),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    FlavorColors.current.primaryDark,
-                                foregroundColor: FlavorColors.current.onPrimary,
-                                elevation: 4,
-                                shadowColor: FlavorColors.current.primaryDark
-                                    .withOpacity(0.5),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                          if (appFlavor != "bac")
+                            SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: _hasPendingRegistration
+                                    ? null
+                                    : () => Get.to(Register()),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      FlavorColors.current.primaryDark,
+                                  foregroundColor:
+                                      FlavorColors.current.onPrimary,
+                                  elevation: 4,
+                                  shadowColor: FlavorColors.current.primaryDark
+                                      .withOpacity(0.5),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  disabledBackgroundColor: Colors.grey.shade300,
                                 ),
-                                disabledBackgroundColor: Colors.grey.shade300,
-                              ),
-                              child: const Text(
-                                'Register Account',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
+                                child: const Text(
+                                  'Register Account',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                           if (_hasPendingRegistration)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
