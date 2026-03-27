@@ -184,7 +184,7 @@ class AuthController extends GetxController {
   /// closeDatabase: if true, closes any existing database before opening the new company's database
   Future<Map<String, dynamic>?> serverLogin(String username, String password, {bool closeDatabase = true}) async {
     try {
-      String usernameLower = username.toLowerCase();
+      String usernameLower = username;
       isLoggingIn.value = true;
 
       // Close the existing database before new authentication (non-blocking if possible)
