@@ -607,7 +607,7 @@ class _SplashPageState extends State<SplashPage> {
             Obx(() {
               if (!Get.isRegistered<MonOperatorController>()) {
                 return const Text(
-                  'Welcome',
+                  'Welcome ',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
