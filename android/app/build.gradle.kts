@@ -15,7 +15,7 @@ android {
         create("komusoft") {
             dimension = "company"
             applicationId = "com.komusoft.businessmanager"
-            resValue("string", "app_name", "Business Manager")
+            resValue("string", "app_name", "Komusoft Solns")
         }
         create("sassy") {
             dimension = "company"

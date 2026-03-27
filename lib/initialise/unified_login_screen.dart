@@ -154,7 +154,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
   /// Handle customer login via server (bot authentication)
   Future<void> _handleServerCustomerLogin(String identifier, String pin) async {
-    // Check if bot credentials are configured
     if (!await _customerAuthService.hasBotCredentials()) {
       throw Exception(
         'Customer login not configured. Please contact administrator.',
@@ -245,7 +244,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     final roles = cachedAccount['roles'] as List<dynamic>?;
     final userData = cachedAccount['userData'] as Map<String, dynamic>? ?? {};
 
-    // Open database for the company
     await UnifiedDatabaseHelper.instance.openForCompany(companyId);
 
     // Determine if user is admin (monitor) or regular POS user
@@ -296,7 +294,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
 
   /// Handle login via server authentication
   Future<void> _handleServerStaffLogin(String username, String password) async {
-    // Authenticate user - returns all needed data so we don't re-read
     final loginResult = await _authController.serverLogin(username, password);
 
     if (loginResult != null) {
@@ -307,10 +304,12 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       final roles = userData['roles'] as List<dynamic>?;
 
       // Validate company ID against bot's company (for flavored apps)
-      final botCompanyId = await _customerAuthService.getBotCompanyId();
-      if (botCompanyId != null && botCompanyId.isNotEmpty) {
-        if (companyId != botCompanyId) {
-          throw Exception('Wrong Username or Password');
+      if (appFlavor != "bac") {
+        final botCompanyId = await _customerAuthService.getBotCompanyId();
+        if (botCompanyId != null && botCompanyId.isNotEmpty) {
+          if (companyId != botCompanyId) {
+            throw Exception('Wrong Username or Password');
+          }
         }
       }
 
@@ -622,6 +621,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               textAlign: TextAlign.center,
                             ),
 
+                          if (appFlavor == "bac") SizedBox(height: 12),
+
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -707,6 +708,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                 ),
                               ),
                             ),
+
                           if (_hasPendingRegistration)
                             Padding(
                               padding: const EdgeInsets.only(top: 8),
