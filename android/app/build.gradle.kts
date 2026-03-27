@@ -42,6 +42,11 @@ android {
             applicationId = "com.wise_farmer.businessmanager"
             resValue("string", "app_name", "Wize Farmer")
         }
+        create("bac") {
+            dimension = "company"
+            applicationId = "com.bac.businessmanager"
+            resValue("string", "app_name", "BAC manager")
+        }
     }
 
     compileOptions {
