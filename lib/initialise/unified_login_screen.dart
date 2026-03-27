@@ -261,6 +261,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       lastLogin: DateTime.now(),
     );
     await _accountManager.setCurrentAccount(account);
+    await _accountManager.addAccount(account);
 
     // Store credentials for auto-fill
     _storeCredentialsSecurely(username, password);

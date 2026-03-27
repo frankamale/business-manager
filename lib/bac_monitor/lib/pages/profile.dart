@@ -1,13 +1,10 @@
-import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../additions/colors.dart';
 import '../controllers/mon_operator_controller.dart';
-import '../controllers/mon_salestrends_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../services/account_manager.dart';
-import '../services/api_services.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
