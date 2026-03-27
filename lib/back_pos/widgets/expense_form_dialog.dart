@@ -66,8 +66,8 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
 
   bool get _isValid =>
       _titleController.text.trim().isNotEmpty &&
-          _descriptionController.text.trim().isNotEmpty &&
-          (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
+      _descriptionController.text.trim().isNotEmpty &&
+      (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
 
   void _submitForm() {
     final title = _titleController.text.trim();
@@ -119,194 +119,207 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            // Handle bar
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 4),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+              // Handle bar
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 4),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(Icons.add_card_outlined, color: color, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'New Expense',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade900,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: Colors.grey.shade500),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.grey.shade100,
-                      padding: const EdgeInsets.all(6),
-                      minimumSize: const Size(32, 32),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Amount — hero field
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: color.withOpacity(0.2)),
-                ),
-                padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(
-                      'UGX',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: color.withOpacity(0.7),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.add_card_outlined,
+                        color: color,
+                        size: 20,
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _amountController,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: color,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: '0.00',
-                          hintStyle: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: color.withOpacity(0.3),
-                          ),
-                          border: InputBorder.none,
-                        ),
-                        onChanged: (_) => setState(() => _amountError = null),
+                    const SizedBox(width: 12),
+                    Text(
+                      'New Expense',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.grey.shade900,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close, color: Colors.grey.shade500),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.grey.shade100,
+                        padding: const EdgeInsets.all(6),
+                        minimumSize: const Size(32, 32),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            if (_amountError != null)
+              const SizedBox(height: 16),
+              // Amount — hero field
               Padding(
-                padding: const EdgeInsets.only(left: 24, top: 4),
-                child: Text(_amountError!,
-                    style:
-                    const TextStyle(color: Colors.red, fontSize: 12)),
-              ),
-            const SizedBox(height: 16),
-            Divider(height: 1, color: Colors.grey.shade100),
-            const SizedBox(height: 16),
-            // Fields
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                children: [
-                  _buildField(
-                    controller: _titleController,
-                    icon: Icons.label_outline,
-                    label: 'Title',
-                    errorText: _titleError,
-                    color: color,
-                    onChanged: (_) => setState(() => _titleError = null),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildField(
-                    controller: _descriptionController,
-                    icon: Icons.notes_outlined,
-                    label: 'Description',
-                    errorText: _descriptionError,
-                    color: color,
-                    onChanged: (_) =>
-                        setState(() => _descriptionError = null),
-                  ),
-                  const SizedBox(height: 12),
-                  Obx(() => _buildDropdown<String>(
-                    icon: Icons.person_outline,
-                    label: 'Subject',
-                    value: _selectedSubject,
-                    color: color,
-                    items: _userController.users
-                        .map((user) => DropdownMenuItem(
-                      value: user.id,
-                      child: Text(user.name),
-                    ))
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _selectedSubject = value),
-                  )),
-                  const SizedBox(height: 12),
-                  _buildDropdown<String>(
-                    icon: Icons.category_outlined,
-                    label: 'Category',
-                    value: _selectedCategory,
-                    color: color,
-                    items: ExpenseCategory.all
-                        .map((c) => DropdownMenuItem(
-                      value: c,
-                      child: Text(c),
-                    ))
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _selectedCategory = value);
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Save button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-              child: FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: _isValid ? color : Colors.grey.shade300,
-                  foregroundColor:
-                  _isValid ? Colors.white : Colors.grey.shade500,
-                  minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: color.withOpacity(0.2)),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'UGX',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: color.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _amountController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: color,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: '0.00',
+                            hintStyle: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: color.withOpacity(0.3),
+                            ),
+                            border: InputBorder.none,
+                          ),
+                          onChanged: (_) => setState(() => _amountError = null),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                onPressed: _isValid ? _submitForm : null,
-                child: const Text(
-                  'Save Expense',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              if (_amountError != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 24, top: 4),
+                  child: Text(
+                    _amountError!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Divider(height: 1, color: Colors.grey.shade100),
+              const SizedBox(height: 16),
+              // Fields
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: [
+                    _buildField(
+                      controller: _titleController,
+                      icon: Icons.label_outline,
+                      label: 'Title',
+                      errorText: _titleError,
+                      color: color,
+                      onChanged: (_) => setState(() => _titleError = null),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildField(
+                      controller: _descriptionController,
+                      icon: Icons.notes_outlined,
+                      label: 'Description',
+                      errorText: _descriptionError,
+                      color: color,
+                      onChanged: (_) =>
+                          setState(() => _descriptionError = null),
+                    ),
+                    const SizedBox(height: 12),
+                    Obx(
+                      () => _buildDropdown<String>(
+                        icon: Icons.person_outline,
+                        label: 'Subject',
+                        value: _selectedSubject,
+                        color: color,
+                        items: _userController.users
+                            .map(
+                              (user) => DropdownMenuItem(
+                                value: user.id,
+                                child: Text(user.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _selectedSubject = value),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildDropdown<String>(
+                      icon: Icons.category_outlined,
+                      label: 'Category',
+                      value: _selectedCategory,
+                      color: color,
+                      items: ExpenseCategory.all
+                          .map(
+                            (c) => DropdownMenuItem(value: c, child: Text(c)),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedCategory = value);
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              // Save button
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _isValid ? color : Colors.grey.shade300,
+                    foregroundColor: _isValid
+                        ? Colors.white
+                        : Colors.grey.shade500,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: _isValid ? _submitForm : null,
+                  child: const Text(
+                    'Save Expense',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -341,8 +354,10 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: color, width: 1.5),
         ),
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -374,8 +389,10 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: color, width: 1.5),
         ),
-        contentPadding:
-        const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
       items: items,
       onChanged: onChanged,
