@@ -262,15 +262,16 @@ class MonStoreKpiTrendController extends GetxController {
       final dailySubsTrendValue = (currentDailySubs - prevDailySubs) / (prevDailySubs.abs() + epsilon);
       final monthlySubsTrendValue = (currentMonthlySubs - prevMonthlySubs) / (prevMonthlySubs.abs() + epsilon);
 
-      // Helper to format trend as percentage
+      // Helper to format trend as percentage (cap at 100%)
       String formatTrendPercent(double value) {
         final percent = (value * 100).abs();
-        if (percent >= 100) {
-          return '${percent.toStringAsFixed(0)}%';
-        } else if (percent >= 10) {
-          return '${percent.toStringAsFixed(0)}%';
+        final cappedPercent = percent > 100 ? 100 : percent;
+        if (cappedPercent >= 100) {
+          return '${cappedPercent.toStringAsFixed(0)}%';
+        } else if (cappedPercent >= 10) {
+          return '${cappedPercent.toStringAsFixed(0)}%';
         } else {
-          return '${percent.toStringAsFixed(1)}%';
+          return '${cappedPercent.toStringAsFixed(1)}%';
         }
       }
 
