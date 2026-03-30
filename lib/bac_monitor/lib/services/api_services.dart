@@ -564,7 +564,7 @@ class MonitorApiService extends GetxService {
         }
       }
 
-      Map<String, dynamic> companyDetailsData = {};
+      Map<String, dynamic> companyDetailsData = {}; 
       if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);

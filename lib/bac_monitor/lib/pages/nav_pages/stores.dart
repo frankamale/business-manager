@@ -32,6 +32,9 @@ class _StoresState extends State<Stores> {
   Future<void> _loadStores() async {
     if (!controller.isInitialized.value) {
       await controller.fetchAllStores();
+      // FIX: Now fetch all data for the default selection (All stores, last 7 days)
+      debugPrint('StoresPage: Fetching all data for initial selection...');
+      await controller.fetchAllDataForSelection();
     }
   }
 
