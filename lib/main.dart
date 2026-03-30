@@ -4,6 +4,8 @@ import 'package:get_storage/get_storage.dart';
 
 // Package imports for external dependencies
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'bac_monitor/lib/controllers/mon_kpi_controller.dart';
+import 'bac_monitor/lib/repositories/kpi_repository.dart';
 import 'flavors/flavor_colors.dart';
 import 'flavors/flavor_config.dart';
 
@@ -69,6 +71,7 @@ void main() async {
   Get.put(AuthController());
   Get.put(CustomerController());
   Get.put(InventoryController());
+  Get.put(KpiRepository());
   Get.put(PaymentController());
   Get.put(SalesController());
   Get.put(UserController());
@@ -76,6 +79,7 @@ void main() async {
   Get.put(ServicePointController());
 
   Get.put(MonDashboardController());
+  Get.put(MonKpiController());
   Get.put(MonGrossProfitController());
   Get.put(MonKpiOverviewController());
   Get.put(MonMainNavigationController());

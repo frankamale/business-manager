@@ -2,10 +2,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../additions/colors.dart';
 import '../../components/store/storeOverview.dart';
+import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_store_controller.dart';
 import '../../controllers/mon_store_kpi_controller.dart';
+import '../../models/kpi_sales_data.dart';
 import '../../models/store.dart';
 import '../../widgets/finance/date_range.dart';
 
@@ -19,12 +22,14 @@ class Stores extends StatefulWidget {
 class _StoresState extends State<Stores> {
   late final MonStoresController controller;
   late final MonStoreKpiTrendController kpiController;
+  late final MonKpiController monKpiController;
 
   @override
   void initState() {
     super.initState();
     controller = Get.put(MonStoresController());
     kpiController = Get.put(MonStoreKpiTrendController());
+    monKpiController = Get.put(MonKpiController());
     // Ensure stores are fetched when page loads
     _loadStores();
   }
@@ -102,9 +107,11 @@ class _StoresState extends State<Stores> {
                 child: DateRangePicker(
                   onDateRangeSelected: controller.onDateRangeChanged,
                 ),
-              ),
+              ), 
             ),
             SliverToBoxAdapter(child: StoreOverview()),
+            // Store-specific KPI mode selector
+            // SliverToBoxAdapter(child: _buildStoreKpiSection()),
           ],
         );
       }),
@@ -139,4 +146,5 @@ class _StoresState extends State<Stores> {
       ),
     );
   }
+
 }

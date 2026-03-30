@@ -7,10 +7,12 @@ import '../../components/dashboard/kpi_overview.dart';
 import '../../components/dashboard/sales_trends.dart';
 import '../../controllers/mon_dashboard_controller.dart';
 import '../../controllers/mon_gross_profit_controller.dart';
+import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
 import '../../controllers/mon_outstanding_payments_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
+import '../../models/kpi_sales_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
 import '../../widgets/dashboard/outstanding_payments.dart';
@@ -70,6 +72,8 @@ class _DashboardState extends State<Dashboard> {
     Get.put(MonGrossProfitController());
     Get.put(MonSalesTrendsController());
     Get.put(MonKpiOverviewController());
+    // Initialize MonKpiController for detailed KPI data
+    Get.put(MonKpiController());
   }
 
   Future<void> _handleRefresh() async {
@@ -266,12 +270,15 @@ class _DashboardState extends State<Dashboard> {
                       }),
                       const SizedBox(height: 24),
                       SalesTrendsSection(),
+                      const SizedBox(height: 24),
+                      // Detailed KPI Section with mode selector
+                      // _buildDetailedKpiSection(),
                     ],
                   ),
                 ),
               ),
             ),
-          ],
+          ], 
         ),
       ),
     );
@@ -281,4 +288,6 @@ class _DashboardState extends State<Dashboard> {
     final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
   }
+
+ 
 }
