@@ -298,10 +298,36 @@ class MonitorApiService extends GetxService {
       throw Exception('Network error: $e');
     }
   }
+ Future<http.Response> getWithAuth(
+    String endpoint, {
+    Duration? timeout,
+  }) async {
+    final request = http.Request('GET', Uri.parse('$_baseUrl$endpoint'));
+    request.headers['Content-Type'] = 'application/json';
+
+    final streamedResponse = await _tokenRefreshInterceptor
+        .send(request)
+        .timeout(
+          timeout ?? const Duration(minutes: 5),
+          onTimeout: () {
+            throw Exception('Request timeout for $endpoint');
+          },
+        );
+
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      // debugPrint("ApiService: Successfully fetched data from $endpoint");
+      return response;
+    } else {
+      _handleResponse(response);
+      throw Exception(
+        'Failed to load data from $endpoint: ${response.statusCode}',
+      );
+    }
+  }
 
   Future<void> login(String email, String password) async {
-    // print("login begin ----- ");
-
     final response = await post('/auth/signin', {
       'username': email.trim().toLowerCase(),
       'password': password.trim(),
@@ -759,79 +785,6 @@ class MonitorApiService extends GetxService {
   Future<void> _syncRecentSalesLegacy() async {
     // This method is kept for backward compatibility but now uses syncAllKpiData
     await syncRecentSales();
-  }
-}
-
-      debugPrint(
-        "ApiService: Deleting local KPI sales from $startDateStr onwards before inserting ${salesData.length} new records.",
-      );
-
-      // Use transaction with batch for optimal performance
-      await db.transaction((txn) async {
-        // Delete old KPI data for the date range
-        await txn.delete(
-          'mon_kpi_sales',
-          where: 'processing_date >= ?',
-          whereArgs: [startDateStr],
-        );
-
-        // Batch insert KPI sales
-        debugPrint("ApiService: Batch inserting ${salesData.length} KPI sales records into mon_kpi_sales");
-        final kpiBatch = txn.batch();
-        for (final sale in salesData) {
-          // Map the KPI response data to the new table schema
-          kpiBatch.insert('mon_kpi_sales', {
-            'kpi_id': 0, // All transactions
-            'processing_date': sale['processingdate'] ?? '',
-            'selling_point': sale['sellingpoint'] ?? '',
-            'currency': sale['currency'] ?? '',
-            'kpi': sale['kpi'] ?? '',
-            'quantity': sale['quantity'] ?? 0,
-            'amount1': _parseDouble(sale['amount1']),
-            'amount2': _parseDouble(sale['amount2']),
-          }, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-        await kpiBatch.commit(noResult: true);
-        debugPrint("ApiService: Successfully inserted KPI sales records");
-      });
-
-      debugPrint(
-        "ApiService: Successfully synced and replaced ${salesData.length} KPI sales records for the specified period.",
-      );
-
-      await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-    } catch (e) {
-      // debugPrint("ApiService: Error during recent sales sync: $e");
-    }
-  }
-
-  Future<http.Response> getWithAuth(
-    String endpoint, {
-    Duration? timeout,
-  }) async {
-    final request = http.Request('GET', Uri.parse('$_baseUrl$endpoint'));
-    request.headers['Content-Type'] = 'application/json';
-
-    final streamedResponse = await _tokenRefreshInterceptor
-        .send(request)
-        .timeout(
-          timeout ?? const Duration(minutes: 5),
-          onTimeout: () {
-            throw Exception('Request timeout for $endpoint');
-          },
-        );
-
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      // debugPrint("ApiService: Successfully fetched data from $endpoint");
-      return response;
-    } else {
-      _handleResponse(response);
-      throw Exception(
-        'Failed to load data from $endpoint: ${response.statusCode}',
-      );
-    }
   }
 
   /// KPI ID definitions for aggregated sales reports
