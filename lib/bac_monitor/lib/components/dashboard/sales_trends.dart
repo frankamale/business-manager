@@ -81,7 +81,7 @@ class SalesTrendsSection extends StatelessWidget {
 
           Obx(
             () => CashierSalesChart(
-              salesData: controller.rawSalesForPeriod.value,
+              salesData: controller.rawSalesForKpi4.value,
               periodLabel: controller.getPeriodLabel(),
             ),
           ),

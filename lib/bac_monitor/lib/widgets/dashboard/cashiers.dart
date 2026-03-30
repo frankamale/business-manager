@@ -22,19 +22,20 @@ class CashierSalesChart extends StatelessWidget {
     Color(0xffA846A0),
   ];
 
-  /// Processes raw sales data to group totals by 'salesperson'.
+  /// Processes raw sales data to group totals by 'kpi' field (kpiId=4 for cashiers).
   List<CashierData> _processData() {
     final Map<String, double> salesByCashier = {};
 
     for (final sale in salesData) {
-      String cashierName = (sale['salesperson'] as String?)?.trim() ?? 'Unknown Cashier';
+      // Cashier name is in 'kpi' field, amount in 'amount1'
+      String cashierName = (sale['kpi'] as String?)?.trim() ?? 'Unknown Cashier';
 
       // Handle empty cashier names
       if (cashierName.isEmpty) {
         cashierName = 'Unknown Cashier';
       }
 
-      final amount = (sale['amount'] as num?)?.toDouble() ?? 0.0;
+      final amount = (sale['amount1'] as num?)?.toDouble() ?? 0.0;
 
       salesByCashier.update(
         cashierName,
