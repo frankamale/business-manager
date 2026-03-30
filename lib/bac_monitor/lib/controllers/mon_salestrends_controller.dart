@@ -21,6 +21,8 @@ class MonSalesTrendsController extends GetxController {
 
   var rawSalesForPeriod = <Map<String, dynamic>>[].obs;
 
+  var rawSalesForKpi3 = <Map<String, dynamic>>[].obs;
+
   var stockAlerts = <CategorizedStockAlert>[].obs;
   var isLoadingStock = true.obs;
   var hasErrorStock = false.obs;
@@ -80,6 +82,7 @@ class MonSalesTrendsController extends GetxController {
     await fetchSalesData(dateRange);
     await fetchTopStores(dateRange);
     await fetchRawSalesData(dateRange);
+    await fetchRawSalesDataForKpi3(dateRange);
     await fetchStockAlerts();
     await fetchExpiries();
     print("fetchAllData completed");
@@ -171,6 +174,32 @@ class MonSalesTrendsController extends GetxController {
     } catch (e) {
       print("Error fetching raw KPI sales data for charts: $e");
       rawSalesForPeriod.assignAll([]);
+    }
+  }
+
+  Future<void> fetchRawSalesDataForKpi3(DateTimeRange dateRange) async {
+    try {
+      final db = dbHelper.database;
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(dateRange.start);
+      final endDateStr = dateFormatter.format(dateRange.end);
+
+      print("Fetching raw KPI sales data for kpiId=3 from $startDateStr to $endDateStr");
+      
+      // Query the new KPI table for kpiId=3
+      final result = await db.query(
+        'mon_kpi_sales',
+        where: 'processing_date >= ? AND processing_date <= ? AND kpi_id = ?',
+        whereArgs: [startDateStr, endDateStr, 3],
+      );
+      print("Raw KPI sales data for kpiId=3 fetched: ${result.length} records");
+      if (result.isNotEmpty) {
+        print("Sample data: ${result.first}");
+      }
+      rawSalesForKpi3.assignAll(result);
+    } catch (e) {
+      print("Error fetching raw KPI sales data for kpiId=3: $e");
+      rawSalesForKpi3.assignAll([]);
     }
   }
 

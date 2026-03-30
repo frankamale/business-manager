@@ -72,7 +72,7 @@ class SalesTrendsSection extends StatelessWidget {
 
           Obx(
             () => PaymentMethodHorizontalBarChart(
-              salesData: controller.rawSalesForPeriod.value,
+              salesData: controller.rawSalesForKpi3.value,
               periodLabel: controller.getPeriodLabel(),
             ),
           ),
@@ -85,11 +85,6 @@ class SalesTrendsSection extends StatelessWidget {
               periodLabel: controller.getPeriodLabel(),
             ),
           ),
-          // const SizedBox(height: 16),
-          // buildStockAlertsCard(controller),
-          // const SizedBox(height: 16),
-          // buildExpiriesCard(controller),
-          // const SizedBox(height: 16),
           buildTopStoresCard(controller),
         ],
       ),
