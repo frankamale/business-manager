@@ -148,63 +148,119 @@ class MonKpiOverviewController extends GetxController {
           break;
       }
 
-      final startMillis = startDate.millisecondsSinceEpoch;
-      final endMillis = endDate.millisecondsSinceEpoch;
-      final prevStartMillis = prevStartDate.millisecondsSinceEpoch;
-      final prevEndMillis = prevEndDate.millisecondsSinceEpoch;
+      // Format dates for KPI queries (yyyy-MM-dd)
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(startDate);
+      final endDateStr = dateFormatter.format(endDate);
+      final prevStartDateStr = dateFormatter.format(prevStartDate);
+      final prevEndDateStr = dateFormatter.format(prevEndDate);
 
-      const salesQuery =
-          'SELECT SUM(total) as total FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)';
-      const transactionsQuery =
-          'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
-      // Query for subscription count (for gym mode)
-      const subscriptionQuery =
-          'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
-      const prevSubscriptionQuery =
-          'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
-      // Query for inventory sales - amount from non-subscription transactions (for gym mode)
-      const inventorySalesQuery =
-          'SELECT SUM(amount) as total FROM mon_sales WHERE category != "Subscription" AND transactiondate BETWEEN ? AND ?';
-      const prevInventorySalesQuery =
-          'SELECT SUM(amount) as total FROM mon_sales WHERE category != "Subscription" AND transactiondate BETWEEN ? AND ?';
-      // Query for subscription revenue - amount from subscription transactions (for gym mode)
-      const subscriptionRevenueQuery =
-          'SELECT SUM(amount) as total FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
-      const prevSubscriptionRevenueQuery =
-          'SELECT SUM(amount) as total FROM mon_sales WHERE category = "Subscription" AND transactiondate BETWEEN ? AND ?';
-      const activeStoresQuery =
-          'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE transactiondate BETWEEN ? AND ?';
-      const basketQuery =
-          'SELECT AVG(total) as avg FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)';
-      const totalStoresQuery =
-          'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
-      const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
+      // Query the new mon_kpi_sales table
+      // KPI ID 0 = All Transactions (total sales)
+      // KPI ID 1 = Cash Transactions
+      // KPI ID 5 = Profit
+      
+      // Query for total sales (kpiId=0, sum of amount2 = transaction value)
+      const salesQuery = '''
+        SELECT SUM(amount2) as total, SUM(quantity) as qty 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
+      ''';
+      
+      // Query for previous period sales
+      const prevSalesQuery = '''
+        SELECT SUM(amount2) as total, SUM(quantity) as qty 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for total transactions (sum of quantity for kpiId=0)
+      const transactionsQuery = '''
+        SELECT SUM(quantity) as count 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for subscription count (for gym mode - kpiId=7 for stock category "Subscription")
+      const subscriptionQuery = '''
+        SELECT SUM(quantity) as count 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
+      ''';
+      const prevSubscriptionQuery = '''
+        SELECT SUM(quantity) as count 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for inventory sales - non-subscription items (kpiId=7, not Subscription)
+      const inventorySalesQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 7 AND kpi != "Subscription" AND processing_date BETWEEN ? AND ?
+      ''';
+      const prevInventorySalesQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 7 AND kpi != "Subscription" AND processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for subscription revenue (kpiId=7, kpi="Subscription")
+      const subscriptionRevenueQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
+      ''';
+      const prevSubscriptionRevenueQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for active stores (distinct selling_point)
+      const activeStoresQuery = '''
+        SELECT COUNT(DISTINCT selling_point) as active 
+        FROM mon_kpi_sales 
+        WHERE processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for avg basket size (total amount / distinct days or transactions)
+      const basketQuery = '''
+        SELECT AVG(daily_total) as avg FROM (
+          SELECT processing_date, SUM(amount2) as daily_total 
+          FROM mon_kpi_sales 
+          WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
+          GROUP BY processing_date
+        )
+      ''';
+
+      const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
+      const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
       final customerQuery = 'SELECT COUNT(*) as count FROM customers WHERE statusid == ?';
 
       // Execute all queries in parallel
       final results = await Future.wait([
-        db.rawQuery(salesQuery, [startMillis, endMillis]),
-        db.rawQuery(salesQuery, [prevStartMillis, prevEndMillis]),
-        db.rawQuery(transactionsQuery, [startMillis, endMillis]),
-        db.rawQuery(transactionsQuery, [prevStartMillis, prevEndMillis]),
-        db.rawQuery(activeStoresQuery, [startMillis, endMillis]),
-        db.rawQuery(activeStoresQuery, [prevStartMillis, prevEndMillis]),
-        db.rawQuery(basketQuery, [startMillis, endMillis]),
-        db.rawQuery(basketQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(salesQuery, [startDateStr, endDateStr]),
+        db.rawQuery(prevSalesQuery, [prevStartDateStr, prevEndDateStr]),
+        db.rawQuery(transactionsQuery, [startDateStr, endDateStr]),
+        db.rawQuery(transactionsQuery, [prevStartDateStr, prevEndDateStr]),
+        db.rawQuery(activeStoresQuery, [startDateStr, endDateStr]),
+        db.rawQuery(activeStoresQuery, [prevStartDateStr, prevEndDateStr]),
+        db.rawQuery(basketQuery, [startDateStr, endDateStr]),
+        db.rawQuery(basketQuery, [prevStartDateStr, prevEndDateStr]),
         db.rawQuery(totalStoresQuery),
         db.rawQuery(currencyQuery),
         db.rawQuery(customerQuery, ["00000000-0000-0000-0000-000000000000"]),
-        db.rawQuery(subscriptionQuery, [startMillis, endMillis]),
-        db.rawQuery(prevSubscriptionQuery, [prevStartMillis, prevEndMillis]),
-        db.rawQuery(inventorySalesQuery, [startMillis, endMillis]),
-        db.rawQuery(prevInventorySalesQuery, [prevStartMillis, prevEndMillis]),
-        db.rawQuery(subscriptionRevenueQuery, [startMillis, endMillis]),
-        db.rawQuery(prevSubscriptionRevenueQuery, [prevStartMillis, prevEndMillis]),
+        db.rawQuery(subscriptionQuery, [startDateStr, endDateStr]),
+        db.rawQuery(prevSubscriptionQuery, [prevStartDateStr, prevEndDateStr]),
+        db.rawQuery(inventorySalesQuery, [startDateStr, endDateStr]),
+        db.rawQuery(prevInventorySalesQuery, [prevStartDateStr, prevEndDateStr]),
+        db.rawQuery(subscriptionRevenueQuery, [startDateStr, endDateStr]),
+        db.rawQuery(prevSubscriptionRevenueQuery, [prevStartDateStr, prevEndDateStr]),
       ]);
 
-      final currentSales = (results[0].first['total'] as num? ?? 0.0)
-          .toDouble();
+      final currentSales = (results[0].first['total'] as num? ?? 0.0).toDouble();
       final prevSales = (results[1].first['total'] as num? ?? 0.0).toDouble();
       final currentTransactions = results[2].first['count'] as int? ?? 0;
       final prevTransactions = results[3].first['count'] as int? ?? 0;

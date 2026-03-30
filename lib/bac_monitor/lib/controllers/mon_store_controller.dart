@@ -158,40 +158,36 @@ class MonStoresController extends GetxController {
         }
       }
 
-      final startMillis = startDate.millisecondsSinceEpoch;
-      final endMillis = endDate.millisecondsSinceEpoch;
+      // Format dates for KPI table queries
+      final startDateStr = dateFormatter.format(startDate);
+      final endDateStr = dateFormatter.format(endDate);
       String dateGroupClause;
 
       if (aggregationType.value == 'hourly') {
-        dateGroupClause =
-        "strftime('%Y-%m-%d ', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d:00:00', (CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) / 3 * 3))";
+        dateGroupClause = "strftime('%Y-%m-%d ', processing_date) || printf('%02d:00:00', (CAST(strftime('%H', processing_date) AS INTEGER) / 3 * 3))";
       } else if (aggregationType.value == 'daily') {
-        dateGroupClause =
-        "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        dateGroupClause = 'processing_date';
       } else if (aggregationType.value == 'weekly') {
-        dateGroupClause =
-        "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime', 'weekday 1', '-7 days'))";
+        dateGroupClause = "strftime('%Y-%m-%d', processing_date, 'weekday 1', '-7 days')";
       } else if (aggregationType.value == 'monthly') {
-        dateGroupClause =
-        "strftime('%Y-%m-01', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        dateGroupClause = "strftime('%Y-%m-01', processing_date)";
       } else if (aggregationType.value == 'quarterly') {
-        dateGroupClause =
-        "strftime('%Y-', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d-01', ((CAST(strftime('%m', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) - 1) / 3 * 3 + 1))";
+        dateGroupClause = "strftime('%Y-', processing_date) || printf('%02d-01', ((CAST(strftime('%m', processing_date) AS INTEGER) - 1) / 3 * 3 + 1))";
       } else {
-        dateGroupClause =
-        "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        dateGroupClause = 'processing_date';
         aggregationType.value = 'daily';
       }
 
+      // Using new KPI table (mon_kpi_sales) for aggregated data
       final whereClause = isAllStores
-          ? 'WHERE transactiondate BETWEEN ? AND ?'
-          : 'WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final args = isAllStores
-          ? [startMillis, endMillis]
-          : [selectedStore.value!.name, startMillis, endMillis];
+          ? [startDateStr, endDateStr]
+          : [selectedStore.value!.name, startDateStr, endDateStr];
 
       final query =
-      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM mon_sales $whereClause GROUP BY date, salesId) GROUP BY date ORDER BY date''';
+      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, SUM(amount2) as grouped_amount FROM mon_kpi_sales $whereClause GROUP BY date) GROUP BY date ORDER BY date''';
       final result = await db.rawQuery(query, args);
 
       for (var row in result) {
@@ -220,14 +216,26 @@ class MonStoresController extends GetxController {
       final db = dbHelper.database;
       final range = _getDateRange();
       final isAllStores = selectedStore.value!.id == Store.all.id;
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(range.start);
+      final endDateStr = dateFormatter.format(range.end);
+
+      // Using new KPI table - kpi_id=0 for all transactions
       final whereClause = isAllStores
-          ? 'WHERE transactiondate BETWEEN ? AND ?'
-          : 'WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final args = isAllStores
-          ? [range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch]
-          : [selectedStore.value!.name, range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch];
-      final query =
-          " SELECT CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch')) AS INTEGER) as hour, COUNT(DISTINCT salesId) as count FROM mon_sales $whereClause GROUP BY hour ORDER BY hour ";
+          ? [startDateStr, endDateStr]
+          : [selectedStore.value!.name, startDateStr, endDateStr];
+
+      // Group by hour of day
+      final query = '''
+        SELECT CAST(strftime('%H', processing_date) AS INTEGER) as hour, COUNT(*) as count 
+        FROM mon_kpi_sales 
+        $whereClause 
+        GROUP BY hour 
+        ORDER BY hour
+      ''';
       final result = await db.rawQuery(query, args);
       hourlyTrafficData.assignAll(
         result.map((row) => HourlyTraffic(row['hour'] as int, row['count'] as int)).toList(),
@@ -243,18 +251,24 @@ class MonStoresController extends GetxController {
       final db = dbHelper.database;
       final range = _getDateRange();
       final isAllStores = selectedStore.value!.id == Store.all.id;
-      final whereClause = isAllStores
-          ? 'WHERE transactiondate BETWEEN ? AND ?'
-          : 'WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
-      final args = isAllStores
-          ? [range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch]
-          : [selectedStore.value!.name, range.start.millisecondsSinceEpoch, range.end.millisecondsSinceEpoch];
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(range.start);
+      final endDateStr = dateFormatter.format(range.end);
 
+      // Using new KPI table - kpi_id=8 for by item
+      final whereClause = isAllStores
+          ? 'WHERE kpi_id = 8 AND processing_date BETWEEN ? AND ?'
+          : 'WHERE kpi_id = 8 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+      final args = isAllStores
+          ? [startDateStr, endDateStr]
+          : [selectedStore.value!.name, startDateStr, endDateStr];
+
+      // The KPI table stores items with kpi field containing the item name
       final query = '''
-        SELECT inventoryname, SUM(quantity) as total_quantity, SUM(amount) as total_revenue
-        FROM mon_sales
+        SELECT kpi as inventoryname, SUM(quantity) as total_quantity, SUM(amount2) as total_revenue
+        FROM mon_kpi_sales
         $whereClause
-        GROUP BY inventoryname
+        GROUP BY kpi
         ORDER BY total_quantity DESC
         LIMIT 10
       ''';

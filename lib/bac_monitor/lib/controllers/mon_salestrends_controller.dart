@@ -151,22 +151,25 @@ class MonSalesTrendsController extends GetxController {
   Future<void> fetchRawSalesData(DateTimeRange dateRange) async {
     try {
       final db = dbHelper.database;
-      final startMillis = dateRange.start.millisecondsSinceEpoch;
-      final endMillis = dateRange.end.millisecondsSinceEpoch;
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(dateRange.start);
+      final endDateStr = dateFormatter.format(dateRange.end);
 
-      print("Fetching raw sales data from ${dateRange.start} to ${dateRange.end}");
+      print("Fetching raw KPI sales data from $startDateStr to $endDateStr");
+      
+      // Query the new KPI table for raw data
       final result = await db.query(
-        'mon_sales',
-        where: 'transactiondate >= ? AND transactiondate <= ?',
-        whereArgs: [startMillis, endMillis],
+        'mon_kpi_sales',
+        where: 'processing_date >= ? AND processing_date <= ?',
+        whereArgs: [startDateStr, endDateStr],
       );
-      print("Raw sales data fetched: ${result.length} records");
+      print("Raw KPI sales data fetched: ${result.length} records");
       if (result.isNotEmpty) {
         print("Sample data: ${result.first}");
       }
       rawSalesForPeriod.assignAll(result);
     } catch (e) {
-      print("Error fetching raw sales data for charts: $e");
+      print("Error fetching raw KPI sales data for charts: $e");
       rawSalesForPeriod.assignAll([]);
     }
   }
@@ -268,45 +271,39 @@ class MonSalesTrendsController extends GetxController {
         }
       }
 
-      final startMillis = startDate.millisecondsSinceEpoch;
-      final endMillis = endDate.millisecondsSinceEpoch;
+      // Format dates for KPI queries
+      final startDateStr = dateFormatter.format(startDate);
+      final endDateStr = dateFormatter.format(endDate);
+      
       String dateGroupClause;
 
       if (aggregationType.value == 'hourly') {
-        dateGroupClause =
-            "strftime('%Y-%m-%d ', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d:00:00', (CAST(strftime('%H', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) / 3 * 3))";
+        // For hourly, we still use date string
+        dateGroupClause = "strftime('%Y-%m-%d %H:00:00', processing_date || ' 00:00:00', 'start of day', '+' || (CAST(strftime('%H', processing_date || ' 00:00:00', 'start of hour') AS INTEGER) / 3 * 3) || ' hours')";
       } else if (aggregationType.value == 'daily') {
-        dateGroupClause =
-            "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        dateGroupClause = 'processing_date';
       } else if (aggregationType.value == 'weekly') {
         if (range == DateRange.monthToDate) {
-          // For month-to-date, group by weeks from the 1st of the month
-          // Calculate which week of the month (starting from day 1)
-          dateGroupClause =
-              "strftime('%Y-%m-', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d', ((CAST(strftime('%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) - 1) / 7 * 7 + 1))";
+          dateGroupClause = "strftime('%Y-%m-', processing_date) || printf('%02d', ((CAST(strftime('%d', processing_date) AS INTEGER) - 1) / 7 * 7 + 1))";
         } else {
-          // For other ranges, group by week start (Monday)
-          dateGroupClause =
-              "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime', 'weekday 1', '-7 days'))";
+          dateGroupClause = "date(processing_date, 'weekday 1', '-7 days')";
         }
       } else if (aggregationType.value == 'monthly') {
-        dateGroupClause =
-            "strftime('%Y-%m-01', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        dateGroupClause = "strftime('%Y-%m-01', processing_date)";
       } else if (aggregationType.value == 'quarterly') {
-        dateGroupClause =
-            "strftime('%Y-', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) || printf('%02d-01', ((CAST(strftime('%m', datetime(transactiondate / 1000, 'unixepoch', 'localtime')) AS INTEGER) - 1) / 3 * 3 + 1))";
+        dateGroupClause = "strftime('%Y-', processing_date) || printf('%02d-01', ((CAST(strftime('%m', processing_date) AS INTEGER) - 1) / 3 * 3 + 1))";
       } else {
-        dateGroupClause =
-            "strftime('%Y-%m-%d', datetime(transactiondate / 1000, 'unixepoch', 'localtime'))";
+        dateGroupClause = 'processing_date';
         aggregationType.value = 'daily';
       }
 
+      // Query using the new KPI table (kpiId=0 for all transactions)
       final query =
-          ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, salesId, SUM(amount) as grouped_amount FROM mon_sales WHERE transactiondate >= ? AND transactiondate <= ? GROUP BY date, salesId) GROUP BY date ''';
+          ''' SELECT date, SUM(amount2) as total FROM (SELECT $dateGroupClause as date, kpi_id, SUM(amount2) as amount2 FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? GROUP BY date, kpi_id) GROUP BY date ''';
 
       print("Executing SQL query for aggregation type: ${aggregationType.value}");
       print("Query: $query");
-      final result = await db.rawQuery(query, [startMillis, endMillis]);
+      final result = await db.rawQuery(query, [startDateStr, endDateStr]);
       print("Query returned ${result.length} rows");
 
       // Update salesByDate with actual values from database
@@ -363,20 +360,26 @@ class MonSalesTrendsController extends GetxController {
       isLoadingStores.value = true;
       hasErrorStores.value = false;
       final db = dbHelper.database;
-      final startMillis = dateRange.start.millisecondsSinceEpoch;
-      final endMillis = dateRange.end.millisecondsSinceEpoch;
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(dateRange.start);
+      final endDateStr = dateFormatter.format(dateRange.end);
 
+      // Query using the new KPI table for store performance
       const query = '''
         SELECT
           sp.name as storeName,
-          COALESCE(SUM(grouped_amount), 0) as total
+          COALESCE(SUM(kpi.amount2), 0) as total
         FROM mon_service_points sp
-        LEFT JOIN (SELECT sourcefacility, salesId, SUM(amount) as grouped_amount FROM mon_sales WHERE transactiondate >= ? AND transactiondate <= ? GROUP BY sourcefacility, salesId) s ON sp.name = s.sourcefacility
+        LEFT JOIN (SELECT selling_point, SUM(amount2) as amount2 
+                   FROM mon_kpi_sales 
+                   WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? 
+                   GROUP BY selling_point) kpi 
+                   ON sp.name = kpi.selling_point OR sp.fullName = kpi.selling_point
         WHERE sp.stores = 1
         GROUP BY sp.id, sp.name
         ORDER BY total DESC
       ''';
-      final result = await db.rawQuery(query, [startMillis, endMillis]);
+      final result = await db.rawQuery(query, [startDateStr, endDateStr]);
       print("Top stores query result: $result");
       topStoresData.assignAll(
         result.map((row) {

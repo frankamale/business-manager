@@ -117,53 +117,48 @@ class MonStoreKpiTrendController extends GetxController {
           break;
       }
 
-      final startMillis = startDate.millisecondsSinceEpoch;
-      final endMillis = endDate.millisecondsSinceEpoch;
-      final prevStartMillis = prevStartDate.millisecondsSinceEpoch;
-      final prevEndMillis = prevEndDate.millisecondsSinceEpoch;
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(startDate);
+      final endDateStr = dateFormatter.format(endDate);
+      final prevStartDateStr = dateFormatter.format(prevStartDate);
+      final prevEndDateStr = dateFormatter.format(prevEndDate);
 
       final isAllStores = storesController.selectedStore.value!.id == Store.all.id;
       final storeName = storesController.selectedStore.value!.name;
 
-      // print('DEBUG: Selected store: ${storesController.selectedStore.value!.name}, isAllStores: $isAllStores, storeName: $storeName');
-      if (isAllStores) {
-        // print('DEBUG: Filtering disabled - querying all stores (no sourcefacility filter)');
-      } else {
-        // print('DEBUG: Filtering enabled - querying only for sourcefacility = "$storeName"');
-      }
-
+      // Using new KPI table (mon_kpi_sales) for aggregated data
       final salesQuery = isAllStores
-          ? 'SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT SUM(amount) as total FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final transactionsQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final activeStoresQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(DISTINCT selling_point) as active FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(DISTINCT selling_point) as active FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final basketQuery = isAllStores
-          ? 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)'
-          : 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ? GROUP BY salesId)';
+          ? 'SELECT AVG(total) FROM (SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)'
+          : 'SELECT AVG(total) FROM (SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)';
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
-      const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
+      const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
-      // Gym-specific subscription queries
+      // Gym-specific subscription queries (using kpi_id = 4 for salesperson which includes subscriptions)
       final subscriptionQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final dailySubQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final monthlySubQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE category = ? AND subcategory = ? AND sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
 
       final argsCurrent = isAllStores
-          ? [startMillis, endMillis]
-          : [storeName, startMillis, endMillis];
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
       final argsPrev = isAllStores
-          ? [prevStartMillis, prevEndMillis]
-          : [storeName, prevStartMillis, prevEndMillis];
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
 
       // print('DEBUG: Sales Query: $salesQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
       // print('DEBUG: Transactions Query: $transactionsQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
@@ -182,24 +177,25 @@ class MonStoreKpiTrendController extends GetxController {
       final currencyResult = await db.rawQuery(currencyQuery);
 
       // Execute gym-specific subscription queries
+      // Using kpi_id=4 for salesperson (gym subscriptions)
       final argsCurrentWithCategory = isAllStores
-          ? ['Subscription', startMillis, endMillis]
-          : ['Subscription', storeName, startMillis, endMillis];
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
       final argsPrevWithCategory = isAllStores
-          ? ['Subscription', prevStartMillis, prevEndMillis]
-          : ['Subscription', storeName, prevStartMillis, prevEndMillis];
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
       final argsCurrentWithSubcategory = isAllStores
-          ? ['Subscription', 'Daily', startMillis, endMillis]
-          : ['Subscription', 'Daily', storeName, startMillis, endMillis];
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
       final argsPrevWithSubcategory = isAllStores
-          ? ['Subscription', 'Daily', prevStartMillis, prevEndMillis]
-          : ['Subscription', 'Daily', storeName, prevStartMillis, prevEndMillis];
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
       final argsCurrentMonthly = isAllStores
-          ? ['Subscription', 'Monthly', startMillis, endMillis]
-          : ['Subscription', 'Monthly', storeName, startMillis, endMillis];
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
       final argsPrevMonthly = isAllStores
-          ? ['Subscription', 'Monthly', prevStartMillis, prevEndMillis]
-          : ['Subscription', 'Monthly', storeName, prevStartMillis, prevEndMillis];
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
 
       final currentSubscriptionResult = await db.rawQuery(subscriptionQuery, argsCurrentWithCategory);
       final prevSubscriptionResult = await db.rawQuery(subscriptionQuery, argsPrevWithCategory);

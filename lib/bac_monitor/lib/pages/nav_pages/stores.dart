@@ -40,11 +40,19 @@ class _StoresState extends State<Stores> {
     return Scaffold(
       backgroundColor: PrimaryColors.darkBlue,
       body: Obx(() {
-        if (controller.isLoading.value) {
+        // Check if stores are initialized before showing content
+        if (!controller.isInitialized.value) {
           return const Center(
             child: CircularProgressIndicator(color: PrimaryColors.brightYellow),
           );
         }
+
+        if (controller.isLoading.value && controller.storeList.isEmpty) {
+          return const Center(
+            child: CircularProgressIndicator(color: PrimaryColors.brightYellow),
+          );
+        }
+
 
         if (controller.storeList.isEmpty) {
           return const Center(

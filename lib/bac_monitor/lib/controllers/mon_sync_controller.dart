@@ -19,7 +19,10 @@ class MonSyncController extends GetxController {
     _syncTimer?.cancel();
     _syncTimer = Timer.periodic(const Duration(minutes: 5), (timer) async {
       debugPrint("Sync triggered by timer.");
-      await _apiService.syncRecentSales();
+      await _apiService.syncAllKpiData(
+        DateTime.now().subtract(const Duration(days: 30)),
+        DateTime.now(),
+      );
 
       if (Get.isRegistered<MonKpiOverviewController>()) {
         await Get.find<MonKpiOverviewController>().fetchKpiData();
@@ -34,7 +37,11 @@ class MonSyncController extends GetxController {
   /// Trigger a one-time sync manually
   Future<void> syncNow() async {
     debugPrint("Manual sync triggered.");
-    await _apiService.syncRecentSales();
+    // Sync last 30 days of all KPI data
+    await _apiService.syncAllKpiData(
+      DateTime.now().subtract(const Duration(days: 30)),
+      DateTime.now(),
+    );
 
     if (Get.isRegistered<MonKpiOverviewController>()) {
       await Get.find<MonKpiOverviewController>().fetchKpiData();

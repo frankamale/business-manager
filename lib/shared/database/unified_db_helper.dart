@@ -455,6 +455,28 @@ class UnifiedDatabaseHelper {
       )
     ''');
 
+    // Monitor KPI aggregated sales table (replaces mon_sales for new KPI endpoints)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS mon_kpi_sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kpi_id INTEGER NOT NULL,
+        processing_date TEXT NOT NULL,
+        selling_point TEXT,
+        currency TEXT,
+        kpi TEXT NOT NULL,
+        quantity INTEGER DEFAULT 0,
+        amount1 REAL DEFAULT 0,
+        amount2 REAL DEFAULT 0,
+        created_at INTEGER DEFAULT (strftime('%s', 'now')),
+        UNIQUE(kpi_id, processing_date, selling_point, kpi)
+      )
+    ''');
+
+    // Create indexes for KPI sales table
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi_id ON mon_kpi_sales(kpi_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_processing_date ON mon_kpi_sales(processing_date)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi ON mon_kpi_sales(kpi)');
+
     // Monitor inventory table
     await db.execute('''
       CREATE TABLE IF NOT EXISTS mon_inventory (
@@ -1418,6 +1440,115 @@ class UnifiedDatabaseHelper {
              OR mon_service_points.fullName = mon_sales.sourcefacility
         )
     ''');
+  }
+
+  // ========================================================================
+  // MONITOR KPI SALES METHODS (mon_kpi_sales)
+  // ========================================================================
+
+  /// Insert a KPI sales record
+  Future<void> insertKpiSale(Map<String, dynamic> kpiData, {DatabaseExecutor? db}) async {
+    final executor = db ?? database;
+    await executor.insert('mon_kpi_sales', {
+      'kpi_id': kpiData['kpi_id'] ?? 0,
+      'processing_date': kpiData['processing_date'] ?? '',
+      'selling_point': kpiData['selling_point'] ?? '',
+      'currency': kpiData['currency'] ?? '',
+      'kpi': kpiData['kpi'] ?? '',
+      'quantity': kpiData['quantity'] ?? 0,
+      'amount1': kpiData['amount1'] ?? 0.0,
+      'amount2': kpiData['amount2'] ?? 0.0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Insert multiple KPI sales records in a batch
+  Future<void> insertKpiSalesBatch(List<Map<String, dynamic>> kpiDataList, {DatabaseExecutor? db}) async {
+    final executor = db ?? database;
+    final batch = executor.batch();
+    for (final kpiData in kpiDataList) {
+      batch.insert('mon_kpi_sales', {
+        'kpi_id': kpiData['kpi_id'] ?? 0,
+        'processing_date': kpiData['processing_date'] ?? '',
+        'selling_point': kpiData['selling_point'] ?? '',
+        'currency': kpiData['currency'] ?? '',
+        'kpi': kpiData['kpi'] ?? '',
+        'quantity': kpiData['quantity'] ?? 0,
+        'amount1': kpiData['amount1'] ?? 0.0,
+        'amount2': kpiData['amount2'] ?? 0.0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Get all KPI sales records
+  Future<List<Map<String, dynamic>>> getKpiSales({int? kpiId}) async {
+    final db = database;
+    if (kpiId != null) {
+      return await db.query(
+        'mon_kpi_sales',
+        where: 'kpi_id = ?',
+        whereArgs: [kpiId],
+        orderBy: 'processing_date DESC',
+      );
+    }
+    return await db.query('mon_kpi_sales', orderBy: 'processing_date DESC');
+  }
+
+  /// Get KPI sales by date range
+  Future<List<Map<String, dynamic>>> getKpiSalesByDateRange({
+    required String startDate,
+    required String endDate,
+    int? kpiId,
+  }) async {
+    final db = database;
+    String where = 'processing_date BETWEEN ? AND ?';
+    List<dynamic> whereArgs = [startDate, endDate];
+    
+    if (kpiId != null) {
+      where += ' AND kpi_id = ?';
+      whereArgs.add(kpiId);
+    }
+    
+    return await db.query(
+      'mon_kpi_sales',
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'processing_date DESC',
+    );
+  }
+
+  /// Delete all KPI sales records
+  Future<void> deleteAllKpiSales({int? kpiId}) async {
+    final db = database;
+    if (kpiId != null) {
+      await db.delete('mon_kpi_sales', where: 'kpi_id = ?', whereArgs: [kpiId]);
+    } else {
+      await db.delete('mon_kpi_sales');
+    }
+  }
+
+  /// Get KPI sales summary (totals by kpi)
+  Future<List<Map<String, dynamic>>> getKpiSalesSummary({String? startDate, String? endDate}) async {
+    final db = database;
+    String sql = '''
+      SELECT 
+        kpi_id,
+        kpi,
+        SUM(quantity) as total_quantity,
+        SUM(amount1) as total_amount1,
+        SUM(amount2) as total_amount2
+      FROM mon_kpi_sales
+    ''';
+    
+    List<dynamic> args = [];
+    if (startDate != null && endDate != null) {
+      sql += ' WHERE processing_date BETWEEN ? AND ?';
+      args = [startDate, endDate];
+    }
+    
+    sql += ' GROUP BY kpi_id, kpi ORDER BY total_amount2 DESC';
+    
+    return await db.rawQuery(sql, args);
   }
 
   // ========================================================================
