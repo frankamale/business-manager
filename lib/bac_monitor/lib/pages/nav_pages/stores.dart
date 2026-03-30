@@ -110,8 +110,7 @@ class _StoresState extends State<Stores> {
               ), 
             ),
             SliverToBoxAdapter(child: StoreOverview()),
-            // Store-specific KPI mode selector
-            // SliverToBoxAdapter(child: _buildStoreKpiSection()),
+
           ],
         );
       }),
