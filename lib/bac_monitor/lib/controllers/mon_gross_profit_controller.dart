@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
-import '../models/trend_direction.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
@@ -18,7 +17,6 @@ class MonGrossProfitController extends GetxController {
   var totalSales = "0".obs;
   var cogs = "0".obs;
   var grossProfitTrend = "0%".obs;
-  var grossProfitTrendDirection = TrendDirection.none.obs;
   var unit = "UGX".obs;
 
   @override
@@ -100,18 +98,10 @@ class MonGrossProfitController extends GetxController {
       final prevStartDateStr = dateFormatter.format(prevStartDate);
       final prevEndDateStr = dateFormatter.format(prevEndDate);
 
-      // SQL Queries using the new KPI table
-      // kpiId=5 is Profit (amount1=profit, amount2=transaction value)
-      // kpiId=0 is All Transactions (amount2=total sales)
+      // SQL Query using the KPI table
+      // kpiId=5 is Profit (amount1=profit, amount2=transaction value during that day)
       
-      // Get total sales (kpiId=0, sum of amount2)
-      const salesQuery = '''
-        SELECT SUM(amount2) as total 
-        FROM mon_kpi_sales 
-        WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
-      ''';
-      
-      // Get profit data (kpiId=5)
+      // Get profit data - amount1 is profit, amount2 is transaction value
       const profitQuery = '''
         SELECT SUM(amount1) as profit, SUM(amount2) as sales 
         FROM mon_kpi_sales 
@@ -122,41 +112,20 @@ class MonGrossProfitController extends GetxController {
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
       // Execute queries
-      final currentSalesResult = await db.rawQuery(salesQuery, [startDateStr, endDateStr]);
-      final prevSalesResult = await db.rawQuery(salesQuery, [prevStartDateStr, prevEndDateStr]);
       final currentProfitResult = await db.rawQuery(profitQuery, [startDateStr, endDateStr]);
       final prevProfitResult = await db.rawQuery(profitQuery, [prevStartDateStr, prevEndDateStr]);
       final currencyResult = await db.rawQuery(currencyQuery);
 
-      // Extract results - sales
-      final currentSales = (currentSalesResult.first['total'] as num? ?? 0.0).toDouble();
-      final prevSales = (prevSalesResult.first['total'] as num? ?? 0.0).toDouble();
-      
-      // Extract results - profit (from kpiId=5)
+      // Extract results - amount1 is profit, amount2 is transaction value (for that day/range)
       final currentProfit = (currentProfitResult.first['profit'] as num? ?? 0.0).toDouble();
-      final currentProfitSales = (currentProfitResult.first['sales'] as num? ?? 0.0).toDouble();
+      final currentTransactionValue = (currentProfitResult.first['sales'] as num? ?? 0.0).toDouble();
       final prevProfit = (prevProfitResult.first['profit'] as num? ?? 0.0).toDouble();
-      final prevProfitSales = (prevProfitResult.first['sales'] as num? ?? 0.0).toDouble();
+      final prevTransactionValue = (prevProfitResult.first['sales'] as num? ?? 0.0).toDouble();
 
-      // For COGS, calculate as sales - profit (or use the sales from profit KPI)
-      // Note: The profit KPI provides both profit (amount1) and sales (amount2)
-      // COGS = Sales - Profit
-      final currentCogs = currentProfitSales > 0 ? currentProfitSales - currentProfit : currentSales;
-      final prevCogs = prevProfitSales > 0 ? prevProfitSales - prevProfit : prevSales;
-
-      print("Current Sales (kpi=0): $currentSales");
-      print("Current Profit (kpi=5): $currentProfit");
-      print("Current COGS: $currentCogs");
-      print("Previous Sales: $prevSales");
+      print("Current Profit: $currentProfit");
+      print("Current Transaction Value: $currentTransactionValue");
       print("Previous Profit: $prevProfit");
-      print("Previous COGS: $prevCogs");
-
-      // Calculate gross profit (use the profit from KPI or calculate from sales - cogs)
-      final currentGrossProfit = currentProfit > 0 ? currentProfit : currentSales - currentCogs;
-      final prevGrossProfit = prevProfit > 0 ? prevProfit : prevSales - prevCogs;
-
-      print("Current Gross Profit: $currentGrossProfit");
-      print("Previous Gross Profit: $prevGrossProfit");
+      print("Previous Transaction Value: $prevTransactionValue");
 
       // Determine currency
       String currency = 'UGX';
@@ -172,21 +141,16 @@ class MonGrossProfitController extends GetxController {
       final compactFormatter = NumberFormat.compact();
       final percentFormatter = NumberFormat('+#,##0.0%;-#,##0.0%');
 
-      // Calculate trend
-      final grossProfitTrendValue = prevGrossProfit > 0
-          ? (currentGrossProfit - prevGrossProfit) / prevGrossProfit
-          : (currentGrossProfit > 0 ? 1.0 : 0.0);
+      // Calculate trend based on profit
+      final grossProfitTrendValue = prevProfit > 0
+          ? (currentProfit - prevProfit) / prevProfit
+          : (currentProfit > 0 ? 1.0 : 0.0);
 
-      // Update observable values
-      grossProfit.value = compactFormatter.format(currentGrossProfit);
-      totalSales.value = compactFormatter.format(currentSales > 0 ? currentSales : currentProfitSales);
-      cogs.value = compactFormatter.format(currentCogs);
+      // Update observable values - directly as fetched
+      grossProfit.value = compactFormatter.format(currentProfit);
+      totalSales.value = compactFormatter.format(currentTransactionValue);
+      cogs.value = '0'; // Not provided by KPI, set to 0
       grossProfitTrend.value = percentFormatter.format(grossProfitTrendValue);
-      grossProfitTrendDirection.value = grossProfitTrendValue > 0.001
-          ? TrendDirection.up
-          : (grossProfitTrendValue < -0.001
-          ? TrendDirection.down
-          : TrendDirection.none);
     } catch (e) {
       hasError.value = true;
       print("Error fetching gross profit data: $e");

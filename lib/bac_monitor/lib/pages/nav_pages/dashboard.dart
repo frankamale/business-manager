@@ -20,7 +20,7 @@ import '../../widgets/dashboard/expenses_card.dart';
 import '../../widgets/finance/date_range.dart';
 import '../profile.dart';
 import '../expenses_detail_page.dart';
-import '../../models/trend_direction.dart';
+
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -30,7 +30,6 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  // Add this helper in _DashboardState class
   double _parseCompactNumber(String formatted) {
     formatted = formatted.replaceAll(',', '').toUpperCase();
     if (formatted.endsWith('K')) {
@@ -179,40 +178,13 @@ class _DashboardState extends State<Dashboard> {
                       SizedBox(height: 24),
                       Obx(() {
                         final controller = Get.find<MonGrossProfitController>();
-                        // Then in the Obx block:
                         final grossProfitValue = _parseCompactNumber(
                           controller.grossProfit.value,
                         );
-                        final totalSalesValue = _parseCompactNumber(
-                          controller.totalSales.value,
-                        );
-                        final cogsValue = _parseCompactNumber(
-                          controller.cogs.value,
-                        );
-
-                        // Calculate previous period profit based on trend
-                        final trendPercent =
-                            double.tryParse(
-                              controller.grossProfitTrend.value
-                                  .replaceAll('%', '')
-                                  .replaceAll('+', '')
-                                  .replaceAll('-', ''),
-                            ) ??
-                            0.0;
-                        final prevProfitValue =
-                            controller.grossProfitTrendDirection.value ==
-                                TrendDirection.up
-                            ? grossProfitValue / (1 + trendPercent / 100)
-                            : controller.grossProfitTrendDirection.value ==
-                                  TrendDirection.down
-                            ? grossProfitValue / (1 - trendPercent / 100)
-                            : grossProfitValue;
 
                         return GrossProfitCard(
                           grossProfit: grossProfitValue,
-                          totalSales: totalSalesValue,
-                          cogs: cogsValue,
-                          previousPeriodProfit: prevProfitValue,
+                          trend: controller.grossProfitTrend.value,
                         );
                       }),
                       const SizedBox(height: 24),
@@ -278,7 +250,7 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ),
             ),
-          ], 
+          ],
         ),
       ),
     );

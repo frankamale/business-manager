@@ -4,28 +4,23 @@ import 'package:intl/intl.dart';
 
 class GrossProfitCard extends StatelessWidget {
   final double grossProfit;
-  final double totalSales;
-  final double cogs;
-  final double previousPeriodProfit;
+  final String trend;
 
   const GrossProfitCard({
     super.key,
     required this.grossProfit,
-    required this.totalSales,
-    required this.cogs,
-    required this.previousPeriodProfit,
+    required this.trend,
   });
 
   @override
   Widget build(BuildContext context) {
-    final double changePercentage = previousPeriodProfit > 0
-        ? ((grossProfit - previousPeriodProfit) / previousPeriodProfit) * 100
-        : (grossProfit > 0 ? 100.0 : 0.0);
-
-    final double profitMargin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0.0;
-
-    final bool isPositiveChange = grossProfit >= previousPeriodProfit;
     final compactFormatter = NumberFormat.compact(locale: 'en_US');
+
+    // Parse trend to determine direction
+    final trendValue = double.tryParse(
+      trend.replaceAll('%', '').replaceAll('+', '').replaceAll('-', '')
+    ) ?? 0.0;
+    final isPositive = trend.startsWith('+');
 
     return Container(
       padding: const EdgeInsets.all(20.0),
@@ -67,26 +62,8 @@ class GrossProfitCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              _buildTrendIndicator(isPositiveChange, changePercentage),
+              _buildTrendIndicator(isPositive, trendValue),
             ],
-          ),
-          const SizedBox(height: 20),
-
-          Divider(color: Colors.white.withOpacity(0.2)),
-          const SizedBox(height: 12),
-
-          _buildDetailRow('Total Sales', compactFormatter.format(totalSales)),
-          const SizedBox(height: 8),
-          _buildDetailRow('Cost of Goods Sold (COGS)', compactFormatter.format(cogs)),
-
-          const SizedBox(height: 12),
-          Divider(color: Colors.white.withOpacity(0.2)),
-          const SizedBox(height: 12),
-
-          _buildDetailRow(
-              'Profit Margin',
-              '${profitMargin.toStringAsFixed(1)}%',
-              isHighlighted: true
           ),
         ],
       ),
