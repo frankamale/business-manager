@@ -161,11 +161,13 @@ class MonKpiOverviewController extends GetxController {
       }
 
       // Format dates for KPI queries (yyyy-MM-dd)
+      // NOTE: processing_date stores date-only strings (no time component)
+      // Use date-only comparisons for accurate filtering
       final dateFormatter = DateFormat('yyyy-MM-dd');
       final startDateStr = dateFormatter.format(startDate);
-      final endDateStr = '${dateFormatter.format(endDate)} 23:59:59';
+      final endDateStr = dateFormatter.format(endDate);
       final prevStartDateStr = dateFormatter.format(prevStartDate);
-      final prevEndDateStr = '${dateFormatter.format(prevEndDate)} 23:59:59';
+      final prevEndDateStr = dateFormatter.format(prevEndDate);
 
       // Query the new mon_kpi_sales table
       // KPI ID 0 = All Transactions (total sales)
@@ -223,7 +225,7 @@ class MonKpiOverviewController extends GetxController {
         FROM mon_kpi_sales 
         WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
       '''; 
-      const prevSubscriptionRevenueQuery = '''
+      const prevSubscriptionRevenueQuery = ''' 
         SELECT SUM(amount1) as total 
         FROM mon_kpi_sales 
         WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
@@ -302,13 +304,16 @@ class MonKpiOverviewController extends GetxController {
       ]);
 
       // Safe access to results with bounds checking
+      // Expected 21 results (indices 0-20)
       if (results.length < 21) {
-        debugPrint('ERROR: Expected 22 results, got ${results.length}');
+        debugPrint('ERROR: Expected 21 results, got ${results.length}');
         for (int i = 0; i < results.length; i++) {
           final row = results[i].isEmpty ? "empty" : results[i].first;
           debugPrint('results[$i]: $row');
         }
         // Continue with available data - use safe access with null coalescing
+        // Index 17: cashSalesQuery (current), Index 18: prevCashSalesQuery (prev)
+        // Index 19: creditSalesQuery (current), Index 20: prevCreditSalesQuery (prev)
         final currentCashSales = results.length > 17 && results[17].isNotEmpty
             ? (results[17].first['total'] as num? ?? 0.0).toDouble()
             : 0.0;
@@ -354,22 +359,24 @@ class MonKpiOverviewController extends GetxController {
       final prevInventorySales = (results[14].first['total'] as num? ?? 0.0).toDouble();
 
       // Subscription revenue for gym mode
-      final currentSubscriptionRevenue = (results[16].first['total'] as num? ?? 0.0).toDouble();
-      final prevSubscriptionRevenue = (results[17].first['total'] as num? ?? 0.0).toDouble();
+      // Index 15: subscriptionRevenueQuery (current), Index 16: prevSubscriptionRevenueQuery (prev)
+      final currentSubscriptionRevenue = (results[15].first['total'] as num? ?? 0.0).toDouble();
+      final prevSubscriptionRevenue = (results[16].first['total'] as num? ?? 0.0).toDouble();
 
       // Cash and Credit sales for the new UI - with bounds checking
-      final currentCashSales = results[18].isNotEmpty 
-          ? (results[18].first['total'] as num? ?? 0.0).toDouble() 
+      // Index 17: cashSalesQuery (current), Index 18: prevCashSalesQuery (prev)
+      // Index 19: creditSalesQuery (current), Index 20: prevCreditSalesQuery (prev)
+      final currentCashSales = results[17].isNotEmpty
+          ? (results[17].first['total'] as num? ?? 0.0).toDouble()
           : 0.0;
-      final prevCashSales = results[19].isNotEmpty 
-          ? (results[19].first['total'] as num? ?? 0.0).toDouble() 
+      final prevCashSales = results[18].isNotEmpty
+          ? (results[18].first['total'] as num? ?? 0.0).toDouble()
           : 0.0;
-      final currentCreditSales = results[20].isNotEmpty 
-          ? (results[20].first['total'] as num? ?? 0.0).toDouble() 
+      final currentCreditSales = results[19].isNotEmpty
+          ? (results[19].first['total'] as num? ?? 0.0).toDouble()
           : 0.0;
-      // Note: prevCreditSales requires 22 results which may not exist in all cases
-      final prevCreditSales = results.length > 21 && results[21].isNotEmpty 
-          ? (results[21].first['total'] as num? ?? 0.0).toDouble() 
+      final prevCreditSales = results[20].isNotEmpty
+          ? (results[20].first['total'] as num? ?? 0.0).toDouble()
           : 0.0;
 
       // Debug prints
