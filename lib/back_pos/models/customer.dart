@@ -151,7 +151,7 @@ class Customer {
       'title': title,
       'guarantors': guarantors,
       'pospassword': pospassword,
-      'posenabled': posenabled,
+      'posenabled': posenabled == true ? 1 : 0,
       'posusername': posusername,
       'pospasswordexpiry': pospasswordexpiry,
       'statusid': statusid,

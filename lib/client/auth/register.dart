@@ -69,7 +69,7 @@ class Register extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 25,
                               fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
+                              color: FlavorColors.current.primaryPlus,
                             ),
                           ),
 
@@ -100,6 +100,50 @@ class Register extends StatelessWidget {
                             "Email *",
                             controller.emailController,
                             Icons.email_outlined,
+                          ),
+
+                          const SizedBox(height: 15),
+                          Obx(
+                            () => Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(
+                                    context,
+                                    "Challenge Code",
+                                    controller.challengeCodeController,
+                                    Icons.qr_code_sharp,
+                                    enabled: controller.isCodeSent.value,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        FlavorColors.current.primaryDark,
+                                    foregroundColor:
+                                        FlavorColors.current.onPrimary,
+                                  ),
+                                  onPressed: controller.isCodeButtonDisabled
+                                      ? null
+                                      : () =>
+                                            controller.generateChallengeCode(),
+                                  child: controller.isGettingCode.value
+                                      ? SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: colorScheme.onPrimary,
+                                          ),
+                                        )
+                                      : controller.cooldownSeconds.value > 0
+                                      ? Text(
+                                          "${controller.cooldownSeconds.value}s",
+                                        )
+                                      : const Text("Get Code"),
+                                ),
+                              ],
+                            ),
                           ),
 
                           const SizedBox(height: 15),
@@ -204,55 +248,78 @@ class Register extends StatelessWidget {
                                         controller.tinController,
                                         Icons.numbers_rounded,
                                       ),
+                                      const SizedBox(height: 15),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: DropdownButtonFormField<int>(
+                                          value:
+                                              controller.selectedService.value,
+                                          decoration: InputDecoration(
+                                            labelText: "Category",
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: colorScheme.outline,
+                                              ),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: colorScheme.outline,
+                                              ),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: colorScheme.primary,
+                                              ),
+                                            ),
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  horizontal: 12,
+                                                  vertical: 16,
+                                                ),
+                                          ),
+                                          items: const [
+                                            DropdownMenuItem(
+                                              value: 1,
+                                              child: Text('Customer'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 2,
+                                              child: Text('Vendor'),
+                                            ),
+                                            DropdownMenuItem(
+                                              value: 3,
+                                              child: Text('Staff'),
+                                            ),
+                                          ],
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              controller.selectedService.value =
+                                                  value;
+                                            }
+                                          },
+                                        ),
+                                      ),
                                     ],
                                   )
                                 : const SizedBox.shrink(),
                           ),
-                          const SizedBox(height: 15),
-                          Obx(
-                            () => Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(
-                                    context,
-                                    "Challenge Code",
-                                    controller.challengeCodeController,
-                                    Icons.qr_code_sharp,
-                                    enabled: controller.isCodeSent.value,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: FlavorColors.current.primaryDark,
-                                    foregroundColor: FlavorColors.current.onPrimary,
-                                  ),
-                                  onPressed: controller.isGettingCode.value
-                                      ? null
-                                      : () =>
-                                            controller.generateChallengeCode(),
-                                  child: controller.isGettingCode.value
-                                      ? SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: colorScheme.onPrimary,
-                                          ),
-                                        )
-                                      : const Text("Get Code"),
-                                ),
-                              ],
-                            ),
-                          ),
+
                           const SizedBox(height: 25),
                           Obx(
                             () => SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: FlavorColors.current.primaryDark,
-                                  foregroundColor: FlavorColors.current.onPrimary,
+                                  backgroundColor:
+                                      FlavorColors.current.primaryDark,
+                                  foregroundColor:
+                                      FlavorColors.current.onPrimary,
                                   elevation: 4,
                                   shadowColor: colorScheme.shadow.withValues(
                                     alpha: 0.5,
@@ -278,7 +345,8 @@ class Register extends StatelessWidget {
                                         height: 20,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: FlavorColors.current.primaryDark,
+                                          color:
+                                              FlavorColors.current.primaryDark,
                                         ),
                                       )
                                     : const Text("Register Account"),

@@ -90,54 +90,58 @@ class MonOutstandingPaymentsController extends GetxController {
           break;
       }
 
-      // Convert to milliseconds for database query
-      final startMillis = startDate.millisecondsSinceEpoch;
-      final endMillis = endDate.millisecondsSinceEpoch;
-      final prevStartMillis = prevStartDate.millisecondsSinceEpoch;
-      final prevEndMillis = prevEndDate.millisecondsSinceEpoch;
+      // Format dates for KPI queries (yyyy-MM-dd)
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(startDate);
+      final endDateStr = dateFormatter.format(endDate);
+      final prevStartDateStr = dateFormatter.format(prevStartDate);
+      final prevEndDateStr = dateFormatter.format(prevEndDate);
 
       // Query for selected period outstanding payments
+      // Using kpiId=2 (pending payment / credit transactions)
+      // amount1 = amount paid, amount2 = amount supposed to be paid
+      // Outstanding = amount2 - amount1 (pending amount)
       const outstandingQuery = '''
-        SELECT SUM(balance) as total
-        FROM mon_sales
-        WHERE transactiondate BETWEEN ? AND ?
-        AND balance > 0
+        SELECT SUM(amount2 - amount1) as total
+        FROM mon_kpi_sales
+        WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
       ''';
 
       final currentResult = await db.rawQuery(
         outstandingQuery,
-        [startMillis, endMillis],
+        [startDateStr, endDateStr],
       );
       final currentOutstanding = (currentResult.first['total'] as num? ?? 0.0).toDouble();
 
       // Query for previous period (for trend calculation)
       final prevResult = await db.rawQuery(
         outstandingQuery,
-        [prevStartMillis, prevEndMillis],
+        [prevStartDateStr, prevEndDateStr],
       );
       final prevOutstanding = (prevResult.first['total'] as num? ?? 0.0).toDouble();
 
       // Calculate MTD (always calculate regardless of selection)
       final mtdStartDate = DateTime(now.year, now.month, 1);
       final mtdEndDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
-      final mtdStartMillis = mtdStartDate.millisecondsSinceEpoch;
-      final mtdEndMillis = mtdEndDate.millisecondsSinceEpoch;
+      final mtdStartStr = dateFormatter.format(mtdStartDate);
+      final mtdEndStr = dateFormatter.format(mtdEndDate);
+
 
       final mtdResult = await db.rawQuery(
         outstandingQuery,
-        [mtdStartMillis, mtdEndMillis],
+        [mtdStartStr, mtdEndStr],
       );
       final mtdOutstanding = (mtdResult.first['total'] as num? ?? 0.0).toDouble();
 
       // Calculate YTD (always calculate regardless of selection)
       final ytdStartDate = DateTime(now.year, 1, 1);
       final ytdEndDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
-      final ytdStartMillis = ytdStartDate.millisecondsSinceEpoch;
-      final ytdEndMillis = ytdEndDate.millisecondsSinceEpoch;
+      final ytdStartStr = dateFormatter.format(ytdStartDate);
+      final ytdEndStr = dateFormatter.format(ytdEndDate);
 
       final ytdResult = await db.rawQuery(
         outstandingQuery,
-        [ytdStartMillis, ytdEndMillis],
+        [ytdStartStr, ytdEndStr],
       );
       final ytdOutstanding = (ytdResult.first['total'] as num? ?? 0.0).toDouble();
 

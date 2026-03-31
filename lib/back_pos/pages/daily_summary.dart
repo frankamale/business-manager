@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:get/get.dart';
 import '../controllers/sales_controller.dart';
 import '../services/print_service.dart';
+import '../../flavors/flavor_colors.dart';
 
 class DailySummary extends StatefulWidget {
   const DailySummary({super.key});
@@ -72,7 +73,7 @@ class _DailySummaryState extends State<DailySummary> {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue[50],
+              color: FlavorColors.current.surface,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
@@ -83,7 +84,7 @@ class _DailySummaryState extends State<DailySummary> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue[900],
+                color: FlavorColors.current.primaryDark,
               ),
             ),
           ),
@@ -95,7 +96,7 @@ class _DailySummaryState extends State<DailySummary> {
               dataRowMaxHeight: 52,
               columnSpacing: 20,
               horizontalMargin: 16,
-              headingRowColor: WidgetStateProperty.all(Colors.grey[100]),
+              headingRowColor: WidgetStateProperty.all(FlavorColors.current.background),
               decoration: const BoxDecoration(
                 border: Border(
                   top: BorderSide(color: Colors.black12, width: 1),
@@ -135,7 +136,7 @@ class _DailySummaryState extends State<DailySummary> {
                   color: WidgetStateProperty.resolveWith<Color?>(
                     (Set<WidgetState> states) {
                       if (isTotal) {
-                        return Colors.blue[50];
+                        return FlavorColors.current.surface;
                       }
                       if (index.isEven) {
                         return Colors.grey[50];
@@ -181,7 +182,7 @@ class _DailySummaryState extends State<DailySummary> {
                           style: TextStyle(
                             fontSize: isTotal ? 16 : 15,
                             fontWeight: FontWeight.bold,
-                            color: isTotal ? Colors.blue.shade900 : Colors.black,
+                            color: isTotal ? FlavorColors.current.primaryDark : Colors.black,
                           ),
                         ),
                       ),
@@ -203,13 +204,13 @@ class _DailySummaryState extends State<DailySummary> {
 
     if (isLoading) {
       return Scaffold(
-        backgroundColor: Colors.grey[100],
+        backgroundColor: FlavorColors.current.background,
         appBar: AppBar(
           title: const Text(
             "Daily Summary",
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
-          backgroundColor: Colors.blue[700],
+          backgroundColor: FlavorColors.current.primaryDark,
           foregroundColor: Colors.white,
           elevation: 0,
         ),
@@ -287,7 +288,7 @@ class _DailySummaryState extends State<DailySummary> {
       'icon': Icons.account_balance,
       'label': 'TOTAL',
       'amount': 'UGX ${currencyFormat.format(totalSales)}',
-      'color': Colors.blue.shade700,
+      'color': FlavorColors.current.primaryDark,
       'isTotal': true,
     });
 
@@ -335,13 +336,13 @@ class _DailySummaryState extends State<DailySummary> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: FlavorColors.current.background,
       appBar: AppBar(
         title: const Text(
           "Daily Summary",
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.blue[700],
+        backgroundColor: FlavorColors.current.primaryDark,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -360,14 +361,14 @@ class _DailySummaryState extends State<DailySummary> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Colors.blue[700]!, Colors.blue[500]!],
+                    colors: [FlavorColors.current.primaryDark, FlavorColors.current.primary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: FlavorColors.current.primary.withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -523,8 +524,8 @@ class _DailySummaryState extends State<DailySummary> {
                       label: const Text("Print"),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: BorderSide(color: Colors.blue[700]!),
-                        foregroundColor: Colors.blue[700],
+                        side: BorderSide(color: FlavorColors.current.primaryDark),
+                        foregroundColor: FlavorColors.current.primaryDark,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -539,7 +540,7 @@ class _DailySummaryState extends State<DailySummary> {
                       label: const Text("Commit"),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: Colors.blue[700],
+                        backgroundColor: FlavorColors.current.primaryDark,
                         foregroundColor: Colors.white,
                         elevation: 2,
                         shape: RoundedRectangleBorder(
@@ -662,7 +663,7 @@ class _DailySummaryState extends State<DailySummary> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.print, color: Colors.blue),
+              leading: Icon(Icons.print, color: FlavorColors.current.primary),
               title: Text('Print Summary'),
               subtitle: Text('Print daily summary report'),
               onTap: () async {

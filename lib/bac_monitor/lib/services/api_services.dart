@@ -5,9 +5,11 @@ import 'package:get/get.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:sqflite/sqflite.dart';
+import '../../../back_pos/services/api_services.dart';
 import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
 import '../../../shared/database/unified_db_helper.dart';
+import '../../../shared/services/token_refresh_interceptor.dart';
 
 /// Top-level function for isolate-based JSON decoding
 /// Must be top-level or static for compute() to work
@@ -19,20 +21,47 @@ Map<String, dynamic> _decodeJsonMap(String jsonString) {
   return json.decode(jsonString) as Map<String, dynamic>;
 }
 
+/// Parse double from various formats (int, double, String)
+double _parseDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is double) return value;
+  if (value is int) return value.toDouble();
+  if (value is String) {
+    return double.tryParse(value) ?? 0.0;
+  }
+  return 0.0;
+}
+
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
   final _dbHelper = UnifiedDatabaseHelper.instance;
- String? _cachedToken;
+  String? _cachedToken;
   String? cachedCompanyId;
   bool _isInitialized = false;
 
   Future<void>? _initializationFuture;
+
+  // Token refresh interceptor for automatic token refresh on 401 errors
+  late final TokenRefreshInterceptor _tokenRefreshInterceptor;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _tokenRefreshInterceptor = TokenRefreshInterceptor(
+      baseUrl: _baseUrl,
+      secureStorage: secureStorage,
+    );
+  }
+
+  @override
+  void onClose() {
+    _tokenRefreshInterceptor.close();
+    super.onClose();
+  }
 
   Future<String?> getStoredToken() async {
     if (_cachedToken != null) {
@@ -46,7 +75,7 @@ class MonitorApiService extends GetxService {
 
   Future<void> storeToken(String token) async {
     await secureStorage.write(key: 'access_token', value: token);
-    _cachedToken = token; 
+    _cachedToken = token;
     // print('DEBUG: MonitorApiService.storeToken() stored token');
   }
 
@@ -63,9 +92,11 @@ class MonitorApiService extends GetxService {
 
   Future<void> storeUserData(Map<String, dynamic> data) async {
     await secureStorage.write(key: 'user_data', value: jsonEncode(data));
-    
+
     // Also store user role separately for easier access
-    if (data.containsKey('roles') && data['roles'] is List && data['roles'].isNotEmpty) {
+    if (data.containsKey('roles') &&
+        data['roles'] is List &&
+        data['roles'].isNotEmpty) {
       final userRole = data['roles'].first.toString();
       await secureStorage.write(key: 'user_role', value: userRole);
     }
@@ -85,11 +116,16 @@ class MonitorApiService extends GetxService {
   }
 
   Future<void> storeLastSyncTimestamp(int timestamp) async {
-    await secureStorage.write(key: 'last_sync_timestamp', value: timestamp.toString());
+    await secureStorage.write(
+      key: 'last_sync_timestamp',
+      value: timestamp.toString(),
+    );
   }
 
   Future<int?> getStoredLastSyncTimestamp() async {
-    final timestampString = await secureStorage.read(key: 'last_sync_timestamp');
+    final timestampString = await secureStorage.read(
+      key: 'last_sync_timestamp',
+    );
     return timestampString != null ? int.parse(timestampString) : null;
   }
 
@@ -119,10 +155,7 @@ class MonitorApiService extends GetxService {
   Future<Map<String, String?>> getServerCredentials() async {
     final username = await secureStorage.read(key: 'server_username');
     final password = await secureStorage.read(key: 'server_password');
-    return {
-      'username': username,
-      'password': password,
-    };
+    return {'username': username, 'password': password};
   }
 
   /// Initialize company ID during app startup
@@ -154,11 +187,14 @@ class MonitorApiService extends GetxService {
 
       // Try to get from cache/storage first
       final cachedId = await getStoredCompanyId();
-      if (cachedId != null && cachedId.isNotEmpty && cachedId != 'default_offline_company') {
+      if (cachedId != null &&
+          cachedId.isNotEmpty &&
+          cachedId != 'default_offline_company') {
         // print('DEBUG: MonitorApiService._performInitialization() - Using cached company ID: $cachedId');
 
         // Check if database is already open for this company
-        if (_dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == cachedId) {
+        if (_dbHelper.isDatabaseOpen &&
+            _dbHelper.currentCompanyId == cachedId) {
           // print('DEBUG: MonitorApiService._performInitialization() - Database already open for company: $cachedId');
           cachedCompanyId = cachedId;
           _isInitialized = true;
@@ -179,7 +215,6 @@ class MonitorApiService extends GetxService {
       if (companyId.isNotEmpty && companyId != 'default_offline_company') {
         await switchCompany(companyId, fetchData: false);
       }
-
     } catch (e) {
       // print('ERROR: MonitorApiService._performInitialization() - Failed to initialize company ID: $e');
       _isInitialized = false;
@@ -228,14 +263,16 @@ class MonitorApiService extends GetxService {
 
     // If not available, this is an error - initialization should have been called
     // print('ERROR: MonitorApiService.ensureCompanyIdAvailable() - Company ID not initialized!');
-    throw Exception('Company ID not initialized. Call initializeCompanyId() first.');
+    throw Exception(
+      'Company ID not initialized. Call initializeCompanyId() first.',
+    );
   }
 
   Future<Map<String, dynamic>> post(
-      String endpoint,
-      Map<String, dynamic> data, {
-        bool useToken = true,
-      }) async {
+    String endpoint,
+    Map<String, dynamic> data, {
+    bool useToken = true,
+  }) async {
     try {
       // print('DEBUG: MonitorApiService.post() called for endpoint: $endpoint');
       final headers = {'Content-Type': 'application/json'};
@@ -261,16 +298,41 @@ class MonitorApiService extends GetxService {
       throw Exception('Network error: $e');
     }
   }
+ Future<http.Response> getWithAuth(
+    String endpoint, {
+    Duration? timeout,
+  }) async {
+    final request = http.Request('GET', Uri.parse('$_baseUrl$endpoint'));
+    request.headers['Content-Type'] = 'application/json';
+
+    final streamedResponse = await _tokenRefreshInterceptor
+        .send(request)
+        .timeout(
+          timeout ?? const Duration(minutes: 5),
+          onTimeout: () {
+            throw Exception('Request timeout for $endpoint');
+          },
+        );
+
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      // debugPrint("ApiService: Successfully fetched data from $endpoint");
+      return response;
+    } else {
+      _handleResponse(response);
+      throw Exception(
+        'Failed to load data from $endpoint: ${response.statusCode}',
+      );
+    }
+  }
 
   Future<void> login(String email, String password) async {
-    // print("login begin ----- ");
-
     final response = await post('/auth/signin', {
       'username': email.trim().toLowerCase(),
       'password': password.trim(),
     }, useToken: false);
-    // print("next .....");
-    // print(response);
+
     if (response.containsKey('accessToken')) {
       await storeToken(response['accessToken']);
 
@@ -345,12 +407,17 @@ class MonitorApiService extends GetxService {
   /// Switch to a different company
   /// This will update the stored company ID and switch the database
   /// Set fetchData to false to skip data fetching (useful when you'll fetch separately)
-  Future<void> switchCompany(String newCompanyId, {bool fetchData = true}) async {
+  Future<void> switchCompany(
+    String newCompanyId, {
+    bool fetchData = true,
+  }) async {
     try {
       // print('DEBUG: MonitorApiService.switchCompany() - Switching to company: $newCompanyId (current: $cachedCompanyId)');
 
       // Check if we're already on this company
-      if (cachedCompanyId == newCompanyId && _dbHelper.isDatabaseOpen && _dbHelper.currentCompanyId == newCompanyId) {
+      if (cachedCompanyId == newCompanyId &&
+          _dbHelper.isDatabaseOpen &&
+          _dbHelper.currentCompanyId == newCompanyId) {
         // print('DEBUG: MonitorApiService.switchCompany() - Already on company $newCompanyId, skipping');
         return;
       }
@@ -381,7 +448,9 @@ class MonitorApiService extends GetxService {
   Future<bool> _hasSalesInDb() async {
     try {
       final db = _dbHelper.database;
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_sales');
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM mon_sales',
+      );
       final count = result.first['count'] as int? ?? 0;
       // debugPrint("ApiService: Found $count sales records in database");
       return count > 0;
@@ -402,7 +471,9 @@ class MonitorApiService extends GetxService {
       if (!force) {
         final hasSales = await _hasSalesInDb();
         if (hasSales) {
-          debugPrint("ApiService: Sales already exist in database, skipping fetch");
+          debugPrint(
+            "ApiService: Sales already exist in database, skipping fetch",
+          );
           await setInitialSyncCompleted();
 
           if (Get.isRegistered<MonOperatorController>()) {
@@ -430,6 +501,27 @@ class MonitorApiService extends GetxService {
       }
 
       try {
+        debugPrint("ApiService: Starting to fetch customers from /bp/customers endpoint");
+        final posApiService = Get.find<PosApiService>();
+        final customers = await posApiService.fetchCustomers();
+        debugPrint(
+          "ApiService: Successfully fetched ${customers.length} customers from API",
+        );
+
+        // Save to database
+        debugPrint("ApiService: Deleting existing customers from database...");
+        await _dbHelper.deleteAllCustomers();
+        debugPrint("ApiService: Inserting ${customers.length} customers into database...");
+        await _dbHelper.insertCustomers(customers);
+        
+        // Verify the save
+        final savedCount = await _dbHelper.getCustomerCount();
+        debugPrint("ApiService: Verified $savedCount customers saved to database successfully");
+      } catch (e) {
+        debugPrint("ApiService: Failed to fetch customers -> $e");
+      }
+
+      try {
         companyDetailsRes = await getWithAuth('/company/details');
         debugPrint("ApiService: Successfully fetched company details");
       } catch (e) {
@@ -438,24 +530,21 @@ class MonitorApiService extends GetxService {
       }
 
       try {
-        final endDate = dateFormatter.format(now);
-        debugPrint("ApiService: Fetching sales from 2023-09-01 to $endDate");
-        salesRes = await getWithAuth(
-          '/sales/reports/transaction/detail?startDate=2023-09-01&endDate=$endDate',
-        );
-        debugPrint("ApiService: Successfully fetched sales reports");
+        // Fetch all KPI data types using syncAllKpiData
+        // This ensures all kpi_ids (0-8) are available in the database
+        final startDate = DateTime(2023, 9, 1); // Start from historical date
+        debugPrint("ApiService: Fetching all KPI data types from 2023-09-01 to ${dateFormatter.format(now)}");
+        
+        await syncAllKpiData(startDate, now);
+        debugPrint("ApiService: Successfully fetched all KPI data types");
       } catch (e) {
-        debugPrint("ApiService: Failed to fetch sales -> $e");
+        debugPrint("ApiService: Failed to fetch all KPI data -> $e");
         salesRes = null;
       }
 
-      try {
-        salesDetailsRes = await getWithAuth('/sales/?pagecount=0&pagesize=5000');
-        debugPrint("ApiService: Successfully fetched sales details");
-      } catch (e) {
-        debugPrint("ApiService: Failed to fetch /sales/ -> $e");
-        salesDetailsRes = null;
-      }
+      // Sales details now fetched via individual KPI endpoints when needed
+      // instead of the previous /sales/?pagecount=0&pagesize=5000 endpoint
+      salesDetailsRes = null;
 
       try {
         inventoryRes = await getWithAuth('/inventory/');
@@ -475,7 +564,7 @@ class MonitorApiService extends GetxService {
         }
       }
 
-      Map<String, dynamic> companyDetailsData = {};
+      Map<String, dynamic> companyDetailsData = {}; 
       if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
@@ -489,7 +578,9 @@ class MonitorApiService extends GetxService {
       if (salesRes != null && salesRes.body.isNotEmpty) {
         try {
           salesData = await compute(_decodeJsonList, salesRes.body);
-          debugPrint("ApiService: Parsed ${salesData.length} sales records (isolate)");
+          debugPrint(
+            "ApiService: Parsed ${salesData.length} sales records (isolate)",
+          );
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales JSON -> $e");
         }
@@ -498,7 +589,10 @@ class MonitorApiService extends GetxService {
       List<dynamic> salesDetailsData = [];
       if (salesDetailsRes != null && salesDetailsRes.body.isNotEmpty) {
         try {
-          salesDetailsData = await compute(_decodeJsonList, salesDetailsRes.body);
+          salesDetailsData = await compute(
+            _decodeJsonList,
+            salesDetailsRes.body,
+          );
         } catch (e) {
           debugPrint("ApiService: Failed to parse sales details JSON -> $e");
         }
@@ -508,7 +602,9 @@ class MonitorApiService extends GetxService {
       if (inventoryRes != null && inventoryRes.body.isNotEmpty) {
         try {
           inventoryData = await compute(_decodeJsonList, inventoryRes.body);
-          debugPrint("ApiService: Parsed ${inventoryData.length} inventory items (isolate)");
+          debugPrint(
+            "ApiService: Parsed ${inventoryData.length} inventory items (isolate)",
+          );
         } catch (e) {
           debugPrint("ApiService: Failed to parse inventory JSON -> $e");
         }
@@ -566,8 +662,10 @@ class MonitorApiService extends GetxService {
             'currentBranchName': companyDetailsData['currentBranchName'],
             'currentBranchCode': companyDetailsData['currentBranchCode'],
             'activeBranchName': companyDetailsData['activeBranch']?['name'],
-            'activeBranchAddress': companyDetailsData['activeBranch']?['address'],
-            'activeBranchPrimaryEmail': companyDetailsData['activeBranch']?['primaryEmail'],
+            'activeBranchAddress':
+                companyDetailsData['activeBranch']?['address'],
+            'activeBranchPrimaryEmail':
+                companyDetailsData['activeBranch']?['primaryEmail'],
             'activeBranchCode': companyDetailsData['activeBranch']?['code'],
             'efrisEnabled': companyDetailsData['efrisEnabled'] == true ? 1 : 0,
           }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -600,53 +698,31 @@ class MonitorApiService extends GetxService {
           await spBatch.commit(noResult: true);
         }
 
-        // Insert sales using batch - this is the big one (4000+ records)
+        // Insert KPI aggregated sales using batch
         if (salesData.isNotEmpty) {
-          // debugPrint("ApiService: Batch inserting ${salesData.length} sales records");
-          final salesBatch = txn.batch();
+          debugPrint("ApiService: Batch inserting ${salesData.length} KPI sales records into mon_kpi_sales");
+          final kpiBatch = txn.batch();
           for (final sale in salesData) {
-            salesBatch.insert('mon_sales', {
-              'id': sale['id'],
-              'purchaseordernumber': sale['purchaseordernumber'],
-              'internalrefno': sale['internalrefno'],
-              'issuedby': sale['issuedby'],
-              'receiptnumber': sale['receiptnumber'],
-              'receivedby': sale['receivedby'],
-              'remarks': sale['remarks'],
-              'transactiondate': sale['transactiondate'],
-              'costcentre': sale['costcentre'],
-              'destinationbp': sale['destinationbp'],
-              'paymentmode': sale['paymentmode'],
-              'sourcefacility': sale['sourcefacility'],
-              'genno': sale['genno'],
-              'paymenttype': sale['paymenttype'],
-              'validtill': sale['validtill'],
-              'currency': sale['currency'],
-              'quantity': sale['quantity'],
-              'unitquantity': sale['unitquantity'],
-              'amount': sale['amount'],
-              'amountpaid': sale['amountpaid'],
-              'balance': sale['balance'],
-              'sellingprice': sale['sellingprice'],
-              'costprice': sale['costprice'],
-              'sellingprice_original': sale['sellingprice_original'],
-              'inventoryname': sale['inventoryname'],
-              'category': sale['category'],
-              'subcategory': sale['subcategory'],
-              'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
-              'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
-              'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
-              'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
-              'patron': sale['patron'],
-              'department': sale['department'],
-              'packsize': sale['packsize'],
-              'packaging': sale['packaging'],
-              'complimentaryid': sale['complimentaryid'],
-              'salesId': sale['salesId'],
+            // Map the KPI response data to the new table schema
+            // kpiId is passed separately, default to 0 (all transactions)
+            kpiBatch.insert('mon_kpi_sales', {
+              'kpi_id': 0, // Default to all transactions
+              'processing_date': sale['processingdate'] ?? '',
+              'selling_point': sale['sellingpoint'] ?? '',
+              'currency': sale['currency'] ?? '',
+              'kpi': sale['kpi'] ?? '',
+              'quantity': sale['quantity'] ?? 0,
+              'amount1': _parseDouble(sale['amount1']),
+              'amount2': _parseDouble(sale['amount2']),
             }, conflictAlgorithm: ConflictAlgorithm.replace);
           }
-          await salesBatch.commit(noResult: true);
+          await kpiBatch.commit(noResult: true);
+          debugPrint("ApiService: Successfully inserted KPI sales records");
         }
+
+        // Clear old mon_sales since we now use KPI aggregated data
+        // Note: Keeping the table for backward compatibility, but it's no longer populated
+        // await txn.delete('mon_sales');
 
         // Update sales with salesperson/payment info using batch
         if (salesDetailsData.isNotEmpty) {
@@ -667,7 +743,6 @@ class MonitorApiService extends GetxService {
           }
           await updateBatch.commit(noResult: true);
         }
-
       });
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
@@ -690,178 +765,205 @@ class MonitorApiService extends GetxService {
 
       final lastSyncTimestamp =
           (await getStoredLastSyncTimestamp()) ??
-              now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
+          now.subtract(const Duration(days: 1)).millisecondsSinceEpoch;
       final lastSyncDate = DateTime.fromMillisecondsSinceEpoch(
         lastSyncTimestamp,
       );
 
-      final dateFormatter = DateFormat('yyyy-MM-dd');
-      final startDate = dateFormatter.format(lastSyncDate);
-      final endDate = dateFormatter.format(now);
-
-      // debugPrint("ApiService: Syncing from $startDate to $endDate.");
-
-      final response = await getWithAuth(
-        '/sales/reports/transaction/detail?startDate=$startDate&endDate=$endDate',
-      );
-
-      // Parse on isolate to prevent GC pressure
-      final List<dynamic> salesData = await compute(_decodeJsonList, response.body);
-
-      // Early return if no sales data - skip all database operations
-      if (salesData.isEmpty) {
-        // debugPrint("ApiService: No new sales to sync, skipping database operations.");
-        await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
-        return;
-      }
-
-      // Only fetch sales details if we have sales data to process
-      http.Response? salesDetailsRes;
-      try {
-        salesDetailsRes = await getWithAuth(
-          '/sales/?pagecount=0&pagesize=5000&startdate=$startDate&enddate=$endDate',
-        );
-      } catch (e) {
-        debugPrint(
-          "ApiService: Failed to fetch sales details during sync -> $e",
-        );
-      }
-
-      final List<dynamic> salesDetailsData = salesDetailsRes != null
-          ? await compute(_decodeJsonList, salesDetailsRes.body)
-          : [];
-
-      final db = _dbHelper.database;
-
-      final startOfDayToClear = DateTime(
-        lastSyncDate.year,
-        lastSyncDate.month,
-        lastSyncDate.day,
-      );
-      final startOfDayMillis = startOfDayToClear.millisecondsSinceEpoch;
-
-      debugPrint(
-        "ApiService: Deleting local sales from ${startOfDayToClear.toIso8601String()} onwards before inserting ${salesData.length} new records.",
-      );
-
-      // Use transaction with batch for optimal performance
-      await db.transaction((txn) async {
-        await txn.delete(
-          'mon_sales',
-          where: 'transactiondate >= ?',
-          whereArgs: [startOfDayMillis],
-        );
-
-        // Batch insert sales
-        final salesBatch = txn.batch();
-        for (final sale in salesData) {
-          salesBatch.insert('mon_sales', {
-            'id': sale['id'],
-            'purchaseordernumber': sale['purchaseordernumber'],
-            'internalrefno': sale['internalrefno'],
-            'issuedby': sale['issuedby'],
-            'receiptnumber': sale['receiptnumber'],
-            'receivedby': sale['receivedby'],
-            'remarks': sale['remarks'],
-            'transactiondate': sale['transactiondate'],
-            'costcentre': sale['costcentre'],
-            'destinationbp': sale['destinationbp'],
-            'paymentmode': sale['paymentmode'],
-            'sourcefacility': sale['sourcefacility'],
-            'genno': sale['genno'],
-            'paymenttype': sale['paymenttype'],
-            'validtill': sale['validtill'],
-            'currency': sale['currency'],
-            'quantity': sale['quantity'],
-            'unitquantity': sale['unitquantity'],
-            'amount': sale['amount'],
-            'amountpaid': sale['amountpaid'],
-            'balance': sale['balance'],
-            'sellingprice': sale['sellingprice'],
-            'costprice': sale['costprice'],
-            'sellingprice_original': sale['sellingprice_original'],
-            'inventoryname': sale['inventoryname'],
-            'category': sale['category'],
-            'subcategory': sale['subcategory'],
-            'gnrtd': (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0,
-            'printed': (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0,
-            'redeemed': (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0,
-            'cancelled': (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0,
-            'patron': sale['patron'],
-            'department': sale['department'],
-            'packsize': sale['packsize'],
-            'packaging': sale['packaging'],
-            'complimentaryid': sale['complimentaryid'],
-            'salesId': sale['salesId'],
-          }, conflictAlgorithm: ConflictAlgorithm.replace);
-        }
-        await salesBatch.commit(noResult: true);
-
-        // Batch update with salesperson and payment info
-        final updateBatch = txn.batch();
-        for (final detail in salesDetailsData) {
-          if (detail['id'] != null) {
-            updateBatch.update(
-              'mon_sales',
-              {
-                'salesperson': detail['salesperson'],
-                'paymentmode': detail['paymentmode'],
-              },
-              where: 'salesId = ?',
-              whereArgs: [detail['id']],
-            );
-          }
-        }
-        await updateBatch.commit(noResult: true);
-      });
-
-      debugPrint(
-        "ApiService: Successfully synced and replaced ${salesData.length} sales records for the specified period.",
-      );
+      // Sync all KPI data types for the recent period
+      await syncAllKpiData(lastSyncDate, now);
 
       await storeLastSyncTimestamp(now.millisecondsSinceEpoch);
+      debugPrint("ApiService: Recent sales sync completed.");
     } catch (e) {
-      // debugPrint("ApiService: Error during recent sales sync: $e");
+      debugPrint("ApiService: syncRecentSales failed -> $e");
+      rethrow;
     }
   }
 
-  Future<http.Response> getWithAuth(String endpoint, {Duration? timeout}) async {
-    final token = await getStoredToken();
+  /// Legacy method - redirects to syncAllKpiData
+  Future<void> _syncRecentSalesLegacy() async {
+    // This method is kept for backward compatibility but now uses syncAllKpiData
+    await syncRecentSales();
+  }
 
-    if (token == null) {
-      // print('ERROR: MonitorApiService.getWithAuth() - Authentication token not found for GET request.');
-      throw Exception('Authentication token not found for GET request.');
-    }
+  /// KPI ID definitions for aggregated sales reports
+  /// 0 - all transactions
+  /// 1 - cash
+  /// 2 - pending payment
+  /// 3 - payment modes
+  /// 4 - salesperson
+  /// 5 - profit
+  /// 6 - efris status (1- pending, 2 - uploaded, 3- failed)
+  /// 7 - by stick category
+  /// 8 - by item
+  static const int kpiAllTransactions = 0;
+  static const int kpiCash = 1;
+  static const int kpiPendingPayment = 2;
+  static const int kpiPaymentModes = 3;
+  static const int kpiSalesperson = 4;
+  static const int kpiProfit = 5;
+  static const int kpiEfrisStatus = 6;
+  static const int kpiStockCategory = 7;
+  static const int kpiByItem = 8;
 
-    final client = http.Client();
-    try {
-      final request = http.Request('GET', Uri.parse('$_baseUrl$endpoint'));
-      request.headers.addAll({
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      });
+  /// Timeframe definitions
+  /// 1 - normal date
+  /// 2 - week
+  /// 3 - month
+  /// 4 - quarter
+  /// 5 - year
+  static const int timeframeNormal = 1;
+  static const int timeframeWeek = 2;
+  static const int timeframeMonth = 3;
+  static const int timeframeQuarter = 4;
+  static const int timeframeYear = 5;
 
-      final streamedResponse = await client.send(request).timeout(
-        timeout ?? const Duration(minutes: 5),
-        onTimeout: () {
-          throw Exception('Request timeout for $endpoint');
-        },
-      );
+  /// Fetch KPI aggregated sales data
+  ///
+  /// [startDate] - Start date in yyyy-MM-dd format
+  /// [endDate] - End date in yyyy-MM-dd format
+  /// [kpiId] - KPI mode (0-8, see constants above)
+  /// [timeframe] - Timeframe (1-5, see constants above)
+  ///
+  /// Returns the HTTP response with aggregated KPI data
+  Future<http.Response> getKpiSalesData({
+    required String startDate,
+    required String endDate,
+    int kpiId = kpiAllTransactions,
+    int timeframe = timeframeNormal,
+  }) async {
+    final endpoint =
+        '/sales/reports/kpi?startDate=$startDate&endDate=$endDate&kpiId=$kpiId&timeframe=$timeframe';
+    debugPrint("ApiService: Fetching KPI data with kpiId=$kpiId, timeframe=$timeframe");
+    return await getWithAuth(endpoint);
+  }
 
-      final response = await http.Response.fromStream(streamedResponse);
+  /// Fetch all transactions KPI (kpiId=0)
+  Future<http.Response> getAllTransactions({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiAllTransactions,
+      timeframe: timeframe,
+    );
+  }
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        // debugPrint("ApiService: Successfully fetched data from $endpoint");
-        return response;
-      } else {
-        _handleResponse(response);
-        throw Exception(
-          'Failed to load data from $endpoint: ${response.statusCode}',
-        );
-      }
-    } finally {
-      client.close();
-    }
+  /// Fetch cash transactions KPI (kpiId=1)
+  Future<http.Response> getCashTransactions({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiCash,
+      timeframe: timeframe,
+    );
+  }
+
+  /// Fetch pending payment transactions KPI (kpiId=2)
+  Future<http.Response> getPendingPaymentTransactions({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiPendingPayment,
+      timeframe: timeframe,
+    );
+  }
+
+  /// Fetch payment modes KPI (kpiId=3)
+  Future<http.Response> getPaymentModes({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiPaymentModes,
+      timeframe: timeframe,
+    );
+  }
+
+  /// Fetch salesperson KPI (kpiId=4)
+  Future<http.Response> getSalespersonData({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiSalesperson,
+      timeframe: timeframe,
+    );
+  }
+
+  /// Fetch profit KPI (kpiId=5)
+  Future<http.Response> getProfitData({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiProfit,
+      timeframe: timeframe,
+    );
+  }
+
+  /// Fetch EFRIS status KPI (kpiId=6)
+  /// [efrisStatus] - 1 for pending, 2 for uploaded, 3 for failed
+  Future<http.Response> getEfrisStatusData({
+    required String startDate,
+    required String endDate,
+    int efrisStatus = 1,
+    int timeframe = timeframeNormal,
+  }) async {
+    // For EFRIS status, the status is passed as part of the query
+    final endpoint =
+        '/sales/reports/kpi?startDate=$startDate&endDate=$endDate&kpiId=$kpiEfrisStatus&efrisStatus=$efrisStatus&timeframe=$timeframe';
+    debugPrint("ApiService: Fetching EFRIS status data with status=$efrisStatus");
+    return await getWithAuth(endpoint);
+  }
+
+  /// Fetch stock category KPI (kpiId=7)
+  Future<http.Response> getStockCategoryData({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiStockCategory,
+      timeframe: timeframe,
+    );
+  }
+
+  /// Fetch by item KPI (kpiId=8)
+  Future<http.Response> getByItemData({
+    required String startDate,
+    required String endDate,
+    int timeframe = timeframeNormal,
+  }) async {
+    return await getKpiSalesData(
+      startDate: startDate,
+      endDate: endDate,
+      kpiId: kpiByItem,
+      timeframe: timeframe,
+    );
   }
 
   Future<void> setInitialSyncCompleted() async {
@@ -890,5 +992,77 @@ class MonitorApiService extends GetxService {
 
   Future<void> clearInitialSyncFlag() async {
     await secureStorage.delete(key: 'initial_sync_completed');
+  }
+
+  /// Sync all KPI data types (0-8) from the API and store in database
+  /// This ensures all data is available for queries including top selling products
+  Future<void> syncAllKpiData(DateTime startDate, DateTime endDate) async {
+    final dateFormatter = DateFormat('yyyy-MM-dd');
+    final startDateStr = dateFormatter.format(startDate);
+    final endDateStr = dateFormatter.format(endDate);
+
+    debugPrint("ApiService: Syncing all KPI data from $startDateStr to $endDateStr");
+
+    // List of all KPI types to fetch
+    final kpiTypes = [
+      {'id': kpiAllTransactions, 'name': 'all_transactions'},
+      {'id': kpiCash, 'name': 'cash'},
+      {'id': kpiPendingPayment, 'name': 'pending_payment'},
+      {'id': kpiPaymentModes, 'name': 'payment_modes'},
+      {'id': kpiSalesperson, 'name': 'salesperson'},
+      {'id': kpiProfit, 'name': 'profit'},
+      {'id': kpiStockCategory, 'name': 'stock_category'},
+      {'id': kpiByItem, 'name': 'by_item'},
+    ];
+
+    final db = _dbHelper.database;
+
+    // Delete old KPI data for the date range
+    await db.delete(
+      'mon_kpi_sales',
+      where: 'processing_date >= ?',
+      whereArgs: [startDateStr],
+    );
+
+    // Fetch and insert each KPI type
+    for (final kpiType in kpiTypes) {
+      try {
+        debugPrint("ApiService: Fetching KPI data for ${kpiType['name']} (kpiId=${kpiType['id']})");
+        final response = await getWithAuth(
+          '/sales/reports/kpi?startDate=$startDateStr&endDate=$endDateStr&kpiId=${kpiType['id']}&timeframe=$timeframeNormal',
+        );
+
+        final List<dynamic> salesData = await compute(
+          _decodeJsonList,
+          response.body,
+        );
+
+        if (salesData.isEmpty) {
+          debugPrint("ApiService: No data for ${kpiType['name']}");
+          continue;
+        }
+
+        // Batch insert KPI sales
+        final kpiBatch = db.batch();
+        for (final sale in salesData) {
+          kpiBatch.insert('mon_kpi_sales', {
+            'kpi_id': kpiType['id'],
+            'processing_date': sale['processingdate'] ?? '',
+            'selling_point': sale['sellingpoint'] ?? '',
+            'currency': sale['currency'] ?? '',
+            'kpi': sale['kpi'] ?? '',
+            'quantity': sale['quantity'] ?? 0,
+            'amount1': _parseDouble(sale['amount1']),
+            'amount2': _parseDouble(sale['amount2']),
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
+        }
+        await kpiBatch.commit(noResult: true);
+        debugPrint("ApiService: Inserted ${salesData.length} records for ${kpiType['name']}");
+      } catch (e) {
+        debugPrint("ApiService: Error fetching ${kpiType['name']}: $e");
+      }
+    }
+
+    debugPrint("ApiService: Completed syncing all KPI data");
   }
 }

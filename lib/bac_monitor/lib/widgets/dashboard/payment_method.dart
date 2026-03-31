@@ -23,8 +23,9 @@ class PaymentMethodHorizontalBarChart extends StatelessWidget {
   List<PaymentData> _processData() {
     final Map<String, double> salesByMode = {};
     for (final sale in salesData) {
-      String paymentMode = sale['paymenttype'] as String? ?? 'Cash';
-      final amount = (sale['amount'] as num?)?.toDouble() ?? 0.0;
+      // Payment type is stored in 'kpi' field, amount in 'amount1'
+      String paymentMode = sale['kpi'] as String? ?? 'Cash';
+      final amount = (sale['amount1'] as num?)?.toDouble() ?? 0.0;
 
       // Handle empty or null payment types
       if (paymentMode.trim().isEmpty) {

@@ -1,12 +1,10 @@
-import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../additions/colors.dart';
 import '../controllers/mon_operator_controller.dart';
-import '../controllers/mon_salestrends_controller.dart';
 import '../controllers/profile_controller.dart';
 import '../services/account_manager.dart';
-import '../services/api_services.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,11 +14,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool _isReloading = false;
-  int _reloadProgress = 0;
-  int _reloadTotal = 0;
-  int _recordsLoaded = 0;
-
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.find();
@@ -197,65 +190,69 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
-              const SizedBox(height: 24),
+              if (appFlavor != "bac") const SizedBox(height: 6),
 
               // Multiple Accounts Section
-              Obx(() {
-                final accounts = controller.getAvailableAccounts();
-                if (accounts.isNotEmpty) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                          child: Text(
-                            'Switch Account',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
+              if (appFlavor == "bac")
+                Obx(() {
+                  final accounts = controller.getAvailableAccounts();
+                  print("accounts $accounts");
+                  if (accounts.isNotEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(left: 8.0, bottom: 12),
+                            child: Text(
+                              'Switch Account',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
-                        ),
-                        ...accounts.map(
-                              (account) =>
-                              _buildAccountItem(account, controller),
-                        ).toList(),
-                      ],
-                    ),
-                  );
-                } else {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                          child: Text(
-                            'Accounts',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
+                          ...accounts
+                              .map(
+                                (account) =>
+                                    _buildAccountItem(account, controller),
+                              )
+                              .toList(),
+                        ],
+                      ),
+                    );
+                  } else {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(left: 8.0, bottom: 12),
+                            child: Text(
+                              'Accounts',
+                              style: TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
-                        ),
-                        _buildMenuItem(
-                          icon: Icons.add,
-                          title: 'Sign in with another account',
-                          subtitle: 'Add new account',
-                          onTap: controller.signOut,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-              }),
+                          _buildMenuItem(
+                            icon: Icons.add,
+                            title: 'Sign in with another account',
+                            subtitle: 'Add new account',
+                            onTap: controller.signOut,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }),
 
               const SizedBox(height: 24),
 

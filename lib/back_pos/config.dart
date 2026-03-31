@@ -19,6 +19,7 @@ class AppConfig {
 
   /// Copyright text
   static const String copyright = '© 2025 Komusoft Solutions';
+  static const String phone = '(+256) 705 344 416';
 
   /// Primary color theme (used in gradients and branding)
   static const int primaryColorValue = 0xFF1976D2; // Blue shade 700

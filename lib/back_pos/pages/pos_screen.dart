@@ -12,6 +12,7 @@ import '../controllers/settings_controller.dart';
 import '../services/print_service.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
+import '../../flavors/flavor_colors.dart';
 
 class PosScreen extends StatefulWidget {
   final String? existingSalesId;
@@ -100,6 +101,7 @@ class _PosScreenState extends State<PosScreen> {
           'price': item.price,
           'amount': item.price,
           'item': item,
+          'complimentary': false,
         });
 
         // Create a controller for this item's price
@@ -140,6 +142,83 @@ class _PosScreenState extends State<PosScreen> {
       selectedItems[index]['amount'] =
           selectedItems[index]['quantity'] * newPrice;
     });
+  }
+
+  void _showItemDetailsDialog(int index) {
+    final item = selectedItems[index];
+    final inventoryItem = item['item'] as InventoryItem;
+    bool isComplimentary = item['complimentary'] == true;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                item['name'],
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Category: ${inventoryItem.category}',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text('Price per unit: UGX ${formatMoney(inventoryItem.price)}',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 14)),
+                  if (inventoryItem.packaging.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text('Packaging: ${inventoryItem.packaging}',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 14)),
+                  ],
+                  const Divider(height: 24),
+                  CheckboxListTile(
+                    title: const Text('Complimentary'),
+                    subtitle: const Text('Set price to 0 for this item'),
+                    value: isComplimentary,
+                    activeColor: FlavorColors.current.primary,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        isComplimentary = value ?? false;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      selectedItems[index]['complimentary'] = isComplimentary;
+                      if (isComplimentary) {
+                        selectedItems[index]['price'] = 0.0;
+                        selectedItems[index]['amount'] = 0.0;
+                        _priceControllers[item['id']]?.text = '0';
+                      } else {
+                        selectedItems[index]['price'] = inventoryItem.price;
+                        selectedItems[index]['amount'] =
+                            selectedItems[index]['quantity'] * inventoryItem.price;
+                        _priceControllers[item['id']]?.text =
+                            inventoryItem.price.toStringAsFixed(0);
+                      }
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _onSearchChanged() {
@@ -289,6 +368,7 @@ class _PosScreenState extends State<PosScreen> {
         salespersonId: selectedSalespersonId,
         servicePointId: widget.servicePoint?.id,
         amountTendered: 0,
+
       );
       if (result['success'] == true) {
         final db = await UnifiedDatabaseHelper.instance.database;
@@ -422,6 +502,7 @@ class _PosScreenState extends State<PosScreen> {
          notes: notesController.text,
          salespersonId: selectedSalespersonId,
          servicePointId: widget.servicePoint?.id,
+
        );
  
        if (result['success'] == true) {
@@ -508,12 +589,12 @@ class _PosScreenState extends State<PosScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: FlavorColors.current.surface,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
                   Icons.inventory_2,
-                  color: Colors.blue[700],
+                  color: FlavorColors.current.primaryDark,
                   size: 25,
                 ),
               ),
@@ -631,7 +712,7 @@ class _PosScreenState extends State<PosScreen> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: FlavorColors.current.primary,
       ),
       body: SafeArea(
         child: Column(
@@ -852,7 +933,7 @@ class _PosScreenState extends State<PosScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
+                        color: FlavorColors.current.surface,
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(8),
                           topRight: Radius.circular(8),
@@ -907,12 +988,16 @@ class _PosScreenState extends State<PosScreen> {
                               itemCount: selectedItems.length,
                               itemBuilder: (context, index) {
                                 final item = selectedItems[index];
-                                return Container(
+                                final isComp = item['complimentary'] == true;
+                                return GestureDetector(
+                                  onTap: widget.isViewOnly ? null : () => _showItemDetailsDialog(index),
+                                  child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 12,
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
+                                      color: isComp ? Colors.orange.shade50 : null,
                                       border: Border(
                                         bottom: BorderSide(
                                           color: Colors.grey.shade200,
@@ -926,12 +1011,36 @@ class _PosScreenState extends State<PosScreen> {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                item['name'],
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      item['name'],
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (isComp) ...[
+                                                    const SizedBox(width: 6),
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.orange.shade700,
+                                                        borderRadius: BorderRadius.circular(3),
+                                                      ),
+                                                      child: const Text(
+                                                        'COMP',
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 9,
+                                                          fontWeight: FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
                                               ),
                                               Row(
                                                 children: [
@@ -1061,7 +1170,8 @@ class _PosScreenState extends State<PosScreen> {
                                         ),
                                       ],
                                     ),
-                                  );
+                                  ),
+                                );
                                 },
                               ),
                       ),
@@ -1085,7 +1195,7 @@ class _PosScreenState extends State<PosScreen> {
                           onPressed: () => Navigator.of(context).pop(),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Colors.blue[700],
+                            backgroundColor: FlavorColors.current.primaryDark,
                             foregroundColor: Colors.white,
                             elevation: 2,
                             shape: RoundedRectangleBorder(
@@ -1220,7 +1330,7 @@ class _PosScreenState extends State<PosScreen> {
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+                                          borderSide: BorderSide(color: FlavorColors.current.primaryDark, width: 2),
                                         ),
                                         filled: true,
                                         fillColor: Colors.grey[50],

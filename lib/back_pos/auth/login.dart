@@ -10,6 +10,7 @@ import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';
 import '../services/api_services.dart';
+import '../../flavors/flavor_colors.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -22,7 +23,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final AuthController _authController = Get.put(AuthController());
-  final PosApiService _apiService = PosApiService();
+  final PosApiService _apiService = Get.find<PosApiService>();
   final ProfileController controller = Get.find();
 
   String? selectedItem;
@@ -146,9 +147,10 @@ controller.signOut();
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.blue.shade700,
-              Colors.blue.shade400,
-              Colors.cyan.shade300,
+              FlavorColors.current.primaryDark,
+              FlavorColors.current.light,
+              FlavorColors.current.primaryDark,
+
             ],
           ),
         ),
@@ -204,7 +206,7 @@ controller.signOut();
                               "Welcome Back",
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 14 : 16,
-                                color: Colors.blue.shade600,
+                                color: FlavorColors.current.primary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -217,7 +219,7 @@ controller.signOut();
                                   labelText: 'Select Account',
                                   prefixIcon: Icon(
                                     Icons.account_circle_outlined,
-                                    color: Colors.blue.shade700,
+                                    color: FlavorColors.current.primaryDark,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -234,7 +236,7 @@ controller.signOut();
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.blue.shade700,
+                                      color: FlavorColors.current.primaryDark,
                                       width: 2,
                                     ),
                                   ),
@@ -274,7 +276,7 @@ controller.signOut();
                                 labelText: 'Passcode',
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
-                                  color: Colors.blue.shade700,
+                                  color: FlavorColors.current.primaryDark,
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
@@ -304,7 +306,7 @@ controller.signOut();
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
-                                    color: Colors.blue.shade700,
+                                    color: FlavorColors.current.primaryDark,
                                     width: 2,
                                   ),
                                 ),
@@ -330,10 +332,10 @@ controller.signOut();
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _handleLogin,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade700,
+                                  backgroundColor: FlavorColors.current.primaryDark,
                                   foregroundColor: Colors.white,
                                   elevation: 4,
-                                  shadowColor: Colors.blue.withOpacity(0.5),
+                                  shadowColor: FlavorColors.current.primary.withOpacity(0.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -367,7 +369,7 @@ controller.signOut();
                               child: Text(
                                 "Login with server credentials",
                                 style: TextStyle(
-                                  color: _isLoading2 ? Colors.grey : Colors.blue,
+                                  color: _isLoading2 ? Colors.grey : FlavorColors.current.primary,
                                 ),
                               ),
                             ),

@@ -1,4 +1,5 @@
 import 'package:bac_pos/back_pos/pages/daily_summary.dart';
+import 'package:bac_pos/back_pos/pages/expenses_page.dart';
 import 'package:bac_pos/back_pos/pages/pos_screen.dart';
 import 'package:bac_pos/back_pos/pages/sales_listing.dart';
 import 'package:bac_pos/back_pos/pages/settings_page.dart';
@@ -7,6 +8,7 @@ import 'package:get/get.dart';
 import '../auth/login.dart';
 import '../models/service_point.dart';
 import '../controllers/auth_controller.dart';
+import '../../flavors/flavor_colors.dart';
 
 class SalesPointDetails extends StatelessWidget {
   final ServicePoint servicePoint;
@@ -22,7 +24,7 @@ class SalesPointDetails extends StatelessWidget {
       return Colors.brown;
     if (lowerType.contains('pharmacy')) return Colors.green;
     if (lowerType.contains('hardware')) return Colors.orange;
-    if (lowerType.contains('shop')) return Colors.blue;
+    if (lowerType.contains('shop')) return FlavorColors.current.primary;
     return Colors.teal;
   }
 
@@ -64,6 +66,12 @@ class SalesPointDetails extends StatelessWidget {
                   "VIEW SALE ORDERS/BILLS",
                   Icons.list,
                   SalesListing(servicePoint: servicePoint),
+                ),
+
+                _actionButton(
+                  "EXPENSES",
+                  Icons.dashboard_outlined,
+                  ExpensesPage(servicePoint: servicePoint),
                 ),
                 _actionButton(
                   "DAILY SUMMARY",

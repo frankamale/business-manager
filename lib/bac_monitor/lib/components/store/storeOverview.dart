@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../additions/colors.dart';
+import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_store_controller.dart';
 import '../../controllers/mon_store_kpi_controller.dart';
+import '../../models/kpi_sales_data.dart';
 import '../../models/trend_direction.dart';
 import '../../widgets/dashboard/line_graph.dart';
 import '../../widgets/store/hourly_traffic.dart';
@@ -15,8 +18,13 @@ class StoreOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final MonStoresController controller = Get.find();
     final kpiTrendController = Get.find<MonStoreKpiTrendController>();
+    final monKpiController = Get.find<MonKpiController>();
 
     return Obx(() {
+      // Load user role and check if user role contains 'fg' (gym)
+      kpiTrendController.loadUserRole();
+      final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
+      
       if (controller.isFetchingKpisAndCharts.value) {
         return const Padding(
           padding: EdgeInsets.only(top: 100.0),
@@ -43,7 +51,7 @@ class StoreOverview extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildKpiCard(
-                    title: 'Total Sales',
+                    title: isGym ? 'Total Revenue' : 'Total Sales',
                     value: kpiTrendController.totalSales.value,
                     unit: kpiTrendController.unit.value,
                     trend: kpiTrendController.salesTrend.value,
@@ -51,21 +59,30 @@ class StoreOverview extends StatelessWidget {
                         kpiTrendController.salesTrendDirection.value,
                   ),
                   _buildKpiCard(
-                    title: 'Transactions',
-                    value: kpiTrendController.totalTransactions.value,
+                    title: isGym ? 'Total Walk Ins' : 'Transactions',
+                    value: isGym 
+                        ? kpiTrendController.totalWalkIns.value.toString()
+                        : kpiTrendController.totalTransactions.value,
                     trend: kpiTrendController.transactionsTrend.value,
                     trendDirection:
                         kpiTrendController.transactionsTrendDirection.value,
                   ),
                   _buildKpiCard(
-                    title: 'Avg. Basket Size',
-                    value: kpiTrendController.avgBasketSize.value,
-                    unit: kpiTrendController.unit.value,
+                    title: isGym ? 'Daily Subs' : 'Avg. Basket Size',
+                    value: isGym
+                        ? kpiTrendController.dailySubs.value.toString()
+                        : kpiTrendController.avgBasketSize.value,
+                    unit: isGym ? '' : kpiTrendController.unit.value,
                     trend: kpiTrendController.basketTrend.value,
                     trendDirection:
                         kpiTrendController.basketTrendDirection.value,
                   ),
-                  _buildKpiCard(title: 'Staff on Duty', value: '0'),
+                  _buildKpiCard(
+                    title: isGym ? 'Monthly Subs' : 'Staff on Duty',
+                    value: isGym
+                        ? kpiTrendController.monthlySubs.value.toString()
+                        : '0',
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
@@ -102,20 +119,20 @@ class StoreOverview extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                "Hourly Customer Traffic",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 250,
-                child: HourlyTrafficChart(trafficData: controller.hourlyTrafficData),
-              ),
-              const SizedBox(height: 24),
+              // const Text(
+              //   "Hourly Customer Traffic",
+              //   style: TextStyle(
+              //     fontSize: 20,
+              //     fontWeight: FontWeight.bold,
+              //     color: Colors.white,
+              //   ),
+              // ),
+              //  const SizedBox(height: 10),
+              // SizedBox(
+              //   height: 250,
+              //   child: HourlyTrafficChart(trafficData: controller.hourlyTrafficData),
+              // ),
+              // const SizedBox(height: 24),
               const Text(
                 "Top Selling Products",
                 style: TextStyle(
@@ -127,6 +144,7 @@ class StoreOverview extends StatelessWidget {
               const SizedBox(height: 10),
               TopProductsList(products: controller.topSellingProducts),
               const SizedBox(height: 24),
+
             ],
           ),
         ),
@@ -205,4 +223,6 @@ class StoreOverview extends StatelessWidget {
       ),
     );
   }
+
+ 
 }

@@ -14,6 +14,7 @@ import '../../shared/database/unified_db_helper.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../utils/network_helper.dart';
 import '../config.dart';
+import '../../flavors/flavor_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   final Widget? nextScreen;
@@ -29,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
-  final PosApiService _apiService = PosApiService();
+  final PosApiService _apiService = Get.find<PosApiService>();
   final _dbHelper = UnifiedDatabaseHelper.instance;
 
   String _statusMessage = 'Initializing...';
@@ -279,13 +280,15 @@ class _SplashScreenState extends State<SplashScreen>
 
       // Fetch cash accounts from API
       _log('initializePosData: Fetching cash accounts from API');
-      final cashAccounts = await _apiService.fetchCashAccounts();
-
-      // Store in local DB
-      await _dbHelper.insertCashAccounts(cashAccounts);
-      _log(
-        'initializePosData: Cash accounts cached successfully (${cashAccounts.length})',
-      );
+      try {
+        final cashAccounts = await _apiService.fetchCashAccounts();
+        await _dbHelper.insertCashAccounts(cashAccounts);
+        _log(
+          'initializePosData: Cash accounts cached successfully (${cashAccounts.length})',
+        );
+      } catch (e) {
+        _log('initializePosData: API fetch failed ($e), using cached cash accounts', level: 'WARN');
+      }
     } catch (e, stackTrace) {
       _log('initializePosData: Error - $e', level: 'ERROR');
       _log('initializePosData: StackTrace - $stackTrace', level: 'ERROR');
@@ -434,9 +437,17 @@ class _SplashScreenState extends State<SplashScreen>
     _log('loadDataWithSmartSync: Cached inventory exists = $hasInventory');
 
     if (hasNetwork) {
-      _log('loadDataWithSmartSync: Syncing inventory from API (network available)');
-      await inventoryController.syncInventoryFromAPI();
-      _log('loadDataWithSmartSync: Inventory synced successfully from API');
+      try {
+        _log('loadDataWithSmartSync: Syncing inventory from API (network available)');
+        await inventoryController.syncInventoryFromAPI();
+        _log('loadDataWithSmartSync: Inventory synced successfully from API');
+      } catch (e) {
+        _log('loadDataWithSmartSync: API sync failed ($e), falling back to cache', level: 'WARN');
+        if (hasInventory) {
+          await inventoryController.loadInventoryFromCache();
+          _log('loadDataWithSmartSync: Inventory loaded from cache after API failure');
+        }
+      }
     } else if (hasInventory) {
       _log('loadDataWithSmartSync: Loading inventory from cache (offline mode)');
       await inventoryController.loadInventoryFromCache();
@@ -501,9 +512,9 @@ class _SplashScreenState extends State<SplashScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.blue.shade700,
-                Colors.blue.shade400,
-                Colors.cyan.shade300,
+                FlavorColors.current.primaryDark,
+                FlavorColors.current.tertiary,
+                FlavorColors.current.light,
               ],
             ),
           ),
@@ -599,7 +610,7 @@ class _SplashScreenState extends State<SplashScreen>
                       label: const Text('Retry Connection'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        foregroundColor: Colors.blue,
+                        foregroundColor: FlavorColors.current.primary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,

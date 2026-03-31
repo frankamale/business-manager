@@ -52,13 +52,6 @@ class AccountPendingScreen extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Hero(
-                          tag: 'logo',
-                          child: AppLogoCircle(
-                            size: isSmallScreen ? 80 : 100,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
@@ -168,7 +161,7 @@ class AccountPendingScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      "Contact your company administrator or help desk for support.",
+                                      "Contact ${AppConfig.companyName} help desk for support. Or call (+256) 705 344 416",
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: colorScheme.onSecondaryContainer,
@@ -190,8 +183,9 @@ class AccountPendingScreen extends StatelessWidget {
                               backgroundColor: FlavorColors.current.primaryDark,
                               foregroundColor: FlavorColors.current.onPrimary,
                               elevation: 4,
-                              shadowColor:
-                                  colorScheme.shadow.withValues(alpha: 0.5),
+                              shadowColor: colorScheme.shadow.withValues(
+                                alpha: 0.5,
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),

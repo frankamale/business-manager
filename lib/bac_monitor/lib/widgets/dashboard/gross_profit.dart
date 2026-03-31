@@ -4,142 +4,166 @@ import 'package:intl/intl.dart';
 
 class GrossProfitCard extends StatelessWidget {
   final double grossProfit;
-  final double totalSales;
-  final double cogs;
-  final double previousPeriodProfit;
+  final String trend;
 
   const GrossProfitCard({
     super.key,
     required this.grossProfit,
-    required this.totalSales,
-    required this.cogs,
-    required this.previousPeriodProfit,
+    required this.trend,
   });
 
   @override
   Widget build(BuildContext context) {
-    final double changePercentage = previousPeriodProfit > 0
-        ? ((grossProfit - previousPeriodProfit) / previousPeriodProfit) * 100
-        : (grossProfit > 0 ? 100.0 : 0.0);
-
-    final double profitMargin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0.0;
-
-    final bool isPositiveChange = grossProfit >= previousPeriodProfit;
     final compactFormatter = NumberFormat.compact(locale: 'en_US');
 
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            PrimaryColors.lightBlue.withOpacity(0.9),
-            PrimaryColors.darkBlue.withOpacity(0.7),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Title
-          const Text(
-            'Gross Profit',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 16),
+    // Parse trend to determine direction
+    final trendValue = double.tryParse(
+      trend.replaceAll('%', '').replaceAll('+', '').replaceAll('-', '')
+    ) ?? 0.0;
+    final isPositive = trend.startsWith('+');
 
-          // 2. Hero Metric and Trend Indicator
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                compactFormatter.format(grossProfit),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 36,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: PrimaryColors.lightBlue,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Decorative glow blob top-right
+          Positioned(
+            top: -20,
+            right: -20,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF26A69A).withOpacity(0.25),
+                    const Color(0xFF26A69A).withOpacity(0.05),
+                    Colors.transparent,
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              _buildTrendIndicator(isPositiveChange, changePercentage),
-            ],
+            ),
           ),
-          const SizedBox(height: 20),
 
-          Divider(color: Colors.white.withOpacity(0.2)),
-          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Category label pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF26A69A).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: const Color(0xFF26A69A).withOpacity(0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Text(
+                    'GROSS PROFIT',
+                    style: TextStyle(
+                      color: Color(0xFF26A69A),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
 
-          _buildDetailRow('Total Sales', compactFormatter.format(totalSales)),
-          const SizedBox(height: 8),
-          _buildDetailRow('Cost of Goods Sold (COGS)', compactFormatter.format(cogs)),
+                // Big value
+                Text(
+                  compactFormatter.format(grossProfit),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
 
-          const SizedBox(height: 12),
-          Divider(color: Colors.white.withOpacity(0.2)),
-          const SizedBox(height: 12),
-
-          _buildDetailRow(
-              'Profit Margin',
-              '${profitMargin.toStringAsFixed(1)}%',
-              isHighlighted: true
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// A helper widget for the trend indicator (e.g., +15.2%)
-  Widget _buildTrendIndicator(bool isPositive, double percentage) {
-    final Color trendColor = isPositive ? Colors.greenAccent[400]! : Colors.redAccent[400]!;
-    final IconData trendIcon = isPositive ? Icons.arrow_upward : Icons.arrow_downward;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: trendColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(trendIcon, color: trendColor, size: 16),
-          const SizedBox(width: 4),
-          Text(
-            '${percentage.toStringAsFixed(1)}%',
-            style: TextStyle(
-              color: trendColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+                // Trend row
+                const SizedBox(height: 6),
+                _TrendBadge(
+                  isPositive: isPositive,
+                  percentage: trendValue,
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  /// A helper widget to create consistent rows for the breakdown.
-  Widget _buildDetailRow(String label, String value, {bool isHighlighted = false}) {
+// ─────────────────────────────────────────────────────────────
+// Trend badge
+// ─────────────────────────────────────────────────────────────
+class _TrendBadge extends StatelessWidget {
+  final bool isPositive;
+  final double percentage;
+
+  const _TrendBadge({
+    required this.isPositive,
+    required this.percentage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isPositive ? const Color(0xFF4CAF50) : const Color(0xFFEF5350);
+    final bgColor = color.withOpacity(0.12);
+
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
-            fontSize: 14,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: color.withOpacity(0.35), width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isPositive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                color: color,
+                size: 12,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                '${percentage.toStringAsFixed(1)}%',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
+        const SizedBox(width: 6),
         Text(
-          value,
+          'vs last period',
           style: TextStyle(
-            color: isHighlighted ? Colors.cyanAccent[100] : Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: isHighlighted ? 16 : 14,
+            color: Colors.white.withOpacity(0.4),
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
