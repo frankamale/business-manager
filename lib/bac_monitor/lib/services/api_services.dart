@@ -449,7 +449,7 @@ class MonitorApiService extends GetxService {
     try {
       final db = _dbHelper.database;
       final result = await db.rawQuery(
-'SELECT COUNT(*) as count FROM mon_kpi_sales',
+'SELECT COUNT(*) as count FROM mon_sales',
       );
       final count = result.first['count'] as int? ?? 0;
       // debugPrint("ApiService: Found $count sales records in database");
