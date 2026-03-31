@@ -38,6 +38,9 @@ class MonStoreKpiTrendController extends GetxController {
   var cashSales = "0".obs;
   var cashSalesTrend = "0%".obs;
   var cashSalesTrendDirection = TrendDirection.none.obs;
+  var pendingPayments = "0".obs;
+  var pendingPaymentsTrend = "0%".obs;
+  var pendingPaymentsTrendDirection = TrendDirection.none.obs;
 
   @override
   void onInit() {
@@ -152,6 +155,11 @@ class MonStoreKpiTrendController extends GetxController {
           ? 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?'
           : 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 1 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
 
+      // Pending payments queries (kpi_id = 2)
+      final pendingPaymentsQuery = isAllStores
+          ? 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+
       // Gym-specific subscription queries (using kpi_id = 4 for salesperson which includes subscriptions)
       final subscriptionQuery = isAllStores
           ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND processing_date BETWEEN ? AND ?'
@@ -189,6 +197,10 @@ class MonStoreKpiTrendController extends GetxController {
       // Execute cash sales queries
       final currentCashSalesResult = await db.rawQuery(cashSalesQuery, argsCurrent);
       final prevCashSalesResult = await db.rawQuery(cashSalesQuery, argsPrev);
+
+      // Execute pending payments queries
+      final currentPendingPaymentsResult = await db.rawQuery(pendingPaymentsQuery, argsCurrent);
+      final prevPendingPaymentsResult = await db.rawQuery(pendingPaymentsQuery, argsPrev);
 
       // Execute gym-specific subscription queries
       // Using kpi_id=4 for salesperson (gym subscriptions)
@@ -261,6 +273,10 @@ class MonStoreKpiTrendController extends GetxController {
       final currentCashSales = (currentCashSalesResult.first['total'] as num? ?? 0.0).toDouble();
       final prevCashSales = (prevCashSalesResult.first['total'] as num? ?? 0.0).toDouble();
 
+      // Extract pending payments values
+      final currentPendingPayments = (currentPendingPaymentsResult.first['total'] as num? ?? 0.0).toDouble();
+      final prevPendingPayments = (prevPendingPaymentsResult.first['total'] as num? ?? 0.0).toDouble();
+
       // Update gym-specific observables
       totalWalkIns.value = currentSubscriptions.toString();
       dailySubs.value = currentDailySubs.toString();
@@ -275,6 +291,7 @@ class MonStoreKpiTrendController extends GetxController {
       final storesTrendValue = (currentActiveStores - prevActiveStores) / (prevActiveStores.abs() + epsilon);
       final basketTrendValue = (currentBasket - prevBasket) / (prevBasket.abs() + epsilon);
       final cashSalesTrendValue = (currentCashSales - prevCashSales) / (prevCashSales.abs() + epsilon);
+      final pendingPaymentsTrendValue = (currentPendingPayments - prevPendingPayments) / (prevPendingPayments.abs() + epsilon);
 
       // Gym-specific trend calculations
       final walkInsTrendValue = (currentSubscriptions - prevSubscriptions) / (prevSubscriptions.abs() + epsilon);
@@ -340,6 +357,13 @@ class MonStoreKpiTrendController extends GetxController {
           ? TrendDirection.up
           : (cashSalesTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
 
+      // Pending payments trends
+      pendingPayments.value = compactFormatter.format(currentPendingPayments);
+      pendingPaymentsTrend.value = formatTrendPercent(pendingPaymentsTrendValue);
+      pendingPaymentsTrendDirection.value = pendingPaymentsTrendValue > 0.01
+          ? TrendDirection.up
+          : (pendingPaymentsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+
       // print('DEBUG: Final KPI Values - Total Sales: ${totalSales.value}, Transactions: ${totalTransactions.value}, Active Stores: ${activeTotalStores.value}, Avg Basket: ${avgBasketSize.value}');
       // print('DEBUG: Trends - Sales: ${salesTrend.value}, Transactions: ${transactionsTrend.value}, Stores: ${storesTrend.value}, Basket: ${basketTrend.value}');
     } catch (e) {
@@ -352,6 +376,9 @@ class MonStoreKpiTrendController extends GetxController {
       cashSales.value = "-";
       cashSalesTrend.value = "0%";
       cashSalesTrendDirection.value = TrendDirection.none;
+      pendingPayments.value = "-";
+      pendingPaymentsTrend.value = "0%";
+      pendingPaymentsTrendDirection.value = TrendDirection.none;
       salesTrend.value = "0%";
       transactionsTrend.value = "0%";
       storesTrend.value = "0%";
