@@ -14,8 +14,7 @@ class MonKpiOverviewController extends GetxController {
 
   var isLoading = true.obs;
   var hasError = false.obs;
-  var isInitialized = false.obs; // Track if first load is done
-
+  var isInitialized = false.obs; 
   var totalSales = "0".obs;
   var salesTrend = "0%".obs;
   var salesTrendDirection = TrendDirection.none.obs;
@@ -78,6 +77,11 @@ class MonKpiOverviewController extends GetxController {
     }
 
     debugPrint('MonKpiOverviewController: Performing first data fetch');
+    
+    // Load user role first before fetching data
+    await loadUserRole();
+    debugPrint('User role loaded: ${userRole.value}');
+    
     await fetchKpiData();
     isInitialized.value = true;
   }
@@ -257,7 +261,7 @@ class MonKpiOverviewController extends GetxController {
         WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
       ''';
 
-      // Query for credit/pending payment sales (kpiId=2)
+      // Query for pending payment sales (kpiId=2)
       const creditSalesQuery = '''
         SELECT SUM(amount2) as total 
         FROM mon_kpi_sales 
@@ -323,6 +327,12 @@ class MonKpiOverviewController extends GetxController {
       final prevCashSales = (results[19].first['total'] as num? ?? 0.0).toDouble();
       final currentCreditSales = (results[20].first['total'] as num? ?? 0.0).toDouble();
       final prevCreditSales = (results[21].first['total'] as num? ?? 0.0).toDouble();
+
+      // Debug prints
+      debugPrint('Current Sales: $currentSales');
+      debugPrint('Current Cash Sales: $currentCashSales');
+      debugPrint('Current Credit Sales: $currentCreditSales');
+      debugPrint('Date range: $startDateStr to $endDateStr');
 
       // Check if user is gym (role contains 'fg')
       final isGym = userRole.value.toLowerCase().contains('fg');
@@ -429,7 +439,9 @@ class MonKpiOverviewController extends GetxController {
           : TrendDirection.none);
     } catch (e) {
       hasError.value = true;
-      print("Error fetching KPI data: $e");
+      debugPrint("Error fetching KPI data: $e");
+      // Print stack trace for better debugging
+      debugPrintStack(stackTrace: StackTrace.current);
     } finally {
       isLoading.value = false;
     }

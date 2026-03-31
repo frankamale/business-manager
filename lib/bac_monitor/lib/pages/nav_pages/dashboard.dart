@@ -173,9 +173,9 @@ class _DashboardState extends State<Dashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 16),
+                      SizedBox(height: 2),
                       KpiOverviewSection(),
-                      SizedBox(height: 24),
+                      SizedBox(height: 2),
                       Obx(() {
                         final controller = Get.find<MonGrossProfitController>();
                         final grossProfitValue = _parseCompactNumber(

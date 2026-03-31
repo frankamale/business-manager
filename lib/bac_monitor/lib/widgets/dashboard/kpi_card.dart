@@ -286,26 +286,3 @@ class _TrendBadge extends StatelessWidget {
 }
 
 
-// ─────────────────────────────────────────────────────────────
-// USAGE EXAMPLE
-// ─────────────────────────────────────────────────────────────
-//
-// KpiCard(
-//   title: 'Total Sales',
-//   value: '400,000',
-//   trendValue: '+12.4%',
-//   trendDirection: TrendDirection.up,
-//   trendReference: 'vs last week',
-//   miniKpis: [
-//     MiniKpiData(
-//       label: 'Cash Sales',
-//       value: '200,000',
-//       accentColor: Color(0xFF4FC3F7),
-//     ),
-//     MiniKpiData(
-//       label: 'Credit Sales',
-//       value: '200,000',
-//       accentColor: Color(0xFFFFC107),
-//     ),
-//   ],
-// )
