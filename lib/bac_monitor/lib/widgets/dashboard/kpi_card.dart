@@ -30,13 +30,8 @@ class KpiCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: LightColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: LightColors.surface,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+
+
       ),
       child: Stack(
         children: [
@@ -57,19 +52,12 @@ class KpiCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: LightColors.accent.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                              color: LightColors.accent.withOpacity(0.4),
-                              width: 1),
-                        ),
-                        child: Text(
+                           child: Text(
                           title.toUpperCase(),
                           style: TextStyle(
-                            color: LightColors.accent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                            color: LightColors.primaryLight,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
                             letterSpacing: 1.4,
                           ),
                         ),
