@@ -52,8 +52,15 @@ class SalesTrendsSection extends StatelessWidget {
             return Container(
               height: 300,
               decoration: BoxDecoration(
-                color: AppColors.getPrimaryLightColor(context).withOpacity(0.5),
+                color: LightColors.card,
                 borderRadius: const BorderRadius.all(Radius.circular(12)),
+                boxShadow: [
+                  BoxShadow(
+                    color: LightColors.shadowLight,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),

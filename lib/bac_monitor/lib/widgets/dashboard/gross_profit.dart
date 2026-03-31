@@ -25,10 +25,10 @@ class GrossProfitCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: LightColors.primaryLight,
+        color: LightColors.card,
         boxShadow: [
           BoxShadow(
-            color: LightColors.shadow,
+            color: LightColors.shadowLight,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

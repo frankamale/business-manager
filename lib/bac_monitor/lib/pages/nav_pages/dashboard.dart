@@ -109,12 +109,12 @@ class _DashboardState extends State<Dashboard> {
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
         color: AppColors.getAccentColor(context),
-        backgroundColor: AppColors.getPrimaryColor(context),
+        backgroundColor: AppColors.getCardColor(context),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: AppColors.getPrimaryColor(context),
-              elevation: 2,
+              backgroundColor: AppColors.getCardColor(context),
+              elevation: 0,
               pinned: true,
               centerTitle: true,
               title: Obx(
@@ -124,7 +124,7 @@ class _DashboardState extends State<Dashboard> {
                     Text(
                       operatorController.companyName.value,
                       style: TextStyle(
-                        color: LightColors.card,
+                        color: AppColors.getTextPrimaryColor(context),
                         fontWeight: FontWeight.bold,
                         fontSize: 18.0,
                       ),
@@ -133,7 +133,7 @@ class _DashboardState extends State<Dashboard> {
                     Text(
                       operatorController.companyAddress.value,
                       style: TextStyle(
-                        color: LightColors.card.withOpacity(0.8),
+                        color: AppColors.getTextSecondaryColor(context),
                         fontWeight: FontWeight.w400,
                         fontSize: 12.0,
                       ),
@@ -150,8 +150,7 @@ class _DashboardState extends State<Dashboard> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: IconButton(
-                    icon: const Icon(Icons.account_circle_outlined, size: 28),
-                    color: AppColors.getAccentColor(context),
+                    icon: Icon(Icons.account_circle_outlined, size: 28, color: AppColors.getTextPrimaryColor(context)),
                     onPressed: () {
                       Get.to(() => ProfilePage());
                     },

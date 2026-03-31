@@ -9,7 +9,8 @@ Widget buildStockAlertsCard(MonSalesTrendsController controller) {
   return Card(
     color: LightColors.card,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    elevation: 2,
+    elevation: 0,
+    shadowColor: LightColors.shadowLight,
     child: Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(

@@ -148,12 +148,15 @@ class HorizontalSummaryCards extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: LightColors.surface,
+        color: LightColors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: LightColors.border,
-          width: 1,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: LightColors.shadowLight,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

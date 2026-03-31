@@ -29,8 +29,14 @@ class KpiCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: LightColors.primaryLight
-
+        color: LightColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: LightColors.surface,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Stack(
         children: [

@@ -44,10 +44,10 @@ class _BottomNavState extends State<BottomNav> {
       } else {
         _lastBackPressed = now;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Press back again to exit'),
             duration: Duration(seconds: 2),
-            backgroundColor: PrimaryColors.lightBlue,
+            backgroundColor: AppColors.getPrimaryColor(context),
           ),
         );
         return false;
@@ -60,7 +60,7 @@ class _BottomNavState extends State<BottomNav> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        backgroundColor: PrimaryColors.darkBlue,
+        backgroundColor: AppColors.getBackgroundColor(context),
         body: Obx(
           () =>
               IndexedStack(index: controller.tabIndex.value, children: screens),
@@ -73,11 +73,11 @@ class _BottomNavState extends State<BottomNav> {
           child: Obx(
             () => BottomNavigationBar(
               type: BottomNavigationBarType.fixed,
-              backgroundColor: PrimaryColors.darkBlue,
+              backgroundColor: AppColors.getCardColor(context),
               onTap: controller.changeTabIndex,
               currentIndex: controller.tabIndex.value,
-              selectedItemColor: PrimaryColors.brightYellow,
-              unselectedItemColor: Colors.white.withOpacity(0.6),
+              selectedItemColor: AppColors.getPrimaryColor(context),
+              unselectedItemColor: AppColors.getTextSecondaryColor(context),
               selectedFontSize: 13.0,
               unselectedFontSize: 12.0,
               selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),

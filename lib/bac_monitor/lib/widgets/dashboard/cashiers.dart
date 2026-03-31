@@ -72,7 +72,7 @@ class CashierSalesChart extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: LightColors.surface,
+          color: LightColors.card,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Center(
@@ -89,8 +89,15 @@ class CashierSalesChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: LightColors.surface,
+        color: LightColors.card,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: LightColors.shadowLight,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
