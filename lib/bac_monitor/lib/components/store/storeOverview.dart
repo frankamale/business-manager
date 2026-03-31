@@ -78,10 +78,13 @@ class StoreOverview extends StatelessWidget {
                         kpiTrendController.basketTrendDirection.value,
                   ),
                   _buildKpiCard(
-                    title: isGym ? 'Monthly Subs' : 'Staff on Duty',
+                    title: isGym ? 'Monthly Subs' : 'Cash Sales',
                     value: isGym
                         ? kpiTrendController.monthlySubs.value.toString()
-                        : '0',
+                        : kpiTrendController.cashSales.value,
+                    unit: isGym ? '' : kpiTrendController.unit.value,
+                    trend: isGym ? null : kpiTrendController.cashSalesTrend.value,
+                    trendDirection: isGym ? null : kpiTrendController.cashSalesTrendDirection.value,
                   ),
                 ],
               ),

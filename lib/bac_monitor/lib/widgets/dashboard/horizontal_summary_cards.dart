@@ -36,7 +36,7 @@ class HorizontalSummaryCards extends StatelessWidget {
 
       salesByMode.update(
         paymentMode,
-        (value) => value + amount,
+            (value) => value + amount,
         ifAbsent: () => amount,
       );
     }
@@ -44,8 +44,8 @@ class HorizontalSummaryCards extends StatelessWidget {
     final processedList = salesByMode.entries
         .map(
           (entry) =>
-              PaymentData(paymentMode: entry.key, totalAmount: entry.value),
-        )
+          PaymentData(paymentMode: entry.key, totalAmount: entry.value),
+    )
         .toList();
 
     processedList.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
@@ -67,7 +67,7 @@ class HorizontalSummaryCards extends StatelessWidget {
 
       salesByCashier.update(
         cashierName,
-        (value) => value + amount,
+            (value) => value + amount,
         ifAbsent: () => amount,
       );
     }
@@ -75,8 +75,8 @@ class HorizontalSummaryCards extends StatelessWidget {
     final processedList = salesByCashier.entries
         .map(
           (entry) =>
-              CashierData(cashierName: entry.key, totalAmount: entry.value),
-        )
+          CashierData(cashierName: entry.key, totalAmount: entry.value),
+    )
         .toList();
 
     processedList.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
@@ -102,7 +102,7 @@ class HorizontalSummaryCards extends StatelessWidget {
               title: 'Summary by Cashier',
               totalSales: cashierData.fold(
                 0.0,
-                (sum, item) => sum + item.totalAmount,
+                    (sum, item) => sum + item.totalAmount,
               ),
               items: cashierData,
               colors: _cashierColors,
@@ -116,7 +116,7 @@ class HorizontalSummaryCards extends StatelessWidget {
               title: 'Summary by Payment',
               totalSales: paymentData.fold(
                 0.0,
-                (sum, item) => sum + item.totalAmount,
+                    (sum, item) => sum + item.totalAmount,
               ),
               items: paymentData,
               colors: _paymentColors,
@@ -138,11 +138,11 @@ class HorizontalSummaryCards extends StatelessWidget {
     final double maxValue = items.isEmpty
         ? 0
         : items.fold(0.0, (max, item) {
-            final value = item is PaymentData
-                ? item.totalAmount
-                : (item as CashierData).totalAmount;
-            return value > max ? value : max;
-          });
+      final value = item is PaymentData
+          ? item.totalAmount
+          : (item as CashierData).totalAmount;
+      return value > max ? value : max;
+    });
 
     return Container(
       width: 300,
@@ -205,113 +205,110 @@ class HorizontalSummaryCards extends StatelessWidget {
           else
             Column(
               children: items.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final data = entry.value;
-                    final color = colors[index % colors.length];
-                    final double value = data is PaymentData
-                        ? data.totalAmount
-                        : (data as CashierData).totalAmount;
-                    final String name = data is PaymentData
-                        ? data.paymentMode
-                        : (data as CashierData).cashierName;
-                    final percentage = totalSales > 0
-                        ? (value / totalSales) * 100
-                        : 0.0;
+                final index = entry.key;
+                final data = entry.value;
+                final color = colors[index % colors.length];
+                final double value = data is PaymentData
+                    ? data.totalAmount
+                    : (data as CashierData).totalAmount;
+                final String name = data is PaymentData
+                    ? data.paymentMode
+                    : (data as CashierData).cashierName;
+                final percentage =
+                    totalSales > 0 ? (value / totalSales) * 100 : 0.0;
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: color.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '${percentage.toStringAsFixed(0)}%',
-                                  style: TextStyle(
-                                    color: color,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'UGX ${compactFormatter.format(value)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
                           ),
-                          const SizedBox(height: 6),
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final barWidth = maxValue > 0
-                                  ? (value / maxValue) * constraints.maxWidth
-                                  : 0.0;
-                              return Stack(
-                                children: [
-                                  Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  Container(
-                                    height: 8,
-                                    width: barWidth.isNaN ? 0 : barWidth,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(4),
-                                      gradient: LinearGradient(
-                                        colors: [color, color.withOpacity(0.6)],
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '${percentage.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'UGX ${compactFormatter.format(value)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
+                      const SizedBox(height: 6),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final barWidth = maxValue > 0
+                              ? (value / maxValue) * constraints.maxWidth
+                              : 0.0;
+                          return Stack(
+                            children: [
+                              Container(
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              Container(
+                                height: 8,
+                                width: barWidth.isNaN ? 0 : barWidth,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(4),
+                                  gradient: LinearGradient(
+                                    colors: [color, color.withOpacity(0.6)],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
         ],
       ),

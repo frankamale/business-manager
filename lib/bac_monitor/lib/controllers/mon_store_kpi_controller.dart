@@ -34,6 +34,11 @@ class MonStoreKpiTrendController extends GetxController {
   var monthlySubs = "0".obs;
   var userRole = "".obs;
 
+  // Additional KPI modes for non-gym users
+  var cashSales = "0".obs;
+  var cashSalesTrend = "0%".obs;
+  var cashSalesTrendDirection = TrendDirection.none.obs;
+
   @override
   void onInit() {
     super.onInit(); 
@@ -128,8 +133,8 @@ class MonStoreKpiTrendController extends GetxController {
 
       // Using new KPI table (mon_kpi_sales) for aggregated data
       final salesQuery = isAllStores
-          ? 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
-          : 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+          ? 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final transactionsQuery = isAllStores
           ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
           : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
@@ -137,10 +142,15 @@ class MonStoreKpiTrendController extends GetxController {
           ? 'SELECT COUNT(DISTINCT selling_point) as active FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
           : 'SELECT COUNT(DISTINCT selling_point) as active FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final basketQuery = isAllStores
-          ? 'SELECT AVG(total) FROM (SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)'
-          : 'SELECT AVG(total) FROM (SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)';
+          ? 'SELECT AVG(total) FROM (SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)'
+          : 'SELECT AVG(total) FROM (SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)';
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
+
+      // Cash sales queries (kpi_id = 1)
+      final cashSalesQuery = isAllStores
+          ? 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 1 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
 
       // Gym-specific subscription queries (using kpi_id = 4 for salesperson which includes subscriptions)
       final subscriptionQuery = isAllStores
@@ -175,6 +185,10 @@ class MonStoreKpiTrendController extends GetxController {
       final prevBasketResult = await db.rawQuery(basketQuery, argsPrev);
       final totalStoresResult = await db.rawQuery(totalStoresQuery);
       final currencyResult = await db.rawQuery(currencyQuery);
+
+      // Execute cash sales queries
+      final currentCashSalesResult = await db.rawQuery(cashSalesQuery, argsCurrent);
+      final prevCashSalesResult = await db.rawQuery(cashSalesQuery, argsPrev);
 
       // Execute gym-specific subscription queries
       // Using kpi_id=4 for salesperson (gym subscriptions)
@@ -243,6 +257,10 @@ class MonStoreKpiTrendController extends GetxController {
       final currentMonthlySubs = currentMonthlySubResult.first['count'] as int? ?? 0;
       final prevMonthlySubs = prevMonthlySubResult.first['count'] as int? ?? 0;
 
+      // Extract cash sales values
+      final currentCashSales = (currentCashSalesResult.first['total'] as num? ?? 0.0).toDouble();
+      final prevCashSales = (prevCashSalesResult.first['total'] as num? ?? 0.0).toDouble();
+
       // Update gym-specific observables
       totalWalkIns.value = currentSubscriptions.toString();
       dailySubs.value = currentDailySubs.toString();
@@ -256,6 +274,7 @@ class MonStoreKpiTrendController extends GetxController {
       final transactionsTrendValue = (currentTransactions - prevTransactions) / (prevTransactions.abs() + epsilon);
       final storesTrendValue = (currentActiveStores - prevActiveStores) / (prevActiveStores.abs() + epsilon);
       final basketTrendValue = (currentBasket - prevBasket) / (prevBasket.abs() + epsilon);
+      final cashSalesTrendValue = (currentCashSales - prevCashSales) / (prevCashSales.abs() + epsilon);
 
       // Gym-specific trend calculations
       final walkInsTrendValue = (currentSubscriptions - prevSubscriptions) / (prevSubscriptions.abs() + epsilon);
@@ -314,6 +333,13 @@ class MonStoreKpiTrendController extends GetxController {
             : (dailySubsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
       }
 
+      // Cash sales trends
+      cashSales.value = compactFormatter.format(currentCashSales);
+      cashSalesTrend.value = formatTrendPercent(cashSalesTrendValue);
+      cashSalesTrendDirection.value = cashSalesTrendValue > 0.01
+          ? TrendDirection.up
+          : (cashSalesTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+
       // print('DEBUG: Final KPI Values - Total Sales: ${totalSales.value}, Transactions: ${totalTransactions.value}, Active Stores: ${activeTotalStores.value}, Avg Basket: ${avgBasketSize.value}');
       // print('DEBUG: Trends - Sales: ${salesTrend.value}, Transactions: ${transactionsTrend.value}, Stores: ${storesTrend.value}, Basket: ${basketTrend.value}');
     } catch (e) {
@@ -323,6 +349,9 @@ class MonStoreKpiTrendController extends GetxController {
       totalTransactions.value = "-";
       activeTotalStores.value = "- / -";
       avgBasketSize.value = "-";
+      cashSales.value = "-";
+      cashSalesTrend.value = "0%";
+      cashSalesTrendDirection.value = TrendDirection.none;
       salesTrend.value = "0%";
       transactionsTrend.value = "0%";
       storesTrend.value = "0%";
