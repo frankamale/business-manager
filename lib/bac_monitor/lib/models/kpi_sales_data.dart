@@ -28,7 +28,7 @@ class KpiSalesData {
   factory KpiSalesData.fromJson(Map<String, dynamic> json, int kpiId) {
     return KpiSalesData(
       kpiId: kpiId,
-      processingDate: json['processingdate'] as String? ?? '',
+      processingDate: _extractDate(json['processingdate'] as String? ?? ''),
       sellingPoint: json['sellingpoint'] as String?,
       currency: json['currency'] as String?,
       kpi: json['kpi'] as String? ?? '',
@@ -52,6 +52,13 @@ class KpiSalesData {
       amount2: (map['amount2'] as num?)?.toDouble() ?? 0.0,
       createdAt: map['created_at'] as int?,
     );
+  }
+
+  /// Extract only the date portion (yyyy-MM-dd) from various datetime formats
+  static String _extractDate(String dateTimeStr) {
+    if (dateTimeStr.isEmpty) return dateTimeStr;
+    // Handle formats like "2026-03-31T14:30:00" or "2026-03-31 14:30:00"
+    return dateTimeStr.split('T')[0].split(' ')[0];
   }
 
   /// Convert to database map for insertion

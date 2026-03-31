@@ -163,9 +163,9 @@ class MonKpiOverviewController extends GetxController {
       // Format dates for KPI queries (yyyy-MM-dd)
       final dateFormatter = DateFormat('yyyy-MM-dd');
       final startDateStr = dateFormatter.format(startDate);
-      final endDateStr = dateFormatter.format(endDate);
+      final endDateStr = '${dateFormatter.format(endDate)} 23:59:59';
       final prevStartDateStr = dateFormatter.format(prevStartDate);
-      final prevEndDateStr = dateFormatter.format(prevEndDate);
+      final prevEndDateStr = '${dateFormatter.format(prevEndDate)} 23:59:59';
 
       // Query the new mon_kpi_sales table
       // KPI ID 0 = All Transactions (total sales)
