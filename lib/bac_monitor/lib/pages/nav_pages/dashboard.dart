@@ -105,15 +105,15 @@ class _DashboardState extends State<Dashboard> {
     final bool isSmallScreen = size.width < 600;
 
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
-        color: PrimaryColors.brightYellow,
-        backgroundColor: PrimaryColors.darkBlue,
+        color: AppColors.getAccentColor(context),
+        backgroundColor: AppColors.getPrimaryColor(context),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: PrimaryColors.darkBlue,
+              backgroundColor: AppColors.getPrimaryColor(context),
               elevation: 2,
               pinned: true,
               centerTitle: true,
@@ -123,8 +123,8 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     Text(
                       operatorController.companyName.value,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: LightColors.card,
                         fontWeight: FontWeight.bold,
                         fontSize: 18.0,
                       ),
@@ -133,7 +133,7 @@ class _DashboardState extends State<Dashboard> {
                     Text(
                       operatorController.companyAddress.value,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: LightColors.card.withOpacity(0.8),
                         fontWeight: FontWeight.w400,
                         fontSize: 12.0,
                       ),
@@ -151,7 +151,7 @@ class _DashboardState extends State<Dashboard> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: IconButton(
                     icon: const Icon(Icons.account_circle_outlined, size: 28),
-                    color: PrimaryColors.brightYellow,
+                    color: AppColors.getAccentColor(context),
                     onPressed: () {
                       Get.to(() => ProfilePage());
                     },
@@ -167,7 +167,7 @@ class _DashboardState extends State<Dashboard> {
             ),
             SliverToBoxAdapter(
               child: Container(
-                color: PrimaryColors.darkBlue,
+                color: AppColors.getBackgroundColor(context),
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
                   child: Column(

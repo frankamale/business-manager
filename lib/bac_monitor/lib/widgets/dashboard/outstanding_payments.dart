@@ -30,8 +30,8 @@ class OutstandingPaymentsCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            PrimaryColors.lightBlue.withOpacity(0.9),
-            PrimaryColors.darkBlue.withOpacity(0.7),
+            LightColors.primaryLight.withOpacity(0.9),
+            LightColors.primaryDark.withOpacity(0.7),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -45,10 +45,10 @@ class OutstandingPaymentsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Outstanding Payments',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: LightColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -56,7 +56,7 @@ class OutstandingPaymentsCard extends StatelessWidget {
               Text(
                 periodLabel,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
+                  color: LightColors.textSecondary.withOpacity(0.7),
                   fontSize: 12,
                 ),
               ),
@@ -70,8 +70,8 @@ class OutstandingPaymentsCard extends StatelessWidget {
             children: [
               Text(
                 'UGX$outstandingSelectedPeriod',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: LightColors.textPrimary,
                   fontWeight: FontWeight.w900,
                   fontSize: 36,
                 ),
@@ -82,7 +82,7 @@ class OutstandingPaymentsCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          Divider(color: Colors.white.withOpacity(0.2)),
+          Divider(color: LightColors.border),
           const SizedBox(height: 12),
 
           // 3. Detail Rows
@@ -96,7 +96,7 @@ class OutstandingPaymentsCard extends StatelessWidget {
 
   /// A helper widget for the trend indicator (e.g., +15.2%)
   Widget _buildTrendIndicator(bool isPositive, double percentage) {
-    final Color trendColor = isPositive ? Colors.greenAccent[400]! : Colors.redAccent[400]!;
+    final Color trendColor = isPositive ? LightColors.success : LightColors.error;
     final IconData trendIcon = isPositive ? Icons.arrow_downward : Icons.arrow_upward;
 
     return Container(
@@ -131,14 +131,14 @@ class OutstandingPaymentsCard extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
+            color: LightColors.textSecondary.withOpacity(0.7),
             fontSize: 14,
           ),
         ),
         Text(
           value,
           style: TextStyle(
-            color: isHighlighted ? Colors.cyanAccent[100] : Colors.white,
+            color: isHighlighted ? LightColors.secondary : LightColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: isHighlighted ? 16 : 14,
           ),

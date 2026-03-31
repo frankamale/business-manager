@@ -148,10 +148,10 @@ class HorizontalSummaryCards extends StatelessWidget {
       width: 300,
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: PrimaryColors.lightBlue.withOpacity(0.5),
+        color: LightColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: PrimaryColors.lightBlue.withOpacity(0.3),
+          color: LightColors.border,
           width: 1,
         ),
       ),
@@ -165,8 +165,8 @@ class HorizontalSummaryCards extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: LightColors.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -174,13 +174,13 @@ class HorizontalSummaryCards extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: PrimaryColors.brightYellow.withOpacity(0.2),
+                  color: LightColors.accent.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   'UGX ${compactFormatter.format(totalSales)}',
-                  style: const TextStyle(
-                    color: PrimaryColors.brightYellow,
+                  style: TextStyle(
+                    color: LightColors.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -189,16 +189,16 @@ class HorizontalSummaryCards extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(color: Colors.white24, height: 1),
+          Divider(color: LightColors.border, height: 1),
           const SizedBox(height: 8),
           // Items list with bar charts
           if (items.isEmpty)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'No data available',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: LightColors.textDisabled, fontSize: 12),
                 ),
               ),
             )
@@ -236,8 +236,8 @@ class HorizontalSummaryCards extends StatelessWidget {
                           Expanded(
                             child: Text(
                               name,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: LightColors.textPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -266,8 +266,8 @@ class HorizontalSummaryCards extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             'UGX ${compactFormatter.format(value)}',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: LightColors.textPrimary,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -285,7 +285,7 @@ class HorizontalSummaryCards extends StatelessWidget {
                               Container(
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.2),
+                                  color: LightColors.border,
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               ),

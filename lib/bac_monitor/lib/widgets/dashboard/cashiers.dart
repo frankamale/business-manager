@@ -72,13 +72,13 @@ class CashierSalesChart extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: PrimaryColors.lightBlue.withOpacity(0.8),
+          color: LightColors.surface,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             "No cashier sales data available.",
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: LightColors.textSecondary),
           ),
         ),
       );
@@ -89,7 +89,7 @@ class CashierSalesChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: PrimaryColors.lightBlue.withOpacity(0.8),
+        color: LightColors.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -103,10 +103,10 @@ class CashierSalesChart extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Summary by Cashier",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: LightColors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -116,7 +116,7 @@ class CashierSalesChart extends StatelessWidget {
                       Text(
                         periodLabel!,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: LightColors.textSecondary.withOpacity(0.7),
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
                         ),
@@ -131,14 +131,14 @@ class CashierSalesChart extends StatelessWidget {
                   Text(
                     'Total',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: LightColors.textSecondary.withOpacity(0.7),
                       fontSize: 11,
                     ),
                   ),
                   Text(
                     'UGX ${compactFormatter.format(totalSales)}',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: LightColors.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -148,7 +148,7 @@ class CashierSalesChart extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Divider(color: Colors.white.withOpacity(0.2)),
+          Divider(color: LightColors.border),
           const SizedBox(height: 12),
 
           Column(
@@ -191,8 +191,8 @@ class CashierSalesChart extends StatelessWidget {
               Expanded(
                 child: Text(
                   name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: LightColors.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -218,8 +218,8 @@ class CashierSalesChart extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 formattedValue,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: LightColors.textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -235,7 +235,7 @@ class CashierSalesChart extends StatelessWidget {
                   Container(
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.2),
+                      color: LightColors.border,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),

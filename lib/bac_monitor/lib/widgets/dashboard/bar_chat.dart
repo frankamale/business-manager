@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/dashboard.dart';
+import '../../additions/colors.dart';
 
 class TopStoresBarChart extends StatelessWidget {
   final List<StorePerformance> storeData;
@@ -77,7 +78,7 @@ class TopStoresBarChart extends StatelessWidget {
           Flexible(
             child: Text(
               '$index. $displayText',
-              style: const TextStyle(color: Colors.white70, fontSize: 9),
+              style: TextStyle(color: LightColors.textSecondary, fontSize: 9),
             ),
           ),
         ],
@@ -101,9 +102,9 @@ class TopStoresBarChart extends StatelessWidget {
         alignment: BarChartAlignment.spaceAround,
         borderData: FlBorderData(
           show: true,
-          border: const Border(
-            left: BorderSide(color: Colors.white70, width: 1),
-            bottom: BorderSide(color: Colors.white70, width: 1),
+          border: Border(
+            left: BorderSide(color: LightColors.border, width: 1),
+            bottom: BorderSide(color: LightColors.border, width: 1),
           ),
         ),
         gridData: FlGridData(
@@ -111,7 +112,7 @@ class TopStoresBarChart extends StatelessWidget {
           drawHorizontalLine: true,
           drawVerticalLine: false,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.white70.withOpacity(0.3),
+            color: LightColors.border.withOpacity(0.3),
             strokeWidth: 1,
             dashArray: [5, 5],
           ),
@@ -141,8 +142,8 @@ class TopStoresBarChart extends StatelessWidget {
                     angle: -0.785, // Rotates the text -45 degrees
                     child: Text(
                       formattedValue,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: LightColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 10,
                       ),
@@ -161,10 +162,10 @@ class TopStoresBarChart extends StatelessWidget {
               reservedSize: 32,
               getTitlesWidget: (value, meta) => _leftTitles(value, meta),
             ),
-            axisNameWidget: const Text(
+            axisNameWidget: Text(
               'Sales (UGX)',
               style: TextStyle(
-                color: Colors.white70,
+                color: LightColors.textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -210,8 +211,8 @@ class TopStoresBarChart extends StatelessWidget {
       space: 8.0,
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: LightColors.textSecondary,
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
@@ -231,7 +232,7 @@ class TopStoresBarChart extends StatelessWidget {
       padding: const EdgeInsets.only(right: 4.0),
       child: Text(
         formattedValue,
-        style: const TextStyle(color: Colors.white70, fontSize: 10),
+        style: TextStyle(color: LightColors.textSecondary, fontSize: 10),
         textAlign: TextAlign.right,
       ),
     );

@@ -41,16 +41,16 @@ class _DateRangePickerState extends State<DateRangePicker> {
     return await showDialog<DateTime>(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: PrimaryColors.darkBlue,
+        backgroundColor: DarkColors.card,
         child: Theme(
           data: ThemeData(
             colorScheme: const ColorScheme.dark().copyWith(
-              primary: PrimaryColors.brightYellow,
-              onPrimary: Colors.black,
-              surface: PrimaryColors.darkBlue,
-              onSurface: Colors.white,
+              primary: DarkColors.accent,
+              onPrimary: DarkColors.textPrimary,
+              surface: DarkColors.card,
+              onSurface: DarkColors.textPrimary,
             ),
-            dialogBackgroundColor: PrimaryColors.darkBlue,
+            dialogBackgroundColor: DarkColors.card,
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 400, maxWidth: 320),
@@ -78,13 +78,13 @@ class _DateRangePickerState extends State<DateRangePicker> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: PrimaryColors.darkBlue,
+              backgroundColor: DarkColors.card,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16.0),
               ),
-              title: const Text(
+              title: Text(
                 "Select Custom Range",
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: DarkColors.textPrimary),
               ),
               content: SizedBox(
                 height: 150,
@@ -124,9 +124,9 @@ class _DateRangePickerState extends State<DateRangePicker> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text(
+                  child: Text(
                     'CANCEL',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: DarkColors.textSecondary),
                   ),
                 ),
                 FilledButton(
@@ -134,11 +134,11 @@ class _DateRangePickerState extends State<DateRangePicker> {
                       ? () {
                           if (startDate!.isAfter(endDate!)) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text(
                                   'Start date must be before end date.',
                                 ),
-                                backgroundColor: Colors.red,
+                                backgroundColor: DarkColors.error,
                               ),
                             );
                             return;
@@ -166,13 +166,13 @@ class _DateRangePickerState extends State<DateRangePicker> {
                         }
                       : null,
                   style: FilledButton.styleFrom(
-                    backgroundColor: PrimaryColors.brightYellow,
-                    disabledBackgroundColor: Colors.grey.shade600,
+                    backgroundColor: DarkColors.accent,
+                    disabledBackgroundColor: DarkColors.textDisabled,
                   ),
-                  child: const Text(
+                  child: Text(
                     'APPLY',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: DarkColors.textPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -195,19 +195,19 @@ class _DateRangePickerState extends State<DateRangePicker> {
     return ListTile(
       title: Text(
         title,
-        style: const TextStyle(color: Colors.white70, fontSize: 14),
+        style: TextStyle(color: DarkColors.textSecondary, fontSize: 14),
       ),
       subtitle: Text(
         date != null ? displayFormat.format(date) : 'Not Set',
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: DarkColors.textPrimary,
           fontWeight: FontWeight.bold,
           fontSize: 16,
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.calendar_month_outlined,
-        color: PrimaryColors.brightYellow,
+        color: DarkColors.accent,
       ),
       onTap: onTap,
     );
@@ -268,21 +268,21 @@ class _DateRangePickerState extends State<DateRangePicker> {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: OutlinedButton.icon(
           onPressed: _showSelectionSheet,
-          icon: const Icon(
+          icon: Icon(
             Icons.calendar_today,
-            color: PrimaryColors.brightYellow,
+            color: DarkColors.accent,
           ),
           label: Text(
             _getDisplayLabel(),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: DarkColors.textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
           ),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            side: const BorderSide(color: Colors.white30),
+            side: BorderSide(color: DarkColors.border),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -296,7 +296,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
   void _showSelectionSheet() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: DarkColors.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -307,18 +307,18 @@ class _DateRangePickerState extends State<DateRangePicker> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(bottom: 12.0),
                   child: Text(
                     'Select a Period',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: DarkColors.textPrimary,
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
                     ),
                   ),
                 ),
-                const Divider(color: Colors.white24, height: 1),
+                Divider(color: DarkColors.border, height: 1),
                 _buildOptionTile('Today', DateRange.today),
                 _buildOptionTile('Yesterday', DateRange.yesterday),
                 _buildOptionTile('Last 7 Days', DateRange.last7Days),
@@ -338,12 +338,12 @@ class _DateRangePickerState extends State<DateRangePicker> {
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? PrimaryColors.brightYellow : Colors.white,
+          color: isSelected ? DarkColors.accent : DarkColors.textPrimary,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
       trailing: isSelected
-          ? const Icon(Icons.check_circle, color: PrimaryColors.brightYellow)
+          ? Icon(Icons.check_circle, color: DarkColors.accent)
           : null,
       onTap: () => _handleSelection(range),
     );

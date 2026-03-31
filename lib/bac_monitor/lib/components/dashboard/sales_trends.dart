@@ -17,14 +17,14 @@ class SalesTrendsSection extends StatelessWidget {
     final MonDashboardController dateController = Get.find<MonDashboardController>();
 
     return Container(
-      color: PrimaryColors.darkBlue,
+      color: AppColors.getBackgroundColor(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Sales Trends",
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.getTextPrimaryColor(context),
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -39,12 +39,12 @@ class SalesTrendsSection extends StatelessWidget {
               );
             }
             if (controller.hasErrorSales.value) {
-              return const SizedBox(
+              return SizedBox(
                 height: 300,
                 child: Center(
                   child: Text(
                     'Error loading sales data',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppColors.getErrorColor(context)),
                   ),
                 ),
               );
@@ -52,7 +52,7 @@ class SalesTrendsSection extends StatelessWidget {
             return Container(
               height: 300,
               decoration: BoxDecoration(
-                color: PrimaryColors.lightBlue.withOpacity(0.5),
+                color: AppColors.getPrimaryLightColor(context).withOpacity(0.5),
                 borderRadius: const BorderRadius.all(Radius.circular(12)),
               ),
               child: Padding(

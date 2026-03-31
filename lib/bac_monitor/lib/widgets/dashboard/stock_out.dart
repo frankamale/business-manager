@@ -10,7 +10,7 @@ class CategorizedStockAlertsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (alerts.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 40.0),
           child: Column(
@@ -18,13 +18,13 @@ class CategorizedStockAlertsList extends StatelessWidget {
             children: [
               Icon(
                 Icons.check_circle_outline,
-                color: Colors.greenAccent,
+                color: LightColors.success,
                 size: 40,
               ),
               SizedBox(height: 8),
               Text(
                 'All stock levels are healthy!',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                style: TextStyle(color: LightColors.textSecondary, fontSize: 16),
               ),
             ],
           ),
@@ -46,12 +46,12 @@ class CategorizedStockAlertsList extends StatelessWidget {
             title: 'Critical Stock (<=5)',
             alerts: criticalAlerts,
             icon: Icons.error_outline,
-            color: Colors.red.shade400,
+            color: LightColors.error,
           ),
 
         // Add a divider if both sections are present
         if (criticalAlerts.isNotEmpty && lowAlerts.isNotEmpty)
-          const Divider(color: Colors.white24, height: 24, thickness: 1),
+          Divider(color: LightColors.border, height: 24, thickness: 1),
 
         // Conditionally build the "Low Stock" section
         if (lowAlerts.isNotEmpty)
@@ -59,7 +59,7 @@ class CategorizedStockAlertsList extends StatelessWidget {
             title: 'Low Stock (6-10)',
             alerts: lowAlerts,
             icon: Icons.warning_amber_rounded,
-            color: PrimaryColors.brightYellow,
+            color: LightColors.accent,
           ),
       ],
     );
@@ -104,7 +104,7 @@ class CategorizedStockAlertsList extends StatelessWidget {
           Expanded(
             child: Text(
               alert.name,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: LightColors.textPrimary, fontSize: 14),
               overflow: TextOverflow.ellipsis,
             ),
           ),

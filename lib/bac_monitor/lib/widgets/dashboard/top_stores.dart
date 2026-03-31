@@ -9,7 +9,7 @@ Widget buildTopStoresCard(MonSalesTrendsController controller) {
   final stores = "Store";
 
   return Card(
-    color: PrimaryColors.lightBlue,
+    color: LightColors.card,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     elevation: 2,
     child: Padding(
@@ -19,8 +19,8 @@ Widget buildTopStoresCard(MonSalesTrendsController controller) {
         children: [
           Text(
             "Top $stores by Sales (UGX)",
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: LightColors.textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -34,12 +34,12 @@ Widget buildTopStoresCard(MonSalesTrendsController controller) {
               );
             }
             if (controller.hasErrorStores.value) {
-              return const SizedBox(
+              return SizedBox(
                 height: 200,
                 child: Center(
                   child: Text(
                     'Error loading store data',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: LightColors.error),
                   ),
                 ),
               );

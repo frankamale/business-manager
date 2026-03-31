@@ -14,18 +14,18 @@ class DailySalesLineChart extends StatelessWidget {
       aspectRatio: 1.7,
       child: LineChart(
         LineChartData(
-          backgroundColor: PrimaryColors.light.withOpacity(0.1),
+          backgroundColor: LightColors.surface.withOpacity(0.1),
           lineBarsData: [_mainLine()],
           borderData: FlBorderData(
             show: true,
             border: Border(
               left: BorderSide(
-                color: Colors.white.withOpacity(0.5),
+                color: LightColors.border.withOpacity(0.5),
                 width: 1,
                 style: BorderStyle.solid,
               ),
               bottom: BorderSide(
-                color: Colors.white.withOpacity(0.5),
+                color: LightColors.border.withOpacity(0.5),
                 width: 1,
                 style: BorderStyle.solid,
               ),
@@ -49,10 +49,10 @@ class DailySalesLineChart extends StatelessWidget {
                         .ceil()
                         .toDouble(),
               ),
-              axisNameWidget: const Text(
+              axisNameWidget: Text(
                 'Sales', // Match axis name
                 style: TextStyle(
-                  color: PrimaryColors.brightYellow,
+                  color: LightColors.accent,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -72,10 +72,10 @@ class DailySalesLineChart extends StatelessWidget {
                 reservedSize: 38,
                 interval: 1,
               ),
-              axisNameWidget: const Text(
+              axisNameWidget: Text(
                 'Day', // Match axis name
                 style: TextStyle(
-                  color: PrimaryColors.brightYellow,
+                  color: LightColors.accent,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -94,7 +94,7 @@ class DailySalesLineChart extends StatelessWidget {
     return LineChartBarData(
       spots: _getSpots(),
       isCurved: true,
-      color: PrimaryColors.brightYellow,
+      color: LightColors.accent,
       barWidth: 4,
       isStrokeCapRound: true,
       dotData: const FlDotData(show: false),
@@ -102,8 +102,8 @@ class DailySalesLineChart extends StatelessWidget {
         show: true,
         gradient: LinearGradient(
           colors: [
-            PrimaryColors.brightYellow.withOpacity(0.3),
-            PrimaryColors.brightYellow.withOpacity(0.0),
+            LightColors.accent.withOpacity(0.3),
+            LightColors.accent.withOpacity(0.0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -139,7 +139,7 @@ class DailySalesLineChart extends StatelessWidget {
       // Match dynamic interval
       getDrawingHorizontalLine: (value) {
         return FlLine(
-          color: Colors.white.withOpacity(0.3),
+          color: LightColors.border.withOpacity(0.3),
           strokeWidth: 1,
           dashArray: [5, 5],
         );
@@ -157,12 +157,12 @@ class DailySalesLineChart extends StatelessWidget {
             final sales = spot.y.toStringAsFixed(2);
             return LineTooltipItem(
               '$day\n',
-              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              TextStyle(color: LightColors.textPrimary, fontWeight: FontWeight.bold),
               children: [
                 TextSpan(
                   text: '\$$sales',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: LightColors.textSecondary,
                     fontWeight: FontWeight.normal,
                   ),
                 ),
@@ -185,8 +185,8 @@ class DailySalesLineChart extends StatelessWidget {
       padding: const EdgeInsets.only(top: 10.0),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: LightColors.textPrimary,
           fontSize: 12,
           fontWeight: FontWeight.normal,
         ),
@@ -199,8 +199,8 @@ class DailySalesLineChart extends StatelessWidget {
     final String text = value.toInt().toString();
     return Text(
       text,
-      style: const TextStyle(
-        color: Colors.white,
+      style: TextStyle(
+        color: LightColors.textPrimary,
         fontSize: 12,
       ),
     );

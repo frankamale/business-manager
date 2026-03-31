@@ -25,10 +25,10 @@ class GrossProfitCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: PrimaryColors.lightBlue,
+        color: LightColors.primaryLight,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: LightColors.shadow,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -66,17 +66,17 @@ class GrossProfitCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF26A69A).withOpacity(0.15),
+                    color: LightColors.secondary.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(30),
                     border: Border.all(
-                      color: const Color(0xFF26A69A).withOpacity(0.4),
+                      color: LightColors.secondary.withOpacity(0.4),
                       width: 1,
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'GROSS PROFIT',
                     style: TextStyle(
-                      color: Color(0xFF26A69A),
+                      color: LightColors.secondary,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.4,
@@ -88,8 +88,8 @@ class GrossProfitCard extends StatelessWidget {
                 // Big value
                 Text(
                   compactFormatter.format(grossProfit),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: LightColors.textPrimary,
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
@@ -125,7 +125,7 @@ class _TrendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isPositive ? const Color(0xFF4CAF50) : const Color(0xFFEF5350);
+    final color = isPositive ? LightColors.success : LightColors.error;
     final bgColor = color.withOpacity(0.12);
 
     return Row(
@@ -161,7 +161,7 @@ class _TrendBadge extends StatelessWidget {
         Text(
           'vs last period',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.4),
+            color: LightColors.textSecondary.withOpacity(0.4),
             fontSize: 10,
             fontWeight: FontWeight.w500,
           ),

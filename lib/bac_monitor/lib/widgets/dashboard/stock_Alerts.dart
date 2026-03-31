@@ -7,7 +7,7 @@ import '../../controllers/mon_salestrends_controller.dart';
 
 Widget buildStockAlertsCard(MonSalesTrendsController controller) {
   return Card(
-    color: PrimaryColors.lightBlue,
+    color: LightColors.card,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     elevation: 2,
     child: Padding(
@@ -15,10 +15,10 @@ Widget buildStockAlertsCard(MonSalesTrendsController controller) {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Stock Alerts",
             style: TextStyle(
-              color: Colors.white,
+              color: LightColors.textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -33,13 +33,13 @@ Widget buildStockAlertsCard(MonSalesTrendsController controller) {
             }
             // Display a message because data is unavailable
             if (controller.stockAlerts.isEmpty) {
-              return const SizedBox(
+              return SizedBox(
                 height: 140,
                 child: Center(
                   child: Text(
                     'Stock alert data is not available.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: LightColors.textSecondary),
                   ),
                 ),
               );

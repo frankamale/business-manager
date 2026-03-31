@@ -25,10 +25,10 @@ class SalesTrendLineGraph extends StatelessWidget {
   Widget build(BuildContext context) {
     // Show empty state if no data
     if (salesData.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No sales data available for this period',
-          style: TextStyle(color: Colors.white70, fontSize: 14),
+          style: TextStyle(color: LightColors.textSecondary, fontSize: 14),
         ),
       );
     }
@@ -38,7 +38,7 @@ class SalesTrendLineGraph extends StatelessWidget {
 
     return LineChart(
       LineChartData(
-        backgroundColor: PrimaryColors.light.withOpacity(0.1),
+        backgroundColor: LightColors.surface.withOpacity(0.1),
         showingTooltipIndicators: salesData.asMap().entries.map((entry) {
           return ShowingTooltipIndicators([
             LineBarSpot(lineBarData, entry.key, lineBarData.spots[entry.key]),
@@ -47,14 +47,14 @@ class SalesTrendLineGraph extends StatelessWidget {
         lineBarsData: [lineBarData],
         borderData: FlBorderData(
           show: true,
-          border: const Border(
+          border: Border(
             left: BorderSide(
-              color: Colors.white70,
+              color: LightColors.border,
               width: 1,
               style: BorderStyle.solid,
             ),
             bottom: BorderSide(
-              color: Colors.white70,
+              color: LightColors.border,
               width: 1,
               style: BorderStyle.solid,
             ),
@@ -70,10 +70,10 @@ class SalesTrendLineGraph extends StatelessWidget {
               reservedSize: 50,
               interval: maxY / 5,
             ),
-            axisNameWidget: const Text(
+            axisNameWidget: Text(
               'Amount (UGX)',
               style: TextStyle(
-                color: Colors.white70,
+                color: LightColors.textSecondary,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -93,10 +93,10 @@ class SalesTrendLineGraph extends StatelessWidget {
               reservedSize: 42,
               interval: _getBottomTitleInterval(),
             ),
-            axisNameWidget: const Text(
+            axisNameWidget: Text(
               'Time Period',
               style: TextStyle(
-                color: Colors.white70,
+                color: LightColors.textSecondary,
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -210,24 +210,24 @@ class SalesTrendLineGraph extends StatelessWidget {
           .map((e) => FlSpot(e.key.toDouble(), e.value.amount))
           .toList(),
       isCurved: true,
-      color: PrimaryColors.brightYellow,
+      color: LightColors.accent,
       barWidth: 4,
       isStrokeCapRound: true,
       dotData: FlDotData(
         show: true,
         getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
           radius: 4,
-          color: PrimaryColors.brightYellow,
+          color: LightColors.accent,
           strokeWidth: 2,
-          strokeColor: Colors.white70,
+          strokeColor: LightColors.border,
         ),
       ),
       belowBarData: BarAreaData(
         show: true,
         gradient: LinearGradient(
           colors: [
-            PrimaryColors.brightYellow.withOpacity(0.3),
-            PrimaryColors.brightYellow.withOpacity(0.0),
+            LightColors.accent.withOpacity(0.3),
+            LightColors.accent.withOpacity(0.0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -244,7 +244,7 @@ class SalesTrendLineGraph extends StatelessWidget {
       horizontalInterval: maxY / 5,
       getDrawingHorizontalLine: (value) {
         return FlLine(
-          color: Colors.white70.withOpacity(0.3),
+          color: LightColors.border.withOpacity(0.3),
           strokeWidth: 1,
           dashArray: [5, 5],
         );
@@ -278,8 +278,8 @@ class SalesTrendLineGraph extends StatelessWidget {
 
             return LineTooltipItem(
               formattedValue,
-              const TextStyle(
-                color: Colors.white,
+              TextStyle(
+                color: LightColors.textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 11,
               ),
@@ -406,8 +406,8 @@ class SalesTrendLineGraph extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8.0),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: LightColors.textSecondary,
           fontSize: 10,
           height: 1.2,
         ),
@@ -446,8 +446,8 @@ class SalesTrendLineGraph extends StatelessWidget {
       padding: const EdgeInsets.only(right: 4.0),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: LightColors.textSecondary,
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),

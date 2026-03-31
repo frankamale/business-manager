@@ -28,8 +28,8 @@ class ExpensesCard extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            PrimaryColors.lightBlue.withOpacity(0.9),
-            PrimaryColors.darkBlue.withOpacity(0.7),
+            LightColors.primaryLight.withOpacity(0.9),
+            LightColors.primaryDark.withOpacity(0.7),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -43,10 +43,10 @@ class ExpensesCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Expenses',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: LightColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -54,7 +54,7 @@ class ExpensesCard extends StatelessWidget {
               Text(
                 periodLabel,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
+                  color: LightColors.textSecondary.withOpacity(0.7),
                   fontSize: 12,
                 ),
               ),
@@ -65,15 +65,15 @@ class ExpensesCard extends StatelessWidget {
           // 2. Hero Metric (Total Expenses)
           Text(
             'UGX${compactFormatter.format(totalExpenses)}',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: LightColors.textPrimary,
               fontWeight: FontWeight.w900,
               fontSize: 36,
             ),
           ),
           const SizedBox(height: 20),
 
-          Divider(color: Colors.white.withOpacity(0.2)),
+          Divider(color: LightColors.border),
           const SizedBox(height: 12),
 
           // 3. Clickable Expense Categories
@@ -113,10 +113,10 @@ class ExpensesCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: LightColors.card.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Colors.white.withOpacity(0.2),
+            color: LightColors.border,
             width: 1,
           ),
         ),
@@ -144,7 +144,7 @@ class ExpensesCard extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: LightColors.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -152,8 +152,8 @@ class ExpensesCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'UGX$amount',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: LightColors.textPrimary,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -164,7 +164,7 @@ class ExpensesCard extends StatelessWidget {
             // Arrow Icon
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.5),
+              color: LightColors.textSecondary.withOpacity(0.5),
               size: 16,
             ),
           ],

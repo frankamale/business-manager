@@ -29,7 +29,7 @@ class KpiCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: PrimaryColors.lightBlue
+        color: LightColors.primaryLight
 
       ),
       child: Stack(
@@ -52,16 +52,16 @@ class KpiCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 3),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFC107).withOpacity(0.15),
+                          color: LightColors.accent.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(30),
                           border: Border.all(
-                              color: const Color(0xFFFFC107).withOpacity(0.4),
+                              color: LightColors.accent.withOpacity(0.4),
                               width: 1),
                         ),
                         child: Text(
                           title.toUpperCase(),
-                          style: const TextStyle(
-                            color: Color(0xFFFFC107),
+                          style: TextStyle(
+                            color: LightColors.accent,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 1.4,
@@ -77,8 +77,8 @@ class KpiCard extends StatelessWidget {
                             if (unit != null)
                               TextSpan(
                                 text: '$unit  ',
-                                style: const TextStyle(
-                                  color: Color(0xFF90A8D0),
+                                style: TextStyle(
+                                  color: LightColors.textSecondary,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
@@ -86,8 +86,8 @@ class KpiCard extends StatelessWidget {
                               ),
                             TextSpan(
                               text: value,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: LightColors.textPrimary,
                                 fontSize: 26,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.5,
@@ -119,9 +119,9 @@ class KpiCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0),
-                        Colors.white.withOpacity(0.18),
-                        Colors.white.withOpacity(0),
+                        LightColors.textPrimary.withOpacity(0),
+                        LightColors.textPrimary.withOpacity(0.18),
+                        LightColors.textPrimary.withOpacity(0),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -173,7 +173,7 @@ class _MiniKpiRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = data.accentColor ?? const Color(0xFF4FC3F7);
+    final accent = data.accentColor ?? LightColors.info;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: Column(
@@ -193,7 +193,7 @@ class _MiniKpiRow extends StatelessWidget {
               Text(
                 data.label,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.55),
+                  color: LightColors.textSecondary.withOpacity(0.55),
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.3,
@@ -206,8 +206,8 @@ class _MiniKpiRow extends StatelessWidget {
             padding: const EdgeInsets.only(left: 12),
             child: Text(
               data.value,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: LightColors.textPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.3,
@@ -237,7 +237,7 @@ class _TrendBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUp = direction == TrendDirection.up;
-    final color = isUp ? const Color(0xFF4CAF50) : const Color(0xFFEF5350);
+    final color = isUp ? LightColors.success : LightColors.error;
     final bgColor = color.withOpacity(0.12);
 
     return Row(
@@ -274,7 +274,7 @@ class _TrendBadge extends StatelessWidget {
           Text(
             reference!,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.4),
+              color: LightColors.textSecondary.withOpacity(0.4),
               fontSize: 10,
               fontWeight: FontWeight.w500,
             ),
