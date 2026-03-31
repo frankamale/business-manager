@@ -3,10 +3,8 @@ import 'package:get/get.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_dashboard_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
-import '../../widgets/dashboard/cashiers.dart';
 import '../../widgets/dashboard/expiries_card.dart';
 import '../../widgets/dashboard/line_graph.dart';
-import '../../widgets/dashboard/payment_method.dart';
 import '../../widgets/dashboard/stock_Alerts.dart';
 import '../../widgets/dashboard/top_stores.dart';
 
@@ -68,23 +66,6 @@ class SalesTrendsSection extends StatelessWidget {
               ),
             );
           }),
-          const SizedBox(height: 24),
-
-          Obx(
-            () => PaymentMethodHorizontalBarChart(
-              salesData: controller.rawSalesForKpi3.value,
-              periodLabel: controller.getPeriodLabel(),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          Obx(
-            () => CashierSalesChart(
-              salesData: controller.rawSalesForKpi4.value,
-              periodLabel: controller.getPeriodLabel(),
-            ),
-          ),
           buildTopStoresCard(controller),
         ],
       ),

@@ -17,6 +17,7 @@ import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
 import '../../widgets/dashboard/outstanding_payments.dart';
 import '../../widgets/dashboard/expenses_card.dart';
+import '../../widgets/dashboard/horizontal_summary_cards.dart';
 import '../../widgets/finance/date_range.dart';
 import '../profile.dart';
 import '../expenses_detail_page.dart';
@@ -186,6 +187,8 @@ class _DashboardState extends State<Dashboard> {
                           trend: controller.grossProfitTrend.value,
                         );
                       }),
+                      const SizedBox(height: 16),
+                      const HorizontalSummaryCards(),
                       const SizedBox(height: 24),
                       // Obx(() {
                       //   final controller =
