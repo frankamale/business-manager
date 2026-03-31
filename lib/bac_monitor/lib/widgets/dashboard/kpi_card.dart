@@ -37,7 +37,7 @@ class KpiCard extends StatelessWidget {
           // Decorative glow blob top-right
 
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

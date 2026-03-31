@@ -21,7 +21,6 @@ import '../../widgets/finance/date_range.dart';
 import '../profile.dart';
 import '../expenses_detail_page.dart';
 
-
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
 
@@ -175,7 +174,7 @@ class _DashboardState extends State<Dashboard> {
                     children: [
                       SizedBox(height: 2),
                       KpiOverviewSection(),
-                      SizedBox(height: 2),
+                      SizedBox(height: 8),
                       Obx(() {
                         final controller = Get.find<MonGrossProfitController>();
                         final grossProfitValue = _parseCompactNumber(
@@ -188,28 +187,28 @@ class _DashboardState extends State<Dashboard> {
                         );
                       }),
                       const SizedBox(height: 24),
-                      Obx(() {
-                        final controller =
-                            Get.find<MonOutstandingPaymentsController>();
-                        final dashboardController =
-                            Get.find<MonDashboardController>();
-                        final periodLabel = _getPeriodLabel(
-                          dashboardController.selectedRange.value,
-                          dashboardController.customRange.value,
-                        );
-
-                        return OutstandingPaymentsCard(
-                          outstandingSelectedPeriod:
-                              controller.outstandingSelectedPeriod.value,
-                          outstandingSelectedPeriodTrend:
-                              controller.outstandingSelectedPeriodTrend.value,
-                          outstandingMTD: controller.outstandingMTD.value,
-                          outstandingYTD: controller.outstandingYTD.value,
-                          periodLabel: periodLabel,
-                        );
-                      }),
-                      const SizedBox(height: 24),
-                      // Expenses Card
+                      // Obx(() {
+                      //   final controller =
+                      //       Get.find<MonOutstandingPaymentsController>();
+                      //   final dashboardController =
+                      //       Get.find<MonDashboardController>();
+                      //   final periodLabel = _getPeriodLabel(
+                      //     dashboardController.selectedRange.value,
+                      //     dashboardController.customRange.value,
+                      //   );
+                      //
+                      //   return OutstandingPaymentsCard(
+                      //     outstandingSelectedPeriod:
+                      //         controller.outstandingSelectedPeriod.value,
+                      //     outstandingSelectedPeriodTrend:
+                      //         controller.outstandingSelectedPeriodTrend.value,
+                      //     outstandingMTD: controller.outstandingMTD.value,
+                      //     outstandingYTD: controller.outstandingYTD.value,
+                      //     periodLabel: periodLabel,
+                      //   );
+                      // }),
+                      // const SizedBox(height: 24),
+                      // // Expenses Card
                       Obx(() {
                         final dashboardController =
                             Get.find<MonDashboardController>();
@@ -260,6 +259,4 @@ class _DashboardState extends State<Dashboard> {
     final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
   }
-
- 
 }
