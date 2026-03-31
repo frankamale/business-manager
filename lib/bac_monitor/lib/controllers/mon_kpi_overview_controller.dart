@@ -32,6 +32,14 @@ class MonKpiOverviewController extends GetxController {
   var basketTrendDirection = TrendDirection.none.obs;
   var unit = "UGX".obs;
 
+  // Mini KPI data for the new UI
+  var cashSales = "0".obs;
+  var creditSales = "0".obs;
+  var cashSalesTrend = "0%".obs;
+  var creditSalesTrend = "0%".obs;
+  var cashSalesTrendDirection = TrendDirection.none.obs;
+  var creditSalesTrendDirection = TrendDirection.none.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -237,6 +245,30 @@ class MonKpiOverviewController extends GetxController {
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
+      // Query for cash sales (kpiId=1)
+      const cashSalesQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
+      ''';
+      const prevCashSalesQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for credit/pending payment sales (kpiId=2)
+      const creditSalesQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
+      ''';
+      const prevCreditSalesQuery = '''
+        SELECT SUM(amount2) as total 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
+      ''';
+
       final customerQuery = 'SELECT COUNT(*) as count FROM customers WHERE statusid == ?';
 
       // Execute all queries in parallel
@@ -258,6 +290,10 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(prevInventorySalesQuery, [prevStartDateStr, prevEndDateStr]),
         db.rawQuery(subscriptionRevenueQuery, [startDateStr, endDateStr]),
         db.rawQuery(prevSubscriptionRevenueQuery, [prevStartDateStr, prevEndDateStr]),
+        db.rawQuery(cashSalesQuery, [startDateStr, endDateStr]),
+        db.rawQuery(prevCashSalesQuery, [prevStartDateStr, prevEndDateStr]),
+        db.rawQuery(creditSalesQuery, [startDateStr, endDateStr]),
+        db.rawQuery(prevCreditSalesQuery, [prevStartDateStr, prevEndDateStr]),
       ]);
 
       final currentSales = (results[0].first['total'] as num? ?? 0.0).toDouble();
@@ -279,8 +315,14 @@ class MonKpiOverviewController extends GetxController {
       final prevInventorySales = (results[14].first['total'] as num? ?? 0.0).toDouble();
 
       // Subscription revenue for gym mode
-      final currentSubscriptionRevenue = (results[15].first['total'] as num? ?? 0.0).toDouble();
-      final prevSubscriptionRevenue = (results[16].first['total'] as num? ?? 0.0).toDouble();
+      final currentSubscriptionRevenue = (results[16].first['total'] as num? ?? 0.0).toDouble();
+      final prevSubscriptionRevenue = (results[17].first['total'] as num? ?? 0.0).toDouble();
+
+      // Cash and Credit sales for the new UI
+      final currentCashSales = (results[18].first['total'] as num? ?? 0.0).toDouble();
+      final prevCashSales = (results[19].first['total'] as num? ?? 0.0).toDouble();
+      final currentCreditSales = (results[20].first['total'] as num? ?? 0.0).toDouble();
+      final prevCreditSales = (results[21].first['total'] as num? ?? 0.0).toDouble();
 
       // Check if user is gym (role contains 'fg')
       final isGym = userRole.value.toLowerCase().contains('fg');
@@ -357,6 +399,32 @@ class MonKpiOverviewController extends GetxController {
       basketTrendDirection.value = displayBasketTrendValue > 0.001
           ? TrendDirection.up
           : (displayBasketTrendValue < -0.001
+          ? TrendDirection.down
+          : TrendDirection.none);
+
+      // Process cash and credit sales for mini KPIs
+      cashSales.value = compactFormatter.format(currentCashSales);
+      creditSales.value = compactFormatter.format(currentCreditSales);
+
+      // Calculate trends for cash and credit
+      final cashTrendValue = prevCashSales > 0
+          ? (currentCashSales - prevCashSales) / prevCashSales
+          : (currentCashSales > 0 ? 1.0 : 0.0);
+      final creditTrendValue = prevCreditSales > 0
+          ? (currentCreditSales - prevCreditSales) / prevCreditSales
+          : (currentCreditSales > 0 ? 1.0 : 0.0);
+
+      cashSalesTrend.value = percentFormatter.format(cashTrendValue);
+      cashSalesTrendDirection.value = cashTrendValue > 0.001
+          ? TrendDirection.up
+          : (cashTrendValue < -0.001
+          ? TrendDirection.down
+          : TrendDirection.none);
+
+      creditSalesTrend.value = percentFormatter.format(creditTrendValue);
+      creditSalesTrendDirection.value = creditTrendValue > 0.001
+          ? TrendDirection.up
+          : (creditTrendValue < -0.001
           ? TrendDirection.down
           : TrendDirection.none);
     } catch (e) {
