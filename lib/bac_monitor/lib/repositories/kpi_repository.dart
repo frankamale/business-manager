@@ -179,8 +179,10 @@ class KpiRepository extends GetxService {
   }
 
   /// Get outstanding payments (pending payments) for a date range
-  /// 
-  /// Uses kpiId=2 (pending payment) and amount2 (transaction value)
+  ///
+  /// Uses kpiId=2 (pending payment)
+  /// amount1 = amount paid, amount2 = amount supposed to be paid
+  /// Outstanding = SUM(amount2 - amount1)
   Future<double> getOutstandingPayments({
     required String startDate,
     required String endDate,
@@ -197,7 +199,7 @@ class KpiRepository extends GetxService {
     }
 
     final result = await db.rawQuery(
-      'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE $where',
+      'SELECT SUM(amount2 - amount1) as total FROM mon_kpi_sales WHERE $where',
       whereArgs,
     );
 

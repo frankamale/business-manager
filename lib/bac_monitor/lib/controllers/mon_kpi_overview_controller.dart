@@ -30,7 +30,7 @@ class MonKpiOverviewController extends GetxController {
   var basketTrend = "0%".obs;
   var basketTrendDirection = TrendDirection.none.obs;
   var unit = "UGX".obs;
-
+ 
   // Mini KPI data for the new UI
   var cashSales = "0".obs;
   var creditSales = "0".obs;
@@ -174,14 +174,14 @@ class MonKpiOverviewController extends GetxController {
       
       // Query for total sales (kpiId=0, sum of amount2 = transaction value)
       const salesQuery = '''
-        SELECT SUM(amount2) as total, SUM(quantity) as qty 
+        SELECT SUM(amount1) as total, SUM(quantity) as qty 
         FROM mon_kpi_sales 
         WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
       ''';
       
       // Query for previous period sales
       const prevSalesQuery = '''
-        SELECT SUM(amount2) as total, SUM(quantity) as qty 
+        SELECT SUM(amount1) as total, SUM(quantity) as qty 
         FROM mon_kpi_sales 
         WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
       ''';
@@ -207,24 +207,24 @@ class MonKpiOverviewController extends GetxController {
 
       // Query for inventory sales - non-subscription items (kpiId=7, not Subscription)
       const inventorySalesQuery = '''
-        SELECT SUM(amount2) as total 
+        SELECT SUM(amount1) as total 
         FROM mon_kpi_sales 
         WHERE kpi_id = 7 AND kpi != "Subscription" AND processing_date BETWEEN ? AND ?
       ''';
       const prevInventorySalesQuery = '''
-        SELECT SUM(amount2) as total 
+        SELECT SUM(amount1) as total 
         FROM mon_kpi_sales 
         WHERE kpi_id = 7 AND kpi != "Subscription" AND processing_date BETWEEN ? AND ?
       ''';
 
       // Query for subscription revenue (kpiId=7, kpi="Subscription")
       const subscriptionRevenueQuery = '''
-        SELECT SUM(amount2) as total 
+        SELECT SUM(amount1) as total 
         FROM mon_kpi_sales 
         WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
-      ''';
+      '''; 
       const prevSubscriptionRevenueQuery = '''
-        SELECT SUM(amount2) as total 
+        SELECT SUM(amount1) as total 
         FROM mon_kpi_sales 
         WHERE kpi_id = 7 AND kpi = "Subscription" AND processing_date BETWEEN ? AND ?
       ''';
@@ -250,25 +250,26 @@ class MonKpiOverviewController extends GetxController {
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
       // Query for cash sales (kpiId=1 based on actual data)
+      // amount1 = amount actually paid (cash received)
       const cashSalesQuery = '''
-        SELECT SUM(amount2) as total
+        SELECT SUM(amount1) as total
         FROM mon_kpi_sales
         WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
       ''';
       const prevCashSalesQuery = '''
-        SELECT SUM(amount2) as total
+        SELECT SUM(amount1) as total
         FROM mon_kpi_sales
         WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
       ''';
 
       // Query for pending payment sales (kpiId=2 based on actual data)
       const creditSalesQuery = '''
-        SELECT SUM(amount2) as total
+        SELECT SUM(amount2 - amount1) as total
         FROM mon_kpi_sales
         WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
       ''';
       const prevCreditSalesQuery = '''
-        SELECT SUM(amount2) as total
+        SELECT SUM(amount2 - amount1) as total
         FROM mon_kpi_sales
         WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
       ''';

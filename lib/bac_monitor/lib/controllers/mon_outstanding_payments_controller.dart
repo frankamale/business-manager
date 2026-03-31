@@ -99,9 +99,10 @@ class MonOutstandingPaymentsController extends GetxController {
 
       // Query for selected period outstanding payments
       // Using kpiId=2 (pending payment / credit transactions)
-      // amount2 represents the transaction value
+      // amount1 = amount paid, amount2 = amount supposed to be paid
+      // Outstanding = amount2 - amount1 (pending amount)
       const outstandingQuery = '''
-        SELECT SUM(amount2) as total
+        SELECT SUM(amount2 - amount1) as total
         FROM mon_kpi_sales
         WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
       ''';
