@@ -249,27 +249,27 @@ class MonKpiOverviewController extends GetxController {
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
-      // Query for cash sales (kpiId=1)
+      // Query for cash sales (kpiId=1 based on actual data)
       const cashSalesQuery = '''
-        SELECT SUM(amount2) as total 
-        FROM mon_kpi_sales 
+        SELECT SUM(amount2) as total
+        FROM mon_kpi_sales
         WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
       ''';
       const prevCashSalesQuery = '''
-        SELECT SUM(amount2) as total 
-        FROM mon_kpi_sales 
+        SELECT SUM(amount2) as total
+        FROM mon_kpi_sales
         WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
       ''';
 
-      // Query for pending payment sales (kpiId=2)
+      // Query for pending payment sales (kpiId=2 based on actual data)
       const creditSalesQuery = '''
-        SELECT SUM(amount2) as total 
-        FROM mon_kpi_sales 
+        SELECT SUM(amount2) as total
+        FROM mon_kpi_sales
         WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
       ''';
       const prevCreditSalesQuery = '''
-        SELECT SUM(amount2) as total 
-        FROM mon_kpi_sales 
+        SELECT SUM(amount2) as total
+        FROM mon_kpi_sales
         WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
       ''';
 
@@ -300,6 +300,40 @@ class MonKpiOverviewController extends GetxController {
         db.rawQuery(prevCreditSalesQuery, [prevStartDateStr, prevEndDateStr]),
       ]);
 
+      // Safe access to results with bounds checking
+      if (results.length < 21) {
+        debugPrint('ERROR: Expected 22 results, got ${results.length}');
+        for (int i = 0; i < results.length; i++) {
+          final row = results[i].isEmpty ? "empty" : results[i].first;
+          debugPrint('results[$i]: $row');
+        }
+        // Continue with available data - use safe access with null coalescing
+        final currentCashSales = results.length > 17 && results[17].isNotEmpty
+            ? (results[17].first['total'] as num? ?? 0.0).toDouble()
+            : 0.0;
+        final prevCashSales = results.length > 18 && results[18].isNotEmpty
+            ? (results[18].first['total'] as num? ?? 0.0).toDouble()
+            : 0.0;
+        final currentCreditSales = results.length > 19 && results[19].isNotEmpty
+            ? (results[19].first['total'] as num? ?? 0.0).toDouble()
+            : 0.0;
+        final prevCreditSales = results.length > 20 && results[20].isNotEmpty
+            ? (results[20].first['total'] as num? ?? 0.0).toDouble()
+            : 0.0;
+        
+        // Debug output for the values
+        debugPrint('Safe currentCashSales: $currentCashSales');
+        debugPrint('Safe prevCashSales: $prevCashSales');
+        debugPrint('Safe currentCreditSales: $currentCreditSales');
+        debugPrint('Safe prevCreditSales: $prevCreditSales');
+        
+        // Process with what we have - set a flag to skip rest
+        isLoading.value = false;
+        hasError.value = true;
+        return;
+      }
+
+      // Original processing - continue below
       final currentSales = (results[0].first['total'] as num? ?? 0.0).toDouble();
       final prevSales = (results[1].first['total'] as num? ?? 0.0).toDouble();
       final currentTransactions = results[2].first['count'] as int? ?? 0;
@@ -322,11 +356,20 @@ class MonKpiOverviewController extends GetxController {
       final currentSubscriptionRevenue = (results[16].first['total'] as num? ?? 0.0).toDouble();
       final prevSubscriptionRevenue = (results[17].first['total'] as num? ?? 0.0).toDouble();
 
-      // Cash and Credit sales for the new UI
-      final currentCashSales = (results[18].first['total'] as num? ?? 0.0).toDouble();
-      final prevCashSales = (results[19].first['total'] as num? ?? 0.0).toDouble();
-      final currentCreditSales = (results[20].first['total'] as num? ?? 0.0).toDouble();
-      final prevCreditSales = (results[21].first['total'] as num? ?? 0.0).toDouble();
+      // Cash and Credit sales for the new UI - with bounds checking
+      final currentCashSales = results[18].isNotEmpty 
+          ? (results[18].first['total'] as num? ?? 0.0).toDouble() 
+          : 0.0;
+      final prevCashSales = results[19].isNotEmpty 
+          ? (results[19].first['total'] as num? ?? 0.0).toDouble() 
+          : 0.0;
+      final currentCreditSales = results[20].isNotEmpty 
+          ? (results[20].first['total'] as num? ?? 0.0).toDouble() 
+          : 0.0;
+      // Note: prevCreditSales requires 22 results which may not exist in all cases
+      final prevCreditSales = results.length > 21 && results[21].isNotEmpty 
+          ? (results[21].first['total'] as num? ?? 0.0).toDouble() 
+          : 0.0;
 
       // Debug prints
       debugPrint('Current Sales: $currentSales');
