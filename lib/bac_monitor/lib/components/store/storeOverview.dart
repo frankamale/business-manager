@@ -52,15 +52,17 @@ class StoreOverview extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildKpiCard(
+                    context,
                     title: isGym ? 'Total Revenue' : 'Total Sales',
                     value: kpiTrendController.totalSales.value,
                     unit: kpiTrendController.unit.value,
                     trend: kpiTrendController.salesTrend.value,
                     trendDirection: kpiTrendController.salesTrendDirection.value,
                     icon: Icons.attach_money,
-                    iconColor: Colors.greenAccent,
+                    iconColor: AppColors.getSuccessColor(context),
                   ),
                   _buildKpiCard(
+                    context,
                     title: isGym ? 'Total Walk Ins' : 'Cash Sales',
                     value: isGym
                         ? kpiTrendController.totalWalkIns.value.toString()
@@ -69,9 +71,10 @@ class StoreOverview extends StatelessWidget {
                     trend: isGym ? null : kpiTrendController.cashSalesTrend.value,
                     trendDirection: isGym ? null : kpiTrendController.cashSalesTrendDirection.value,
                     icon: isGym ? Icons.people : Icons.payments,
-                    iconColor: isGym ? Colors.blueAccent : Colors.greenAccent,
+                    iconColor: isGym ? AppColors.getInfoColor(context) : AppColors.getSuccessColor(context),
                   ),
                   _buildKpiCard(
+                    context,
                     title: isGym ? 'Daily Subs' : 'Avg. Basket Size',
                     value: isGym
                         ? kpiTrendController.dailySubs.value.toString()
@@ -80,9 +83,10 @@ class StoreOverview extends StatelessWidget {
                     trend: kpiTrendController.basketTrend.value,
                     trendDirection: kpiTrendController.basketTrendDirection.value,
                     icon: Icons.shopping_basket,
-                    iconColor: Colors.orangeAccent,
+                    iconColor: AppColors.getWarningColor(context),
                   ),
                   _buildKpiCard(
+                    context,
                     title: isGym ? 'Monthly Subs' : 'Pending Payments',
                     value: isGym
                         ? kpiTrendController.monthlySubs.value.toString()
@@ -91,13 +95,14 @@ class StoreOverview extends StatelessWidget {
                     trend: isGym ? null : kpiTrendController.pendingPaymentsTrend.value,
                     trendDirection: isGym ? null : kpiTrendController.pendingPaymentsTrendDirection.value,
                     icon: isGym ? Icons.calendar_month : Icons.pending_actions,
-                    iconColor: isGym ? Colors.purpleAccent : Colors.orangeAccent,
+                    iconColor: isGym ? AppColors.getPrimaryColor(context) : AppColors.getWarningColor(context),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               // Sales Trends Section
               _buildSectionCard(
+                context,
                 title: "Sales Trends",
                 icon: Icons.trending_up,
                 child: SizedBox(
@@ -113,6 +118,7 @@ class StoreOverview extends StatelessWidget {
               const SizedBox(height: 16),
               // Top Selling Products Section
               _buildSectionCard(
+                context,
                 title: "Top Selling Products",
                 icon: Icons.leaderboard,
                 child: TopProductsList(products: controller.topSellingProducts),
@@ -125,7 +131,8 @@ class StoreOverview extends StatelessWidget {
     });
   }
 
-  Widget _buildSectionCard({
+  Widget _buildSectionCard(
+    BuildContext context, {
     required String title,
     required IconData icon,
     required Widget child,
@@ -133,11 +140,11 @@ class StoreOverview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: LightColors.card,
+        color: AppColors.getCardColor(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: LightColors.shadowLight,
+            color: AppColors.getShadowLightColor(context),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -148,14 +155,14 @@ class StoreOverview extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: LightColors.textPrimary, size: 17),
+              Icon(icon, color: AppColors.getTextPrimaryColor(context), size: 17),
               const SizedBox(width: 8),
               Text(
                 title,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: LightColors.textPrimary,
+                  color: AppColors.getTextPrimaryColor(context),
                 ),
               ),
             ],
@@ -167,7 +174,8 @@ class StoreOverview extends StatelessWidget {
     );
   }
 
-  Widget _buildKpiCard({
+  Widget _buildKpiCard(
+    BuildContext context, {
     required String title,
     required String value,
     String? unit,
@@ -185,14 +193,14 @@ class StoreOverview extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              LightColors.card,
-              LightColors.surface,
+              AppColors.getCardColor(context),
+              AppColors.getSurfaceColor(context),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: LightColors.shadowLight,
+              color: AppColors.getShadowLightColor(context),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -233,10 +241,10 @@ class StoreOverview extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: trendDirection == TrendDirection.up
-                                ? LightColors.success.withOpacity(0.2)
+                                ? AppColors.getSuccessColor(context).withOpacity(0.2)
                                 : trendDirection == TrendDirection.down
-                                    ? LightColors.error.withOpacity(0.2)
-                                    : LightColors.textDisabled.withOpacity(0.1),
+                                    ? AppColors.getErrorColor(context).withOpacity(0.2)
+                                    : AppColors.getTextDisabledColor(context).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -249,10 +257,10 @@ class StoreOverview extends StatelessWidget {
                                         ? Icons.arrow_downward
                                         : Icons.remove,
                                 color: trendDirection == TrendDirection.up
-                                    ? LightColors.success
+                                    ? AppColors.getSuccessColor(context)
                                     : trendDirection == TrendDirection.down
-                                        ? LightColors.error
-                                        : LightColors.textSecondary,
+                                        ? AppColors.getErrorColor(context)
+                                        : AppColors.getTextSecondaryColor(context),
                                 size: 10,
                               ),
                               const SizedBox(width: 2),
@@ -261,10 +269,10 @@ class StoreOverview extends StatelessWidget {
                                   trend,
                                   style: TextStyle(
                                     color: trendDirection == TrendDirection.up
-                                        ? LightColors.success
+                                        ? AppColors.getSuccessColor(context)
                                         : trendDirection == TrendDirection.down
-                                            ? LightColors.error
-                                            : LightColors.textSecondary,
+                                            ? AppColors.getErrorColor(context)
+                                            : AppColors.getTextSecondaryColor(context),
                                     fontSize: 9,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -286,7 +294,7 @@ class StoreOverview extends StatelessWidget {
                           child: Text(
                             title,
                             style: TextStyle(
-                              color: LightColors.textSecondary,
+                              color: AppColors.getTextSecondaryColor(context),
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
@@ -301,7 +309,7 @@ class StoreOverview extends StatelessWidget {
                           child: Text(
                             '${unit != null && unit.isNotEmpty ? '$unit ' : ''}$value',
                             style: TextStyle(
-                              color: LightColors.textPrimary,
+                              color: AppColors.getTextPrimaryColor(context),
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,

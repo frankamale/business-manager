@@ -33,7 +33,7 @@ class UserProfileHeader extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  AppColors.getAccentColor(context),
+                  AppColors.getSurfaceColor(context),
                   Colors.amber.shade300,
                 ],
                 begin: Alignment.topLeft,
@@ -42,7 +42,7 @@ class UserProfileHeader extends StatelessWidget {
             ),
             child: CircleAvatar(
               radius: 35,
-              backgroundColor: AppColors.getPrimaryColor(context),
+              backgroundColor: AppColors.getSurfaceColor(context),
               child: Text(
                 avatarInitial ?? (userName.isNotEmpty ? userName[0].toUpperCase() : 'U'),
                 style: TextStyle(
