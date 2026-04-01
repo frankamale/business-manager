@@ -106,7 +106,7 @@ class SalesTrendLineGraph extends StatelessWidget {
         ),
         minY: 0,
         maxY: maxY,
-        lineTouchData: _lineTouchData(),
+        lineTouchData: _lineTouchData(context),
         clipData: const FlClipData.none(),
       ),
     );
@@ -252,7 +252,7 @@ class SalesTrendLineGraph extends StatelessWidget {
     );
   }
 
-  LineTouchData _lineTouchData() {
+  LineTouchData _lineTouchData(BuildContext context) {
     return LineTouchData(
       enabled: true,
       handleBuiltInTouches: false,
@@ -302,7 +302,7 @@ class SalesTrendLineGraph extends StatelessWidget {
 
   // -------------------- LABELS --------------------
 
-  Widget _bottomTitles(double value, TitleMeta meta) {
+  Widget _bottomTitles(BuildContext context, double value, TitleMeta meta) {
     final int index = value.toInt();
     if (index < 0 || index >= salesData.length) return const Text('');
 
@@ -416,7 +416,7 @@ class SalesTrendLineGraph extends StatelessWidget {
     );
   }
 
-  Widget _leftTitles(double value, TitleMeta meta) {
+  Widget _leftTitles(BuildContext context, double value, TitleMeta meta) {
     // Don't show label at the very top to avoid overlap
     if (value == meta.max) return const Text('');
 
