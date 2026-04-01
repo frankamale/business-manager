@@ -45,8 +45,8 @@ class StoreOverview extends StatelessWidget {
               GridView.count(
                 padding: EdgeInsets.zero,
                 crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
                 childAspectRatio: 1.6,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -99,7 +99,7 @@ class StoreOverview extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               // Sales Trends Section
               _buildSectionCard(
                 context,
@@ -115,7 +115,7 @@ class StoreOverview extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               // Top Selling Products Section
               _buildSectionCard(
                 context,
@@ -141,7 +141,7 @@ class StoreOverview extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.getCardColor(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
             color: AppColors.getShadowLightColor(context),
@@ -185,7 +185,7 @@ class StoreOverview extends StatelessWidget {
     required Color iconColor,
   }) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(8),
       child: Container(
         constraints: const BoxConstraints(maxHeight: 140),
         decoration: BoxDecoration(
@@ -197,7 +197,7 @@ class StoreOverview extends StatelessWidget {
               AppColors.getSurfaceColor(context),
             ],
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
               color: AppColors.getShadowLightColor(context),

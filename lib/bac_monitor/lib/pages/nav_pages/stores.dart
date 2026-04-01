@@ -60,8 +60,6 @@ class _StoresState extends State<Stores> {
             child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
           );
         }
-
-
         if (controller.storeList.isEmpty) {
           return Center(
             child: Text(
