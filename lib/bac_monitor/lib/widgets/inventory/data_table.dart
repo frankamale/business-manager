@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:path/path.dart';
 import '../../additions/colors.dart';
 import '../../models/inventory_data.dart';
 import 'item_details_dialog.dart';
@@ -54,17 +53,17 @@ class InventoryDataTable extends StatelessWidget {
       onSelectChanged: (_) => _showItemDetailsDialog(context, item),
       cells: isServicesView
           ? [
-              DataCell(_buildServiceCell(item)),
-              DataCell(_buildPriceCell(item)),
+              DataCell(_buildServiceCell(context, item)),
+              DataCell(_buildPriceCell(context, item)),
             ]
           : [
-              DataCell(_buildProductCell(item)),
-              DataCell(_buildQuantityCell(item)),
+              DataCell(_buildProductCell(context, item)),
+              DataCell(_buildQuantityCell(context, item)),
             ],
     );
   }
 
-  Widget _buildProductCell(MonitorInventoryItem item) {
+  Widget _buildProductCell(BuildContext context, MonitorInventoryItem item) {
     final currencyFormatter = NumberFormat.currency(
       locale: 'en_UG',
       symbol: 'UGX ',
@@ -82,7 +81,7 @@ class InventoryDataTable extends StatelessWidget {
     if (isPharmacy && item.expiryDate != null && item.expiryDate!.isNotEmpty) {
       conditionalWidget = Text(
         'exp: ${item.expiryDate}',
-        style: TextStyle(color: AppColors.getTextSecondaryColor(context as BuildContext), fontSize: 10),
+        style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 10),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       );
@@ -93,19 +92,19 @@ class InventoryDataTable extends StatelessWidget {
         children: [
           Text(
             item.category,
-            style: TextStyle(color: AppColors.getTextHintColor(context as BuildContext), fontSize: 10),
+            style: TextStyle(color: AppColors.getTextHintColor(context), fontSize: 10),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             "cost: ${currencyFormatter.format(item.costPrice)}",
-            style: TextStyle(color: AppColors.getTextHintColor(context as BuildContext), fontSize: 10),
+            style: TextStyle(color: AppColors.getTextHintColor(context), fontSize: 10),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             "supplier: ${item.servicePoint}",
-            style: TextStyle(color: AppColors.getTextHintColor(context as BuildContext), fontSize: 10),
+            style: TextStyle(color: AppColors.getTextHintColor(context), fontSize: 10),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -117,13 +116,13 @@ class InventoryDataTable extends StatelessWidget {
         children: [
           Text(
             "cost price: ${currencyFormatter.format(item.costPrice)}",
-            style: TextStyle(color: AppColors.getTextHintColor(context as BuildContext), fontSize: 10),
+            style: TextStyle(color: AppColors.getTextHintColor(context), fontSize: 10),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             "Supplier: ${item.servicePoint}",
-            style: TextStyle(color: AppColors.getTextHintColor(context as BuildContext), fontSize: 10),
+            style: TextStyle(color: AppColors.getTextHintColor(context), fontSize: 10),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -144,9 +143,9 @@ class InventoryDataTable extends StatelessWidget {
                   height: 32,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
-                      _fallbackImage(),
+                      _fallbackImage(context),
                 )
-              : _fallbackImage(),
+              : _fallbackImage(context),
         ),
         const SizedBox(width: 12),
         Flexible(
@@ -158,7 +157,7 @@ class InventoryDataTable extends StatelessWidget {
                 Text(
                   item.name,
                   style: TextStyle(
-                    color: AppColors.getTextPrimaryColor(context as BuildContext),
+                    color: AppColors.getTextPrimaryColor(context),
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 2,
@@ -174,7 +173,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildQuantityCell(MonitorInventoryItem item) {
+  Widget _buildQuantityCell(BuildContext context, MonitorInventoryItem item) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -183,7 +182,7 @@ class InventoryDataTable extends StatelessWidget {
           'SP: ${currencyFormatter.format(item.sellingPrice)}',
           maxLines: 1,
           style: TextStyle(
-            color: AppColors.getTextPrimaryColor(context as BuildContext),
+            color: AppColors.getTextPrimaryColor(context),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -191,19 +190,19 @@ class InventoryDataTable extends StatelessWidget {
         item.expiryDate != null && item.expiryDate!.isNotEmpty
             ? Text(
                 'exp: ${item.expiryDate}',
-                style: TextStyle(color: AppColors.getTextSecondaryColor(context as BuildContext), fontSize: 10),
+                style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 10),
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'QTY: ${item.quantityOnHand}',
-                    style: TextStyle(color: AppColors.getTextSecondaryColor(context as BuildContext), fontSize: 10),
+                    style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 10),
                   ),
                   const SizedBox(height: 1),
                   Text(
                     'sup. on : ${DateFormat('dd/MM/yyyy').format(item.lastUpdated)}',
-                    style: TextStyle(color: AppColors.getTextSecondaryColor(context as BuildContext), fontSize: 10),
+                    style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 10),
                   ),
                 ],
               ),
@@ -211,7 +210,7 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildServiceCell(MonitorInventoryItem item) {
+  Widget _buildServiceCell(BuildContext context, MonitorInventoryItem item) {
     return Row(
       children: [
         const SizedBox(width: 4),
@@ -224,9 +223,9 @@ class InventoryDataTable extends StatelessWidget {
                   height: 32,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
-                      _fallbackImage(),
+                      _fallbackImage(context),
                 )
-              : _fallbackImage(),
+              : _fallbackImage(context),
         ),
         const SizedBox(width: 12),
         Flexible(
@@ -238,7 +237,7 @@ class InventoryDataTable extends StatelessWidget {
                 Text(
                   item.name,
                   style: TextStyle(
-                    color: AppColors.getTextPrimaryColor(context as BuildContext),
+                    color: AppColors.getTextPrimaryColor(context),
                     fontWeight: FontWeight.bold,
                   ),
                   maxLines: 2,
@@ -247,7 +246,7 @@ class InventoryDataTable extends StatelessWidget {
                 const SizedBox(height: 1),
                 Text(
                   'Category: ${item.category}',
-                  style: TextStyle(color: AppColors.getTextHintColor(context as BuildContext), fontSize: 10),
+                  style: TextStyle(color: AppColors.getTextHintColor(context), fontSize: 10),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -259,11 +258,11 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceCell(MonitorInventoryItem item) {
+  Widget _buildPriceCell(BuildContext context, MonitorInventoryItem item) {
     return Text(
       currencyFormatter.format(item.sellingPrice),
       style: TextStyle(
-        color: AppColors.getTextPrimaryColor(context as BuildContext),
+        color: AppColors.getTextPrimaryColor(context),
         fontWeight: FontWeight.bold,
       ),
     );
@@ -290,15 +289,15 @@ class InventoryDataTable extends StatelessWidget {
     );
   }
 
-  Widget _fallbackImage() {
+  Widget _fallbackImage(BuildContext context) {
     return Container(
       width: 32,
       height: 32,
-      color: AppColors.getSurfaceColor(context as BuildContext),
+      color: AppColors.getSurfaceColor(context),
       child: Icon(
         Icons.image_not_supported_outlined,
         size: 16,
-        color: AppColors.getTextSecondaryColor(context as BuildContext),
+        color: AppColors.getTextSecondaryColor(context),
       ),
     );
   }
