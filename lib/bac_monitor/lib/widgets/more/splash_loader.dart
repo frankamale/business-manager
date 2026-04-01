@@ -27,7 +27,7 @@ class _MonSplashLoaderState extends State<MonSplashLoader>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true); // "alternate" like the CSS
+    )..repeat(reverse: true);
   }
 
   @override
@@ -38,6 +38,10 @@ class _MonSplashLoaderState extends State<MonSplashLoader>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final secondaryColor = isDark ? DarkColors.secondary : LightColors.secondary;
+    final warningColor = isDark ? DarkColors.warning : LightColors.warning;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -45,24 +49,7 @@ class _MonSplashLoaderState extends State<MonSplashLoader>
         SizedBox(
           width: 48,
           height: 48,
-          child: _BarLoader(controller: _controller),
-        ),
-
-        const SizedBox(height: 24),
-
-        // Status Message
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: Text(
-            widget.statusMessage,
-            key: ValueKey(widget.statusMessage),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: LightColors.textPrimary.withOpacity(0.9),
-              fontSize: 14.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          child: _BarLoader(controller: _controller, secondaryColor: secondaryColor),
         ),
 
         const SizedBox(height: 12),
@@ -71,19 +58,19 @@ class _MonSplashLoaderState extends State<MonSplashLoader>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.12),
+              color: warningColor.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              border: Border.all(color: warningColor.withOpacity(0.3)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.cloud_off_rounded, color: Colors.orange, size: 15),
-                SizedBox(width: 6),
+                Icon(Icons.cloud_off_rounded, color: warningColor, size: 15),
+                const SizedBox(width: 6),
                 Text(
                   'Offline Mode',
                   style: TextStyle(
-                    color: Colors.orange,
+                    color: warningColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -99,8 +86,9 @@ class _MonSplashLoaderState extends State<MonSplashLoader>
 // ── CSS-inspired Vertical Bars Loader ─────────────────────────────
 class _BarLoader extends StatelessWidget {
   final AnimationController controller;
+  final Color secondaryColor;
 
-  const _BarLoader({required this.controller});
+  const _BarLoader({required this.controller, required this.secondaryColor});
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +122,7 @@ class _BarLoader extends StatelessWidget {
                     width: barWidth,
                     height: barHeight,
                     decoration: BoxDecoration(
-                      color: LightColors.secondary.withOpacity(0.15),
+                      color: secondaryColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(3),
                     ),
                   ),
@@ -145,11 +133,11 @@ class _BarLoader extends StatelessWidget {
                       width: barWidth,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: LightColors.secondary,
+                        color: secondaryColor,
                         borderRadius: BorderRadius.circular(3),
                         boxShadow: [
                           BoxShadow(
-                            color: LightColors.secondary.withOpacity(0.4),
+                            color: secondaryColor.withOpacity(0.4),
                             blurRadius: 4,
                             offset: const Offset(0, 1),
                           ),

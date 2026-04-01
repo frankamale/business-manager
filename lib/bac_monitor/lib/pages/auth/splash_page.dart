@@ -589,13 +589,19 @@ class _SplashPageState extends State<SplashPage> {
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? DarkColors.background : LightColors.background;
+    final textColor = isDark ? DarkColors.textPrimary : LightColors.textPrimary;
+    final textSecondaryColor = isDark ? DarkColors.textSecondary : LightColors.textSecondary;
+    final offlineColor = isDark ? DarkColors.warning : LightColors.warning;
+
     return Scaffold(
       appBar: AppBar(
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         toolbarHeight: 0,
-        backgroundColor: PrimaryColors.darkBlue,
+        backgroundColor: backgroundColor,
       ),
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: backgroundColor,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -607,10 +613,10 @@ class _SplashPageState extends State<SplashPage> {
             const SizedBox(height: 24),
             Obx(() {
               if (!Get.isRegistered<MonOperatorController>()) {
-                return const Text(
+                return Text(
                   'Welcome ',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: textColor,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                   ),
@@ -623,8 +629,8 @@ class _SplashPageState extends State<SplashPage> {
                 companyName.isNotEmpty && companyName != 'Loading...'
                     ? companyName
                     : 'Welcome',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textColor,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
@@ -638,19 +644,19 @@ class _SplashPageState extends State<SplashPage> {
             const SizedBox(height: 16),
             Text(
               _statusMessage,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: textSecondaryColor, fontSize: 14),
             ),
             if (_isOfflineMode) ...[
               const SizedBox(height: 8),
-              const Row(
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.cloud_off, color: Colors.orange, size: 16),
-                  SizedBox(width: 8),
+                  Icon(Icons.cloud_off, color: offlineColor, size: 16),
+                  const SizedBox(width: 8),
                   Text(
                     'Offline Mode',
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: offlineColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
