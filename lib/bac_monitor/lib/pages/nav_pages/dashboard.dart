@@ -102,8 +102,6 @@ class _DashboardState extends State<Dashboard> {
     final operatorController = Get.find<MonOperatorController>();
     final size = MediaQuery.of(context).size;
 
-    final bool isSmallScreen = size.width < 600;
-
     return Scaffold(
       backgroundColor: AppColors.getBackgroundColor(context),
       body: RefreshIndicator(
