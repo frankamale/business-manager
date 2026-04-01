@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../additions/colors.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../../models/inventory_data.dart';
 import '../../models/service_points.dart';
+import '../../services/api_services.dart';
 import '../../widgets/inventory/data_table.dart';
 import '../../widgets/inventory/floating_search_bar.dart';
 
@@ -81,6 +84,33 @@ class _InventoryPageState extends State<InventoryPage>
       });
     } catch (e) {
       debugPrint("Error loading service points: $e");
+    }
+  }
+
+  /// Fetch inventory from server and store in DB, then reload from DB
+  Future<void> _refreshInventoryFromServer() async {
+    try {
+      final apiService = Get.find<MonitorApiService>();
+      
+      // Fetch inventory from server
+      final response = await apiService.getWithAuth('/inventory/');
+      if (response.body.isNotEmpty) {
+        final inventoryData = json.decode(response.body) as List;
+        final items = inventoryData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        
+        // Store in database
+        await _dbHelper.deleteAllMonInventoryItems();
+        await _dbHelper.insertMonInventoryItems(items);
+        
+        debugPrint("InventoryPage: Fetched and stored ${items.length} inventory items from server");
+      }
+      
+      // Reload from database
+      await _loadInventoryFromDb();
+    } catch (e) {
+      debugPrint("InventoryPage: Error refreshing inventory from server: $e");
+      // Fall back to loading from local DB
+      await _loadInventoryFromDb();
     }
   }
 
@@ -229,7 +259,7 @@ class _InventoryPageState extends State<InventoryPage>
         },
         body: Builder(
           builder: (innerContext) => RefreshIndicator(
-            onRefresh: _loadInventoryFromDb,
+            onRefresh: _refreshInventoryFromServer,
             child: _selectedView == "Inventory"
                 ? TabBarView(
                     controller: _tabController,

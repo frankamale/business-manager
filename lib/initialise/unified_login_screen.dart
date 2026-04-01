@@ -11,6 +11,7 @@ import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../bac_monitor/lib/additions/colors.dart';
 import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
@@ -245,6 +246,23 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     final userData = cachedAccount['userData'] as Map<String, dynamic>? ?? {};
 
     await UnifiedDatabaseHelper.instance.openForCompany(companyId);
+    
+    // Store company ID, user role, and username in GetStorage for offline access
+    try {
+      final box = GetStorage();
+      await box.write('last_company_id', companyId);
+      await box.write('last_username', username);
+      
+      // Determine and store user role
+      final isAdmin = roles != null &&
+          roles.any((role) => role.toString().toLowerCase().contains("admin"));
+      final userRole = isAdmin ? 'admin' : 'staff';
+      await box.write('last_user_role', userRole);
+      
+      debugPrint('UnifiedLoginScreen: Offline credentials stored in GetStorage (company: $companyId, role: $userRole, user: $username)');
+    } catch (e) {
+      debugPrint('UnifiedLoginScreen: Error storing credentials in GetStorage: $e');
+    }
 
     // Determine if user is admin (monitor) or regular POS user
     final isAdmin =
@@ -284,8 +302,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
           );
         }
       } catch (e) {
-        // Offline or server error - store companyId for offline mode
-        await _monitorApiService.storeCompanyId(companyId);
+        // Offline or server error - companyId already stored above
+        debugPrint('UnifiedLoginScreen: Server sync failed, but company ID stored for offline mode');
       }
     }
 
@@ -322,6 +340,23 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         roles: roles ?? [],
         userData: userData,
       );
+      
+      // Store company ID, user role, and username in GetStorage for offline access
+      try {
+        final box = GetStorage();
+        await box.write('last_company_id', companyId);
+        await box.write('last_username', username);
+        
+        // Determine and store user role
+        final isAdmin = roles != null &&
+            roles.any((role) => role.toString().toLowerCase().contains("admin"));
+        final userRole = isAdmin ? 'admin' : 'staff';
+        await box.write('last_user_role', userRole);
+        
+        debugPrint('UnifiedLoginScreen: Offline credentials stored in GetStorage (company: $companyId, role: $userRole, user: $username)');
+      } catch (e) {
+        debugPrint('UnifiedLoginScreen: Error storing credentials in GetStorage: $e');
+      }
 
       // Determine if user is admin (monitor) or regular POS user
       final isAdmin =
@@ -476,6 +511,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                   maxWidth: isSmallScreen ? 400 : 480,
                 ),
                 child: Card(
+                  color: Colors.white,
                   elevation: 12,
                   shadowColor: Colors.black.withOpacity(0.3),
                   shape: RoundedRectangleBorder(
@@ -521,6 +557,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           // Account Selection Dropdown
                           TextFormField(
                             controller: _usernameController,
+                            style: TextStyle(
+                              color: DarkColors.background
+                            ),
                             keyboardType: TextInputType.text,
                             decoration: InputDecoration(
                               labelText: 'Username',
@@ -531,13 +570,13 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                                  color: Colors.grey.shade500,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                                  color: Colors.grey.shade500,
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
@@ -562,6 +601,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                           // Password Field
                           TextFormField(
                             controller: _passwordController,
+                            style: TextStyle(
+                                color: DarkColors.background
+                            ),
                             obscureText: _obscurePassword,
                             keyboardType: TextInputType.text,
                             decoration: InputDecoration(

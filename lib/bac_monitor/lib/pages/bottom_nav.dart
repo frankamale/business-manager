@@ -1,4 +1,7 @@
 
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -18,6 +21,10 @@ class BottomNav extends StatefulWidget {
 
 class _BottomNavState extends State<BottomNav> {
   final MonDashboardController controller = Get.put(MonDashboardController());
+  
+  // Track offline status
+  final RxBool isOffline = false.obs;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   final List<Widget> screens = [
     Dashboard(),
@@ -28,6 +35,26 @@ class _BottomNavState extends State<BottomNav> {
   ];
 
   DateTime? _lastBackPressed;
+
+  @override
+  void initState() {
+    super.initState();
+    _startConnectivityListener();
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
+  }
+
+  /// Listen to connectivity changes
+  void _startConnectivityListener() {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+      final result = results.first;
+      isOffline.value = result == ConnectivityResult.none;
+    });
+  }
 
   Future<bool> _onWillPop() async {
     if (controller.tabIndex.value != 0) {
@@ -62,8 +89,36 @@ class _BottomNavState extends State<BottomNav> {
       child: Scaffold(
         backgroundColor: AppColors.getBackgroundColor(context),
         body: Obx(
-          () =>
-              IndexedStack(index: controller.tabIndex.value, children: screens),
+          () => Column(
+            children: [
+              // Offline indicator banner
+              if (isOffline.value)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  color: Colors.orange,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.cloud_off, color: Colors.white, size: 18),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'OFFLINE MODE - Showing cached data',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              // Main content
+              Expanded(
+                child: IndexedStack(index: controller.tabIndex.value, children: screens),
+              ),
+            ],
+          ),
         ),
         bottomNavigationBar: Theme(
           data: Theme.of(context).copyWith(

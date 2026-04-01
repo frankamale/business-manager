@@ -6,7 +6,7 @@ import '../widgets/finance/date_range.dart';
 class MonDashboardController extends GetxController {
 
   var tabIndex = 0.obs;
-  var selectedRange = DateRange.last7Days.obs;
+  var selectedRange = DateRange.today.obs;
   var customRange = Rxn<DateTimeRange>();
 
   void changeTabIndex(int index) {

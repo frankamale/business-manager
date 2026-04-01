@@ -6,6 +6,7 @@ import '../../back_pos/models/inventory_item.dart';
 import '../../back_pos/models/sale_transaction.dart';
 import '../../back_pos/models/customer.dart';
 import '../../back_pos/models/expense.dart';
+import '../../bac_monitor/lib/models/sync_tracker.dart';
 
 /// Unified Database Helper that combines POS and Monitor databases
 
@@ -56,7 +57,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 2,
+        version: 3,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -534,6 +535,24 @@ class UnifiedDatabaseHelper {
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_transactiondate ON mon_sales(transactiondate)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_service_point ON mon_sales(service_point_id)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+
+    // Sync tracker table (for incremental sync support)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_tracker (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sync_type TEXT NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'in_progress',
+        start_timestamp INTEGER NOT NULL,
+        end_timestamp INTEGER,
+        records_fetched INTEGER DEFAULT 0,
+        date_range_start TEXT,
+        date_range_end TEXT,
+        error_message TEXT,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -554,6 +573,26 @@ class UnifiedDatabaseHelper {
       ''');
       // Also add the missing index for existing databases
       await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+    }
+
+    // Migration to version 3 - Add sync_tracker table
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_tracker (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sync_type TEXT NOT NULL,
+          sync_status TEXT NOT NULL DEFAULT 'in_progress',
+          start_timestamp INTEGER NOT NULL,
+          end_timestamp INTEGER,
+          records_fetched INTEGER DEFAULT 0,
+          date_range_start TEXT,
+          date_range_end TEXT,
+          error_message TEXT,
+          created_at INTEGER DEFAULT (strftime('%s', 'now'))
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)');
     }
   }
 
@@ -1591,6 +1630,120 @@ class UnifiedDatabaseHelper {
   Future<void> deleteAllMonInventoryItems() async {
     final db = database;
     await db.delete('mon_inventory');
+  }
+
+  /// Insert multiple inventory items at once
+  Future<void> insertMonInventoryItems(List<Map<String, dynamic>> items) async {
+    final db = database;
+    final batch = db.batch();
+    for (final item in items) {
+      batch.insert('mon_inventory', {
+        'id': item['id'],
+        'ipdid': item['ipdid'],
+        'code': item['code'],
+        'externalserial': item['externalserial'],
+        'name': item['name'],
+        'category': item['category'],
+        'price': item['price'],
+        'packsize': item['packsize'],
+        'packaging': item['packaging'],
+        'packagingid': item['packagingid'],
+        'soldfrom': item['soldfrom'],
+        'shortform': item['shortform'],
+        'packagingcode': item['packagingcode'],
+        'efris': item['efris'] == true ? 1 : 0,
+        'efrisid': item['efrisid'],
+        'measurmentunitidefris': item['measurmentunitidefris'],
+        'measurmentunit': item['measurmentunit'],
+        'measurmentunitid': item['measurmentunitid'],
+        'vatcategoryid': item['vatcategoryid'],
+        'branchid': item['branchid'],
+        'companyid': item['companyid'],
+        'downloadlink': item['downloadlink'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  // ========================================================================
+  // SYNC TRACKER METHODS
+  // ========================================================================
+
+  /// Records a completed sync operation
+  Future<int> insertSyncRecord(SyncRecord record) async {
+    final db = database;
+    return await db.insert('sync_tracker', record.toMap(), 
+      conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Gets the timestamp of the most recent successful sync
+  Future<DateTime?> getLastSyncTimestamp() async {
+    final db = database;
+    final result = await db.query(
+      'sync_tracker',
+      columns: ['end_timestamp'],
+      where: 'sync_status = ?',
+      whereArgs: ['completed'],
+      orderBy: 'end_timestamp DESC',
+      limit: 1,
+    );
+    
+    if (result.isEmpty) return null;
+    return DateTime.fromMillisecondsSinceEpoch(
+      (result.first['end_timestamp'] as int) * 1000,
+    );
+  }
+
+  /// Checks if KPI data exists for a given date range
+  Future<bool> hasKpiDataForDateRange(String startDate, String endDate) async {
+    final db = database;
+    final result = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM mon_kpi_sales 
+      WHERE processing_date >= ? AND processing_date <= ?
+      ''',
+      [startDate, endDate],
+    );
+    return (result.first['count'] as int? ?? 0) > 0;
+  }
+
+  /// Deletes sync tracker records older than 90 days (cleanup)
+  Future<void> cleanupOldSyncRecords({int daysToKeep = 90}) async {
+    final db = database;
+    final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
+    final cutoffTimestamp = cutoffDate.millisecondsSinceEpoch ~/ 1000;
+    
+    await db.delete(
+      'sync_tracker',
+      where: 'end_timestamp < ?',
+      whereArgs: [cutoffTimestamp],
+    );
+  }
+
+  /// Get all sync records for a specific sync type
+  Future<List<SyncRecord>> getSyncRecordsByType(String syncType) async {
+    final db = database;
+    final result = await db.query(
+      'sync_tracker',
+      where: 'sync_type = ?',
+      whereArgs: [syncType],
+      orderBy: 'end_timestamp DESC',
+    );
+    return result.map((map) => SyncRecord.fromMap(map)).toList();
+  }
+
+  /// Get the most recent sync record for a specific sync type
+  Future<SyncRecord?> getLatestSyncRecord(String syncType) async {
+    final db = database;
+    final result = await db.query(
+      'sync_tracker',
+      where: 'sync_type = ? AND sync_status = ?',
+      whereArgs: [syncType, 'completed'],
+      orderBy: 'end_timestamp DESC',
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return SyncRecord.fromMap(result.first);
   }
 
   // ========================================================================

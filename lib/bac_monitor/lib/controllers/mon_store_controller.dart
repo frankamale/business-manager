@@ -21,7 +21,7 @@ class MonStoresController extends GetxController {
   var isInitialized = false.obs;
   var storeList = <Store>[].obs;
   var selectedStore = Rxn<Store>();
-  var selectedDateRange = DateRange.last7Days.obs;
+  var selectedDateRange = DateRange.today.obs;
   var customDateRange = Rxn<DateTimeRange>();
   var salesDataPoints = <SalesDataPoint>[].obs;
   var aggregationType = 'daily'.obs;

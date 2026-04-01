@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../../../back_pos/utils/network_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
@@ -16,14 +17,20 @@ import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_gross_profit_controller.dart';
 import '../../controllers/mon_outstanding_payments_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
+import '../../controllers/mon_data_sync_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
+import '../../services/kpi_sync_service.dart';
 import '../../../../shared/database/unified_db_helper.dart';
+import '../../../../initialise/splashscreen.dart';
 import '../../widgets/more/splash_loader.dart';
 import '../bottom_nav.dart';
 
 class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
+  /// Whether the app is running in offline mode
+  final bool isOffline;
+  
+  const SplashPage({super.key, this.isOffline = false});
 
   @override
   State<SplashPage> createState() => _SplashPageState();
@@ -127,7 +134,7 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _initializeApp() async {
-    debugPrint('SplashPage: Starting app initialization');
+    debugPrint('SplashPage: Starting app initialization (offline: ${widget.isOffline})');
     await _initializeServicesAndDatabase();
   }
 
@@ -135,13 +142,29 @@ class _SplashPageState extends State<SplashPage> {
     try {
       final stopwatch = Stopwatch()..start();
 
-      // STEP 1: Check network connectivity first
-      _updateStatus('Checking network...');
-      final isOnline = await NetworkHelper.hasConnection();
-      _isOfflineMode = !isOnline;
-      debugPrint(
-        'SplashPage: Network check took ${stopwatch.elapsedMilliseconds}ms - Online: $isOnline',
-      );
+      // Initialize offline mode state from widget parameter
+      _isOfflineMode = widget.isOffline;
+
+      // Track network connectivity status (default to true if in offline mode to skip online-only logic)
+      bool isOnline = true;
+
+      // STEP 1: Check network connectivity first (if not already in offline mode)
+      if (!widget.isOffline) {
+        _updateStatus('Checking network...');
+        isOnline = await NetworkHelper.hasConnection();
+        debugPrint(
+          'SplashPage: Network check took ${stopwatch.elapsedMilliseconds}ms - Online: $isOnline',
+        );
+        if (!isOnline) {
+          // Network check failed after starting online - redirect to offline handling
+          debugPrint('SplashPage: Lost connection during startup, handling offline mode');
+          _isOfflineMode = true;
+          await _handleOfflineInitialization();
+          return;
+        }
+      } else {
+        debugPrint('SplashPage: Starting in offline mode');
+      }
 
       // STEP 2: Initialize company ID FIRST (works offline)
       _updateStatus('Initializing company...');
@@ -182,7 +205,7 @@ class _SplashPageState extends State<SplashPage> {
         'SplashPage: Cached data check took ${stopwatch.elapsedMilliseconds}ms - Has data: $hasCachedData',
       );
 
-      if (_isOfflineMode && !hasCachedData) {
+      if (widget.isOffline && !hasCachedData) {
         debugPrint(
           'SplashPage: Offline mode with no cached data - need to go online first',
         );
@@ -214,17 +237,34 @@ class _SplashPageState extends State<SplashPage> {
         );
 
         if (!initialSyncDone || !hasCompanyDetails) {
-          // Initial sync required - always sync
-          _updateStatus('Syncing company data...');
+          // Initial sync required - ONLY fetch today's KPI metrics and baseline data
+          // Full historical data will be fetched via pull-to-refresh on respective pages
+          _updateStatus('Syncing today\'s data...');
           debugPrint(
-            'SplashPage: Full sync needed - initialSyncDone: $initialSyncDone, hasCompanyDetails: $hasCompanyDetails',
+            'SplashPage: Initial sync needed - fetching only today KPI + baseline',
           );
 
           try {
+            // Register and use MonDataSyncController for staged sync
+            MonDataSyncController? dataSyncController;
+            if (!Get.isRegistered<MonDataSyncController>()) {
+              dataSyncController = Get.put(MonDataSyncController(), permanent: true);
+            } else {
+              dataSyncController = Get.find<MonDataSyncController>();
+            }
+
+            // Listen to sync progress for UI updates
+            dataSyncController?.syncStatusMessage.listen((message) {
+              if (message.isNotEmpty) {
+                _updateStatus(message);
+              }
+            });
+
             stopwatch.reset();
-            await apiService.fetchAndCacheAllData();
+            // Only fetch today's KPI + baseline (inventory, service points, company details)
+            await dataSyncController?.performInitialSyncWithBaseline();
             debugPrint(
-              'SplashPage: Data fetch took ${stopwatch.elapsedMilliseconds}ms',
+              'SplashPage: Initial data fetch took ${stopwatch.elapsedMilliseconds}ms',
             );
           } catch (e) {
             debugPrint(
@@ -238,13 +278,27 @@ class _SplashPageState extends State<SplashPage> {
             }
           }
         } else if (syncNeeded) {
-          // Sync cache expired (>30 minutes) - refresh data
-          _updateStatus('Refreshing data...');
-          debugPrint('SplashPage: Sync cache expired, refreshing data');
+          // Sync cache expired (>30 minutes) - refresh only today's KPI data
+          _updateStatus('Refreshing today\'s data...');
+          debugPrint('SplashPage: Sync cache expired, refreshing today\'s KPI data');
 
           try {
+            // Use incremental sync for faster updates (only today's KPI)
+            MonDataSyncController? dataSyncController;
+            if (!Get.isRegistered<MonDataSyncController>()) {
+              dataSyncController = Get.put(MonDataSyncController(), permanent: true);
+            } else {
+              dataSyncController = Get.find<MonDataSyncController>();
+            }
+
+            dataSyncController?.syncStatusMessage.listen((message) {
+              if (message.isNotEmpty) {
+                _updateStatus(message);
+              }
+            });
+
             stopwatch.reset();
-            await apiService.fetchAndCacheAllData();
+            await dataSyncController?.performIncrementalSync();
             debugPrint(
               'SplashPage: Data refresh took ${stopwatch.elapsedMilliseconds}ms',
             );
@@ -259,7 +313,7 @@ class _SplashPageState extends State<SplashPage> {
             'SplashPage: Sync cache valid (<30 min old), skipping data fetch',
           );
         }
-      } else {
+      } else if (!widget.isOffline) {
         _updateStatus('Loading cached data...');
         await _loadCompanyDetailsOffline();
       }
@@ -288,6 +342,34 @@ class _SplashPageState extends State<SplashPage> {
       );
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.offAll(() => const BottomNav());
+        
+        // Show offline mode snackbar if in offline mode
+        if (widget.isOffline) {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (Get.context != null) {
+              ScaffoldMessenger.of(Get.context!).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, color: Colors.white),
+                      const SizedBox(width: 12),
+                      const Text('You are offline. Showing cached data.'),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 4),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          });
+        }
+        
+        // STEP 10: Post-mount historical sync (background task)
+        // Trigger historical data fetch after UI is mounted (only if online)
+        if (!widget.isOffline) {
+          _triggerHistoricalSync();
+        }
       });
     } catch (e) {
       debugPrint('SplashPage: Fatal error during initialization - $e');
@@ -322,6 +404,17 @@ class _SplashPageState extends State<SplashPage> {
         return;
       }
 
+      // If no stored ID in secure storage, try GetStorage fallback
+      final box = GetStorage();
+      final lastCompanyId = box.read(kLastCompanyIdKey) as String?;
+      if (lastCompanyId != null && lastCompanyId.isNotEmpty) {
+        debugPrint('SplashPage: Using GetStorage company ID: $lastCompanyId');
+        await _dbHelper.openForCompany(lastCompanyId);
+        // Also store in secure storage for future use
+        await apiService.storeCompanyId(lastCompanyId);
+        return;
+      }
+
       // If no stored ID and we're online, try to initialize via API service
       if (!_isOfflineMode) {
         debugPrint('SplashPage: No stored company ID, initializing from API');
@@ -330,13 +423,15 @@ class _SplashPageState extends State<SplashPage> {
         debugPrint('SplashPage: Company ID initialized from API: $companyId');
       } else {
         // Offline with no stored company ID - this is a problem
-        throw Exception('No stored company ID available for offline mode');
+        debugPrint('SplashPage: Offline mode with no stored company ID');
+        throw Exception('Cannot use app offline without prior login');
       }
     } catch (e) {
       debugPrint('SplashPage: Error initializing company ID - $e');
 
       // If we're offline, we can't proceed without a stored company ID
       if (_isOfflineMode) {
+        debugPrint('SplashPage: Offline mode - cannot proceed without stored company ID');
         throw Exception('Cannot use app offline without prior login');
       }
 
@@ -411,7 +506,9 @@ class _SplashPageState extends State<SplashPage> {
         debugPrint(
           "SplashPage: Sync failed but we have cached data. Continuing...",
         );
-        _isOfflineMode = true; // Switch to offline mode
+        setState(() {
+          _isOfflineMode = true; // Switch to offline mode
+        });
         await _loadCompanyDetailsOffline();
       } else {
         throw Exception('Failed to sync data and no cached data available');
@@ -432,8 +529,13 @@ class _SplashPageState extends State<SplashPage> {
     if (!Get.isRegistered<MonSyncController>()) {
       Get.put(MonSyncController(), permanent: true);
     }
-    // Start periodic background sync for sales data
-    Get.find<MonSyncController>().startPeriodicSync();
+    
+    // Start periodic background sync for sales data ONLY if online
+    if (!widget.isOffline) {
+      Get.find<MonSyncController>().startPeriodicSync();
+    } else {
+      debugPrint('SplashPage: Offline mode - skipping periodic sync initialization');
+    }
   }
 
   /// Load data into controllers AFTER database is ready
@@ -482,7 +584,7 @@ class _SplashPageState extends State<SplashPage> {
         debugPrint('SplashPage: Loaded ${customerController.customers.length} customers from cache');
         
         // Only sync if online
-        if (!_isOfflineMode) {
+        if (!widget.isOffline) {
           debugPrint('SplashPage: Syncing customers from API...');
           await customerController.syncCustomersFromAPI();
           debugPrint('SplashPage: Synced ${customerController.customers.length} customers from API');
@@ -541,6 +643,78 @@ class _SplashPageState extends State<SplashPage> {
       final salesTrendsController = Get.find<MonSalesTrendsController>();
       await salesTrendsController.fetchAllData();
       debugPrint('SplashPage: Sales trends controller refreshed');
+    }
+  }
+
+  /// Trigger historical data sync after UI is mounted (background task)
+  void _triggerHistoricalSync() {
+    if (Get.isRegistered<MonDataSyncController>()) {
+      final dataSyncController = Get.find<MonDataSyncController>();
+      // Run historical sync in background without blocking UI
+      dataSyncController.performHistoricalSyncInBackground().then((_) {
+        debugPrint('SplashPage: Historical sync completed in background');
+      }).catchError((e) {
+        debugPrint('SplashPage: Historical sync failed: $e');
+      });
+    } else {
+      debugPrint('SplashPage: MonDataSyncController not registered, skipping historical sync');
+    }
+  }
+
+  /// Handle offline initialization when connection is lost during startup
+  Future<void> _handleOfflineInitialization() async {
+    try {
+      debugPrint('SplashPage: Handling offline initialization');
+      
+      // Try to get company ID from GetStorage
+      final box = GetStorage();
+      final lastCompanyId = box.read('last_company_id') as String?;
+      final lastUserRole = box.read('last_user_role') as String?;
+      
+      if (lastCompanyId != null && lastCompanyId.isNotEmpty) {
+        // Open database for the company
+        await _dbHelper.openForCompany(lastCompanyId);
+        
+        // Load company details
+        await _loadCompanyDetailsOffline();
+        
+        // Initialize controllers
+        _initializeControllers();
+        
+        // Load data into controllers
+        await _loadDataIntoControllers();
+        
+        // Navigate to main screen
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Get.offAll(() => const BottomNav());
+          
+          // Show offline snackbar
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (Get.context != null) {
+              ScaffoldMessenger.of(Get.context!).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, color: Colors.white),
+                      const SizedBox(width: 12),
+                      const Text('You are offline. Showing cached data.'),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 4),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          });
+        });
+      } else {
+        debugPrint('SplashPage: No offline credentials found');
+        _showOfflineNoDataDialog();
+      }
+    } catch (e) {
+      debugPrint('SplashPage: Error in offline initialization - $e');
+      _showErrorDialog('Failed to initialize offline: $e');
     }
   }
 

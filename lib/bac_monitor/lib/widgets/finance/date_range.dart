@@ -21,7 +21,7 @@ class DateRangePicker extends StatefulWidget {
 }
 
 class _DateRangePickerState extends State<DateRangePicker> {
-  DateRange _selectedRange = DateRange.last7Days;
+  DateRange _selectedRange = DateRange.today;
   DateTimeRange? _customDateRange;
 
   @override

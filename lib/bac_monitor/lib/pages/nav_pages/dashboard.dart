@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../../../../shared/database/unified_db_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
 import '../../components/dashboard/kpi_overview.dart';
@@ -77,23 +79,73 @@ class _DashboardState extends State<Dashboard> {
 
   Future<void> _handleRefresh() async {
     final apiService = Get.find<MonitorApiService>();
-    await apiService.syncRecentSales();
+    final dashboardController = Get.find<MonDashboardController>();
+    
+    // Get the selected date range
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final range = dashboardController.selectedRange.value;
+    final customRange = dashboardController.customRange.value;
+    
+    switch (range) {
+      case DateRange.today:
+        startDate = DateTime(now.year, now.month, now.day);
+        break;
+      case DateRange.yesterday:
+        startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
+        endDate = DateTime(now.year, now.month, now.day).subtract(const Duration(milliseconds: 1));
+        break;
+      case DateRange.last7Days:
+        startDate = now.subtract(const Duration(days: 6));
+        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        break;
+      case DateRange.monthToDate:
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      case DateRange.custom:
+        if (customRange != null) {
+          startDate = customRange.start;
+          endDate = customRange.end;
+        } else {
+          startDate = now.subtract(const Duration(days: 6));
+        }
+        break;
+    }
+    
+    // Fetch KPI data for the selected date range from server and store in DB
+    try {
+      await apiService.syncAllKpiData(startDate, endDate);
+      
+      // Also fetch service points to ensure they're up to date
+      try {
+        final servicePointsRes = await apiService.getWithAuth('/servicepoints');
+        if (servicePointsRes.body.isNotEmpty) {
+          final servicePointsData = json.decode(servicePointsRes.body) as List;
+          await UnifiedDatabaseHelper.instance.deleteAllMonServicePoints();
+          await UnifiedDatabaseHelper.instance.insertServicePoints(
+            servicePointsData.map((e) => Map<String, dynamic>.from(e as Map)).toList(),
+          );
+        }
+      } catch (e) {
+        debugPrint('Dashboard: Service points fetch failed (non-critical): $e');
+      }
+    } catch (e) {
+      debugPrint('Dashboard: KPI data fetch failed: $e');
+    }
 
+    // Refresh all controllers with the new data from DB
     if (Get.isRegistered<MonKpiOverviewController>()) {
       await Get.find<MonKpiOverviewController>().fetchKpiData();
     }
     if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>();
+      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
     if (Get.isRegistered<MonOutstandingPaymentsController>()) {
-      await Get.find<MonOutstandingPaymentsController>()
-          .fetchOutstandingPaymentsData();
+      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
     }
     if (Get.isRegistered<MonSalesTrendsController>()) {
       await Get.find<MonSalesTrendsController>().fetchAllData();
-    }
-    if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
   }
 

@@ -22,10 +22,14 @@ import '../bac_monitor/lib/services/api_services.dart';
 import '../shared/database/unified_db_helper.dart';
 import '../bac_monitor/lib/pages/bottom_nav.dart';
 
+/// Key for storing company ID in GetStorage for offline access
+const String kLastCompanyIdKey = 'last_company_id';
+
 class ConnectivityController extends GetxController {
   var isConnected = false.obs;
   var isLoading = true.obs;
   var hasError = false.obs;
+  var isOfflineMode = false.obs;  // Track if we're in offline mode
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
@@ -69,10 +73,9 @@ class ConnectivityController extends GetxController {
         isLoading.value = false;
         final hasCredentials = await _hasValidCredentials();
         if (hasCredentials) {
-          _initializeControllers();
-          await _loadDataFromDatabase();
+          // Get role FIRST before initializing controllers
           final role = await _getUserRole();
-
+          
           // Handle null or empty role with fallback logic
           if (role == null || role.isEmpty) {
             debugPrint(
@@ -90,20 +93,32 @@ class ConnectivityController extends GetxController {
                   key: 'user_role',
                   value: fallbackRole,
                 );
-                if (fallbackRole.toLowerCase().contains("admin")) {
-                  Get.offAll(() => const MonitorAppRoot());
-                } else {
-                  Get.offAll(() => const PosAppRoot());
-                }
-                return;
+                // Initialize controllers based on role
+                _initializeControllersForRole(fallbackRole);
+                await _loadDataFromDatabase();
+                Get.offAll(() => const MonitorAppRoot());
+              } else {
+                // Default to POS
+                _initializeControllersForRole('pos');
+                await _loadDataFromDatabase();
+                Get.offAll(() => const PosAppRoot());
               }
+            } else {
+              // If still no role, default to POS (non-admin)
+              debugPrint('SplashScreen: No role found, defaulting to POS app');
+              _initializeControllersForRole('pos');
+              await _loadDataFromDatabase();
+              Get.offAll(() => const PosAppRoot());
             }
-            // If still no role, default to POS (non-admin)
-            debugPrint('SplashScreen: No role found, defaulting to POS app');
-            Get.offAll(() => const PosAppRoot());
           } else if (role.toLowerCase().contains("admin")) {
+            // Admin user - initialize monitor controllers only
+            _initializeControllersForRole('admin');
+            await _loadDataFromDatabase();
             Get.offAll(() => const MonitorAppRoot());
           } else {
+            // Non-admin user - initialize POS controllers only
+            _initializeControllersForRole('pos');
+            await _loadDataFromDatabase();
             Get.offAll(() => const PosAppRoot());
           }
         } else {
@@ -233,36 +248,46 @@ class ConnectivityController extends GetxController {
     }
   }
 
-  void _initializeControllers() {
-    if (!Get.isRegistered<MonOperatorController>()) {
-      Get.put(MonOperatorController());
-    }
-    if (!Get.isRegistered<MonSyncController>()) {
-      Get.put(MonSyncController());
-    }
-    if (!Get.isRegistered<MonStoresController>()) {
-      Get.put(MonStoresController());
-    }
-    if (!Get.isRegistered<MonStoreKpiTrendController>()) {
-      Get.put(MonStoreKpiTrendController());
-    }
-    if (!Get.isRegistered<MonDashboardController>()) {
-      Get.put(MonDashboardController());
-    }
-    if (!Get.isRegistered<MonKpiOverviewController>()) {
-      Get.put(MonKpiOverviewController());
-    }
-    if (!Get.isRegistered<MonSalesTrendsController>()) {
-      Get.put(MonSalesTrendsController());
-    }
-    if (!Get.isRegistered<MonGrossProfitController>()) {
-      Get.put(MonGrossProfitController());
-    }
-    if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
-      Get.put(MonOutstandingPaymentsController());
-    }
-    if (!Get.isRegistered<MonInventoryController>()) {
-      Get.put(MonInventoryController());
+  /// Initialize controllers based on user role
+  /// Admin users get monitor controllers, POS users get POS controllers
+  void _initializeControllersForRole(String role) {
+    final isAdmin = role.toLowerCase().contains("admin");
+
+    if (isAdmin) {
+      debugPrint('SplashScreen: Admin user - initializing monitor controllers');
+      if (!Get.isRegistered<MonOperatorController>()) {
+        Get.put(MonOperatorController());
+      }
+      if (!Get.isRegistered<MonSyncController>()) {
+        Get.put(MonSyncController());
+      }
+      if (!Get.isRegistered<MonStoresController>()) {
+        Get.put(MonStoresController());
+      }
+      if (!Get.isRegistered<MonStoreKpiTrendController>()) {
+        Get.put(MonStoreKpiTrendController());
+      }
+      if (!Get.isRegistered<MonDashboardController>()) {
+        Get.put(MonDashboardController());
+      }
+      if (!Get.isRegistered<MonKpiOverviewController>()) {
+        Get.put(MonKpiOverviewController());
+      }
+      if (!Get.isRegistered<MonSalesTrendsController>()) {
+        Get.put(MonSalesTrendsController());
+      }
+      if (!Get.isRegistered<MonGrossProfitController>()) {
+        Get.put(MonGrossProfitController());
+      }
+      if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
+        Get.put(MonOutstandingPaymentsController());
+      }
+      if (!Get.isRegistered<MonInventoryController>()) {
+        Get.put(MonInventoryController());
+      }
+    } else {
+      debugPrint('SplashScreen: Non-admin user - skipping monitor controller initialization');
+      // POS controllers are initialized elsewhere in the POS flow
     }
   }
 
@@ -307,13 +332,83 @@ class ConnectivityController extends GetxController {
     hasError.value = false;
     _retryTimer?.cancel();
     try {
-      final hasCredentials = await _hasValidCredentials();
-      if (hasCredentials) {
-        _initializeControllers();
-        await _loadDataFromDatabase();
-        await _performOfflineAuthAndNavigation();
+      // First, try to use GetStorage offline credentials
+      final box = GetStorage();
+      final lastCompanyId = box.read('last_company_id') as String?;
+      final lastUserRole = box.read('last_user_role') as String?;
+      final lastUsername = box.read('last_username') as String?;
+      
+      if (lastCompanyId != null && lastCompanyId.isNotEmpty) {
+        // We have offline credentials - proceed with offline login
+        isOfflineMode.value = true;
+        debugPrint('SplashScreen: Offline mode detected. Company: $lastCompanyId, Role: $lastUserRole, User: $lastUsername');
+        
+        try {
+          // Open database for the company
+          await UnifiedDatabaseHelper.instance.openForCompany(lastCompanyId);
+          
+          // Determine role from GetStorage or fallback to secure storage
+          String effectiveRole = lastUserRole ?? 'pos';
+          if (effectiveRole.isEmpty) {
+            final storedRole = await _getUserRole();
+            effectiveRole = storedRole ?? 'pos';
+          }
+          
+          // Initialize controllers based on role
+          _initializeControllersForRole(effectiveRole);
+          
+          // Load data from local database
+          await _loadDataFromDatabase();
+          
+          // Navigate based on role
+          if (effectiveRole.toLowerCase().contains("admin")) {
+            Get.offAll(() => const MonitorAppRoot());
+          } else {
+            Get.offAll(() => const PosAppRoot());
+          }
+          
+          // Show offline mode notification
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (Get.context != null) {
+              ScaffoldMessenger.of(Get.context!).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, color: Colors.white),
+                      const SizedBox(width: 12),
+                      const Text('You are offline. Showing cached data.'),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange,
+                  duration: const Duration(seconds: 4),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          });
+        } catch (e) {
+          debugPrint('SplashScreen: Error opening offline database - $e');
+          _setError();
+        }
       } else {
-        _setError();
+        // No GetStorage credentials - fallback to old method
+        final hasCredentials = await _hasValidCredentials();
+        if (hasCredentials) {
+          isOfflineMode.value = true;
+          
+          final role = await _getUserRole();
+          final effectiveRole = role ?? 'pos';
+          _initializeControllersForRole(effectiveRole);
+          await _loadDataFromDatabase();
+          
+          if (effectiveRole.toLowerCase().contains("admin")) {
+            Get.offAll(() => const MonitorAppRoot());
+          } else {
+            Get.offAll(() => const PosAppRoot());
+          }
+        } else {
+          _setError();
+        }
       }
     } catch (e) {
       debugPrint('SplashScreen: Error in offline mode - $e');

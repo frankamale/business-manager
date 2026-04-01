@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:path/path.dart' as path;
+import 'package:sqflite/sqflite.dart';
 
 import '../../additions/colors.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
@@ -9,6 +14,8 @@ import '../../controllers/mon_salestrends_controller.dart';
 import '../../controllers/mon_sync_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
+import '../../services/kpi_sync_service.dart';
+import '../../../../shared/database/unified_db_helper.dart';
 import '../../widgets/more/more_data.dart';
 import '../../widgets/more/profile_page.dart';
 import '../../widgets/more/section_header.dart';
@@ -144,8 +151,18 @@ class _MoreState extends State<More> {
       PopScope(
         canPop: false,
         child: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.getAccentColor(context),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                color: AppColors.getAccentColor(context),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Fetching 3 years of data...',
+                style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
+              ),
+            ],
           ),
         ),
       ),
@@ -154,8 +171,54 @@ class _MoreState extends State<More> {
 
     try {
       final apiService = Get.find<MonitorApiService>();
-      await apiService.fetchAndCacheAllData(force: true);
-
+      final dbHelper = UnifiedDatabaseHelper.instance;
+      
+      // Close and delete the database
+      await dbHelper.close();
+      
+      // Delete the database file
+      final dbPath = await getDatabasesPath();
+      final companyId = await apiService.getStoredCompanyId();
+      if (companyId != null && companyId.isNotEmpty) {
+        final dbFile = '$dbPath/unified_db_company_$companyId.db';
+        final file = File(dbFile);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+      
+      // Reopen the database
+      if (companyId != null && companyId.isNotEmpty) {
+        await dbHelper.openForCompany(companyId);
+      }
+      
+      // Fetch baseline data (service points, inventory, company details)
+      final kpiSyncService = Get.find<KpiSyncService>();
+      final baselineResult = await kpiSyncService.fetchBaselineDatasets();
+      
+      // Store baseline data
+      if (baselineResult.servicePoints.isNotEmpty) {
+        final servicePoints = baselineResult.servicePoints
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        await dbHelper.insertServicePoints(servicePoints);
+      }
+      if (baselineResult.companyDetails.isNotEmpty) {
+        await dbHelper.insertCompanyDetails(baselineResult.companyDetails);
+      }
+      if (baselineResult.inventory.isNotEmpty) {
+        final inventory = baselineResult.inventory
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        await dbHelper.insertMonInventoryItems(inventory);
+      }
+      
+      // Fetch 3 years of KPI data
+      final now = DateTime.now();
+      final threeYearsAgo = DateTime(now.year - 3, now.month, now.day);
+      await apiService.syncAllKpiData(threeYearsAgo, now);
+      
+      // Refresh all controllers with the new data from DB
       if (Get.isRegistered<MonKpiOverviewController>()) {
         await Get.find<MonKpiOverviewController>().fetchKpiData();
       }
@@ -170,7 +233,7 @@ class _MoreState extends State<More> {
 
       Get.snackbar(
         "Success",
-        "All data has been reloaded from the server.",
+        "All data has been reloaded from the server (3 years).",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.getSuccessColor(context),
         colorText: LightColors.card,

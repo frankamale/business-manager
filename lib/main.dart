@@ -4,9 +4,11 @@ import 'package:get_storage/get_storage.dart';
 
 // Package imports for external dependencies
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'package:bac_pos/bac_monitor/lib/services/kpi_sync_service.dart';
 import 'bac_monitor/lib/controllers/mon_kpi_controller.dart';
 import 'bac_monitor/lib/repositories/kpi_repository.dart';
 import 'bac_monitor/lib/additions/colors.dart';
+import 'bac_monitor/lib/controllers/mon_data_sync_controller.dart';
 import 'flavors/flavor_colors.dart';
 import 'flavors/flavor_config.dart';
 
@@ -68,6 +70,7 @@ void main() async {
   // Monitor Services
   Get.put(MonitorApiService());
   Get.put(AccountManager());
+  Get.put(KpiSyncService());
 
   Get.put(AuthController());
   Get.put(CustomerController());
@@ -90,6 +93,7 @@ void main() async {
   Get.put(MonStoresController());
   Get.put(MonStoreKpiTrendController());
   Get.put(MonSyncController());
+  Get.put(MonDataSyncController());
   Get.put(ProfileController());
 
   runApp(const MyApp());
@@ -112,7 +116,7 @@ class MyApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: LightColors.background,
         appBarTheme: const AppBarTheme(
-          backgroundColor: LightColors.background,
+          backgroundColor: LightColors.background, 
           foregroundColor: LightColors.textPrimary,
         ),
         cardTheme: CardThemeData(
