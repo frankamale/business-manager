@@ -29,16 +29,17 @@ class KpiCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: LightColors.surface,
-
-
+        color: AppColors.getCardColor(context),
+        border: Border.all(color: AppColors.getBorderColor(context)),
       ),
       child: Stack(
         children: [
           // Decorative glow blob top-right
-
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 16.0,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -51,8 +52,10 @@ class KpiCard extends StatelessWidget {
                       // Category label pill
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 3),
-                           child: Text(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
+                        child: Text(
                           title.toUpperCase(),
                           style: TextStyle(
                             color: LightColors.primaryLight,
@@ -163,6 +166,7 @@ class MiniKpiData {
 // ─────────────────────────────────────────────────────────────
 class _MiniKpiRow extends StatelessWidget {
   final MiniKpiData data;
+
   const _MiniKpiRow({required this.data});
 
   @override
@@ -198,14 +202,26 @@ class _MiniKpiRow extends StatelessWidget {
           const SizedBox(height: 2),
           Padding(
             padding: const EdgeInsets.only(left: 12),
-            child: Text(
-              data.value,
-              style: TextStyle(
-                color: LightColors.textPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-              ),
+            child: Row(
+              children: [
+                Text(
+                  "UGX",
+                  style: TextStyle(
+                    color: LightColors.textSecondary.withOpacity(0.55),
+                    fontSize: 12,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  data.value,
+                  style: TextStyle(
+                    color: LightColors.textPrimary,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -232,14 +248,12 @@ class _TrendBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final isUp = direction == TrendDirection.up;
     final color = isUp ? LightColors.success : LightColors.error;
-    final bgColor = color.withOpacity(0.12);
 
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: bgColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: color.withOpacity(0.35), width: 1),
           ),
@@ -247,7 +261,9 @@ class _TrendBadge extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                isUp
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
                 color: color,
                 size: 12,
               ),
@@ -278,5 +294,3 @@ class _TrendBadge extends StatelessWidget {
     );
   }
 }
-
-
