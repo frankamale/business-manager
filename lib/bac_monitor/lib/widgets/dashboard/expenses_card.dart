@@ -20,152 +20,147 @@ class ExpensesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compactFormatter = NumberFormat.compact(locale: 'en_US');
+    final compactFormatter = NumberFormat.compact();
     final totalExpenses = stockExpenses + nonStockExpenses;
 
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: LightColors.card,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: LightColors.shadowLight,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
+
+        // match your other cards
+        border: Border.all(
+          color: AppColors.getBorderColor(context),
+        ),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Title with Period Label
+          // HEADER
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Expenses',
                 style: TextStyle(
-                  color: LightColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  color: LightColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               Text(
                 periodLabel,
                 style: TextStyle(
-                  color: LightColors.textSecondary.withOpacity(0.7),
-                  fontSize: 12,
+                  color: LightColors.textSecondary.withOpacity(0.6),
+                  fontSize: 11,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
 
-          // 2. Hero Metric (Total Expenses)
+          const SizedBox(height: 6),
+
+          // TOTAL (hero)
           Text(
-            'UGX${compactFormatter.format(totalExpenses)}',
+            'UGX ${compactFormatter.format(totalExpenses)}',
             style: TextStyle(
               color: LightColors.textPrimary,
-              fontWeight: FontWeight.w900,
-              fontSize: 36,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 20),
 
-          Divider(color: LightColors.border),
           const SizedBox(height: 12),
 
-          // 3. Clickable Expense Categories
-          _buildExpenseCategoryCard(
-            context: context,
-            label: 'Stock Expenses',
-            amount: compactFormatter.format(stockExpenses),
-            icon: Icons.inventory_2_outlined,
-            color: Colors.orangeAccent,
-            onTap: onStockExpensesTap,
-          ),
-          const SizedBox(height: 12),
-          _buildExpenseCategoryCard(
-            context: context,
-            label: 'Non-Stock Expenses',
-            amount: compactFormatter.format(nonStockExpenses),
-            icon: Icons.receipt_long_outlined,
-            color: Colors.purpleAccent,
-            onTap: onNonStockExpensesTap,
+          // CATEGORY ROW (side by side)
+          Row(
+            children: [
+              Expanded(
+                child: _miniCategoryCard(
+                  label: 'Stock',
+                  amount: stockExpenses,
+                  color: Colors.orange,
+                  icon: Icons.inventory_2_outlined,
+                  formatter: compactFormatter,
+                  onTap: onStockExpensesTap,
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: _miniCategoryCard(
+                  label: 'Non-Stock',
+                  amount: nonStockExpenses,
+                  color: Colors.purple,
+                  icon: Icons.receipt_long_outlined,
+                  formatter: compactFormatter,
+                  onTap: onNonStockExpensesTap,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildExpenseCategoryCard({
-    required BuildContext context,
+  Widget _miniCategoryCard({
     required String label,
-    required String amount,
-    required IconData icon,
+    required double amount,
     required Color color,
+    required IconData icon,
+    required NumberFormat formatter,
     VoidCallback? onTap,
   }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: LightColors.card.withOpacity(0.1),
+          color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
+
           border: Border.all(
-            color: LightColors.border,
-            width: 1,
+            color: color.withOpacity(0.25),
           ),
         ),
-        child: Row(
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon Container
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            // Label and Amount
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            // ICON + LABEL
+            Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
                     label,
                     style: TextStyle(
-                      color: LightColors.textSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'UGX$amount',
-                    style: TextStyle(
-                      color: LightColors.textPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            // Arrow Icon
-            Icon(
-              Icons.arrow_forward_ios,
-              color: LightColors.textSecondary.withOpacity(0.5),
-              size: 16,
+
+            const SizedBox(height: 8),
+
+            // VALUE
+            Text(
+              formatter.format(amount),
+              style: TextStyle(
+                color: LightColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),
