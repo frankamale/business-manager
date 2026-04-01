@@ -25,36 +25,11 @@ class GrossProfitCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: LightColors.card,
-        boxShadow: [
-          BoxShadow(
-            color: LightColors.shadowLight,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: LightColors.surface,
+
       ),
       child: Stack(
         children: [
-          // Decorative glow blob top-right
-          Positioned(
-            top: -20,
-            right: -20,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFF26A69A).withOpacity(0.25),
-                    const Color(0xFF26A69A).withOpacity(0.05),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
