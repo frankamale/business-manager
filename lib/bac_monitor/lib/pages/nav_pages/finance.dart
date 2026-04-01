@@ -81,16 +81,16 @@ class _FinancePageState extends State<Finance> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             pinned: true,
             // floating: true,
-            title: const Text(
+            title: Text(
               "Financial Summary",
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.getTextPrimaryColor(context),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -98,8 +98,8 @@ class _FinancePageState extends State<Finance> {
               preferredSize: const Size.fromHeight(65.0),
               child: DateRangePicker(onDateRangeSelected: _onDateRangeChanged),
             ),
-            backgroundColor: PrimaryColors.darkBlue,
-            iconTheme: const IconThemeData(color: Colors.white),
+            backgroundColor: AppColors.getCardColor(context),
+            iconTheme: IconThemeData(color: AppColors.getTextPrimaryColor(context)),
             elevation: 0,
           ),
 
@@ -123,7 +123,7 @@ class _FinancePageState extends State<Finance> {
               child: ExpandableExpensesCard(expenses: _expenseData),
             ),
           ),
-          const SliverPadding(
+          SliverPadding(
             padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
             sliver: SliverToBoxAdapter(
               child: Text(
@@ -131,7 +131,7 @@ class _FinancePageState extends State<Finance> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.getTextPrimaryColor(context),
                 ),
               ),
             ),
@@ -140,7 +140,7 @@ class _FinancePageState extends State<Finance> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             sliver: SliverToBoxAdapter(
               child: Card(
-                color: PrimaryColors.lightBlue,
+                color: AppColors.getCardColor(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

@@ -22,7 +22,7 @@ class UserProfileHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: PrimaryColors.lightBlue,
+      color: AppColors.getSurfaceColor(context),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       child: Row(
         children: [
@@ -33,7 +33,7 @@ class UserProfileHeader extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [
-                  PrimaryColors.brightYellow,
+                  AppColors.getAccentColor(context),
                   Colors.amber.shade300,
                 ],
                 begin: Alignment.topLeft,
@@ -42,13 +42,13 @@ class UserProfileHeader extends StatelessWidget {
             ),
             child: CircleAvatar(
               radius: 35,
-              backgroundColor: PrimaryColors.darkBlue,
+              backgroundColor: AppColors.getPrimaryColor(context),
               child: Text(
                 avatarInitial ?? (userName.isNotEmpty ? userName[0].toUpperCase() : 'U'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 30,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: AppColors.getTextPrimaryColor(context),
                 ),
               ),
             ),
@@ -61,8 +61,8 @@ class UserProfileHeader extends StatelessWidget {
                 // User name with modern styling
                 Text(
                   userName,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppColors.getTextPrimaryColor(context),
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
@@ -73,7 +73,7 @@ class UserProfileHeader extends StatelessWidget {
                 Text(
                   userEmail,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: AppColors.getTextSecondaryColor(context),
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
                   ),
@@ -85,17 +85,17 @@ class UserProfileHeader extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: AppColors.getSurfaceColor(context),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
+                        color: AppColors.getBorderColor(context),
                         width: 1,
                       ),
                     ),
                     child: Text(
                       companyName!,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: AppColors.getTextPrimaryColor(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,

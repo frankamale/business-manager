@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import '../../additions/colors.dart';
 import '../../models/finanacial_data.dart';
 
 class ExpensesPieChart extends StatelessWidget {
@@ -31,11 +32,11 @@ class ExpensesPieChart extends StatelessWidget {
                     value: category.amount,
                     radius: 80,
                     title: '${percentage.toStringAsFixed(0)}%',
-                    titleStyle: const TextStyle(
+                    titleStyle: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+                      color: AppColors.getTextPrimaryColor(context),
+                      shadows: [Shadow(color: AppColors.getShadowColor(context), blurRadius: 2)],
                     ),
                   );
                 }).toList(),
@@ -48,7 +49,7 @@ class ExpensesPieChart extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: expenses.map((category) => _buildLegendItem(category)).toList(),
+              children: expenses.map((category) => _buildLegendItem(context, category)).toList(),
             ),
           ),
         ],
@@ -56,7 +57,7 @@ class ExpensesPieChart extends StatelessWidget {
     );
   }
 
-  Widget _buildLegendItem(ExpenseCategory category) {
+  Widget _buildLegendItem(BuildContext context, ExpenseCategory category) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -75,7 +76,7 @@ class ExpensesPieChart extends StatelessWidget {
           Flexible(
             child: Text(
               category.name,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 14),
               overflow: TextOverflow.ellipsis,
             ),
           ),

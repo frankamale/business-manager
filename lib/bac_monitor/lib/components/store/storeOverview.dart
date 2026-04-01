@@ -26,15 +26,15 @@ class StoreOverview extends StatelessWidget {
       final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
       
       if (controller.isFetchingKpisAndCharts.value) {
-        return const Padding(
+        return Padding(
           padding: EdgeInsets.only(top: 100.0),
           child: Center(
-            child: CircularProgressIndicator(color: PrimaryColors.brightYellow),
+            child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
           ),
         );
       }
       return Container(
-        color: PrimaryColors.darkBlue,
+        color: AppColors.getBackgroundColor(context),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
           child: Column(
@@ -133,11 +133,11 @@ class StoreOverview extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: PrimaryColors.lightBlue,
+        color: LightColors.card,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: LightColors.shadowLight,
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -148,14 +148,14 @@ class StoreOverview extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.white, size: 17),
+              Icon(icon, color: LightColors.textPrimary, size: 17),
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: LightColors.textPrimary,
                 ),
               ),
             ],
@@ -185,14 +185,14 @@ class StoreOverview extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              PrimaryColors.lightBlue,
-              PrimaryColors.lightBlue.withOpacity(0.85),
+              LightColors.card,
+              LightColors.surface,
             ],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
+              color: LightColors.shadowLight,
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -233,10 +233,10 @@ class StoreOverview extends StatelessWidget {
                           ),
                           decoration: BoxDecoration(
                             color: trendDirection == TrendDirection.up
-                                ? Colors.green.withOpacity(0.2)
+                                ? LightColors.success.withOpacity(0.2)
                                 : trendDirection == TrendDirection.down
-                                    ? Colors.red.withOpacity(0.2)
-                                    : Colors.white70.withOpacity(0.1),
+                                    ? LightColors.error.withOpacity(0.2)
+                                    : LightColors.textDisabled.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -249,10 +249,10 @@ class StoreOverview extends StatelessWidget {
                                         ? Icons.arrow_downward
                                         : Icons.remove,
                                 color: trendDirection == TrendDirection.up
-                                    ? Colors.green
+                                    ? LightColors.success
                                     : trendDirection == TrendDirection.down
-                                        ? Colors.red
-                                        : Colors.white70,
+                                        ? LightColors.error
+                                        : LightColors.textSecondary,
                                 size: 10,
                               ),
                               const SizedBox(width: 2),
@@ -261,10 +261,10 @@ class StoreOverview extends StatelessWidget {
                                   trend,
                                   style: TextStyle(
                                     color: trendDirection == TrendDirection.up
-                                        ? Colors.green
+                                        ? LightColors.success
                                         : trendDirection == TrendDirection.down
-                                            ? Colors.red
-                                            : Colors.white70,
+                                            ? LightColors.error
+                                            : LightColors.textSecondary,
                                     fontSize: 9,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -285,8 +285,8 @@ class StoreOverview extends StatelessWidget {
                         Flexible(
                           child: Text(
                             title,
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: LightColors.textSecondary,
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
@@ -300,8 +300,8 @@ class StoreOverview extends StatelessWidget {
                           alignment: Alignment.centerLeft,
                           child: Text(
                             '${unit != null && unit.isNotEmpty ? '$unit ' : ''}$value',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: LightColors.textPrimary,
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,

@@ -29,21 +29,24 @@ class _MoreState extends State<More> {
     Get.lazyPut(() => MonSyncController());
 
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'More',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.getTextPrimaryColor(context),
+          ),
         ),
-        backgroundColor: PrimaryColors.darkBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.getCardColor(context),
+        foregroundColor: AppColors.getTextPrimaryColor(context),
         elevation: 0,
       ),
       body: Obx(() {
         if (_profileController.isLoading.value) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(
-              color: PrimaryColors.brightYellow,
+              color: AppColors.getAccentColor(context),
             ),
           );
         }
@@ -57,8 +60,8 @@ class _MoreState extends State<More> {
               companyName: _profileController.companyName,
               avatarInitial: _profileController.userInitial,
             ),
-
-            const SectionHeader(title: "ACCOUNT"),
+ 
+            SectionHeader(title: "ACCOUNT", textColor: AppColors.getTextSecondaryColor(context)),
 
             MoreListItem(
               title: "Profile & Settings",
@@ -80,18 +83,18 @@ class _MoreState extends State<More> {
               onTap: () => _showReloadDataDialog(context),
             ),
 
-            const Divider(color: Colors.white12, indent: 16, endIndent: 16),
+            Divider(color: AppColors.getBorderColor(context), indent: 16, endIndent: 16),
             const SizedBox(height: 8),
 
             MoreListItem(
               title: "Log Out",
               icon: Icons.logout,
-              color: Colors.red.shade400,
+              color: AppColors.getErrorColor(context),
               onTap: () => _showLogoutDialog(context),
             ),
 
             const SizedBox(height: 40),
-          ],
+          ], 
         );
       }),
     );
@@ -103,27 +106,27 @@ class _MoreState extends State<More> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: PrimaryColors.lightBlue,
-        title: const Text(
+        backgroundColor: AppColors.getCardColor(context),
+        title: Text(
           'Reload All Data?',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.getTextPrimaryColor(context)),
         ),
-        content: const Text(
+        content: Text(
           'This will sync everything with the server. This can take a moment. Are you sure?',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
             ),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: PrimaryColors.brightYellow,
-              foregroundColor: PrimaryColors.darkBlue,
+              backgroundColor: AppColors.getAccentColor(context),
+              foregroundColor: AppColors.getTextPrimaryColor(context),
             ),
             onPressed: () {
               Navigator.of(context).pop();
@@ -138,11 +141,11 @@ class _MoreState extends State<More> {
 
   Future<void> _performFullReload(BuildContext context) async {
     Get.dialog(
-      const PopScope(
+      PopScope(
         canPop: false,
         child: Center(
           child: CircularProgressIndicator(
-            color: PrimaryColors.brightYellow,
+            color: AppColors.getAccentColor(context),
           ),
         ),
       ),
@@ -169,8 +172,8 @@ class _MoreState extends State<More> {
         "Success",
         "All data has been reloaded from the server.",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+        backgroundColor: AppColors.getSuccessColor(context),
+        colorText: LightColors.card,
       );
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
@@ -179,8 +182,8 @@ class _MoreState extends State<More> {
         "Error",
         "Failed to reload data.\n${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+        backgroundColor: AppColors.getErrorColor(context),
+        colorText: LightColors.card,
       );
     }
   }
@@ -190,26 +193,26 @@ class _MoreState extends State<More> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: PrimaryColors.lightBlue,
-        title: const Text(
+        backgroundColor: AppColors.getCardColor(context),
+        title: Text(
           'Confirm Log Out',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.getTextPrimaryColor(context)),
         ),
-        content: const Text(
+        content: Text(
           'Are you sure you want to log out?',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
             ),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
+              backgroundColor: AppColors.getErrorColor(context),
             ),
             onPressed: () async {
               final apiService = Get.find<MonitorApiService>();

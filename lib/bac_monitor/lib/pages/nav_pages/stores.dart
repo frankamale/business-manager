@@ -46,27 +46,27 @@ class _StoresState extends State<Stores> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: Obx(() {
         // Check if stores are initialized before showing content
         if (!controller.isInitialized.value) {
-          return const Center(
-            child: CircularProgressIndicator(color: PrimaryColors.brightYellow),
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
           );
         }
 
         if (controller.isLoading.value && controller.storeList.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: PrimaryColors.brightYellow),
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
           );
         }
 
 
         if (controller.storeList.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               "No stores were found.",
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
             ),
           );
         }
@@ -74,20 +74,20 @@ class _StoresState extends State<Stores> {
         return CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: PrimaryColors.darkBlue,
+              backgroundColor: AppColors.getCardColor(context),
               elevation: 0,
               pinned: true,
-              title: _buildStoreSelector(controller),
+              title: _buildStoreSelector(context, controller),
               actions: [
                 Tooltip(
                   message: "View store location",
                   child: IconButton(
                     padding: EdgeInsetsGeometry.only(right: 16),
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.quick_contacts_dialer_outlined,
                       size: 28,
+                      color: AppColors.getTextPrimaryColor(context),
                     ),
-                    color: Colors.white,
                     onPressed:
                         controller.selectedStore.value?.id == Store.all.id
                         ? null
@@ -107,7 +107,7 @@ class _StoresState extends State<Stores> {
                 child: DateRangePicker(
                   onDateRangeSelected: controller.onDateRangeChanged,
                 ),
-              ), 
+              ),
             ),
             SliverToBoxAdapter(child: StoreOverview()),
 
@@ -117,20 +117,20 @@ class _StoresState extends State<Stores> {
     );
   }
 
-  Widget _buildStoreSelector(MonStoresController ctrl) {
+  Widget _buildStoreSelector(BuildContext context, MonStoresController ctrl) {
     return Obx(
       () => DropdownButtonHideUnderline(
         child: Padding(
           padding: const EdgeInsets.only(left: 8.0),
           child: DropdownButton<Store>(
             value: ctrl.selectedStore.value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: AppColors.getTextPrimaryColor(context),
               fontWeight: FontWeight.w500,
               fontSize: 20.0,
             ),
-            dropdownColor: PrimaryColors.lightBlue,
-            icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+            dropdownColor: AppColors.getCardColor(context),
+            icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
             items: ctrl.storeList.map<DropdownMenuItem<Store>>((Store store) {
               return DropdownMenuItem<Store>(
                 value: store,
