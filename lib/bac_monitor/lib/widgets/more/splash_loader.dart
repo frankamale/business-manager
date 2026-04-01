@@ -1,6 +1,5 @@
 // mon_splash_loader.dart
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../additions/colors.dart';
 
@@ -19,36 +18,21 @@ class MonSplashLoader extends StatefulWidget {
 }
 
 class _MonSplashLoaderState extends State<MonSplashLoader>
-    with TickerProviderStateMixin {
-  late final AnimationController _mainCtrl;
-  late final AnimationController _pulseCtrl;
-  late final AnimationController _dotCtrl;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-
-    _mainCtrl = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat();
-
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
-
-    _dotCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1100),
-    )..repeat();
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true); // "alternate" like the CSS
   }
 
   @override
   void dispose() {
-    _mainCtrl.dispose();
-    _pulseCtrl.dispose();
-    _dotCtrl.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -57,200 +41,123 @@ class _MonSplashLoaderState extends State<MonSplashLoader>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // The CSS-inspired vertical bars loader
         SizedBox(
-          width: 88,
-          height: 88,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Subtle outer glow ring
-              AnimatedBuilder(
-                animation: _pulseCtrl,
-                builder: (_, __) {
-                  final scale = lerpDouble(0.95, 1.08, _pulseCtrl.value)!;
-                  return Transform.scale(
-                    scale: scale,
-                    child: Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: LightColors.secondary.withOpacity(0.15),
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              // Main rotating loader
-              RotationTransition(
-                turns: _mainCtrl,
-                child: CustomPaint(
-                  size: const Size(88, 88),
-                  painter: _BusinessLoaderPainter(),
-                ),
-              ),
-
-              // Center logo/icon area (pulsing)
-              AnimatedBuilder(
-                animation: _pulseCtrl,
-                builder: (_, __) {
-                  final opacity = lerpDouble(0.7, 1.0, _pulseCtrl.value)!;
-                  return Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: LightColors.surface,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: LightColors.secondary.withOpacity(0.25),
-                          blurRadius: 20,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.analytics_rounded,
-                      size: 22,
-                      color: LightColors.secondary,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
+          width: 48,
+          height: 48,
+          child: _BarLoader(controller: _controller),
         ),
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 24),
 
         // Status Message
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.25),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
+          duration: const Duration(milliseconds: 300),
+          child: Text(
+            widget.statusMessage,
+            key: ValueKey(widget.statusMessage),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: LightColors.textPrimary.withOpacity(0.9),
+              fontSize: 14.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
-
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
-        // Elegant pulsing dots
-        _BusinessDots(controller: _dotCtrl),
-
-        if (widget.isOfflineMode) ...[
-          const SizedBox(height: 20),
+        if (widget.isOfflineMode)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                color: Colors.orange.withOpacity(0.25),
-              ),
+              color: Colors.orange.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.orange.withOpacity(0.3)),
             ),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.cloud_off_rounded, color: Colors.orange, size: 15),
-                SizedBox(width: 8),
+                SizedBox(width: 6),
                 Text(
-                  'Working in Offline Mode',
+                  'Offline Mode',
                   style: TextStyle(
                     color: Colors.orange,
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-        ],
       ],
     );
   }
 }
 
-// ── Custom Business Loader Painter ─────────────────────────────
-class _BusinessLoaderPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final rect = Rect.fromCircle(center: center, radius: 36);
-
-    // Light background ring
-    final bgPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..color = LightColors.secondary.withOpacity(0.08);
-
-    canvas.drawCircle(center, 36, bgPaint);
-
-    // Gradient rotating arc
-    final gradientPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.5
-      ..strokeCap = StrokeCap.round
-      ..shader = SweepGradient(
-        center: Alignment.center,
-        startAngle: 0,
-        endAngle: 2 * pi,
-        colors: [
-          LightColors.secondary.withOpacity(0.1),
-          LightColors.secondary.withOpacity(0.9),
-          LightColors.secondary.withOpacity(0.3),
-        ],
-        stops: const [0.0, 0.6, 1.0],
-      ).createShader(rect);
-
-    canvas.drawArc(
-      rect,
-      -pi / 2,           // start from top
-      2.8,               // sweep angle in radians (~160 degrees)
-      false,
-      gradientPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
-}
-
-// ── Elegant Wave Dots ───────────────────────────────────────────
-class _BusinessDots extends StatelessWidget {
+// ── CSS-inspired Vertical Bars Loader ─────────────────────────────
+class _BarLoader extends StatelessWidget {
   final AnimationController controller;
 
-  const _BusinessDots({required this.controller});
+  const _BarLoader({required this.controller});
 
   @override
   Widget build(BuildContext context) {
+    const barWidth = 5.0;
+    const barHeight = 24.0;
+    const spacing = 6.0;
+
     return AnimatedBuilder(
       animation: controller,
       builder: (_, __) {
         return Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(3, (index) {
-            final delay = index * 0.25;
+            // Staggered delay for each bar (0%, 33%, 66%)
+            final delay = index * 0.33;
             final phase = (controller.value - delay).clamp(0.0, 1.0);
-            final t = (sin(phase * 2 * pi * 1.8) + 1) / 2;
 
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: 5.5,
-              height: 5.5,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: LightColors.secondary.withOpacity(0.35 + 0.65 * t),
+            // Smooth up/down movement (similar to the CSS keyframes)
+            final animationValue = sin(phase * pi * 2) * 0.5 + 0.5; // 0.0 to 1.0
+
+            // Map to vertical position: top = 0, bottom = full height
+            final topPosition = (1 - animationValue) * (barHeight - 8);
+
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: spacing / 2),
+              child: Stack(
+                children: [
+                  // Background faint bar
+                  Container(
+                    width: barWidth,
+                    height: barHeight,
+                    decoration: BoxDecoration(
+                      color: LightColors.secondary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  // Animated foreground bar
+                  Positioned(
+                    top: topPosition,
+                    child: Container(
+                      width: barWidth,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: LightColors.secondary,
+                        borderRadius: BorderRadius.circular(3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: LightColors.secondary.withOpacity(0.4),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             );
           }),

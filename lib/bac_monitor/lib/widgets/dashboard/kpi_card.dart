@@ -253,10 +253,7 @@ class _TrendBadge extends StatelessWidget {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.35), width: 1),
-          ),
+
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
