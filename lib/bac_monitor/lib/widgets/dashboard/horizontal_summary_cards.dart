@@ -36,7 +36,7 @@ class HorizontalSummaryCards extends StatelessWidget {
 
       salesByMode.update(
         paymentMode,
-            (value) => value + amount,
+        (value) => value + amount,
         ifAbsent: () => amount,
       );
     }
@@ -44,8 +44,8 @@ class HorizontalSummaryCards extends StatelessWidget {
     final processedList = salesByMode.entries
         .map(
           (entry) =>
-          PaymentData(paymentMode: entry.key, totalAmount: entry.value),
-    )
+              PaymentData(paymentMode: entry.key, totalAmount: entry.value),
+        )
         .toList();
 
     processedList.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
@@ -67,7 +67,7 @@ class HorizontalSummaryCards extends StatelessWidget {
 
       salesByCashier.update(
         cashierName,
-            (value) => value + amount,
+        (value) => value + amount,
         ifAbsent: () => amount,
       );
     }
@@ -75,8 +75,8 @@ class HorizontalSummaryCards extends StatelessWidget {
     final processedList = salesByCashier.entries
         .map(
           (entry) =>
-          CashierData(cashierName: entry.key, totalAmount: entry.value),
-    )
+              CashierData(cashierName: entry.key, totalAmount: entry.value),
+        )
         .toList();
 
     processedList.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
@@ -99,10 +99,11 @@ class HorizontalSummaryCards extends StatelessWidget {
           children: [
             // Cashier Summary Card
             _buildSummaryCard(
+              context: context,
               title: 'Summary by Cashier',
               totalSales: cashierData.fold(
                 0.0,
-                    (sum, item) => sum + item.totalAmount,
+                (sum, item) => sum + item.totalAmount,
               ),
               items: cashierData,
               colors: _cashierColors,
@@ -113,10 +114,11 @@ class HorizontalSummaryCards extends StatelessWidget {
 
             // Payment Summary Card
             _buildSummaryCard(
-              title: 'Summary by Payment',
+              context: context,
+              title: 'Summary by Payment Methods',
               totalSales: paymentData.fold(
                 0.0,
-                    (sum, item) => sum + item.totalAmount,
+                (sum, item) => sum + item.totalAmount,
               ),
               items: paymentData,
               colors: _paymentColors,
@@ -129,6 +131,7 @@ class HorizontalSummaryCards extends StatelessWidget {
   }
 
   Widget _buildSummaryCard<T>({
+    required BuildContext context,
     required String title,
     required double totalSales,
     required List<T> items,
@@ -138,175 +141,169 @@ class HorizontalSummaryCards extends StatelessWidget {
     final double maxValue = items.isEmpty
         ? 0
         : items.fold(0.0, (max, item) {
-      final value = item is PaymentData
-          ? item.totalAmount
-          : (item as CashierData).totalAmount;
-      return value > max ? value : max;
-    });
+            final value = item is PaymentData
+                ? item.totalAmount
+                : (item as CashierData).totalAmount;
+            return value > max ? value : max;
+          });
+
+    final displayItems = items.take(5).toList();
 
     return Container(
-      width: 300,
-      padding: const EdgeInsets.all(16.0),
+      width: Get.width * 0.8,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: LightColors.card,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: LightColors.shadowLight,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(18),
+
+        // subtle border like KPI
+        border: Border.all(color: AppColors.getBorderColor(context), width: 1),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: LightColors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: LightColors.accent.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'UGX ${compactFormatter.format(totalSales)}',
-                  style: TextStyle(
-                    color: LightColors.accent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          // HEADER
+          Text(
+            title,
+            style: TextStyle(
+              color: LightColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+
+          const SizedBox(height: 6),
+
+          // TOTAL (more prominent)
+          Text(
+            'UGX ${compactFormatter.format(totalSales)}',
+            style: TextStyle(
+              color: LightColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
           const SizedBox(height: 12),
-          Divider(color: LightColors.border, height: 1),
-          const SizedBox(height: 8),
-          // Items list with bar charts
-          if (items.isEmpty)
+
+          if (displayItems.isEmpty)
             Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  'No data available',
-                  style: TextStyle(color: LightColors.textDisabled, fontSize: 12),
+                  'No data',
+                  style: TextStyle(
+                    color: LightColors.textDisabled,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             )
           else
             Column(
-              children: items.asMap().entries.map((entry) {
+              children: displayItems.asMap().entries.map((entry) {
                 final index = entry.key;
                 final data = entry.value;
                 final color = colors[index % colors.length];
+
                 final double value = data is PaymentData
                     ? data.totalAmount
                     : (data as CashierData).totalAmount;
+
                 final String name = data is PaymentData
                     ? data.paymentMode
                     : (data as CashierData).cashierName;
-                final percentage =
-                    totalSales > 0 ? (value / totalSales) * 100 : 0.0;
+
+                final percentage = totalSales > 0
+                    ? (value / totalSales) * 100
+                    : 0.0;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // LABEL ROW
                       Row(
                         children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               name,
                               style: TextStyle(
                                 color: LightColors.textPrimary,
                                 fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w600,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '${percentage.toStringAsFixed(0)}%',
-                              style: TextStyle(
-                                color: color,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
+
                           Text(
-                            'UGX ${compactFormatter.format(value)}',
+                            compactFormatter.format(value),
                             style: TextStyle(
                               color: LightColors.textPrimary,
                               fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
                       ),
+
                       const SizedBox(height: 6),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final barWidth = maxValue > 0
-                              ? (value / maxValue) * constraints.maxWidth
-                              : 0.0;
-                          return Stack(
-                            children: [
-                              Container(
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: LightColors.border,
-                                  borderRadius: BorderRadius.circular(4),
+
+                      // BAR (cleaner)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final targetWidth = maxValue > 0
+                                ? (value / maxValue) * constraints.maxWidth
+                                : 0.0;
+
+                            return Stack(
+                              children: [
+                                // Background bar
+                                Container(
+                                  height: 10,
+                                  color: LightColors.border.withOpacity(0.4),
                                 ),
-                              ),
-                              Container(
-                                height: 8,
-                                width: barWidth.isNaN ? 0 : barWidth,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(4),
-                                  gradient: LinearGradient(
-                                    colors: [color, color.withOpacity(0.6)],
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                  ),
+
+                                // Animated foreground bar
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0, end: targetWidth),
+                                  duration: const Duration(milliseconds: 800),
+                                  curve: Curves.easeOutCubic,
+                                  builder: (context, animatedWidth, child) {
+                                    return Container(
+                                      height: 10,
+                                      width: animatedWidth,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            color,
+                                            color.withOpacity(0.7),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
-                              ),
-                            ],
-                          );
-                        },
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+
+                      // PERCENT (clean text instead of badge)
+                      Text(
+                        '${percentage.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
