@@ -44,7 +44,7 @@ class DarkColors {
 
   // Text colors
   static const Color textPrimary = Color(0xFFE7E9EA);
-  static const Color textSecondary = Color(0xFF71767B);
+  static const Color textSecondary = Color(0xFFBEC4C8);
   static const Color textHint = Color(0xFF536471);
   static const Color textDisabled = Color(0xFF3E4144);
 

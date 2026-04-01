@@ -5,7 +5,10 @@ import '../../additions/colors.dart';
 import '../../controllers/mon_salestrends_controller.dart';
 import 'bar_chat.dart';
 
-Widget buildTopStoresCard(BuildContext context, MonSalesTrendsController controller) {
+Widget buildTopStoresCard(
+  BuildContext context,
+  MonSalesTrendsController controller,
+) {
   final stores = "Store";
   final cardColor = AppColors.getCardColor(context);
   final shadowColor = AppColors.getShadowLightColor(context);
@@ -14,7 +17,7 @@ Widget buildTopStoresCard(BuildContext context, MonSalesTrendsController control
 
   return Card(
     color: cardColor,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     elevation: 0,
     shadowColor: shadowColor,
     child: Padding(

@@ -52,8 +52,8 @@ class SalesTrendsSection extends StatelessWidget {
             return Container(
               height: 300,
               decoration: BoxDecoration(
-                color: LightColors.card,
-                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                color: AppColors.getCardColor(context),
+                  borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: AppColors.getBorderColor(context)
                 )
@@ -70,6 +70,7 @@ class SalesTrendsSection extends StatelessWidget {
               ),
             );
           }),
+          SizedBox(height: 8,),
           buildTopStoresCard(context, controller),
         ],
       ),

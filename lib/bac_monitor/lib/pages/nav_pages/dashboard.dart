@@ -239,9 +239,9 @@ class _DashboardState extends State<Dashboard> {
                           },
                         );
                       }),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       SalesTrendsSection(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       // Detailed KPI Section with mode selector
                       // _buildDetailedKpiSection(),
                     ],
