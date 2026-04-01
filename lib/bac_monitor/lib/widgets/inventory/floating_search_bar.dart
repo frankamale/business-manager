@@ -40,16 +40,16 @@ class _FloatingSearchBarState extends State<FloatingSearchBar> {
         focusNode: widget.focusNode,
         controller: _searchController,
         onChanged: widget.onSearchChanged,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-        cursorColor: PrimaryColors.brightYellow,
+        style: TextStyle(color: AppColors.getTextPrimaryColor(context), fontSize: 16),
+        cursorColor: AppColors.getAccentColor(context),
         decoration: InputDecoration(
           filled: true,
-          fillColor: PrimaryColors.lightBlue,
+          fillColor: AppColors.getSurfaceColor(context),
           hintText: 'Search for products...',
-          hintStyle: const TextStyle(color: Colors.white54),
+          hintStyle: TextStyle(color: AppColors.getTextHintColor(context)),
           prefixIcon: Icon(
             Icons.search,
-            color: PrimaryColors.brightYellow,
+            color: AppColors.getAccentColor(context),
             size: 24,
           ),
           border: OutlineInputBorder(

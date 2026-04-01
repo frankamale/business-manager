@@ -170,25 +170,25 @@ class _InventoryPageState extends State<InventoryPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverOverlapAbsorber(
               handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
               sliver: SliverAppBar(
-                backgroundColor: PrimaryColors.darkBlue,
+                backgroundColor: AppColors.getCardColor(context),
                 pinned: true,
                 floating: true,
                 snap: true,
                 forceElevated: innerBoxIsScrolled,
-                iconTheme: const IconThemeData(color: Colors.white),
+                iconTheme: IconThemeData(color: AppColors.getTextPrimaryColor(context)),
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildViewDropdown(),
+                    _buildViewDropdown(context),
                     const SizedBox(width: 10),
-                    _buildServicePointDropdown(),
+                    _buildServicePointDropdown(context),
                   ],
                 ),
                 expandedHeight: _selectedView == "Services" ? 120.0 : 180,
@@ -209,9 +209,9 @@ class _InventoryPageState extends State<InventoryPage>
                 bottom: _selectedView == "Inventory"
                     ? TabBar(
                         controller: _tabController,
-                        indicatorColor: PrimaryColors.brightYellow,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white54,
+                        indicatorColor: AppColors.getAccentColor(context),
+                        labelColor: AppColors.getTextPrimaryColor(context),
+                        unselectedLabelColor: AppColors.getTextSecondaryColor(context),
                         labelStyle: const TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
@@ -246,13 +246,13 @@ class _InventoryPageState extends State<InventoryPage>
     );
   }
 
-  Widget _buildViewDropdown() {
+  Widget _buildViewDropdown(BuildContext context) {
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
-        dropdownColor: PrimaryColors.lightBlue,
-        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-        style: const TextStyle(
-          color: Colors.white,
+        dropdownColor: AppColors.getCardColor(context),
+        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
+        style: TextStyle(
+          color: AppColors.getTextPrimaryColor(context),
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
@@ -272,13 +272,13 @@ class _InventoryPageState extends State<InventoryPage>
     );
   }
 
-  Widget _buildServicePointDropdown() {
+  Widget _buildServicePointDropdown(BuildContext context) {
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
-        dropdownColor: PrimaryColors.lightBlue,
-        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-        style: const TextStyle(
-          color: Colors.white,
+        dropdownColor: AppColors.getCardColor(context),
+        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
+        style: TextStyle(
+          color: AppColors.getTextPrimaryColor(context),
           fontWeight: FontWeight.w600,
           fontSize: 15,
         ),
@@ -303,18 +303,18 @@ class _InventoryPageState extends State<InventoryPage>
 
   Widget _buildInventoryList(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
+      return Center(
+        child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
       );
     }
 
     if (_filteredItems.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(24.0),
           child: Text(
             "No items found.",
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+            style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 16),
             textAlign: TextAlign.center,
           ),
         ),
