@@ -70,7 +70,7 @@ class SalesTrendsSection extends StatelessWidget {
               ),
             );
           }),
-          buildTopStoresCard(controller),
+          buildTopStoresCard(context, controller),
         ],
       ),
     );

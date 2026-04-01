@@ -58,6 +58,12 @@ class CashierSalesChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardColor = AppColors.getCardColor(context);
+    final shadowColor = AppColors.getShadowLightColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+
     final processedData = _processData();
     final double totalSales = processedData.fold(
       0.0,
@@ -72,13 +78,13 @@ class CashierSalesChart extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: LightColors.card,
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Center(
           child: Text(
             "No cashier sales data available.",
-            style: TextStyle(color: LightColors.textSecondary),
+            style: TextStyle(color: textSecondary),
           ),
         ),
       );
@@ -89,11 +95,11 @@ class CashierSalesChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: LightColors.card,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: LightColors.shadowLight,
+            color: shadowColor,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -113,7 +119,7 @@ class CashierSalesChart extends StatelessWidget {
                     Text(
                       "Summary by Cashier",
                       style: TextStyle(
-                        color: LightColors.textPrimary,
+                        color: textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -123,7 +129,7 @@ class CashierSalesChart extends StatelessWidget {
                       Text(
                         periodLabel!,
                         style: TextStyle(
-                          color: LightColors.textSecondary.withOpacity(0.7),
+                          color: textSecondary.withOpacity(0.7),
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
                         ),
@@ -138,14 +144,14 @@ class CashierSalesChart extends StatelessWidget {
                   Text(
                     'Total',
                     style: TextStyle(
-                      color: LightColors.textSecondary.withOpacity(0.7),
+                      color: textSecondary.withOpacity(0.7),
                       fontSize: 11,
                     ),
                   ),
                   Text(
                     'UGX ${compactFormatter.format(totalSales)}',
                     style: TextStyle(
-                      color: LightColors.textPrimary,
+                      color: textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -155,7 +161,7 @@ class CashierSalesChart extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Divider(color: LightColors.border),
+          Divider(color: borderColor),
           const SizedBox(height: 12),
 
           Column(
@@ -164,6 +170,7 @@ class CashierSalesChart extends StatelessWidget {
               final data = entry.value;
               final color = _barColors[index % _barColors.length];
               return _buildBarRow(
+                context: context,
                 name: data.cashierName,
                 value: data.totalAmount,
                 totalValue: totalSales,
@@ -178,12 +185,15 @@ class CashierSalesChart extends StatelessWidget {
   }
 
   Widget _buildBarRow({
+    required BuildContext context,
     required String name,
     required double value,
     required double totalValue,
     required double maxValue,
     required Color color,
   }) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final borderColor = AppColors.getBorderColor(context);
     final compactFormatter = NumberFormat.compact(locale: 'en_US');
     final formattedValue = compactFormatter.format(value);
     final percentage = totalValue > 0 ? (value / totalValue) * 100 : 0.0;
@@ -199,7 +209,7 @@ class CashierSalesChart extends StatelessWidget {
                 child: Text(
                   name,
                   style: TextStyle(
-                    color: LightColors.textPrimary,
+                    color: textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -226,7 +236,7 @@ class CashierSalesChart extends StatelessWidget {
               Text(
                 formattedValue,
                 style: TextStyle(
-                  color: LightColors.textPrimary,
+                  color: textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -242,7 +252,7 @@ class CashierSalesChart extends StatelessWidget {
                   Container(
                     height: 10,
                     decoration: BoxDecoration(
-                      color: LightColors.border,
+                      color: borderColor.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),

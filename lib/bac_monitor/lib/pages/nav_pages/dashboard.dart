@@ -170,7 +170,7 @@ class _DashboardState extends State<Dashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 2),
+                      SizedBox(height: 8,),
                       KpiOverviewSection(),
                       SizedBox(height: 8),
                       Obx(() {
@@ -184,9 +184,9 @@ class _DashboardState extends State<Dashboard> {
                           trend: controller.grossProfitTrend.value,
                         );
                       }),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                       const HorizontalSummaryCards(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
                       // Obx(() {
                       //   final controller =
                       //       Get.find<MonOutstandingPaymentsController>();

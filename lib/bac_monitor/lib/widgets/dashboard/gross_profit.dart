@@ -15,25 +15,34 @@ class GrossProfitCard extends StatelessWidget {
       decimalDigits: 0,
       symbol: '', // Remove currency symbol if you just want number
     );
+    
+    final cardColor = AppColors.getCardColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final secondaryColor = AppColors.getSecondaryColor(context);
+    final successColor = AppColors.getSuccessColor(context);
+    final errorColor = AppColors.getErrorColor(context);
+    final shadowColor = AppColors.getShadowColor(context);
+    
     // Parse trend safely
     final trendStr = trend.replaceAll('%', '').trim();
     final trendValue = double.tryParse(trendStr) ?? 0.0;
     final isPositive = trend.startsWith('+') || trendValue > 0;
-    final trendColor = isPositive
-        ? LightColors.success
-        : LightColors.error;
+    final trendColor = isPositive ? successColor : errorColor;
+    
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: LightColors.surface,
-        borderRadius: BorderRadius.circular(18),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: LightColors.textSecondary.withOpacity(0.1),
+          color: borderColor,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: shadowColor,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -45,12 +54,12 @@ class GrossProfitCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: LightColors.secondary.withOpacity(0.12),
+              color: secondaryColor.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.trending_up_rounded,
-              color: LightColors.secondary,
+              color: secondaryColor,
               size: 22,
             ),
           ),
@@ -63,7 +72,7 @@ class GrossProfitCard extends StatelessWidget {
                 Text(
                   'Gross Profit',
                   style: TextStyle(
-                    color: LightColors.textSecondary,
+                    color: textSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -71,8 +80,8 @@ class GrossProfitCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   compactFormatter.format(grossProfit),
-                  style: const TextStyle(
-                    color: LightColors.textPrimary,
+                  style: TextStyle(
+                    color: textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
@@ -110,7 +119,7 @@ class GrossProfitCard extends StatelessWidget {
               Text(
                 'vs last period',
                 style: TextStyle(
-                  color: LightColors.textSecondary.withOpacity(0.6),
+                  color: textSecondary.withOpacity(0.6),
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),

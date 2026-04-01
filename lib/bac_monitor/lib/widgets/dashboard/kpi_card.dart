@@ -26,9 +26,13 @@ class KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final primaryLight = AppColors.getPrimaryLightColor(context);
+
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         color: AppColors.getCardColor(context),
         border: Border.all(color: AppColors.getBorderColor(context)),
       ),
@@ -58,7 +62,7 @@ class KpiCard extends StatelessWidget {
                         child: Text(
                           title.toUpperCase(),
                           style: TextStyle(
-                            color: LightColors.primaryLight,
+                            color: primaryLight,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 1.4,
@@ -75,7 +79,7 @@ class KpiCard extends StatelessWidget {
                               TextSpan(
                                 text: '$unit  ',
                                 style: TextStyle(
-                                  color: LightColors.textSecondary,
+                                  color: textSecondary,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
@@ -84,7 +88,7 @@ class KpiCard extends StatelessWidget {
                             TextSpan(
                               text: value,
                               style: TextStyle(
-                                color: LightColors.textPrimary,
+                                color: textPrimary,
                                 fontSize: 26,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.5,
@@ -116,9 +120,9 @@ class KpiCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        LightColors.textPrimary.withOpacity(0),
-                        LightColors.textPrimary.withOpacity(0.18),
-                        LightColors.textPrimary.withOpacity(0),
+                        textPrimary.withOpacity(0),
+                        textPrimary.withOpacity(0.18),
+                        textPrimary.withOpacity(0),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -171,7 +175,10 @@ class _MiniKpiRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = data.accentColor ?? LightColors.info;
+    final accent = data.accentColor ?? AppColors.getInfoColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: Column(
@@ -191,7 +198,7 @@ class _MiniKpiRow extends StatelessWidget {
               Text(
                 data.label,
                 style: TextStyle(
-                  color: LightColors.textSecondary.withOpacity(0.55),
+                  color: textSecondary.withOpacity(0.55),
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.3,
@@ -207,7 +214,7 @@ class _MiniKpiRow extends StatelessWidget {
                 Text(
                   "UGX",
                   style: TextStyle(
-                    color: LightColors.textSecondary.withOpacity(0.55),
+                    color: textSecondary.withOpacity(0.55),
                     fontSize: 12,
                   ),
                 ),
@@ -215,7 +222,7 @@ class _MiniKpiRow extends StatelessWidget {
                 Text(
                   data.value,
                   style: TextStyle(
-                    color: LightColors.textPrimary,
+                    color: textPrimary,
                     fontSize: 19,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.3,
@@ -247,10 +254,12 @@ class _TrendBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUp = direction == TrendDirection.up;
-    final color = isUp ? LightColors.success : LightColors.error;
+    final color = isUp ? AppColors.getSuccessColor(context) : AppColors.getErrorColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
 
     return Row(
       children: [
+
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
 
@@ -281,7 +290,7 @@ class _TrendBadge extends StatelessWidget {
           Text(
             reference!,
             style: TextStyle(
-              color: LightColors.textSecondary.withOpacity(0.4),
+              color: textSecondary.withOpacity(0.4),
               fontSize: 10,
               fontWeight: FontWeight.w500,
             ),

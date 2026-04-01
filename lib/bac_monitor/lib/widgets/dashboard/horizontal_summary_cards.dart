@@ -138,6 +138,13 @@ class HorizontalSummaryCards extends StatelessWidget {
     required List<Color> colors,
     required NumberFormat compactFormatter,
   }) {
+    final cardColor = AppColors.getCardColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final textDisabled = AppColors.getTextDisabledColor(context);
+    final borderLightColor = AppColors.getBorderLightColor(context);
+
     final double maxValue = items.isEmpty
         ? 0
         : items.fold(0.0, (max, item) {
@@ -153,11 +160,11 @@ class HorizontalSummaryCards extends StatelessWidget {
       width: Get.width * 0.8,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: LightColors.card,
-        borderRadius: BorderRadius.circular(18),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
 
         // subtle border like KPI
-        border: Border.all(color: AppColors.getBorderColor(context), width: 1),
+        border: Border.all(color: borderColor, width: 1),
       ),
 
       child: Column(
@@ -167,7 +174,7 @@ class HorizontalSummaryCards extends StatelessWidget {
           Text(
             title,
             style: TextStyle(
-              color: LightColors.textSecondary,
+              color: textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
@@ -179,7 +186,7 @@ class HorizontalSummaryCards extends StatelessWidget {
           Text(
             'UGX ${compactFormatter.format(totalSales)}',
             style: TextStyle(
-              color: LightColors.textPrimary,
+              color: textPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w800,
             ),
@@ -194,7 +201,7 @@ class HorizontalSummaryCards extends StatelessWidget {
                 child: Text(
                   'No data',
                   style: TextStyle(
-                    color: LightColors.textDisabled,
+                    color: textDisabled,
                     fontSize: 12,
                   ),
                 ),
@@ -231,7 +238,7 @@ class HorizontalSummaryCards extends StatelessWidget {
                             child: Text(
                               name,
                               style: TextStyle(
-                                color: LightColors.textPrimary,
+                                color: textPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -242,7 +249,7 @@ class HorizontalSummaryCards extends StatelessWidget {
                           Text(
                             compactFormatter.format(value),
                             style: TextStyle(
-                              color: LightColors.textPrimary,
+                              color: textPrimary,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                             ),
@@ -266,7 +273,7 @@ class HorizontalSummaryCards extends StatelessWidget {
                                 // Background bar
                                 Container(
                                   height: 10,
-                                  color: LightColors.border.withOpacity(0.4),
+                                  color: borderLightColor.withOpacity(0.4),
                                 ),
 
                                 // Animated foreground bar

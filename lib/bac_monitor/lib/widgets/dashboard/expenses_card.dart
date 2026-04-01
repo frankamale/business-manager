@@ -22,16 +22,20 @@ class ExpensesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final compactFormatter = NumberFormat.compact();
     final totalExpenses = stockExpenses + nonStockExpenses;
+    final cardColor = AppColors.getCardColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: LightColors.card,
-        borderRadius: BorderRadius.circular(18),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
 
         // match your other cards
         border: Border.all(
-          color: AppColors.getBorderColor(context),
+          color: borderColor,
         ),
       ),
 
@@ -45,7 +49,7 @@ class ExpensesCard extends StatelessWidget {
               Text(
                 'Expenses',
                 style: TextStyle(
-                  color: LightColors.textSecondary,
+                  color: textSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -53,7 +57,7 @@ class ExpensesCard extends StatelessWidget {
               Text(
                 periodLabel,
                 style: TextStyle(
-                  color: LightColors.textSecondary.withOpacity(0.6),
+                  color: textSecondary.withOpacity(0.6),
                   fontSize: 11,
                 ),
               ),
@@ -66,7 +70,7 @@ class ExpensesCard extends StatelessWidget {
           Text(
             'UGX ${compactFormatter.format(totalExpenses)}',
             style: TextStyle(
-              color: LightColors.textPrimary,
+              color: textPrimary,
               fontSize: 26,
               fontWeight: FontWeight.w800,
             ),
@@ -79,6 +83,7 @@ class ExpensesCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _miniCategoryCard(
+                  context: context,
                   label: 'Stock',
                   amount: stockExpenses,
                   color: Colors.orange,
@@ -92,6 +97,7 @@ class ExpensesCard extends StatelessWidget {
 
               Expanded(
                 child: _miniCategoryCard(
+                  context: context,
                   label: 'Non-Stock',
                   amount: nonStockExpenses,
                   color: Colors.purple,
@@ -108,6 +114,7 @@ class ExpensesCard extends StatelessWidget {
   }
 
   Widget _miniCategoryCard({
+    required BuildContext context,
     required String label,
     required double amount,
     required Color color,
@@ -115,6 +122,8 @@ class ExpensesCard extends StatelessWidget {
     required NumberFormat formatter,
     VoidCallback? onTap,
   }) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -157,7 +166,7 @@ class ExpensesCard extends StatelessWidget {
             Text(
               formatter.format(amount),
               style: TextStyle(
-                color: LightColors.textPrimary,
+                color: textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),

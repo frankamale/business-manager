@@ -37,37 +37,37 @@ class LightColors {
 
 /// Primary brand colors - Dark Mode
 class DarkColors {
-  // Background colors - Clean dark
-  static const Color background = Color(0xFF121212);
-  static const Color surface = Color(0xFF1E1E1E);
-  static const Color card = Color(0xFF2A2A2A);
-  
+  // Background colors - True OLED black (X-style)
+  static const Color background = Color(0xFF000000);
+  static const Color surface = Color(0xFF16181C);
+  static const Color card = Color(0xFF1E2328);
+
   // Text colors
-  static const Color textPrimary = Color(0xFFF5F5F5);
-  static const Color textSecondary = Color(0xFF9CA3AF);
-  static const Color textHint = Color(0xFF6B7280);
-  static const Color textDisabled = Color(0xFF4B5563);
-  
-  // Brand colors (adjusted for dark mode)
-  static const Color primary = Color(0xFFF5F5F5);
-  static const Color primaryLight = Color(0xFFE0E0E0);
-  static const Color primaryDark = Color(0xFF121212);
-  static const Color secondary = Color(0xFF40C4B4);
-  static const Color accent = Color(0xFFFFD54F);
-  
+  static const Color textPrimary = Color(0xFFE7E9EA);
+  static const Color textSecondary = Color(0xFF71767B);
+  static const Color textHint = Color(0xFF536471);
+  static const Color textDisabled = Color(0xFF3E4144);
+
+  // Brand colors
+  static const Color primary = Color(0xFFE7E9EA);
+  static const Color primaryLight = Color(0xFFD1D5DB);
+  static const Color primaryDark = Color(0xFF000000);
+  static const Color secondary = Color(0xFF1D9BF0);   // X blue
+  static const Color accent = Color(0xFFFFD700);
+
   // Border colors
-  static const Color border = Color(0xFF374151);
-  static const Color borderLight = Color(0xFF2D3748);
-  
-  // Status colors (adjusted for dark mode)
-  static const Color success = Color(0xFF34D399);
-  static const Color warning = Color(0xFFFBBF24);
-  static const Color error = Color(0xFFF87171);
-  static const Color info = Color(0xFF60A5FA);
-  
+  static const Color border = Color(0xFF2F3336);
+  static const Color borderLight = Color(0xFF1E2328);
+
+  // Status colors
+  static const Color success = Color(0xFF00BA7C);
+  static const Color warning = Color(0xFFFF7A00);
+  static const Color error = Color(0xFFF4212E);
+  static const Color info = Color(0xFF1D9BF0);
+
   // Shadow colors
-  static const Color shadow = Color(0x4D000000);
-  static const Color shadowLight = Color(0x33000000);
+  static const Color shadow = Color(0x66000000);
+  static const Color shadowLight = Color(0x40000000);
 }
 
 /// Legacy color support - deprecated, use LightColors or DarkColors instead

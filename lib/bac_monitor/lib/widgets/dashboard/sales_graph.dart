@@ -10,34 +10,40 @@ class DailySalesLineChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final surfaceColor = AppColors.getSurfaceColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+    final accentColor = AppColors.getAccentColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+
     return AspectRatio(
       aspectRatio: 1.7,
       child: LineChart(
         LineChartData(
-          backgroundColor: LightColors.surface.withOpacity(0.1),
-          lineBarsData: [_mainLine()],
+          backgroundColor: surfaceColor.withOpacity(0.1),
+          lineBarsData: [_mainLine(context)],
           borderData: FlBorderData(
             show: true,
             border: Border(
               left: BorderSide(
-                color: LightColors.border.withOpacity(0.5),
+                color: borderColor.withOpacity(0.5),
                 width: 1,
                 style: BorderStyle.solid,
               ),
               bottom: BorderSide(
-                color: LightColors.border.withOpacity(0.5),
+                color: borderColor.withOpacity(0.5),
                 width: 1,
                 style: BorderStyle.solid,
               ),
             ),
           ),
-          gridData: _mainGridData(),
+          gridData: _mainGridData(context),
           titlesData: FlTitlesData(
             show: true,
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                getTitlesWidget: _leftTitles,
+                getTitlesWidget: (value, meta) => _leftTitles(value, meta, context),
                 reservedSize: 40,
                 interval:
                     (salesData.isNotEmpty
@@ -52,7 +58,7 @@ class DailySalesLineChart extends StatelessWidget {
               axisNameWidget: Text(
                 'Sales', // Match axis name
                 style: TextStyle(
-                  color: LightColors.accent,
+                  color: accentColor,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -68,14 +74,14 @@ class DailySalesLineChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                getTitlesWidget: _bottomTitles,
+                getTitlesWidget: (value, meta) => _bottomTitles(value, meta, context),
                 reservedSize: 38,
                 interval: 1,
               ),
               axisNameWidget: Text(
                 'Day', // Match axis name
                 style: TextStyle(
-                  color: LightColors.accent,
+                  color: accentColor,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -83,18 +89,19 @@ class DailySalesLineChart extends StatelessWidget {
               axisNameSize: 24,
             ),
           ),
-          lineTouchData: _mainTouchData(),
+          lineTouchData: _mainTouchData(context),
         ),
       ),
     );
   }
 
   /// Creates the main line for the chart from the sales data.
-  LineChartBarData _mainLine() {
+  LineChartBarData _mainLine(BuildContext context) {
+    final accentColor = AppColors.getAccentColor(context);
     return LineChartBarData(
       spots: _getSpots(),
       isCurved: true,
-      color: LightColors.accent,
+      color: accentColor,
       barWidth: 4,
       isStrokeCapRound: true,
       dotData: const FlDotData(show: false),
@@ -102,8 +109,8 @@ class DailySalesLineChart extends StatelessWidget {
         show: true,
         gradient: LinearGradient(
           colors: [
-            LightColors.accent.withOpacity(0.3),
-            LightColors.accent.withOpacity(0.0),
+            accentColor.withOpacity(0.3),
+            accentColor.withOpacity(0.0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -122,7 +129,8 @@ class DailySalesLineChart extends StatelessWidget {
   }
 
   /// Configures the grid lines.
-  FlGridData _mainGridData() {
+  FlGridData _mainGridData(BuildContext context) {
+    final borderColor = AppColors.getBorderColor(context);
     return FlGridData(
       show: true,
       drawVerticalLine: false,
@@ -139,7 +147,7 @@ class DailySalesLineChart extends StatelessWidget {
       // Match dynamic interval
       getDrawingHorizontalLine: (value) {
         return FlLine(
-          color: LightColors.border.withOpacity(0.3),
+          color: borderColor.withOpacity(0.3),
           strokeWidth: 1,
           dashArray: [5, 5],
         );
@@ -148,7 +156,9 @@ class DailySalesLineChart extends StatelessWidget {
   }
 
   /// Configures the tooltips that appear on touch.
-  LineTouchData _mainTouchData() {
+  LineTouchData _mainTouchData(BuildContext context) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
     return LineTouchData(
       touchTooltipData: LineTouchTooltipData(
         getTooltipItems: (List<LineBarSpot> touchedSpots) {
@@ -157,12 +167,12 @@ class DailySalesLineChart extends StatelessWidget {
             final sales = spot.y.toStringAsFixed(2);
             return LineTooltipItem(
               '$day\n',
-              TextStyle(color: LightColors.textPrimary, fontWeight: FontWeight.bold),
+              TextStyle(color: textPrimary, fontWeight: FontWeight.bold),
               children: [
                 TextSpan(
                   text: '\$$sales',
                   style: TextStyle(
-                    color: LightColors.textSecondary,
+                    color: textSecondary,
                     fontWeight: FontWeight.normal,
                   ),
                 ),
@@ -175,8 +185,9 @@ class DailySalesLineChart extends StatelessWidget {
   }
 
   /// Creates the labels for the bottom (X) axis.
-  Widget _bottomTitles(double value, TitleMeta meta) {
+  Widget _bottomTitles(double value, TitleMeta meta, BuildContext context) {
     final int index = value.toInt();
+    final textPrimary = AppColors.getTextPrimaryColor(context);
     if (index < 0 || index >= salesData.length) {
       return const Text('');
     }
@@ -186,7 +197,7 @@ class DailySalesLineChart extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          color: LightColors.textPrimary,
+          color: textPrimary,
           fontSize: 12,
           fontWeight: FontWeight.normal,
         ),
@@ -195,12 +206,13 @@ class DailySalesLineChart extends StatelessWidget {
   }
 
   /// Creates the labels for the left (Y) axis.
-  Widget _leftTitles(double value, TitleMeta meta) {
+  Widget _leftTitles(double value, TitleMeta meta, BuildContext context) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
     final String text = value.toInt().toString();
     return Text(
       text,
       style: TextStyle(
-        color: LightColors.textPrimary,
+        color: textPrimary,
         fontSize: 12,
       ),
     );

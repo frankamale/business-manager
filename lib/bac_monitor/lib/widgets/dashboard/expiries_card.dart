@@ -5,12 +5,17 @@ import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_salestrends_controller.dart';
 
-Widget buildExpiriesCard(MonSalesTrendsController controller) {
+Widget buildExpiriesCard(BuildContext context, MonSalesTrendsController controller) {
+  final cardColor = AppColors.getCardColor(context);
+  final shadowColor = AppColors.getShadowLightColor(context);
+  final textPrimary = AppColors.getTextPrimaryColor(context);
+  final textSecondary = AppColors.getTextSecondaryColor(context);
+
   return Card(
-    color: LightColors.card,
+    color: cardColor,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     elevation: 0,
-    shadowColor: LightColors.shadowLight,
+    shadowColor: shadowColor,
     child: Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
@@ -19,7 +24,7 @@ Widget buildExpiriesCard(MonSalesTrendsController controller) {
           Text(
             "Expiries",
             style: TextStyle(
-              color: LightColors.textPrimary,
+              color: textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -40,12 +45,12 @@ Widget buildExpiriesCard(MonSalesTrendsController controller) {
                   child: Text(
                     'Product expiry data is not available.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: LightColors.textSecondary),
+                    style: TextStyle(color: textSecondary),
                   ),
                 ),
               );
             }
-            return CategorizedStockAlertsList(alerts: controller.expiries.toList());
+            return CategorizedStockAlertsList(context: context, alerts: controller.expiries.toList());
           }),
         ],
       ),
