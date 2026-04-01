@@ -19,6 +19,7 @@ import '../../controllers/mon_salestrends_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
 import '../../../../shared/database/unified_db_helper.dart';
+import '../../widgets/more/splash_loader.dart';
 import '../bottom_nav.dart';
 
 class SplashPage extends StatefulWidget {
@@ -630,10 +631,9 @@ class _SplashPageState extends State<SplashPage> {
               );
             }),
             const SizedBox(height: 40),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                PrimaryColors.brightYellow,
-              ),
+            MonSplashLoader(
+              statusMessage: _statusMessage,
+              isOfflineMode: _isOfflineMode,
             ),
             const SizedBox(height: 16),
             Text(

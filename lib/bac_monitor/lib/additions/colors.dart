@@ -40,7 +40,7 @@ class DarkColors {
   // Background colors - Clean dark
   static const Color background = Color(0xFF121212);
   static const Color surface = Color(0xFF1E1E1E);
-  static const Color card = Color(0xFFEFEFEF);
+  static const Color card = Color(0xFF2A2A2A);
   
   // Text colors
   static const Color textPrimary = Color(0xFFF5F5F5);
