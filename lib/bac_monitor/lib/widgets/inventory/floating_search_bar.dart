@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../additions/colors.dart';
+import '../../controllers/mon_inventory_controller.dart';
 
 class FloatingSearchBar extends StatefulWidget {
   final Function(String) onSearchChanged;
@@ -16,20 +18,17 @@ class _FloatingSearchBarState extends State<FloatingSearchBar> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    widget.focusNode.addListener(() {
-      if (!widget.focusNode.hasFocus && _searchController.text.isNotEmpty) {
-        _searchController.clear();
-        widget.onSearchChanged('');
-      }
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    if (Get.isRegistered<MonInventoryController>()) {
+      Get.find<MonInventoryController>().clearSearch();
+    }
+    widget.onSearchChanged('');
   }
 
   @override
@@ -51,6 +50,17 @@ class _FloatingSearchBarState extends State<FloatingSearchBar> {
             Icons.search,
             color: AppColors.getAccentColor(context),
             size: 24,
+          ),
+          suffixIcon: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _searchController,
+            builder: (context, value, child) {
+              return value.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: _clearSearch,
+                    )
+                  : const SizedBox.shrink();
+            },
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(30.0),

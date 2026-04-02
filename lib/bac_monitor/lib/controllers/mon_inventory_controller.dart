@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:isolate';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../models/inventory_data.dart';
+import '../services/kpi_sync_service.dart';
 
 class MonInventoryController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
@@ -105,6 +108,78 @@ class MonInventoryController extends GetxController {
     _currentPage = 0;
     hasMoreItems.value = true;
     await loadInventoryFromDb();
+  }
+
+  /// Fetch inventory from server, save to DB, then reload first page
+  Future<void> refreshInventoryFromServer() async {
+    try {
+      debugPrint('MonInventoryController: Fetching inventory from server...');
+      isLoading.value = true;
+      
+      // Fetch from API via KpiSyncService
+      final kpiSyncService = Get.isRegistered<KpiSyncService>() 
+          ? Get.find<KpiSyncService>() 
+          : null;
+      
+      if (kpiSyncService != null) {
+        final result = await kpiSyncService.fetchBaselineDatasets();
+        
+        if (result.inventory.isNotEmpty) {
+          debugPrint('MonInventoryController: Got ${result.inventory.length} items from server');
+          
+          // Store to DB in chunks
+          final dbHelper = UnifiedDatabaseHelper.instance;
+          await dbHelper.deleteAllMonInventoryItems();
+          
+          const mapChunkSize = 1000;
+          const insertBatchSize = 500;
+          int totalItems = result.inventory.length;
+          
+          for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {
+            final chunkEnd = (chunkStart + mapChunkSize < totalItems) 
+                ? chunkStart + mapChunkSize 
+                : totalItems;
+            final chunk = result.inventory.sublist(chunkStart, chunkEnd);
+            
+            final mappedChunk = await compute(
+              (List<dynamic> items) => items
+                  .map((e) => Map<String, dynamic>.from(e as Map))
+                  .toList(),
+              chunk,
+            );
+            
+            for (int i = 0; i < mappedChunk.length; i += insertBatchSize) {
+              final batch = mappedChunk.skip(i).take(insertBatchSize).toList();
+              await dbHelper.insertMonInventoryItems(batch);
+              if (i + insertBatchSize < mappedChunk.length) {
+                await Future.delayed(const Duration(milliseconds: 50));
+              }
+            }
+            
+            await Future.delayed(const Duration(milliseconds: 50));
+          }
+          
+          debugPrint('MonInventoryController: Stored $totalItems items to DB');
+        }
+      }
+      
+      // Reset pagination and reload first page
+      _currentPage = 0;
+      hasMoreItems.value = true;
+      inventoryItems.clear();
+      
+      final db = _dbHelper.database;
+      final countResult = await db.rawQuery('SELECT COUNT(*) as count FROM mon_inventory');
+      _totalItemCount = countResult.first['count'] as int? ?? 0;
+      
+      await _loadNextPage();
+      
+      debugPrint('MonInventoryController: Refreshed inventory from server, loaded ${inventoryItems.length} items');
+    } catch (e) {
+      debugPrint('MonInventoryController: Error refreshing from server - $e');
+    } finally {
+      isLoading.value = false;
+    }
   }
   
   /// Get current load progress for display

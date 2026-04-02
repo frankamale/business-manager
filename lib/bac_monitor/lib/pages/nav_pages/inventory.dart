@@ -123,29 +123,7 @@ class _InventoryPageState extends State<InventoryPage>
 
   /// Fetch inventory from server and store in DB, then reload from DB
   Future<void> _refreshInventoryFromServer() async {
-    try {
-      final apiService = Get.find<MonitorApiService>();
-      
-      // Fetch inventory from server
-      final response = await apiService.getWithAuth('/inventory/');
-      if (response.body.isNotEmpty) {
-        final inventoryData = json.decode(response.body) as List;
-        final items = inventoryData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        
-        // Store in database
-        await _dbHelper.deleteAllMonInventoryItems();
-        await _dbHelper.insertMonInventoryItems(items);
-        
-        debugPrint("InventoryPage: Fetched and stored ${items.length} inventory items from server");
-      }
-      
-      // Reload from database using controller
-      await _inventoryController.refreshInventory();
-    } catch (e) {
-      debugPrint("InventoryPage: Error refreshing inventory from server: $e");
-      // Fall back to loading from local DB
-      await _inventoryController.refreshInventory();
-    }
+    await _inventoryController.refreshInventoryFromServer();
   }
 
   void _handleTabChange() {
@@ -159,7 +137,6 @@ class _InventoryPageState extends State<InventoryPage>
 
   void _handleSearchChanged(String query) {
     _inventoryController.searchInventory(query);
-    if (query.isEmpty) _searchFocusNode.unfocus();
   }
 
   List<MonitorInventoryItem> _getFilteredItems() {
