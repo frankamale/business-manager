@@ -84,6 +84,13 @@ class _InventoryPageState extends State<InventoryPage>
     });
   }
 
+  /// Build search results into MonitorInventoryItem list
+  List<MonitorInventoryItem> _buildSearchResults() {
+    return _inventoryController.searchResults
+        .map((e) => MonitorInventoryItem.fromJson(e))
+        .toList();
+  }
+
   Future<void> _loadServicePoints() async {
     try {
       final db = _dbHelper.database;
@@ -151,14 +158,8 @@ class _InventoryPageState extends State<InventoryPage>
   }
 
   void _handleSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      setState(() {
-        _searchQuery = query.toLowerCase();
-        _filteredItems = _getFilteredItems();
-        if (_searchQuery.isEmpty) _searchFocusNode.unfocus();
-      });
-    });
+    _inventoryController.searchInventory(query);
+    if (query.isEmpty) _searchFocusNode.unfocus();
   }
 
   List<MonitorInventoryItem> _getFilteredItems() {
@@ -344,59 +345,77 @@ class _InventoryPageState extends State<InventoryPage>
   }
 
   Widget _buildInventoryList(BuildContext context) {
-    if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
-      );
-    }
+    return Obx(() {
+      final isSearching = _inventoryController.isSearching.value;
+      final searchResults = _inventoryController.searchResults;
+      final inventoryItems = _inventoryController.inventoryItems;
+      final hasMore = _inventoryController.hasMoreItems.value;
 
-    if (_filteredItems.isEmpty && !_inventoryController.hasMoreItems.value) {
-      return Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text(
-            "No items found.",
-            style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
+      // Use search results when searching, otherwise use normal inventory
+      final List<MonitorInventoryItem> displayItems;
+      if (searchResults.isNotEmpty) {
+        displayItems = searchResults
+            .map((e) => MonitorInventoryItem.fromJson(e))
+            .toList();
+      } else {
+        displayItems = _filteredItems;
+      }
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification scrollInfo) {
-        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent * 0.8) {
-          // User scrolled to 80% of the list - load more
-          if (_inventoryController.hasMoreItems.value && !_inventoryController.isLoading.value) {
-            _inventoryController.loadMoreInventory();
-          }
-        }
-        return false;
-      },
-      child: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          SliverOverlapInjector(
-            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
-            sliver: SliverToBoxAdapter(
-              child: InventoryDataTable(items: _filteredItems, isServicesView: _selectedView == "Services"),
+      if (_isLoading && displayItems.isEmpty) {
+        return Center(
+          child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
+        );
+      }
+
+      if (displayItems.isEmpty && !hasMore) {
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Text(
+              "No items found.",
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 16),
+              textAlign: TextAlign.center,
             ),
           ),
-          // Loading indicator at bottom when loading more
-          if (_inventoryController.isLoading.value && _filteredItems.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
-                ),
+        );
+      }
+
+      return NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scrollInfo) {
+          // Only load more for normal inventory, not search results
+          if (searchResults.isEmpty &&
+              scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent * 0.8) {
+            if (_inventoryController.hasMoreItems.value && !_inventoryController.isLoading.value) {
+              _inventoryController.loadMoreInventory();
+            }
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverOverlapInjector(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
+              sliver: SliverToBoxAdapter(
+                child: InventoryDataTable(items: displayItems, isServicesView: _selectedView == "Services"),
               ),
             ),
-        ],
-      ),
-    );
+            // Loading indicator at bottom when loading more
+            if (_inventoryController.isLoading.value && displayItems.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
   }
 }

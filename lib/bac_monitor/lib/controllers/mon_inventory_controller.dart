@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import '../../../shared/database/unified_db_helper.dart';
@@ -15,6 +16,12 @@ class MonInventoryController extends GetxController {
   static const int pageSize = 100;
   int _currentPage = 0;
   int _totalItemCount = 0;
+  
+  // Search state
+  var searchResults = <Map<String, dynamic>>[].obs;
+  var isSearching = false.obs;
+  String _currentSearchQuery = '';
+  Timer? _searchDebounceTimer;
   
   @override
   void onInit() {
@@ -104,5 +111,73 @@ class MonInventoryController extends GetxController {
   String getLoadProgress() {
     if (_totalItemCount == 0) return '0 items';
     return '${inventoryItems.length}/$_totalItemCount items';
+  }
+
+  /// Search inventory directly from database with debouncing
+  /// [query] - Search term (matches name, code, or barcode fields)
+  void searchInventory(String query) {
+    _currentSearchQuery = query;
+    
+    // Cancel previous timer
+    _searchDebounceTimer?.cancel();
+    
+    if (query.isEmpty) {
+      searchResults.clear();
+      isSearching.value = false;
+      return;
+    }
+    
+    isSearching.value = true;
+    
+    // Debounce: wait 300ms before executing search
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      await _executeSearch(query);
+    });
+  }
+
+  /// Internal method to execute the database search
+  Future<void> _executeSearch(String query) async {
+    try {
+      final db = _dbHelper.database;
+      final searchPattern = '%$query%';
+      
+      debugPrint('MonInventoryController: Searching DB for "$query"');
+      
+      // Search across name, code, and barcode fields
+      final result = await db.rawQuery(
+        '''
+        SELECT * FROM mon_inventory 
+        WHERE name LIKE ? OR code LIKE ? OR barcode LIKE ?
+        LIMIT 200
+        ''',
+        [searchPattern, searchPattern, searchPattern],
+      );
+      
+      searchResults.assignAll(result);
+      debugPrint('MonInventoryController: Search returned ${result.length} results');
+    } catch (e) {
+      debugPrint('MonInventoryController: Search error - $e');
+      searchResults.clear();
+    } finally {
+      isSearching.value = false;
+    }
+  }
+
+  /// Clear search and return to normal browsing
+  void clearSearch() {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = null;
+    _currentSearchQuery = '';
+    searchResults.clear();
+    isSearching.value = false;
+  }
+
+  /// Get current search query (for TextField controller sync)
+  String get currentSearchQuery => _currentSearchQuery;
+
+  @override
+  void onClose() {
+    _searchDebounceTimer?.cancel();
+    super.onClose();
   }
 }
