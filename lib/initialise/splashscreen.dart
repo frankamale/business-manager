@@ -19,6 +19,8 @@ import '../bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
 import '../bac_monitor/lib/controllers/mon_outstanding_payments_controller.dart';
 import '../bac_monitor/lib/controllers/mon_inventory_controller.dart';
 import '../bac_monitor/lib/services/api_services.dart';
+import '../bac_monitor/lib/services/sync_state_manager.dart';
+import '../bac_monitor/lib/services/sync_state_manager.dart';
 import '../shared/database/unified_db_helper.dart';
 import '../bac_monitor/lib/pages/bottom_nav.dart';
 
@@ -301,6 +303,20 @@ class ConnectivityController extends GetxController {
 
       // Load inventory from database
       await inventoryController.loadInventoryFromDb();
+
+      // Fetch KPI data so the dashboard shows actual values
+      if (Get.isRegistered<MonKpiOverviewController>()) {
+        final kpiController = Get.find<MonKpiOverviewController>();
+        await kpiController.fetchKpiData();
+        debugPrint('SplashScreen: KPI data fetched - totalSales: ${kpiController.totalSales.value}');
+      }
+
+      // Register SyncStateManager and mark today's data as loaded
+      // so the dashboard doesn't try to re-fetch
+      if (!Get.isRegistered<SyncStateManager>()) {
+        Get.put(SyncStateManager(), permanent: true);
+      }
+      Get.find<SyncStateManager>().markTodayDataLoaded();
 
       debugPrint('SplashScreen: Data loaded from database successfully');
     } catch (e) {

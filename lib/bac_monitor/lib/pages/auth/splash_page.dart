@@ -576,13 +576,17 @@ class _SplashPageState extends State<SplashPage> {
         debugPrint('SplashPage: Customers loaded successfully - Total: ${customerController.customers.length}');
       }
 
-      // Print customer count from KPI controller after data is loaded
-      if (Get.isRegistered<MonKpiOverviewController>()) {
-        final kpiController = Get.find<MonKpiOverviewController>();
-        // Trigger KPI data fetch to populate activeMembers
-        await kpiController.fetchKpiData();
-        print("Total customers \${kpiController.activeMembers.value}");
+      // Ensure MonKpiOverviewController is registered so it can fetch data
+      // before markTodayDataLoaded() is called
+      MonKpiOverviewController kpiController;
+      if (!Get.isRegistered<MonKpiOverviewController>()) {
+        kpiController = Get.put(MonKpiOverviewController(), permanent: true);
+      } else {
+        kpiController = Get.find<MonKpiOverviewController>();
       }
+      // Trigger KPI data fetch to populate activeMembers
+      await kpiController.fetchKpiData();
+      debugPrint("Total customers ${kpiController.activeMembers.value}");
 
       // Mark today's data as loaded so controllers don't re-fetch
       if (Get.isRegistered<SyncStateManager>()) {

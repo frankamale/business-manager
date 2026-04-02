@@ -188,16 +188,7 @@ class _MoreState extends State<More> {
                     color: AppColors.getTextPrimaryColor(context),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please wait...',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.getTextSecondaryColor(context),
-                    height: 1.4,
-                  ),
-                ),
+
                 const SizedBox(height: 16),
 
                 // Optional subtle progress hint (fake or real)

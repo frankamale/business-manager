@@ -72,7 +72,9 @@ class _DashboardState extends State<Dashboard> {
     Get.put(MonOutstandingPaymentsController());
     Get.put(MonGrossProfitController());
     Get.put(MonSalesTrendsController());
-    Get.put(MonKpiOverviewController());
+    if (!Get.isRegistered<MonKpiOverviewController>()) {
+      Get.put(MonKpiOverviewController());
+    }
     // Initialize MonKpiController for detailed KPI data
     Get.put(MonKpiController());
   }
