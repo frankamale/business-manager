@@ -6,6 +6,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../additions/colors.dart';
 import '../../../../shared/database/unified_db_helper.dart';
+import '../../controllers/mon_inventory_controller.dart';
 import '../../models/inventory_data.dart';
 import '../../models/service_points.dart';
 import '../../services/api_services.dart';
@@ -22,6 +23,7 @@ class InventoryPage extends StatefulWidget {
 class _InventoryPageState extends State<InventoryPage>
     with SingleTickerProviderStateMixin {
   final _dbHelper = UnifiedDatabaseHelper.instance;
+  late MonInventoryController _inventoryController;
 
   List<MonitorInventoryItem> _allItems = [];
   List<MonitorInventoryItem> _filteredItems = [];
@@ -44,7 +46,21 @@ class _InventoryPageState extends State<InventoryPage>
     _searchFocusNode = FocusNode();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
-    _loadInventoryFromDb();
+    
+    // Initialize controller
+    if (Get.isRegistered<MonInventoryController>()) {
+      _inventoryController = Get.find<MonInventoryController>();
+    } else {
+      _inventoryController = Get.put(MonInventoryController());
+    }
+    
+    // Listen to controller changes
+    _inventoryController.inventoryItems.listen((_) {
+      if (mounted) {
+        _applyFiltersFromController();
+      }
+    });
+    
     _loadServicePoints();
   }
 
@@ -55,6 +71,14 @@ class _InventoryPageState extends State<InventoryPage>
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _applyFiltersFromController() {
+    setState(() {
+      _allItems = List.from(_inventoryController.inventoryItems);
+      _filteredItems = _getFilteredItems();
+      _isLoading = _inventoryController.isLoading.value && _allItems.isEmpty;
+    });
   }
 
   Future<void> _loadServicePoints() async {
@@ -105,28 +129,12 @@ class _InventoryPageState extends State<InventoryPage>
         debugPrint("InventoryPage: Fetched and stored ${items.length} inventory items from server");
       }
       
-      // Reload from database
-      await _loadInventoryFromDb();
+      // Reload from database using controller
+      await _inventoryController.refreshInventory();
     } catch (e) {
       debugPrint("InventoryPage: Error refreshing inventory from server: $e");
       // Fall back to loading from local DB
-      await _loadInventoryFromDb();
-    }
-  }
-
-  Future<void> _loadInventoryFromDb() async {
-    setState(() => _isLoading = true);
-    try {
-      final db = _dbHelper.database;
-      final List<Map<String, dynamic>> maps = await db.query('mon_inventory');
-      _allItems = maps.map((map) => MonitorInventoryItem.fromJson(map)).toList();
-      setState(() {
-        _filteredItems = _getFilteredItems();
-        _isLoading = false;
-      });
-    } catch (e) {
-      debugPrint("Error loading inventory from DB: $e");
-      setState(() => _isLoading = false);
+      await _inventoryController.refreshInventory();
     }
   }
 
@@ -247,9 +255,10 @@ class _InventoryPageState extends State<InventoryPage>
                         ),
                         indicatorWeight: 3.0,
                         tabs: const [
+                          Tab(text: 'All Items'),
                           Tab(text: 'Low Stock'),
                           Tab(text: 'Overstocked'),
-                          Tab(text: 'All Items'),
+
                         ],
                       )
                     : null,
@@ -338,7 +347,7 @@ class _InventoryPageState extends State<InventoryPage>
       );
     }
 
-    if (_filteredItems.isEmpty) {
+    if (_filteredItems.isEmpty && !_inventoryController.hasMoreItems.value) {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(24.0),
@@ -351,19 +360,40 @@ class _InventoryPageState extends State<InventoryPage>
       );
     }
 
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverOverlapInjector(
-          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
-          sliver:  SliverToBoxAdapter(
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification scrollInfo) {
+        if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent * 0.8) {
+          // User scrolled to 80% of the list - load more
+          if (_inventoryController.hasMoreItems.value && !_inventoryController.isLoading.value) {
+            _inventoryController.loadMoreInventory();
+          }
+        }
+        return false;
+      },
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverOverlapInjector(
+            handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
+            sliver: SliverToBoxAdapter(
               child: InventoryDataTable(items: _filteredItems, isServicesView: _selectedView == "Services"),
             ),
           ),
-      ],
+          // Loading indicator at bottom when loading more
+          if (_inventoryController.isLoading.value && _filteredItems.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

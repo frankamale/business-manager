@@ -67,8 +67,11 @@ class _MoreState extends State<More> {
               companyName: _profileController.companyName,
               avatarInitial: _profileController.userInitial,
             ),
- 
-            SectionHeader(title: "ACCOUNT", textColor: AppColors.getTextSecondaryColor(context)),
+
+            SectionHeader(
+              title: "ACCOUNT",
+              textColor: AppColors.getTextSecondaryColor(context),
+            ),
 
             MoreListItem(
               title: "Profile & Settings",
@@ -90,7 +93,11 @@ class _MoreState extends State<More> {
               onTap: () => _showReloadDataDialog(context),
             ),
 
-            Divider(color: AppColors.getBorderColor(context), indent: 16, endIndent: 16),
+            Divider(
+              color: AppColors.getBorderColor(context),
+              indent: 16,
+              endIndent: 16,
+            ),
             const SizedBox(height: 8),
 
             MoreListItem(
@@ -101,7 +108,7 @@ class _MoreState extends State<More> {
             ),
 
             const SizedBox(height: 40),
-          ], 
+          ],
         );
       }),
     );
@@ -151,18 +158,61 @@ class _MoreState extends State<More> {
       PopScope(
         canPop: false,
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                color: AppColors.getAccentColor(context),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Fetching 3 years of data...',
-                style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
-              ),
-            ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            decoration: BoxDecoration(
+              color: AppColors.getCardColor(context),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AppColors.getAccentColor(context),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Fetching Data',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.getTextPrimaryColor(context),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please wait...',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.getTextSecondaryColor(context),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Optional subtle progress hint (fake or real)
+                LinearProgressIndicator(
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(10),
+                  backgroundColor: AppColors.getTextSecondaryColor(
+                    context,
+                  ).withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation(
+                    AppColors.getAccentColor(context),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -172,10 +222,10 @@ class _MoreState extends State<More> {
     try {
       final apiService = Get.find<MonitorApiService>();
       final dbHelper = UnifiedDatabaseHelper.instance;
-      
+
       // Close and delete the database
       await dbHelper.close();
-      
+
       // Delete the database file
       final dbPath = await getDatabasesPath();
       final companyId = await apiService.getStoredCompanyId();
@@ -186,16 +236,16 @@ class _MoreState extends State<More> {
           await file.delete();
         }
       }
-      
+
       // Reopen the database
       if (companyId != null && companyId.isNotEmpty) {
         await dbHelper.openForCompany(companyId);
       }
-      
+
       // Fetch baseline data (service points, inventory, company details)
       final kpiSyncService = Get.find<KpiSyncService>();
       final baselineResult = await kpiSyncService.fetchBaselineDatasets();
-      
+
       // Store baseline data
       if (baselineResult.servicePoints.isNotEmpty) {
         final servicePoints = baselineResult.servicePoints
@@ -212,12 +262,12 @@ class _MoreState extends State<More> {
             .toList();
         await dbHelper.insertMonInventoryItems(inventory);
       }
-      
+
       // Fetch 3 years of KPI data
       final now = DateTime.now();
       final threeYearsAgo = DateTime(now.year - 3, now.month, now.day);
       await apiService.syncAllKpiData(threeYearsAgo, now);
-      
+
       // Refresh all controllers with the new data from DB
       if (Get.isRegistered<MonKpiOverviewController>()) {
         await Get.find<MonKpiOverviewController>().fetchKpiData();
@@ -250,7 +300,6 @@ class _MoreState extends State<More> {
       );
     }
   }
-
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(

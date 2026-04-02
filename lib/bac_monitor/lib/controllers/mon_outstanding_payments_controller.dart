@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
+import '../services/sync_state_manager.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
@@ -32,6 +33,19 @@ class MonOutstandingPaymentsController extends GetxController {
 
   Future<void> fetchOutstandingPaymentsData() async {
     try {
+      // Check if data was already loaded by splash page via SyncStateManager
+      try {
+        if (Get.isRegistered<SyncStateManager>()) {
+          final syncManager = Get.find<SyncStateManager>();
+          if (!syncManager.shouldFetchTodayData()) {
+            print("MonOutstandingPaymentsController: Data already loaded, skipping fetch");
+            return;
+          }
+        }
+      } catch (e) {
+        print("MonOutstandingPaymentsController: Error checking SyncStateManager: $e");
+      }
+
       isLoading.value = true;
       hasError.value = false;
 

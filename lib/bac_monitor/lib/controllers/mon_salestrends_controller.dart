@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../shared/database/unified_db_helper.dart';
 import '../models/dashboard.dart';
+import '../services/sync_state_manager.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
@@ -63,15 +64,36 @@ class MonSalesTrendsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    print("SalesTrendsController onInit - Starting initial data fetch");
+    debugPrint("SalesTrendsController onInit - checking sync state");
     print("Initial date range: ${dateController.selectedRange.value}");
-    fetchAllData();
+    
+    // Check if data was already loaded by splash page via SyncStateManager
+    bool shouldFetch = true;
+    try {
+      if (Get.isRegistered<SyncStateManager>()) {
+        final syncManager = Get.find<SyncStateManager>();
+        shouldFetch = syncManager.shouldFetchTodayData();
+        if (!shouldFetch) {
+          debugPrint("SalesTrendsController: Data already loaded by splash, skipping initial fetch");
+        }
+      }
+    } catch (e) {
+      debugPrint("SalesTrendsController: Error checking SyncStateManager: $e");
+    }
+    
+    // Only fetch if SyncStateManager says data isn't loaded yet
+    if (shouldFetch) {
+      debugPrint("SalesTrendsController: Fetching data on init");
+      fetchAllData();
+    }
+    
+    // Set up listeners for date range changes (user-triggered, always fetch)
     ever(dateController.selectedRange, (_) {
-      print("Date range changed to: ${dateController.selectedRange.value}");
+      debugPrint("Date range changed to: ${dateController.selectedRange.value}");
       fetchAllData();
     });
     ever(dateController.customRange, (_) {
-      print("Custom range changed to: ${dateController.customRange.value}");
+      debugPrint("Custom range changed to: ${dateController.customRange.value}");
       fetchAllData();
     });
   }

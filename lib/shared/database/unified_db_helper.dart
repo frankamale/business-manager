@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
 import '../../back_pos/models/users.dart';
 import '../../back_pos/models/service_point.dart';
 import '../../back_pos/models/inventory_item.dart';
@@ -1771,5 +1772,45 @@ class UnifiedDatabaseHelper {
   Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
     final db = database;
     return await db.transaction(action);
+  }
+
+  // ========================================================================
+  // DATA EXISTENCE CHECK METHODS
+  // ========================================================================
+
+  /// Check if company details exist in the database
+  Future<bool> hasCompanyDetails() async {
+    try {
+      final db = database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM company_details');
+      return (result.first['count'] as int? ?? 0) > 0;
+    } catch (e) {
+      debugPrint('[UnifiedDatabaseHelper] Error checking company details: $e');
+      return false;
+    }
+  }
+
+  /// Check if service points exist in the database
+  Future<bool> hasServicePoints() async {
+    try {
+      final db = database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_service_points');
+      return (result.first['count'] as int? ?? 0) > 0;
+    } catch (e) {
+      debugPrint('[UnifiedDatabaseHelper] Error checking service points: $e');
+      return false;
+    }
+  }
+
+  /// Check if inventory items exist in the database
+  Future<bool> hasInventory() async {
+    try {
+      final db = database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_inventory');
+      return (result.first['count'] as int? ?? 0) > 0;
+    } catch (e) {
+      debugPrint('[UnifiedDatabaseHelper] Error checking inventory: $e');
+      return false;
+    }
   }
 }

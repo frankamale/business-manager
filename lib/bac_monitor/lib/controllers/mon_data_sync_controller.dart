@@ -176,14 +176,49 @@ class MonDataSyncController extends GetxController {
         debugPrint('[MonDataSyncController] Stored company details');
       }
       
-      // Store inventory to database
+      // Store inventory to database (chunked + batched to prevent memory exhaustion)
       if (result.inventory.isNotEmpty) {
-        final inventory = result.inventory
-            .map((e) => Map<String, dynamic>.from(e as Map))
-            .toList();
+        final totalItems = result.inventory.length;
+        debugPrint('[MonDataSyncController] Processing $totalItems inventory items in chunks');
+        
         await _dbHelper.deleteAllMonInventoryItems();
-        await _dbHelper.insertMonInventoryItems(inventory);
-        debugPrint('[MonDataSyncController] Stored ${inventory.length} inventory items');
+        
+        // Process in chunks of 1000 for mapping, then insert in batches of 200
+        const mapChunkSize = 1000;
+        const insertBatchSize = 200;
+        int stored = 0;
+        
+        for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {
+          final chunkEnd = (chunkStart + mapChunkSize < totalItems) 
+              ? chunkStart + mapChunkSize 
+              : totalItems;
+          final chunk = result.inventory.sublist(chunkStart, chunkEnd);
+          
+          // Use compute() isolate for JSON map conversion to avoid main thread blocking
+          final mappedChunk = await compute(
+            (List<dynamic> items) => items
+                .map((e) => Map<String, dynamic>.from(e as Map))
+                .toList(),
+            chunk,
+          );
+          
+          // Insert mapped chunk in smaller batches
+          for (int i = 0; i < mappedChunk.length; i += insertBatchSize) {
+            final batch = mappedChunk.skip(i).take(insertBatchSize).toList();
+            await _dbHelper.insertMonInventoryItems(batch);
+            stored += batch.length;
+            debugPrint('[MonDataSyncController] Inventory progress: $stored/$totalItems');
+            
+            // Longer delay between batches for GC to run
+            if (stored < totalItems) {
+              await Future.delayed(const Duration(milliseconds: 100));
+            }
+          }
+          
+          // Allow GC to collect the mapped chunk before processing next chunk
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
+        debugPrint('[MonDataSyncController] Stored $totalItems inventory items in chunks');
       }
       
       debugPrint('[MonDataSyncController] Baseline data fetch and store completed');

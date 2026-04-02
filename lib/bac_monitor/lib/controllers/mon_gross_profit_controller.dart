@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
+import '../services/sync_state_manager.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
@@ -29,6 +30,21 @@ class MonGrossProfitController extends GetxController {
 
   Future<void> fetchGrossProfitData() async {
     try {
+      // Check if data was already loaded by splash page via SyncStateManager
+      try {
+        if (Get.isRegistered<SyncStateManager>()) {
+          final syncManager = Get.find<SyncStateManager>();
+          if (!syncManager.shouldFetchTodayData()) {
+            print(
+                "MonGrossProfitController: Data already loaded, skipping fetch");
+            return;
+          }
+        }
+      } catch (e) {
+        print(
+            "MonGrossProfitController: Error checking SyncStateManager: $e");
+      }
+
       isLoading.value = true;
       hasError.value = false;
 
@@ -52,8 +68,10 @@ class MonGrossProfitController extends GetxController {
           break;
 
         case DateRange.yesterday:
-          startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
-          endDate = DateTime(now.year, now.month, now.day).subtract(const Duration(milliseconds: 1));
+          startDate = DateTime(now.year, now.month, now.day).subtract(
+              const Duration(days: 1));
+          endDate = DateTime(now.year, now.month, now.day).subtract(
+              const Duration(milliseconds: 1));
           prevStartDate = startDate.subtract(const Duration(days: 1));
           prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           break;
@@ -71,7 +89,8 @@ class MonGrossProfitController extends GetxController {
           endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
           final prevMonth = DateTime(now.year, now.month - 1, 1);
           prevStartDate = prevMonth;
-          prevEndDate = DateTime(now.year, now.month, 1).subtract(const Duration(milliseconds: 1));
+          prevEndDate = DateTime(now.year, now.month, 1).subtract(
+              const Duration(milliseconds: 1));
           break;
 
         case DateRange.custom:
@@ -83,7 +102,8 @@ class MonGrossProfitController extends GetxController {
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           } else {
             startDate = now.subtract(const Duration(days: 6));
-            startDate = DateTime(startDate.year, startDate.month, startDate.day);
+            startDate =
+                DateTime(startDate.year, startDate.month, startDate.day);
             endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
             prevStartDate = startDate.subtract(const Duration(days: 7));
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
@@ -100,7 +120,7 @@ class MonGrossProfitController extends GetxController {
 
       // SQL Query using the KPI table
       // kpiId=5 is Profit (amount1=profit, amount2=transaction value during that day)
-      
+
       // Get profit data - amount1 is profit, amount2 is transaction value
       const profitQuery = '''
         SELECT SUM(amount1) as profit, SUM(amount2) as sales 
@@ -112,15 +132,21 @@ class MonGrossProfitController extends GetxController {
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
       // Execute queries
-      final currentProfitResult = await db.rawQuery(profitQuery, [startDateStr, endDateStr]);
-      final prevProfitResult = await db.rawQuery(profitQuery, [prevStartDateStr, prevEndDateStr]);
+      final currentProfitResult = await db.rawQuery(
+          profitQuery, [startDateStr, endDateStr]);
+      final prevProfitResult = await db.rawQuery(
+          profitQuery, [prevStartDateStr, prevEndDateStr]);
       final currencyResult = await db.rawQuery(currencyQuery);
 
       // Extract results - amount1 is profit, amount2 is transaction value (for that day/range)
-      final currentProfit = (currentProfitResult.first['profit'] as num? ?? 0.0).toDouble();
-      final currentTransactionValue = (currentProfitResult.first['sales'] as num? ?? 0.0).toDouble();
-      final prevProfit = (prevProfitResult.first['profit'] as num? ?? 0.0).toDouble();
-      final prevTransactionValue = (prevProfitResult.first['sales'] as num? ?? 0.0).toDouble();
+      final currentProfit = (currentProfitResult.first['profit'] as num? ?? 0.0)
+          .toDouble();
+      final currentTransactionValue = (currentProfitResult
+          .first['sales'] as num? ?? 0.0).toDouble();
+      final prevProfit = (prevProfitResult.first['profit'] as num? ?? 0.0)
+          .toDouble();
+      final prevTransactionValue = (prevProfitResult.first['sales'] as num? ??
+          0.0).toDouble();
 
       print("Current Profit: $currentProfit");
       print("Current Transaction Value: $currentTransactionValue");

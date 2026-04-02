@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:intl/intl.dart';
 import '../../../../back_pos/utils/network_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
@@ -21,6 +22,7 @@ import '../../controllers/mon_data_sync_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
 import '../../services/kpi_sync_service.dart';
+import '../../services/sync_state_manager.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../../../../initialise/splashscreen.dart';
 import '../../widgets/more/splash_loader.dart';
@@ -214,104 +216,26 @@ class _SplashPageState extends State<SplashPage> {
       }
 
       if (isOnline) {
-        final apiService = Get.find<MonitorApiService>();
-        stopwatch.reset();
-        final initialSyncDone = await apiService.isInitialSyncCompleted();
-        debugPrint(
-          'SplashPage: Initial sync check took ${stopwatch.elapsedMilliseconds}ms - Done: $initialSyncDone',
-        );
-
-        stopwatch.reset();
-        final companyDetails = await _dbHelper.getCompanyDetails();
-        final hasCompanyDetails =
-            companyDetails != null && companyDetails.isNotEmpty;
-        debugPrint(
-          'SplashPage: Company details check took ${stopwatch.elapsedMilliseconds}ms - Has: $hasCompanyDetails',
-        );
-
-        // Check if sync is needed (cache window: 30 minutes)
-        stopwatch.reset();
-        final syncNeeded = await apiService.isSyncNeeded(cacheMinutes: 30);
-        debugPrint(
-          'SplashPage: Sync needed check took ${stopwatch.elapsedMilliseconds}ms - Needed: $syncNeeded',
-        );
-
-        if (!initialSyncDone || !hasCompanyDetails) {
-          // Initial sync required - ONLY fetch today's KPI metrics and baseline data
-          // Full historical data will be fetched via pull-to-refresh on respective pages
-          _updateStatus('Syncing today\'s data...');
-          debugPrint(
-            'SplashPage: Initial sync needed - fetching only today KPI + baseline',
-          );
-
-          try {
-            // Register and use MonDataSyncController for staged sync
-            MonDataSyncController? dataSyncController;
-            if (!Get.isRegistered<MonDataSyncController>()) {
-              dataSyncController = Get.put(MonDataSyncController(), permanent: true);
-            } else {
-              dataSyncController = Get.find<MonDataSyncController>();
-            }
-
-            // Listen to sync progress for UI updates
-            dataSyncController?.syncStatusMessage.listen((message) {
-              if (message.isNotEmpty) {
-                _updateStatus(message);
-              }
-            });
-
-            stopwatch.reset();
-            // Only fetch today's KPI + baseline (inventory, service points, company details)
-            await dataSyncController?.performInitialSyncWithBaseline();
-            debugPrint(
-              'SplashPage: Initial data fetch took ${stopwatch.elapsedMilliseconds}ms',
-            );
-          } catch (e) {
-            debugPrint(
-              'SplashPage: Initial sync failed, checking for cached data - $e',
-            );
-            final hasCachedData = await _hasCachedData();
-            if (!hasCachedData) {
-              throw Exception(
-                'Failed to sync data and no cached data available',
-              );
-            }
-          }
-        } else if (syncNeeded) {
-          // Sync cache expired (>30 minutes) - refresh only today's KPI data
-          _updateStatus('Refreshing today\'s data...');
-          debugPrint('SplashPage: Sync cache expired, refreshing today\'s KPI data');
-
-          try {
-            // Use incremental sync for faster updates (only today's KPI)
-            MonDataSyncController? dataSyncController;
-            if (!Get.isRegistered<MonDataSyncController>()) {
-              dataSyncController = Get.put(MonDataSyncController(), permanent: true);
-            } else {
-              dataSyncController = Get.find<MonDataSyncController>();
-            }
-
-            dataSyncController?.syncStatusMessage.listen((message) {
-              if (message.isNotEmpty) {
-                _updateStatus(message);
-              }
-            });
-
-            stopwatch.reset();
-            await dataSyncController?.performIncrementalSync();
-            debugPrint(
-              'SplashPage: Data refresh took ${stopwatch.elapsedMilliseconds}ms',
-            );
-          } catch (e) {
-            debugPrint(
-              'SplashPage: Data refresh failed, using cached data - $e',
-            );
-            // Continue with cached data - not a fatal error
-          }
-        } else {
-          debugPrint(
-            'SplashPage: Sync cache valid (<30 min old), skipping data fetch',
-          );
+        // Register SyncStateManager for centralized sync coordination
+        _updateStatus('Checking sync status...');
+        final syncManager = Get.put(SyncStateManager(), permanent: true);
+        final scenario = await syncManager.determineSyncScenario();
+        
+        switch (scenario) {
+          case SyncScenario.firstLogin:
+            _updateStatus('First login - fetching today\'s data...');
+            await _performFirstLoginSync(syncManager);
+            break;
+            
+          case SyncScenario.subsequentLogin:
+            _updateStatus('Refreshing today\'s data...');
+            await _performSubsequentLoginSync(syncManager);
+            break;
+            
+          case SyncScenario.offline:
+          case SyncScenario.cacheValid:
+            debugPrint('SplashPage: Using cached data - no fetch needed');
+            break;
         }
       } else if (!widget.isOffline) {
         _updateStatus('Loading cached data...');
@@ -516,6 +440,66 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
+  /// First login sync: fetch today's KPI + baseline data only
+  Future<void> _performFirstLoginSync(SyncStateManager syncManager) async {
+    final stopwatch = Stopwatch()..start();
+    
+    try {
+      MonDataSyncController? dataSyncController;
+      if (!Get.isRegistered<MonDataSyncController>()) {
+        dataSyncController = Get.put(MonDataSyncController(), permanent: true);
+      } else {
+        dataSyncController = Get.find<MonDataSyncController>();
+      }
+
+      dataSyncController?.syncStatusMessage.listen((message) {
+        if (message.isNotEmpty) {
+          _updateStatus(message);
+        }
+      });
+
+      // Only fetch today + baseline (NO historical)
+      await dataSyncController?.performInitialSyncWithBaseline();
+      syncManager.markBaselineLoaded();
+      
+      debugPrint('SplashPage: First login sync took ${stopwatch.elapsedMilliseconds}ms');
+    } catch (e) {
+      debugPrint('SplashPage: First login sync failed - $e');
+      final hasCachedData = await _hasCachedData();
+      if (!hasCachedData) {
+        throw Exception('Failed to sync data and no cached data available');
+      }
+    }
+  }
+
+  /// Subsequent login sync: fetch today's data only if missing/expired
+  Future<void> _performSubsequentLoginSync(SyncStateManager syncManager) async {
+    final stopwatch = Stopwatch()..start();
+    
+    try {
+      MonDataSyncController? dataSyncController;
+      if (!Get.isRegistered<MonDataSyncController>()) {
+        dataSyncController = Get.put(MonDataSyncController(), permanent: true);
+      } else {
+        dataSyncController = Get.find<MonDataSyncController>();
+      }
+
+      dataSyncController?.syncStatusMessage.listen((message) {
+        if (message.isNotEmpty) {
+          _updateStatus(message);
+        }
+      });
+
+      // Incremental sync only fetches today's delta
+      await dataSyncController?.performIncrementalSync();
+      
+      debugPrint('SplashPage: Subsequent login sync took ${stopwatch.elapsedMilliseconds}ms');
+    } catch (e) {
+      debugPrint('SplashPage: Subsequent login sync failed - $e');
+      // Continue with cache - not fatal
+    }
+  }
+
   void _initializeControllers() {
     debugPrint(
       'SplashPage: Initializing controllers (without triggering data fetch)',
@@ -600,8 +584,10 @@ class _SplashPageState extends State<SplashPage> {
         print("Total customers \${kpiController.activeMembers.value}");
       }
 
-      // Reset and refresh dashboard controllers for account switch
-      await _refreshDashboardControllers();
+      // Mark today's data as loaded so controllers don't re-fetch
+      if (Get.isRegistered<SyncStateManager>()) {
+        Get.find<SyncStateManager>().markTodayDataLoaded();
+      }
 
       debugPrint('SplashPage: Controllers loaded with data successfully');
     } catch (e) {
@@ -646,18 +632,61 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  /// Trigger historical data sync after UI is mounted (background task)
+  /// Trigger historical data sync in background - fetches month by month
   void _triggerHistoricalSync() {
-    if (Get.isRegistered<MonDataSyncController>()) {
-      final dataSyncController = Get.find<MonDataSyncController>();
-      // Run historical sync in background without blocking UI
-      dataSyncController.performHistoricalSyncInBackground().then((_) {
-        debugPrint('SplashPage: Historical sync completed in background');
-      }).catchError((e) {
-        debugPrint('SplashPage: Historical sync failed: $e');
-      });
-    } else {
-      debugPrint('SplashPage: MonDataSyncController not registered, skipping historical sync');
+    _runHistoricalLoop();
+  }
+
+  Future<void> _runHistoricalLoop() async {
+    try {
+      final syncManager = Get.isRegistered<SyncStateManager>() 
+          ? Get.find<SyncStateManager>() 
+          : null;
+          
+      while (true) {
+        String? nextMonth;
+        if (syncManager != null) {
+          nextMonth = await syncManager.getNextHistoricalMonthToFetch();
+        } else {
+          // Fallback: check DB directly
+          final now = DateTime.now();
+          bool found = false;
+          for (int i = 1; i < 12; i++) {
+            final monthStart = DateTime(now.year, now.month - i, 1);
+            final monthEnd = DateTime(now.year, now.month - i + 1, 0);
+            final hasData = await _dbHelper.hasKpiDataForDateRange(
+              DateFormat('yyyy-MM-dd').format(monthStart),
+              DateFormat('yyyy-MM-dd').format(monthEnd),
+            );
+            if (!hasData) {
+              nextMonth = DateFormat('yyyy-MM').format(monthStart);
+              found = true;
+              break;
+            }
+          }
+          if (!found) break;
+        }
+        
+        if (nextMonth == null) {
+          debugPrint('[SplashPage] All historical data loaded');
+          break;
+        }
+        
+        debugPrint('[SplashPage] Fetching historical month: $nextMonth');
+        final parts = nextMonth.split('-');
+        final monthStart = DateTime(int.parse(parts[0]), int.parse(parts[1]), 1);
+        final monthEnd = DateTime(int.parse(parts[0]), int.parse(parts[1]) + 1, 0);
+        
+        final apiService = Get.find<MonitorApiService>();
+        await apiService.syncAllKpiData(monthStart, monthEnd);
+        
+        syncManager?.markHistoricalMonthLoaded(nextMonth);
+        
+        // Small delay between months to prevent server overload
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    } catch (e) {
+      debugPrint('[SplashPage] Historical sync loop failed: $e');
     }
   }
 
