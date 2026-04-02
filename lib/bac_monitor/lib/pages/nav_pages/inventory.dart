@@ -54,6 +54,9 @@ class _InventoryPageState extends State<InventoryPage>
       _inventoryController = Get.put(MonInventoryController());
     }
     
+    // Load first page of inventory from DB
+    _inventoryController.loadInventoryFromDb();
+    
     // Listen to controller changes
     _inventoryController.inventoryItems.listen((_) {
       if (mounted) {

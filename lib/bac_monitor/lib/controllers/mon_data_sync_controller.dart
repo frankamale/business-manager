@@ -183,9 +183,9 @@ class MonDataSyncController extends GetxController {
         
         await _dbHelper.deleteAllMonInventoryItems();
         
-        // Process in chunks of 1000 for mapping, then insert in batches of 200
+        // Process in chunks of 1000 for mapping, then insert in batches of 500
         const mapChunkSize = 1000;
-        const insertBatchSize = 200;
+        const insertBatchSize = 500;
         int stored = 0;
         
         for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {
