@@ -176,15 +176,15 @@ class MonKpiOverviewController extends GetxController {
       
       // Query for total sales (kpiId=0, sum of amount2 = transaction value)
       const salesQuery = '''
-        SELECT SUM(amount1) as total, SUM(quantity) as qty 
-        FROM mon_kpi_sales 
+        SELECT SUM(amount2) as total, SUM(quantity) as qty
+        FROM mon_kpi_sales
         WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
       ''';
       
       // Query for previous period sales
       const prevSalesQuery = '''
-        SELECT SUM(amount1) as total, SUM(quantity) as qty 
-        FROM mon_kpi_sales 
+        SELECT SUM(amount2) as total, SUM(quantity) as qty
+        FROM mon_kpi_sales
         WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
       ''';
 

@@ -427,11 +427,11 @@ class MonSalesTrendsController extends GetxController {
           sp.name as storeName,
           COALESCE(SUM(kpi.amount2), 0) as total
         FROM mon_service_points sp
-        LEFT JOIN (SELECT selling_point, SUM(amount2) as amount2 
-                   FROM mon_kpi_sales 
-                   WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? 
-                   GROUP BY selling_point) kpi 
-                   ON sp.name = kpi.selling_point OR sp.fullName = kpi.selling_point
+        LEFT JOIN (SELECT selling_point, SUM(amount2) as amount2
+                   FROM mon_kpi_sales
+                   WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ?
+                   GROUP BY selling_point) kpi
+                   ON (sp.name = kpi.selling_point OR sp.fullName = kpi.selling_point)
         WHERE sp.stores = 1
         GROUP BY sp.id, sp.name
         ORDER BY total DESC

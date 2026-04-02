@@ -145,8 +145,24 @@ class MonDataSyncController extends GetxController {
       
       // Store service points to database
       if (result.servicePoints.isNotEmpty) {
+        // Filter service points to only include columns that exist in the local service_point table
+        // service_point table schema: id, name, code, fullName, servicepointtype, facilityName, sales, stores, production, booking
         final servicePoints = result.servicePoints
-            .map((e) => Map<String, dynamic>.from(e as Map))
+            .map((e) {
+              final sp = Map<String, dynamic>.from(e as Map);
+              return {
+                'id': sp['id'],
+                'name': sp['name'],
+                'code': sp['code'],
+                'fullName': sp['fullName'] ?? sp['name'] ?? '',
+                'servicepointtype': sp['servicepointtype'] ?? '',
+                'facilityName': sp['facilityName'] ?? '',
+                'sales': _toInt(sp['sales'] ?? 0),
+                'stores': _toInt(sp['stores'] ?? 0),
+                'production': _toInt(sp['production'] ?? 0),
+                'booking': _toInt(sp['booking'] ?? 0),
+              };
+            })
             .toList();
         await _dbHelper.deleteAllMonServicePoints();
         await _dbHelper.insertServicePoints(servicePoints);
@@ -379,5 +395,19 @@ class MonDataSyncController extends GetxController {
     }
     
     return 'Last synced: $timeAgo';
+  }
+
+  /// Helper method to convert values to int for SQLite compatibility
+  /// SQLite only supports num, String, and Uint8List - not bool
+  int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is bool) return value ? 1 : 0;
+    if (value is String) {
+      final parsed = int.tryParse(value);
+      return parsed ?? 0;
+    }
+    return 0;
   }
 }

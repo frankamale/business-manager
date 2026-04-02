@@ -41,9 +41,12 @@ class MonKpiController extends GetxController {
   var selectedTimeframe = KpiTimeframe.normal.obs;
 
   @override
-  void onInit() { 
+  void onInit() {
     super.onInit();
     debugPrint('MonKpiController: onInit - Setting up listeners');
+    
+    // Fetch data immediately on init
+    fetchKpiData();
     
     // Listen for date range changes
     ever(dateController.selectedRange, (_) {

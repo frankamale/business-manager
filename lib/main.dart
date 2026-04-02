@@ -82,20 +82,19 @@ void main() async {
   Get.put(SettingsController());
   Get.put(ServicePointController());
 
-  Get.put(MonDashboardController());
-  Get.put(MonKpiController());
-  Get.put(MonGrossProfitController());
-  Get.put(MonKpiOverviewController());
-  Get.put(MonMainNavigationController());
-  Get.put(MonOperatorController());
-  Get.put(MonOutstandingPaymentsController());
-  Get.put(MonSalesTrendsController());
-  Get.put(MonStoresController());
-  Get.put(MonStoreKpiTrendController());
-  Get.put(MonSyncController());
-  Get.put(MonDataSyncController());
+  Get.lazyPut<MonDashboardController>(() => MonDashboardController());
+  Get.lazyPut<MonKpiController>(() => MonKpiController());
+  Get.lazyPut<MonGrossProfitController>(() => MonGrossProfitController());
+  Get.lazyPut<MonKpiOverviewController>(() => MonKpiOverviewController());
+  Get.lazyPut<MonMainNavigationController>(() => MonMainNavigationController());
+  Get.lazyPut<MonOperatorController>(() => MonOperatorController());
+  Get.lazyPut<MonOutstandingPaymentsController>(() => MonOutstandingPaymentsController());
+  Get.lazyPut<MonSalesTrendsController>(() => MonSalesTrendsController());
+  Get.lazyPut<MonStoresController>(() => MonStoresController());
+  Get.lazyPut<MonStoreKpiTrendController>(() => MonStoreKpiTrendController());
+  Get.lazyPut<MonSyncController>(() => MonSyncController());
+  Get.lazyPut<MonDataSyncController>(() => MonDataSyncController());
   Get.put(ProfileController());
-
   runApp(const MyApp());
 }
 
