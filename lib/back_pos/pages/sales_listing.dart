@@ -300,7 +300,6 @@ class _SalesListingState extends State<SalesListing> {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: isSearching
             ? TextField(

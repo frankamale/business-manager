@@ -88,19 +88,19 @@ class MonKpiOverviewController extends GetxController {
   }
 
   Future<void> fetchKpiData() async {
-    // try {
-    //   // Check if data was already loaded by splash page via SyncStateManager
-    //   try {
-    //     if (Get.isRegistered<SyncStateManager>()) {
-    //       final syncManager = Get.find<SyncStateManager>();
-    //       if (!syncManager.shouldFetchTodayData()) {
-    //         debugPrint("MonKpiOverviewController: Data already loaded, skipping fetch");
-    //         return;
-    //       }
-    //     }
-    //   } catch (e) {
-    //     debugPrint("MonKpiOverviewController: Error checking SyncStateManager: $e");
-    //   }
+    try {
+      // // Check if data was already loaded by splash page via SyncStateManager
+      // try {
+      //   if (Get.isRegistered<SyncStateManager>()) {
+      //     final syncManager = Get.find<SyncStateManager>();
+      //     if (!syncManager.shouldFetchTodayData()) {
+      //       debugPrint("MonKpiOverviewController: Data already loaded, skipping fetch");
+      //       return;
+      //     }
+      //   }
+      // } catch (e) {
+      //   debugPrint("MonKpiOverviewController: Error checking SyncStateManager: $e");
+      // }
       
       isLoading.value = true;
       hasError.value = false;
