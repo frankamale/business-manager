@@ -86,7 +86,7 @@ class ExpensesCard extends StatelessWidget {
                   context: context,
                   label: 'Stock',
                   amount: stockExpenses,
-                  color: Colors.orange,
+                  color: AppColors.getBackgroundColor(context),
                   icon: Icons.inventory_2_outlined,
                   formatter: compactFormatter,
                   onTap: onStockExpensesTap,
@@ -100,7 +100,7 @@ class ExpensesCard extends StatelessWidget {
                   context: context,
                   label: 'Non-Stock',
                   amount: nonStockExpenses,
-                  color: Colors.purple,
+                  color: AppColors.getBackgroundColor(context),
                   icon: Icons.receipt_long_outlined,
                   formatter: compactFormatter,
                   onTap: onNonStockExpensesTap,
@@ -134,7 +134,7 @@ class ExpensesCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
 
           border: Border.all(
-            color: color.withOpacity(0.25),
+            color: AppColors.getBorderColor(context),
           ),
         ),
 
@@ -144,13 +144,13 @@ class ExpensesCard extends StatelessWidget {
             // ICON + LABEL
             Row(
               children: [
-                Icon(icon, size: 16, color: color),
+                Icon(icon, size: 16, color: AppColors.getTextSecondaryColor(context)),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: color,
+                      color: AppColors.getTextSecondaryColor(context),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
