@@ -1,3 +1,4 @@
+import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
@@ -124,7 +125,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
       setState(() {
         _isLoading2 = true;
       });
-controller.signOut();
+      controller.signOut();
       print('DEBUG: Login._logoutAndGoToServerLogin() - Starting logout');
 
       setState(() {
@@ -150,7 +151,6 @@ controller.signOut();
               FlavorColors.current.primaryDark,
               FlavorColors.current.light,
               FlavorColors.current.primaryDark,
-
             ],
           ),
         ),
@@ -217,16 +217,17 @@ controller.signOut();
                             Obx(
                               () => DropdownButtonFormField<String>(
                                 value: selectedItem,
+                                borderRadius: BorderRadius.circular(8),
                                 style: TextStyle(
                                   color: Colors.black87,
                                   fontSize: 16,
                                 ),
                                 decoration: InputDecoration(
                                   labelText: 'Select Account',
-                                  labelStyle: TextStyle(color: Colors.grey.shade700),
+                                  labelStyle: TextStyle(color: Colors.black),
                                   prefixIcon: Icon(
                                     Icons.account_circle_outlined,
-                                    color: FlavorColors.current.primaryDark,
+                                    color: Colors.black87,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -285,7 +286,9 @@ controller.signOut();
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: 'Passcode',
-                                labelStyle: TextStyle(color: Colors.grey.shade700),
+                                labelStyle: TextStyle(
+                                  color: Colors.grey.shade700,
+                                ),
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
                                   color: FlavorColors.current.primaryDark,
@@ -345,9 +348,11 @@ controller.signOut();
                                 onPressed: _isLoading ? null : _handleLogin,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: FlavorColors.current.primary,
-                                  foregroundColor: FlavorColors.current.onPrimary,
+                                  foregroundColor:
+                                      FlavorColors.current.onPrimary,
                                   elevation: 4,
-                                  shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
+                                  shadowColor: FlavorColors.current.primaryDark
+                                      .withOpacity(0.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -377,11 +382,15 @@ controller.signOut();
                             ),
                             const SizedBox(height: 18),
                             GestureDetector(
-                              onTap: _isLoading2 ? null : _logoutAndGoToServerLogin,
+                              onTap: _isLoading2
+                                  ? null
+                                  : _logoutAndGoToServerLogin,
                               child: Text(
                                 "Login with server credentials",
                                 style: TextStyle(
-                                  color: _isLoading2 ? Colors.grey : FlavorColors.current.primary,
+                                  color: _isLoading2
+                                      ? Colors.blue.shade700
+                                      : FlavorColors.current.primary,
                                 ),
                               ),
                             ),

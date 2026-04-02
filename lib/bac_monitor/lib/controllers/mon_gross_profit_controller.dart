@@ -31,19 +31,19 @@ class MonGrossProfitController extends GetxController {
   Future<void> fetchGrossProfitData() async {
     try {
       // Check if data was already loaded by splash page via SyncStateManager
-      try {
-        if (Get.isRegistered<SyncStateManager>()) {
-          final syncManager = Get.find<SyncStateManager>();
-          if (!syncManager.shouldFetchTodayData()) {
-            print(
-                "MonGrossProfitController: Data already loaded, skipping fetch");
-            return;
-          }
-        }
-      } catch (e) {
-        print(
-            "MonGrossProfitController: Error checking SyncStateManager: $e");
-      }
+      // try {
+      //   if (Get.isRegistered<SyncStateManager>()) {
+      //     final syncManager = Get.find<SyncStateManager>();
+      //     if (!syncManager.shouldFetchTodayData()) {
+      //       print(
+      //           "MonGrossProfitController: Data already loaded, skipping fetch");
+      //       return;
+      //     }
+      //   }
+      // } catch (e) {
+      //   print(
+      //       "MonGrossProfitController: Error checking SyncStateManager: $e");
+      // }
 
       isLoading.value = true;
       hasError.value = false;
