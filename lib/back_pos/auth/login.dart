@@ -150,15 +150,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              FlavorColors.current.primary,
-              // FlavorColors.current.light,
-              FlavorColors.current.primaryDark,
-            ],
-          ),
+         color: AppColors.getBackgroundColor(context)
         ),
         child: SafeArea(
           child: Center(

@@ -64,30 +64,11 @@ class MonSalesTrendsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    debugPrint("SalesTrendsController onInit - checking sync state");
+    debugPrint("SalesTrendsController onInit - fetching data");
     print("Initial date range: ${dateController.selectedRange.value}");
     
-    // Check if data was already loaded by splash page via SyncStateManager
-    bool shouldFetch = true;
-    try {
-      if (Get.isRegistered<SyncStateManager>()) {
-        final syncManager = Get.find<SyncStateManager>();
-        shouldFetch = syncManager.shouldFetchTodayData();
-        if (!shouldFetch) {
-          debugPrint("SalesTrendsController: Data already loaded by splash, skipping initial fetch");
-        }
-      }
-    } catch (e) {
-      debugPrint("SalesTrendsController: Error checking SyncStateManager: $e");
-    }
+    fetchAllData();
     
-    // Only fetch if SyncStateManager says data isn't loaded yet
-    if (shouldFetch) {
-      debugPrint("SalesTrendsController: Fetching data on init");
-      fetchAllData();
-    }
-    
-    // Set up listeners for date range changes (user-triggered, always fetch)
     ever(dateController.selectedRange, (_) {
       debugPrint("Date range changed to: ${dateController.selectedRange.value}");
       fetchAllData();
