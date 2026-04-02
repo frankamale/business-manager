@@ -114,7 +114,7 @@ class MonInventoryController extends GetxController {
   }
 
   /// Search inventory directly from database with debouncing
-  /// [query] - Search term (matches name, code, or barcode fields)
+  /// [query] - Search term (matches name, code fields)
   void searchInventory(String query) {
     _currentSearchQuery = query;
     
@@ -143,14 +143,14 @@ class MonInventoryController extends GetxController {
       
       debugPrint('MonInventoryController: Searching DB for "$query"');
       
-      // Search across name, code, and barcode fields
+      // Search across name, code, fields
       final result = await db.rawQuery(
         '''
-        SELECT * FROM mon_inventory 
-        WHERE name LIKE ? OR code LIKE ? OR barcode LIKE ?
+        SELECT * FROM mon_inventory
+        WHERE name LIKE ? OR code LIKE ?
         LIMIT 200
         ''',
-        [searchPattern, searchPattern, searchPattern],
+        [searchPattern, searchPattern],
       );
       
       searchResults.assignAll(result);
