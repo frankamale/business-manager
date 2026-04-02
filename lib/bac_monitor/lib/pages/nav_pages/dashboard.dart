@@ -122,10 +122,25 @@ class _DashboardState extends State<Dashboard> {
         final servicePointsRes = await apiService.getWithAuth('/servicepoints');
         if (servicePointsRes.body.isNotEmpty) {
           final servicePointsData = json.decode(servicePointsRes.body) as List;
+          final filteredServicePoints = servicePointsData
+              .map((e) {
+                final sp = Map<String, dynamic>.from(e as Map);
+                return {
+                  'id': sp['id'],
+                  'name': sp['name'],
+                  'code': sp['code'],
+                  'fullName': sp['fullName'] ?? sp['name'] ?? '',
+                  'servicepointtype': sp['servicepointtype'] ?? '',
+                  'facilityName': sp['facilityName'] ?? '',
+                  'sales': (sp['sales'] == true || sp['sales'] == 1) ? 1 : 0,
+                  'stores': (sp['stores'] == true || sp['stores'] == 1) ? 1 : 0,
+                  'production': (sp['production'] == true || sp['production'] == 1) ? 1 : 0,
+                  'booking': (sp['booking'] == true || sp['booking'] == 1) ? 1 : 0,
+                };
+              })
+              .toList();
           await UnifiedDatabaseHelper.instance.deleteAllMonServicePoints();
-          await UnifiedDatabaseHelper.instance.insertServicePoints(
-            servicePointsData.map((e) => Map<String, dynamic>.from(e as Map)).toList(),
-          );
+          await UnifiedDatabaseHelper.instance.insertServicePoints(filteredServicePoints);
         }
       } catch (e) {
         debugPrint('Dashboard: Service points fetch failed (non-critical): $e');

@@ -168,6 +168,7 @@ controller.signOut();
                     maxWidth: isSmallScreen ? 400 : 480,
                   ),
                   child: Card(
+                    color: Colors.white,
                     elevation: 12,
                     shadowColor: Colors.black.withOpacity(0.3),
                     shape: RoundedRectangleBorder(
@@ -187,7 +188,7 @@ controller.signOut();
                                 size: isSmallScreen ? 100 : 120,
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 15),
 
                             // Title
                             Text(
@@ -195,10 +196,11 @@ controller.signOut();
                                   ? "$_companyName "
                                   : "${AppConfig.companyName} ",
 
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: isSmallScreen ? 23 : 25,
+                                fontSize: isSmallScreen ? 25 : 29,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
+                                color: FlavorColors.current.primaryPlus,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -206,7 +208,7 @@ controller.signOut();
                               "Welcome Back",
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 14 : 16,
-                                color: FlavorColors.current.primary,
+                                color: FlavorColors.current.primaryDark,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -215,8 +217,13 @@ controller.signOut();
                             Obx(
                               () => DropdownButtonFormField<String>(
                                 value: selectedItem,
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 16,
+                                ),
                                 decoration: InputDecoration(
                                   labelText: 'Select Account',
+                                  labelStyle: TextStyle(color: Colors.grey.shade700),
                                   prefixIcon: Icon(
                                     Icons.account_circle_outlined,
                                     color: FlavorColors.current.primaryDark,
@@ -224,13 +231,13 @@ controller.signOut();
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
+                                      color: Colors.grey.shade500,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
+                                      color: Colors.grey.shade500,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
@@ -270,10 +277,15 @@ controller.signOut();
                             // Password Field
                             TextFormField(
                               controller: _passwordController,
+                              style: TextStyle(
+                                color: Colors.black87,
+                                fontSize: 16,
+                              ),
                               obscureText: _obscurePassword,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: 'Passcode',
+                                labelStyle: TextStyle(color: Colors.grey.shade700),
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
                                   color: FlavorColors.current.primaryDark,
@@ -294,13 +306,13 @@ controller.signOut();
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
+                                    color: Colors.grey.shade500,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
+                                    color: Colors.grey.shade500,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
@@ -328,14 +340,14 @@ controller.signOut();
                             // Sign In Button
                             SizedBox(
                               width: double.infinity,
-                              height: 56,
+                              height: 50,
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _handleLogin,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: FlavorColors.current.primaryDark,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: FlavorColors.current.primary,
+                                  foregroundColor: FlavorColors.current.onPrimary,
                                   elevation: 4,
-                                  shadowColor: FlavorColors.current.primary.withOpacity(0.5),
+                                  shadowColor: FlavorColors.current.primaryDark.withOpacity(0.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),

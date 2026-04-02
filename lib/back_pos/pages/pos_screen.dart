@@ -594,7 +594,7 @@ class _PosScreenState extends State<PosScreen> {
                 ),
                 child: Icon(
                   Icons.inventory_2,
-                  color: FlavorColors.current.primaryDark,
+                  color: FlavorColors.current.icon,
                   size: 25,
                 ),
               ),
@@ -625,14 +625,14 @@ class _PosScreenState extends State<PosScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.grey[200],
+                            color: FlavorColors.current.surface,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             item.code,
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.grey[700],
+                              color: FlavorColors.current.tertiary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -644,7 +644,7 @@ class _PosScreenState extends State<PosScreen> {
                           item.category,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: FlavorColors.current.tertiary,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -666,7 +666,7 @@ class _PosScreenState extends State<PosScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
+                      color: FlavorColors.current.primary,
                     ),
                   ),
                   if (item.costprice != null && item.costprice! > 0) ...[
@@ -675,7 +675,7 @@ class _PosScreenState extends State<PosScreen> {
                       'Cost: ${item.costprice!.toStringAsFixed(0)}',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey[500],
+                        color: FlavorColors.current.tertiary,
                       ),
                     ),
 
@@ -686,7 +686,7 @@ class _PosScreenState extends State<PosScreen> {
                     '${item.packaging} • ${item.measurmentunit}',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.grey[500],
+                      color: FlavorColors.current.tertiary,
                     ),
                   ),
                 ],
@@ -724,7 +724,7 @@ class _PosScreenState extends State<PosScreen> {
                 width: double.infinity,
                 height: isKeyboardVisible ? 50 : 65,
                 decoration: BoxDecoration(
-                  color: Colors.black, 
+                  color: FlavorColors.current.primaryDark, 
                   borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.centerRight,
@@ -732,7 +732,7 @@ class _PosScreenState extends State<PosScreen> {
                 child: Text(
                   "UGX ${formatMoney(totalAmount)}",
                   style: TextStyle(
-                    color: Colors.green,
+                    color: FlavorColors.current.onPrimary,
                     fontSize: isKeyboardVisible ? 24 : 32,
                     fontWeight: FontWeight.bold,
                   ),
@@ -919,9 +919,9 @@ class _PosScreenState extends State<PosScreen> {
               Container(
                 height: 300,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
+                  border: Border.all(color: FlavorColors.current.light),
                   borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey.shade50,
+                  color: FlavorColors.current.surface,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -996,14 +996,14 @@ class _PosScreenState extends State<PosScreen> {
                                       horizontal: 12,
                                       vertical: 8,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: isComp ? Colors.orange.shade50 : null,
-                                      border: Border(
-                                        bottom: BorderSide(
-                                          color: Colors.grey.shade200,
-                                        ),
-                                      ),
-                                    ),
+                                     decoration: BoxDecoration(
+                                       color: isComp ? FlavorColors.current.light.withValues(alpha: 0.3) : null,
+                                       border: Border(
+                                         bottom: BorderSide(
+                                           color: FlavorColors.current.light,
+                                         ),
+                                       ),
+                                     ),
                                     child: Row(
                                       children: [
                                         Expanded(
@@ -1022,24 +1022,24 @@ class _PosScreenState extends State<PosScreen> {
                                                       ),
                                                     ),
                                                   ),
-                                                  if (isComp) ...[
-                                                    const SizedBox(width: 6),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.orange.shade700,
-                                                        borderRadius: BorderRadius.circular(3),
-                                                      ),
-                                                      child: const Text(
-                                                        'COMP',
-                                                        style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: 9,
-                                                          fontWeight: FontWeight.bold,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
+                                                   if (isComp) ...[
+                                                     const SizedBox(width: 6),
+                                                     Container(
+                                                       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                       decoration: BoxDecoration(
+                                                         color: FlavorColors.current.primary,
+                                                         borderRadius: BorderRadius.circular(3),
+                                                       ),
+                                                       child: const Text(
+                                                         'COMP',
+                                                         style: TextStyle(
+                                                           color: Colors.white,
+                                                           fontSize: 9,
+                                                           fontWeight: FontWeight.bold,
+                                                         ),
+                                                       ),
+                                                     ),
+                                                   ],
                                                 ],
                                               ),
                                               Row(
@@ -1106,56 +1106,58 @@ class _PosScreenState extends State<PosScreen> {
                                             ],
                                           ),
                                         ),
-                                        Row(
-                                          children: [
-                                            InkWell(
-                                              onTap: widget.isViewOnly ? null : () => _updateQuantity(
-                                                index,
-                                                item['quantity'] - 1,
-                                              ),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.red[50],
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Icon(
-                                                  Icons.remove,
-                                                  size: 16,
-                                                  color: Colors.red[700],
-                                                ),
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                                              child: Text(
-                                                "${item['quantity']}",
-                                                style: const TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                            InkWell(
-                                              onTap: widget.isViewOnly ? null : () => _updateQuantity(
-                                                index,
-                                                item['quantity'] + 1,
-                                              ),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(4),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.green[50],
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Icon(
-                                                  Icons.add,
-                                                  size: 16,
-                                                  color: Colors.green[700],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                         Row(
+                                           children: [
+                                             InkWell(
+                                               onTap: widget.isViewOnly ? null : () => _updateQuantity(
+                                                 index,
+                                                 item['quantity'] - 1,
+                                               ),
+                                               child: Container(
+                                                 padding: const EdgeInsets.all(4),
+                                                 decoration: BoxDecoration(
+                                                   color: FlavorColors.current.surface,
+                                                   borderRadius: BorderRadius.circular(4),
+                                                   border: Border.all(color: FlavorColors.current.light),
+                                                 ),
+                                                 child: Icon(
+                                                   Icons.remove,
+                                                   size: 16,
+                                                   color: FlavorColors.current.icon,
+                                                 ),
+                                               ),
+                                             ),
+                                             Padding(
+                                               padding: const EdgeInsets.symmetric(horizontal: 8),
+                                               child: Text(
+                                                 "${item['quantity']}",
+                                                 style: const TextStyle(
+                                                   fontSize: 14,
+                                                   fontWeight: FontWeight.bold,
+                                                 ),
+                                               ),
+                                             ),
+                                             InkWell(
+                                               onTap: widget.isViewOnly ? null : () => _updateQuantity(
+                                                 index,
+                                                 item['quantity'] + 1,
+                                               ),
+                                               child: Container(
+                                                 padding: const EdgeInsets.all(4),
+                                                 decoration: BoxDecoration(
+                                                   color: FlavorColors.current.surface,
+                                                   borderRadius: BorderRadius.circular(4),
+                                                   border: Border.all(color: FlavorColors.current.light),
+                                                 ),
+                                                 child: Icon(
+                                                   Icons.add,
+                                                   size: 16,
+                                                   color: FlavorColors.current.icon,
+                                                 ),
+                                               ),
+                                             ),
+                                           ],
+                                         ),
                                         const SizedBox(width: 12),
                                         SizedBox(
                                           width: 80,
@@ -1211,75 +1213,75 @@ class _PosScreenState extends State<PosScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
-                            final bool isNewSale = widget.existingSalesId == null;
-                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+                       Expanded(
+                         child: ElevatedButton(
+                           onPressed: () {
+                             final bool isWaiter = (authController.currentUser.value?.role ?? '').toLowerCase().contains('waiter');
+                             final bool isNewSale = widget.existingSalesId == null;
+                             final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
 
-                            if (isNewSale && isWaiter && !allowAllUsersPayment) {
-                              _saveBill();
-                            } else if (isNewSale) {
-                              _navigateToPayment();
-                            } else {
-                              _updateSale();
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: Colors.purple[700],
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(() {
-                            final bool isCashier = _isCashierRole();
-                            final bool isNewSale = widget.existingSalesId == null;
-                            final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
-                            return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "SAVE";
-                          }()),
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (widget.existingSalesId != null) {
-                              Navigator.of(context).pop();
-                            } else { 
-                              setState(() {
-                                for (var controller in _priceControllers.values) {
-                                  controller.dispose();
-                                }
-                                _priceControllers.clear();
-                                selectedItems.clear();
-                                refController.clear();
-                                notesController.clear();
-                                final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
-                                selectedCustomerId = cashCustomer?.id;
-                                // Reset salesperson to logged-in user
-                                final currentUser = authController.currentUser.value;
-                                if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
-                                  selectedSalespersonId = currentUser.salespersonid;
-                                }
-                              });
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            backgroundColor: widget.existingSalesId != null ? Colors.grey[700] : Colors.green[700],
-                            foregroundColor: Colors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(widget.existingSalesId != null ? "Cancel" : "New"),
-                        ),
-                      ),
+                             if (isNewSale && isWaiter && !allowAllUsersPayment) {
+                               _saveBill();
+                             } else if (isNewSale) {
+                               _navigateToPayment();
+                             } else {
+                               _updateSale();
+                             }
+                           },
+                           style: ElevatedButton.styleFrom(
+                             padding: const EdgeInsets.symmetric(vertical: 12),
+                             backgroundColor: FlavorColors.current.primary,
+                             foregroundColor: FlavorColors.current.onPrimary,
+                             elevation: 2,
+                             shape: RoundedRectangleBorder(
+                               borderRadius: BorderRadius.circular(8),
+                             ),
+                           ),
+                           child: Text(() {
+                             final bool isCashier = _isCashierRole();
+                             final bool isNewSale = widget.existingSalesId == null;
+                             final bool allowAllUsersPayment = settingsController.paymentAccessForAllUsers.value;
+                             return (isNewSale && !isCashier && !allowAllUsersPayment) ? "SAVE" : "SAVE";
+                           }()),
+                         ),
+                       ),
+                       const SizedBox(width: 3),
+                       Expanded(
+                         child: ElevatedButton(
+                           onPressed: () {
+                             if (widget.existingSalesId != null) {
+                               Navigator.of(context).pop();
+                             } else { 
+                               setState(() {
+                                 for (var controller in _priceControllers.values) {
+                                   controller.dispose();
+                                 }
+                                 _priceControllers.clear();
+                                 selectedItems.clear();
+                                 refController.clear();
+                                 notesController.clear();
+                                 final cashCustomer = customerController.getCustomerByFullnames("Cash Customer ");
+                                 selectedCustomerId = cashCustomer?.id;
+                                 // Reset salesperson to logged-in user
+                                 final currentUser = authController.currentUser.value;
+                                 if (currentUser != null && currentUser.salespersonid.isNotEmpty) {
+                                   selectedSalespersonId = currentUser.salespersonid;
+                                 }
+                               });
+                             }
+                           },
+                           style: ElevatedButton.styleFrom(
+                             padding: const EdgeInsets.symmetric(vertical: 12),
+                             backgroundColor: widget.existingSalesId != null ? FlavorColors.current.tertiary : FlavorColors.current.secondary,
+                             foregroundColor: FlavorColors.current.onPrimary,
+                             elevation: 2,
+                             shape: RoundedRectangleBorder(
+                               borderRadius: BorderRadius.circular(8),
+                             ),
+                           ),
+                           child: Text(widget.existingSalesId != null ? "Cancel" : "New"),
+                         ),
+                       ),
                   const SizedBox(width: 3),
                   Expanded(
                     child: ElevatedButton(
@@ -1287,7 +1289,7 @@ class _PosScreenState extends State<PosScreen> {
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
-                          backgroundColor: Colors.grey[100],
+                          backgroundColor: FlavorColors.current.surface,
                           shape: const RoundedRectangleBorder(
                             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                           ),
@@ -1305,7 +1307,7 @@ class _PosScreenState extends State<PosScreen> {
                                   // Search Bar
                                   Container(
                                     padding: const EdgeInsets.all(12),
-                                    color: Colors.white,
+                                    color: FlavorColors.current.background,
                                     child: TextField(
                                       controller: searchController,
                                       decoration: InputDecoration(
@@ -1322,18 +1324,18 @@ class _PosScreenState extends State<PosScreen> {
                                             : null,
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                          borderSide: BorderSide(color: FlavorColors.current.light),
                                         ),
                                         enabledBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                          borderSide: BorderSide(color: FlavorColors.current.light),
                                         ),
                                         focusedBorder: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(10),
                                           borderSide: BorderSide(color: FlavorColors.current.primaryDark, width: 2),
                                         ),
                                         filled: true,
-                                        fillColor: Colors.grey[50],
+                                        fillColor: FlavorColors.current.surface,
                                         contentPadding: const EdgeInsets.symmetric(
                                           horizontal: 16,
                                           vertical: 12,
@@ -1397,8 +1399,8 @@ class _PosScreenState extends State<PosScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Colors.yellow[700],
-                        foregroundColor: Colors.white,
+                        backgroundColor: FlavorColors.current.tertiary,
+                        foregroundColor: FlavorColors.current.onPrimary,
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -1413,8 +1415,8 @@ class _PosScreenState extends State<PosScreen> {
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: Colors.red[700],
-                        foregroundColor: Colors.white,
+                        backgroundColor: FlavorColors.current.primaryDark,
+                        foregroundColor: FlavorColors.current.onPrimary,
                         elevation: 2,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),

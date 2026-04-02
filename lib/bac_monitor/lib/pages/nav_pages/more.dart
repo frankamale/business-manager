@@ -249,7 +249,21 @@ class _MoreState extends State<More> {
       // Store baseline data
       if (baselineResult.servicePoints.isNotEmpty) {
         final servicePoints = baselineResult.servicePoints
-            .map((e) => Map<String, dynamic>.from(e as Map))
+            .map((e) {
+              final sp = Map<String, dynamic>.from(e as Map);
+              return {
+                'id': sp['id'],
+                'name': sp['name'],
+                'code': sp['code'],
+                'fullName': sp['fullName'] ?? sp['name'] ?? '',
+                'servicepointtype': sp['servicepointtype'] ?? '',
+                'facilityName': sp['facilityName'] ?? '',
+                'sales': (sp['sales'] == true || sp['sales'] == 1) ? 1 : 0,
+                'stores': (sp['stores'] == true || sp['stores'] == 1) ? 1 : 0,
+                'production': (sp['production'] == true || sp['production'] == 1) ? 1 : 0,
+                'booking': (sp['booking'] == true || sp['booking'] == 1) ? 1 : 0,
+              };
+            })
             .toList();
         await dbHelper.insertServicePoints(servicePoints);
       }
