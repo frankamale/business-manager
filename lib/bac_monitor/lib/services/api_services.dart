@@ -34,6 +34,12 @@ double _parseDouble(dynamic value) {
   return 0.0;
 }
 
+/// Extract date part from datetime string (e.g., "2026-04-02T00:00:00" -> "2026-04-02")
+String _extractDate(String dateTimeStr) {
+  if (dateTimeStr.isEmpty) return dateTimeStr;
+  return dateTimeStr.split('T')[0].split(' ')[0];
+}
+
 class MonitorApiService extends GetxService {
   static const String _baseUrl = 'http://52.30.142.12:8080/rest';
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage(
@@ -727,7 +733,7 @@ class MonitorApiService extends GetxService {
             // kpiId is passed separately, default to 0 (all transactions)
             kpiBatch.insert('mon_kpi_sales', {
               'kpi_id': 0, // Default to all transactions
-              'processing_date': sale['processingdate'] ?? '',
+              'processing_date': _extractDate(sale['processingdate'] ?? ''),
               'selling_point': sale['sellingpoint'] ?? '',
               'currency': sale['currency'] ?? '',
               'kpi': sale['kpi'] ?? '',
@@ -1067,7 +1073,7 @@ class MonitorApiService extends GetxService {
         for (final sale in salesData) {
           kpiBatch.insert('mon_kpi_sales', {
             'kpi_id': kpiType['id'],
-            'processing_date': sale['processingdate'] ?? '',
+            'processing_date': _extractDate(sale['processingdate'] ?? ''),
             'selling_point': sale['sellingpoint'] ?? '',
             'currency': sale['currency'] ?? '',
             'kpi': sale['kpi'] ?? '',
