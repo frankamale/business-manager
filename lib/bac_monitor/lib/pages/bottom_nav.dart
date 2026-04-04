@@ -1,12 +1,14 @@
-
 import 'dart:async';
 
+import 'package:circle_nav_bar/circle_nav_bar.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../additions/colors.dart';
 import '../controllers/mon_dashboard_controller.dart';
+import '../controllers/mon_operator_controller.dart';
+import '../controllers/mon_store_controller.dart';
 import 'nav_pages/dashboard.dart';
 import 'nav_pages/inventory.dart';
 import 'nav_pages/more.dart';
@@ -20,10 +22,11 @@ class BottomNav extends StatefulWidget {
 }
 
 class _BottomNavState extends State<BottomNav> {
-  final MonDashboardController controller = Get.isRegistered<MonDashboardController>()
+  final MonDashboardController controller =
+      Get.isRegistered<MonDashboardController>()
       ? Get.find<MonDashboardController>()
       : Get.put(MonDashboardController());
-  
+
   // Track offline status
   final RxBool isOffline = false.obs;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
@@ -41,6 +44,13 @@ class _BottomNavState extends State<BottomNav> {
   @override
   void initState() {
     super.initState();
+    // Register controllers for child pages
+    if (!Get.isRegistered<MonOperatorController>()) {
+      Get.put(MonOperatorController());
+    }
+    if (!Get.isRegistered<MonStoresController>()) {
+      Get.put(MonStoresController());
+    }
     _startConnectivityListener();
   }
 
@@ -52,7 +62,9 @@ class _BottomNavState extends State<BottomNav> {
 
   /// Listen to connectivity changes
   void _startConnectivityListener() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      results,
+    ) {
       final result = results.first;
       isOffline.value = result == ConnectivityResult.none;
     });
@@ -97,12 +109,19 @@ class _BottomNavState extends State<BottomNav> {
               if (isOffline.value)
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   color: Colors.orange,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.cloud_off, color: Colors.white, size: 18),
+                      const Icon(
+                        Icons.cloud_off,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       const Text(
                         'OFFLINE MODE - Showing cached data',
@@ -117,59 +136,98 @@ class _BottomNavState extends State<BottomNav> {
                 ),
               // Main content
               Expanded(
-                child: IndexedStack(index: controller.tabIndex.value, children: screens),
+                child: IndexedStack(
+                  index: controller.tabIndex.value,
+                  children: screens,
+                ),
               ),
             ],
           ),
         ),
-        bottomNavigationBar: Theme(
-          data: Theme.of(context).copyWith(
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-          ),
-          child: Obx(
-            () => BottomNavigationBar(
-              type: BottomNavigationBarType.fixed,
-              backgroundColor: AppColors.getCardColor(context),
-              onTap: controller.changeTabIndex,
-              currentIndex: controller.tabIndex.value,
-              selectedItemColor: AppColors.getPrimaryColor(context),
-              unselectedItemColor: AppColors.getTextSecondaryColor(context),
-              selectedFontSize: 13.0,
-              unselectedFontSize: 12.0,
-              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.normal,
+        bottomNavigationBar: Obx(
+          () => CircleNavBar(
+            onTap: controller.changeTabIndex,
+            activeIndex: controller.tabIndex.value,
+            inactiveIcons: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.dashboard,
+                    color: AppColors.getSurfaceColor(context),
+                  ),
+                  Text(
+                    'Dashboard',
+                    style: TextStyle(
+                      color: AppColors.getSurfaceColor(context),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
-              elevation: 10,
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.dashboard_outlined),
-                  activeIcon: Icon(Icons.dashboard),
-                  label: 'Dashboard',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.inventory_2_outlined),
-                  activeIcon: Icon(Icons.inventory_2),
-                  label: 'Inventory',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.store_outlined),
-                  activeIcon: Icon(Icons.store),
-                  label: 'Sales',
-                ),
-                // BottomNavigationBarItem(
-                //   icon: Icon(Icons.monetization_on_outlined),
-                //   activeIcon: Icon(Icons.monetization_on),
-                //   label: 'Finance',
-                // ),
-                //
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.more_horiz),
-                  label: 'More',
-                ),
-              ],
-            ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.inventory_2,
+                    color: AppColors.getSurfaceColor(context),
+                  ),
+                  Text(
+                    'Inventory',
+                    style: TextStyle(
+                      color: AppColors.getSurfaceColor(context),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.store, color: AppColors.getSurfaceColor(context)),
+                  Text(
+                    'Stores',
+                    style: TextStyle(
+                      color: AppColors.getSurfaceColor(context),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.more_horiz,
+                    color: AppColors.getSurfaceColor(context),
+                  ),
+                  Text(
+                    'More',
+                    style: TextStyle(
+                      color: AppColors.getSurfaceColor(context),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            activeIcons: [
+              Icon(
+                Icons.dashboard_outlined,
+                color: AppColors.getSurfaceColor(context),
+              ),
+              Icon(
+                Icons.inventory_2_outlined,
+                color: AppColors.getSurfaceColor(context),
+              ),
+              Icon(
+                Icons.store_outlined,
+                color: AppColors.getSurfaceColor(context),
+              ),
+              Icon(Icons.more_horiz, color: AppColors.getSurfaceColor(context)),
+            ],
+            color: PrimaryColors.darkBlue,
+            circleWidth: 50,
           ),
         ),
       ),
