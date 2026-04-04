@@ -800,10 +800,13 @@ class _PosScreenState extends State<PosScreen> {
                     Row(
                       children: [
                         const SizedBox(
-                          width: 60,
+                          width: 80,
                           child: Text(
                             "Client:",
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: PrimaryColors.lightBlue,
+                            ),
                           ),
                         ),
                         Expanded(
@@ -882,10 +885,13 @@ class _PosScreenState extends State<PosScreen> {
                       Row(
                         children: [
                           const SizedBox(
-                            width: 60,
+                            width: 85,
                             child: Text(
                               "Salesperson:",
-                              style: TextStyle(fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: PrimaryColors.lightBlue,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -925,10 +931,13 @@ class _PosScreenState extends State<PosScreen> {
                     Row(
                       children: [
                         const SizedBox(
-                          width: 60,
+                          width: 80,
                           child: Text(
                             "Ref:",
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: PrimaryColors.lightBlue,
+                            ),
                           ),
                         ),
                         Expanded(
@@ -956,10 +965,13 @@ class _PosScreenState extends State<PosScreen> {
                     Row(
                       children: [
                         const SizedBox(
-                          width: 60,
+                          width: 80,
                           child: Text(
                             "Notes:",
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: PrimaryColors.lightBlue,
+                            ),
                           ),
                         ),
                         Expanded(
@@ -985,7 +997,7 @@ class _PosScreenState extends State<PosScreen> {
 
                     // Selected Items Container
                     Container(
-                      height: 300,
+                      height: 500,
                       decoration: BoxDecoration(
                         border: Border.all(color: FlavorColors.current.light),
                         borderRadius: BorderRadius.circular(8),
@@ -1001,7 +1013,7 @@ class _PosScreenState extends State<PosScreen> {
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: FlavorColors.current.surface,
+                              color: Colors.blue.shade100,
                               borderRadius: const BorderRadius.only(
                                 topLeft: Radius.circular(8),
                                 topRight: Radius.circular(8),
@@ -1015,7 +1027,7 @@ class _PosScreenState extends State<PosScreen> {
                                     "Item",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 ),
@@ -1025,7 +1037,7 @@ class _PosScreenState extends State<PosScreen> {
                                     "Qty",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 ),
@@ -1036,7 +1048,7 @@ class _PosScreenState extends State<PosScreen> {
                                     textAlign: TextAlign.right,
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontSize: 15,
                                     ),
                                   ),
                                 ),
@@ -1093,13 +1105,15 @@ class _PosScreenState extends State<PosScreen> {
                                                         Flexible(
                                                           child: Text(
                                                             item['name'],
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 14,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                ),
+                                                            style: const TextStyle(
+                                                              fontSize: 14,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                              color:
+                                                                  PrimaryColors
+                                                                      .lightBlue,
+                                                            ),
                                                           ),
                                                         ),
                                                         if (isComp) ...[
@@ -1158,13 +1172,14 @@ class _PosScreenState extends State<PosScreen> {
                                                                 !settingsController
                                                                     .priceEditingEnabled
                                                                     .value,
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 12,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w600,
-                                                                ),
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color:
+                                                                  Colors.black,
+                                                            ),
                                                             decoration: InputDecoration(
                                                               isDense: true,
                                                               contentPadding:
@@ -1283,17 +1298,16 @@ class _PosScreenState extends State<PosScreen> {
                                                               4,
                                                             ),
                                                         border: Border.all(
-                                                          color: FlavorColors
-                                                              .current
-                                                              .light,
+                                                          color: Colors
+                                                              .red
+                                                              .shade900,
                                                         ),
                                                       ),
                                                       child: Icon(
                                                         Icons.remove,
                                                         size: 16,
-                                                        color: FlavorColors
-                                                            .current
-                                                            .icon,
+                                                        color:
+                                                            Colors.red.shade900,
                                                       ),
                                                     ),
                                                   ),
@@ -1305,9 +1319,10 @@ class _PosScreenState extends State<PosScreen> {
                                                     child: Text(
                                                       "${item['quantity']}",
                                                       style: const TextStyle(
-                                                        fontSize: 14,
+                                                        fontSize: 16,
                                                         fontWeight:
                                                             FontWeight.bold,
+                                                        color: Colors.black87,
                                                       ),
                                                     ),
                                                   ),
@@ -1333,17 +1348,13 @@ class _PosScreenState extends State<PosScreen> {
                                                               4,
                                                             ),
                                                         border: Border.all(
-                                                          color: FlavorColors
-                                                              .current
-                                                              .light,
+                                                          color: Colors.green.shade900
                                                         ),
                                                       ),
                                                       child: Icon(
                                                         Icons.add,
                                                         size: 16,
-                                                        color: FlavorColors
-                                                            .current
-                                                            .icon,
+                                                        color: Colors.green.shade900
                                                       ),
                                                     ),
                                                   ),
@@ -1356,7 +1367,7 @@ class _PosScreenState extends State<PosScreen> {
                                                   formatMoney(item['amount']),
                                                   textAlign: TextAlign.right,
                                                   style: const TextStyle(
-                                                    fontSize: 14,
+                                                    fontSize: 16,
                                                     fontWeight: FontWeight.w600,
                                                   ),
                                                 ),
@@ -1713,7 +1724,7 @@ class _PosScreenState extends State<PosScreen> {
                             onPressed: () => Navigator.pop(context),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
-                              backgroundColor:Colors.red.shade700,
+                              backgroundColor: Colors.red.shade700,
                               foregroundColor: FlavorColors.current.onPrimary,
                               elevation: 2,
                               shape: RoundedRectangleBorder(
