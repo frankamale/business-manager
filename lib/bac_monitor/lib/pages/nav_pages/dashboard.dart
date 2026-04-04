@@ -97,6 +97,9 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void _initializeControllerData() async {
+    // Initialize all controllers that load data from local DB
+    // Each controller will query the DB based on the current date range
+    
     // Initialize KPI overview data
     if (Get.isRegistered<MonKpiOverviewController>()) {
       await Get.find<MonKpiOverviewController>().initializeData();
@@ -104,6 +107,18 @@ class _DashboardState extends State<Dashboard> {
     // Initialize gross profit data
     if (Get.isRegistered<MonGrossProfitController>()) {
       await Get.find<MonGrossProfitController>().initializeData();
+    }
+    // Initialize sales trends data
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      await Get.find<MonSalesTrendsController>().initializeData();
+    }
+    // Initialize outstanding payments data
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      await Get.find<MonOutstandingPaymentsController>().initializeData();
+    }
+    // Initialize KPI controller for detailed data
+    if (Get.isRegistered<MonKpiController>()) {
+      await Get.find<MonKpiController>().initializeData();
     }
   }
 

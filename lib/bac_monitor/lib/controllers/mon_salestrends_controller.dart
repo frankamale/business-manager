@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../../shared/database/unified_db_helper.dart';
 import '../models/dashboard.dart';
-import '../services/sync_state_manager.dart';
 import '../widgets/finance/date_range.dart';
 import 'mon_dashboard_controller.dart';
 
@@ -12,6 +11,7 @@ class MonSalesTrendsController extends GetxController {
   final MonDashboardController dateController = Get.find();
   final dbHelper = UnifiedDatabaseHelper.instance;
 
+  var isInitialized = false.obs;
   var salesData = <SalesDataPoint>[].obs;
   var isLoadingSales = true.obs;
   var hasErrorSales = false.obs;
@@ -64,11 +64,11 @@ class MonSalesTrendsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    debugPrint("SalesTrendsController onInit - fetching data");
+    debugPrint("SalesTrendsController onInit - NOT fetching data yet");
     print("Initial date range: ${dateController.selectedRange.value}");
     
-    fetchAllData();
-    
+    // Don't fetch data here - let the UI trigger it when ready
+    // Set up listeners for date changes
     ever(dateController.selectedRange, (_) {
       debugPrint("Date range changed to: ${dateController.selectedRange.value}");
       fetchAllData();
@@ -77,6 +77,18 @@ class MonSalesTrendsController extends GetxController {
       debugPrint("Custom range changed to: ${dateController.customRange.value}");
       fetchAllData();
     });
+  }
+
+  /// Call this manually when the UI is ready
+  Future<void> initializeData() async {
+    if (isInitialized.value) {
+      debugPrint('MonSalesTrendsController: Already initialized, skipping');
+      return;
+    }
+    
+    debugPrint('MonSalesTrendsController: Performing first data fetch');
+    await fetchAllData();
+    isInitialized.value = true;
   }
 
   Future<void> fetchAllData() async {
