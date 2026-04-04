@@ -136,60 +136,61 @@ class KpiSyncService extends GetxService {
   }
 
   /// Performs incremental sync fetching only records newer than last sync point.
+  /// Only fetches KPI data - baseline data (customers, inventory, service points)
+  /// is only fetched during first login.
   /// 
   /// Returns: IncrementalSyncResult with counts of new/updated records
   Future<IncrementalSyncResult> performIncrementalSync() async {
     final lastSync = await _dbHelper.getLastSyncTimestamp();
     final now = DateTime.now();
 
-    if (lastSync == null) {
-      // First sync - do full sync
-      debugPrint('[KpiSyncService] No previous sync found, performing full sync');
-      try {
-        await _apiService.fetchAndCacheAllData();
-        await _dbHelper.insertSyncRecord(SyncRecord(
-          syncType: 'full',
-          syncStatus: 'completed',
-          completedAt: now,
-          recordsFetched: 0,
-        ));
+    // Check if sync is needed (30-minute cache window)
+    if (lastSync != null) {
+      final timeSinceLastSync = now.difference(lastSync);
+      if (timeSinceLastSync < const Duration(minutes: 30)) {
+        debugPrint('[KpiSyncService] Sync skipped - last sync was ${timeSinceLastSync.inMinutes} minutes ago');
         return IncrementalSyncResult(
-          syncType: 'full',
+          syncType: 'skipped',
           recordsFetched: 0,
-          lastSyncTimestamp: now,
-        );
-      } catch (e) {
-        debugPrint('[KpiSyncService] Full sync failed: $e');
-        return IncrementalSyncResult(
-          syncType: 'full',
-          recordsFetched: 0,
-          lastSyncTimestamp: null,
+          lastSyncTimestamp: lastSync,
         );
       }
     }
 
-    // Check if sync is needed (30-minute cache window)
-    final timeSinceLastSync = now.difference(lastSync);
-    if (timeSinceLastSync < const Duration(minutes: 30)) {
-      debugPrint('[KpiSyncService] Sync skipped - last sync was ${timeSinceLastSync.inMinutes} minutes ago');
-      return IncrementalSyncResult(
-        syncType: 'skipped',
-        recordsFetched: 0,
-        lastSyncTimestamp: lastSync,
-      );
-    }
-
-    // Fetch delta - only records since last sync
+    // Fetch delta - only KPI records since last sync
     int totalRecords = 0;
 
     try {
       // Fetch today's KPI data (most likely to have new records)
-      debugPrint('[KpiSyncService] Performing incremental sync from $lastSync');
-      final todayRecords = await fetchTodayKpiMetrics();
-      totalRecords += todayRecords.values.expand((e) => e).length;
-
-      // Fetch recent sales for the delta period
-      await _apiService.syncAllKpiData(lastSync, now);
+      debugPrint('[KpiSyncService] Performing incremental KPI sync from $lastSync');
+      
+      final today = DateFormat('yyyy-MM-dd').format(now);
+      
+      // Only fetch KPI data - NOT baseline data (customers, inventory, service points)
+      // Baseline data is only fetched during first login via fetchBaselineDatasets()
+      for (final kpiType in kpiTypes) {
+        try {
+          debugPrint('[KpiSyncService] Fetching KPI ${kpiType['name']} (id=${kpiType['id']}) for $today');
+          
+          final response = await _apiService.getWithAuth(
+            '/sales/reports/kpi?startDate=$today&endDate=$today&kpiId=${kpiType['id']}&timeframe=1',
+          );
+          
+          final data = await compute(_decodeJsonList, response.body);
+          final records = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          
+          totalRecords += records.length;
+          
+          debugPrint('[KpiSyncService] Fetched ${records.length} records for ${kpiType['name']}');
+        } catch (e) {
+          debugPrint('[KpiSyncService] Error fetching KPI ${kpiType['name']}: $e');
+        }
+      }
+      
+      // Store today's KPI data
+      if (totalRecords > 0) {
+        await _apiService.syncAllKpiData(now, now);
+      }
 
       // Record sync completion
       await _dbHelper.insertSyncRecord(SyncRecord(
@@ -197,11 +198,11 @@ class KpiSyncService extends GetxService {
         syncStatus: 'completed',
         completedAt: now,
         recordsFetched: totalRecords,
-        dateRangeStart: DateFormat('yyyy-MM-dd').format(lastSync),
-        dateRangeEnd: DateFormat('yyyy-MM-dd').format(now),
+        dateRangeStart: today,
+        dateRangeEnd: today,
       ));
 
-      debugPrint('[KpiSyncService] Incremental sync complete - fetched $totalRecords records');
+      debugPrint('[KpiSyncService] Incremental KPI sync complete - fetched $totalRecords records');
     } catch (e) {
       debugPrint('[KpiSyncService] Incremental sync failed: $e');
       // Record failed sync

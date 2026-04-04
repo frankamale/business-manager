@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../bac_monitor/lib/additions/colors.dart';
@@ -21,6 +20,7 @@ import '../client/auth/account_pending_screen.dart';
 import '../client/auth/register.dart';
 import '../flavors/flavor_colors.dart';
 import '../shared/services/customer_auth_service.dart';
+import '../shared/services/credential_helper.dart';
 import '../shared/widgets/app_logo.dart';
 import 'app_roots.dart';
 
@@ -44,13 +44,6 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   bool _isLoading = false;
   bool _hasPendingRegistration = false;
   String? _errorMessage;
-
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
-
-  static const String _usernameKey = 'login_username';
-  static const String _passwordKey = 'login_password';
 
   @override
   void initState() {
@@ -188,7 +181,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       DateTime.now().millisecondsSinceEpoch,
     );
 
-    _storeCredentialsSecurely(identifier, pin);
+    await _storeCredentialsSecurely(identifier, pin);
 
     Get.offAll(() => const ClientAppRoot());
   }
@@ -226,9 +219,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       await box.write('last_company_id', companyId);
       await box.write('last_username', username);
 
-      final isAdmin =
-          roles != null &&
-          roles.any((role) => role.toString().toLowerCase().contains("admin"));
+      final isAdmin = CredentialHelper.isAdminFromRoles(roles);
       final userRole = isAdmin ? 'admin' : 'staff';
       await box.write('last_user_role', userRole);
 
@@ -241,9 +232,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       );
     }
 
-    final isAdmin =
-        roles != null &&
-        roles.any((role) => role.toString().toLowerCase().contains("admin"));
+    final isAdmin = CredentialHelper.isAdminFromRoles(roles);
     final targetSystem = isAdmin ? 'monitor' : 'pos';
 
     final account = UserAccount(
@@ -256,7 +245,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     await _accountManager.setCurrentAccount(account);
     await _accountManager.addAccount(account);
 
-    _storeCredentialsSecurely(username, password);
+    await _storeCredentialsSecurely(username, password);
 
     if (isAdmin) {
       try {
@@ -315,11 +304,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         await box.write('last_company_id', companyId);
         await box.write('last_username', username);
 
-        final isAdmin =
-            roles != null &&
-            roles.any(
-              (role) => role.toString().toLowerCase().contains("admin"),
-            );
+        final isAdmin = CredentialHelper.isAdminFromRoles(roles);
         final userRole = isAdmin ? 'admin' : 'staff';
         await box.write('last_user_role', userRole);
 
@@ -332,9 +317,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         );
       }
 
-      final isAdmin =
-          roles != null &&
-          roles.any((role) => role.toString().toLowerCase().contains("admin"));
+      final isAdmin = CredentialHelper.isAdminFromRoles(roles);
       final targetSystem = isAdmin ? 'monitor' : 'pos';
 
       final currentAccount = _accountManager.currentAccount.value;
@@ -349,7 +332,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         await _accountManager.setCurrentAccount(updatedAccount);
       }
 
-      _storeCredentialsSecurely(username, password);
+      await _storeCredentialsSecurely(username, password);
 
       if (isAdmin) {
         await _syncToMonitorServiceAsync(
@@ -400,47 +383,20 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     ]);
   }
 
-  void _storeCredentialsSecurely(String username, String password) {
-    Future.wait([
-      _secureStorage.write(key: _usernameKey, value: username),
-      _secureStorage.write(key: _passwordKey, value: password),
-    ]);
+  Future<void> _storeCredentialsSecurely(String username, String password) async {
+    await CredentialHelper.storeCredentials(username, password);
   }
 
   Future<Map<String, String?>> _getStoredCredentials() async {
-    try {
-      final results = await Future.wait([
-        _secureStorage.read(key: _usernameKey),
-        _secureStorage.read(key: _passwordKey),
-      ]);
-      return {'username': results[0], 'password': results[1]};
-    } catch (e) {
-      return {'username': null, 'password': null};
-    }
+    return CredentialHelper.getStoredCredentials();
   }
 
   Future<void> _clearStoredCredentials() async {
-    await Future.wait([
-      _secureStorage.delete(key: _usernameKey),
-      _secureStorage.delete(key: _passwordKey),
-    ]);
+    await CredentialHelper.clearCredentials();
   }
 
   Future<bool> _hasStoredCredentials() async {
-    try {
-      final results = await Future.wait([
-        _secureStorage.read(key: _usernameKey),
-        _secureStorage.read(key: _passwordKey),
-      ]);
-      final username = results[0];
-      final password = results[1];
-      return username != null &&
-          username.isNotEmpty &&
-          password != null &&
-          password.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
+    return CredentialHelper.hasStoredCredentials();
   }
 
   @override

@@ -2,12 +2,13 @@ import 'package:bac_pos/back_pos/controllers/customer_controller.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import '../../../../back_pos/utils/network_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../shared/widgets/ui_helper.dart';
+import '../../../../shared/services/credential_helper.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_dashboard_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
@@ -41,10 +42,6 @@ class SplashPage extends StatefulWidget {
 class _SplashPageState extends State<SplashPage> {
   final _dbHelper = UnifiedDatabaseHelper.instance;
 
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
-
   // Track offline mode
   bool _isOfflineMode = false;
   String _statusMessage = 'Initializing...';
@@ -67,33 +64,22 @@ class _SplashPageState extends State<SplashPage> {
 
   /// Retrieve stored credentials from FlutterSecureStorage
   Future<Map<String, String?>> _getStoredCredentials() async {
-    try {
-      final username = await _secureStorage.read(key: 'login_username');
-      final password = await _secureStorage.read(key: 'login_password');
-      return {'username': username, 'password': password};
-    } catch (e) {
-      debugPrint('SplashPage: Error retrieving stored credentials - $e');
-      return {'username': null, 'password': null};
-    }
+    return CredentialHelper.getStoredCredentials();
   }
 
   /// Check if we have valid stored credentials
   Future<bool> _hasValidCredentials() async {
     try {
       debugPrint('SplashPage: Checking stored credentials');
-      final credentials = await _getStoredCredentials();
+      final hasCredentials = await CredentialHelper.hasStoredCredentials();
+      if (!hasCredentials) return false;
+
       final apiService = Get.find<MonitorApiService>();
       final token = await apiService.getStoredToken();
       final companyId = await apiService.getStoredCompanyId();
 
-      return credentials['username'] != null &&
-          credentials['username']!.isNotEmpty &&
-          credentials['password'] != null &&
-          credentials['password']!.isNotEmpty &&
-          token != null &&
-          token.isNotEmpty &&
-          companyId != null &&
-          companyId.isNotEmpty;
+      return token != null && token.isNotEmpty &&
+          companyId != null && companyId.isNotEmpty;
     } catch (e) {
       debugPrint('SplashPage: Error checking valid credentials - $e');
       return false;
@@ -269,24 +255,7 @@ class _SplashPageState extends State<SplashPage> {
         
         // Show offline mode snackbar if in offline mode
         if (widget.isOffline) {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (Get.context != null) {
-              ScaffoldMessenger.of(Get.context!).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.cloud_off, color: Colors.white),
-                      const SizedBox(width: 12),
-                      const Text('You are offline. Showing cached data.'),
-                    ],
-                  ),
-                  backgroundColor: Colors.orange,
-                  duration: const Duration(seconds: 4),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          });
+          UIHelper.showOfflineSnackbar();
         }
         
         // STEP 10: Post-mount historical sync (background task)
@@ -404,39 +373,6 @@ class _SplashPageState extends State<SplashPage> {
     } catch (e) {
       debugPrint('SplashPage: Error loading company details - $e');
       // Continue anyway - not critical
-    }
-  }
-
-  /// Sync data from server BEFORE initializing controllers
-  Future<void> _syncDataFromServer() async {
-    try {
-      final apiService = Get.find<MonitorApiService>();
-
-      debugPrint(
-        "SplashPage: Device is online. Syncing all data from server...",
-      );
-      await apiService.fetchAndCacheAllData();
-      debugPrint("SplashPage: Data sync completed successfully");
-
-      // Load company details into operator controller
-      await _loadCompanyDetailsOffline();
-    } catch (e) {
-      debugPrint("SplashPage: Error during sync - $e");
-
-      // Check if we have cached data to fall back on
-      final hasCachedData = await _hasCachedData();
-
-      if (hasCachedData) {
-        debugPrint(
-          "SplashPage: Sync failed but we have cached data. Continuing...",
-        );
-        setState(() {
-          _isOfflineMode = true; // Switch to offline mode
-        });
-        await _loadCompanyDetailsOffline();
-      } else {
-        throw Exception('Failed to sync data and no cached data available');
-      }
     }
   }
 
@@ -638,7 +574,11 @@ class _SplashPageState extends State<SplashPage> {
 
   /// Trigger historical data sync in background - fetches month by month
   void _triggerHistoricalSync() {
-    _runHistoricalLoop();
+    // Delay starting historical sync to let UI fully load first
+    // This prevents database locking issues during initial UI rendering
+    Future.delayed(const Duration(seconds: 5), () {
+      _runHistoricalLoop();
+    });
   }
 
   Future<void> _runHistoricalLoop() async {
@@ -686,8 +626,9 @@ class _SplashPageState extends State<SplashPage> {
         
         syncManager?.markHistoricalMonthLoaded(nextMonth);
         
-        // Small delay between months to prevent server overload
-        await Future.delayed(const Duration(milliseconds: 500));
+        // Longer delay between months to prevent database locking
+        // and give UI time to access the database
+        await Future.delayed(const Duration(seconds: 2));
       }
     } catch (e) {
       debugPrint('[SplashPage] Historical sync loop failed: $e');
@@ -722,24 +663,7 @@ class _SplashPageState extends State<SplashPage> {
           Get.offAll(() => const BottomNav());
           
           // Show offline snackbar
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (Get.context != null) {
-              ScaffoldMessenger.of(Get.context!).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.cloud_off, color: Colors.white),
-                      const SizedBox(width: 12),
-                      const Text('You are offline. Showing cached data.'),
-                    ],
-                  ),
-                  backgroundColor: Colors.orange,
-                  duration: const Duration(seconds: 4),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          });
+          UIHelper.showOfflineSnackbar();
         });
       } else {
         debugPrint('SplashPage: No offline credentials found');

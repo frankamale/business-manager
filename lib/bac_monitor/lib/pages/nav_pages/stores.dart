@@ -27,9 +27,16 @@ class _StoresState extends State<Stores> {
   @override
   void initState() {
     super.initState();
-    controller = Get.put(MonStoresController());
-    kpiController = Get.put(MonStoreKpiTrendController());
-    monKpiController = Get.put(MonKpiController());
+    // Use existing controllers if registered, otherwise register new ones
+    controller = Get.isRegistered<MonStoresController>()
+        ? Get.find<MonStoresController>()
+        : Get.put(MonStoresController());
+    kpiController = Get.isRegistered<MonStoreKpiTrendController>()
+        ? Get.find<MonStoreKpiTrendController>()
+        : Get.put(MonStoreKpiTrendController());
+    monKpiController = Get.isRegistered<MonKpiController>()
+        ? Get.find<MonKpiController>()
+        : Get.put(MonKpiController());
     // Ensure stores are fetched when page loads
     _loadStores();
   }

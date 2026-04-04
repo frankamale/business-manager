@@ -27,10 +27,18 @@ class UnifiedDatabaseHelper {
   /// Opens the database for a specific company
   /// If force is false and database is already open for this company, returns early
   Future<void> openForCompany(String companyId, {bool force = false}) async {
-    // Prevent concurrent opening
+    // Prevent concurrent opening with timeout to avoid infinite loops
     if (_isOpening) {
+      int waitCount = 0;
+      const maxWaitCount = 200; // 200 * 50ms = 10 seconds timeout
       while (_isOpening) {
         await Future.delayed(const Duration(milliseconds: 50));
+        waitCount++;
+        if (waitCount >= maxWaitCount) {
+          debugPrint('UnifiedDatabaseHelper: Timeout waiting for database to open, resetting mutex');
+          _isOpening = false;
+          break;
+        }
       }
       if (_currentCompanyId == companyId && _database != null) {
         return;

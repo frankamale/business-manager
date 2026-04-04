@@ -14,10 +14,21 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  late final MonOperatorController operatorController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure MonOperatorController is registered before using it
+    if (!Get.isRegistered<MonOperatorController>()) {
+      Get.put(MonOperatorController());
+    }
+    operatorController = Get.find<MonOperatorController>();
+  }
+
   @override
   Widget build(BuildContext context) {
     final ProfileController controller = Get.find();
-    final operatorController = Get.find<MonOperatorController>();
 
     return Obx(() {
       if (controller.isLoading.value) {

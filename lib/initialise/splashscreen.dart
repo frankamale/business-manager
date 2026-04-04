@@ -6,6 +6,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_storage/get_storage.dart';
 import '../back_pos/utils/network_helper.dart';
 import '../shared/widgets/app_logo.dart';
+import '../shared/widgets/ui_helper.dart';
+import '../shared/services/credential_helper.dart';
 import 'app_roots.dart';
 import 'unified_login_screen.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
@@ -19,7 +21,6 @@ import '../bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
 import '../bac_monitor/lib/controllers/mon_outstanding_payments_controller.dart';
 import '../bac_monitor/lib/controllers/mon_inventory_controller.dart';
 import '../bac_monitor/lib/services/api_services.dart';
-import '../bac_monitor/lib/services/sync_state_manager.dart';
 import '../bac_monitor/lib/services/sync_state_manager.dart';
 import '../shared/database/unified_db_helper.dart';
 import '../bac_monitor/lib/pages/bottom_nav.dart';
@@ -112,7 +113,7 @@ class ConnectivityController extends GetxController {
               await _loadDataFromDatabase();
               Get.offAll(() => const PosAppRoot());
             }
-          } else if (role.toLowerCase().contains("admin")) {
+          } else if (CredentialHelper.isAdminRole(role)) {
             // Admin user - initialize monitor controllers only
             _initializeControllersForRole('admin');
             await _loadDataFromDatabase();
@@ -190,31 +191,19 @@ class ConnectivityController extends GetxController {
   }
 
   Future<Map<String, String?>> _getStoredCredentials() async {
-    try {
-      final username = await _secureStorage.read(key: 'login_username');
-      final password = await _secureStorage.read(key: 'login_password');
-      return {'username': username, 'password': password};
-    } catch (e) {
-      debugPrint('SplashScreen: Error retrieving stored credentials - $e');
-      return {'username': null, 'password': null};
-    }
+    return CredentialHelper.getStoredCredentials();
   }
 
   Future<bool> _hasValidCredentials() async {
     try {
-      final credentials = await _getStoredCredentials();
-      final token = await Get.find<MonitorApiService>().getStoredToken();
-      final companyId = await Get.find<MonitorApiService>()
-          .getStoredCompanyId();
+      final hasCredentials = await CredentialHelper.hasStoredCredentials();
+      if (!hasCredentials) return false;
 
-      return credentials['username'] != null &&
-          credentials['username']!.isNotEmpty &&
-          credentials['password'] != null &&
-          credentials['password']!.isNotEmpty &&
-          token != null &&
-          token.isNotEmpty &&
-          companyId != null &&
-          companyId.isNotEmpty;
+      final token = await Get.find<MonitorApiService>().getStoredToken();
+      final companyId = await Get.find<MonitorApiService>().getStoredCompanyId();
+
+      return token != null && token.isNotEmpty &&
+          companyId != null && companyId.isNotEmpty;
     } catch (e) {
       debugPrint('SplashScreen: Error checking valid credentials - $e');
       return false;
@@ -253,7 +242,7 @@ class ConnectivityController extends GetxController {
   /// Initialize controllers based on user role
   /// Admin users get monitor controllers, POS users get POS controllers
   void _initializeControllersForRole(String role) {
-    final isAdmin = role.toLowerCase().contains("admin");
+    final isAdmin = CredentialHelper.isAdminRole(role);
 
     if (isAdmin) {
       debugPrint('SplashScreen: Admin user - initializing monitor controllers');
@@ -336,7 +325,7 @@ class ConnectivityController extends GetxController {
         'SplashScreen: User role is null in offline mode, defaulting to POS app',
       );
       Get.offAll(() => const PosAppRoot());
-    } else if (role.toLowerCase().contains("admin")) {
+    } else if (CredentialHelper.isAdminRole(role)) {
       Get.offAll(() => const MonitorAppRoot());
     } else {
       Get.offAll(() => const PosAppRoot());
@@ -377,31 +366,14 @@ class ConnectivityController extends GetxController {
           await _loadDataFromDatabase();
           
           // Navigate based on role
-          if (effectiveRole.toLowerCase().contains("admin")) {
+          if (CredentialHelper.isAdminRole(effectiveRole)) {
             Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());
           }
           
           // Show offline mode notification
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (Get.context != null) {
-              ScaffoldMessenger.of(Get.context!).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      const Icon(Icons.cloud_off, color: Colors.white),
-                      const SizedBox(width: 12),
-                      const Text('You are offline. Showing cached data.'),
-                    ],
-                  ),
-                  backgroundColor: Colors.orange,
-                  duration: const Duration(seconds: 4),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          });
+          UIHelper.showOfflineSnackbar();
         } catch (e) {
           debugPrint('SplashScreen: Error opening offline database - $e');
           _setError();
@@ -417,7 +389,7 @@ class ConnectivityController extends GetxController {
           _initializeControllersForRole(effectiveRole);
           await _loadDataFromDatabase();
           
-          if (effectiveRole.toLowerCase().contains("admin")) {
+          if (CredentialHelper.isAdminRole(effectiveRole)) {
             Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());

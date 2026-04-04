@@ -20,7 +20,9 @@ class BottomNav extends StatefulWidget {
 }
 
 class _BottomNavState extends State<BottomNav> {
-  final MonDashboardController controller = Get.put(MonDashboardController());
+  final MonDashboardController controller = Get.isRegistered<MonDashboardController>()
+      ? Get.find<MonDashboardController>()
+      : Get.put(MonDashboardController());
   
   // Track offline status
   final RxBool isOffline = false.obs;

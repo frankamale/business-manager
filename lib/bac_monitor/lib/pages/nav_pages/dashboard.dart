@@ -67,16 +67,44 @@ class _DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
     // DashboardController must be initialized first as other controllers depend on it
-    Get.put(MonDashboardController());
-    Get.put(MonOperatorController());
-    Get.put(MonOutstandingPaymentsController());
-    Get.put(MonGrossProfitController());
-    Get.put(MonSalesTrendsController());
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController());
+    }
+    if (!Get.isRegistered<MonOperatorController>()) {
+      Get.put(MonOperatorController());
+    }
+    if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
+      Get.put(MonOutstandingPaymentsController());
+    }
+    if (!Get.isRegistered<MonGrossProfitController>()) {
+      Get.put(MonGrossProfitController());
+    }
+    if (!Get.isRegistered<MonSalesTrendsController>()) {
+      Get.put(MonSalesTrendsController());
+    }
     if (!Get.isRegistered<MonKpiOverviewController>()) {
       Get.put(MonKpiOverviewController());
     }
     // Initialize MonKpiController for detailed KPI data
-    Get.put(MonKpiController());
+    if (!Get.isRegistered<MonKpiController>()) {
+      Get.put(MonKpiController());
+    }
+    
+    // Initialize controller data after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeControllerData();
+    });
+  }
+
+  void _initializeControllerData() async {
+    // Initialize KPI overview data
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      await Get.find<MonKpiOverviewController>().initializeData();
+    }
+    // Initialize gross profit data
+    if (Get.isRegistered<MonGrossProfitController>()) {
+      await Get.find<MonGrossProfitController>().initializeData();
+    }
   }
 
   Future<void> _handleRefresh() async {

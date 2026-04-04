@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
@@ -13,6 +14,7 @@ class MonGrossProfitController extends GetxController {
   // Reactive state variables
   var isLoading = true.obs;
   var hasError = false.obs;
+  var isInitialized = false.obs;
 
   var grossProfit = "0".obs;
   var totalSales = "0".obs;
@@ -23,28 +25,36 @@ class MonGrossProfitController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchGrossProfitData();
-    ever(dateController.selectedRange, (_) => fetchGrossProfitData());
-    ever(dateController.customRange, (_) => fetchGrossProfitData());
+    // Don't fetch data here - let the UI trigger it when ready
+    debugPrint('MonGrossProfitController: onInit - NOT fetching data yet');
+    
+    // Set up listeners for date changes
+    ever(dateController.selectedRange, (_) {
+      if (isInitialized.value) {
+        fetchGrossProfitData();
+      }
+    });
+    ever(dateController.customRange, (_) {
+      if (isInitialized.value) {
+        fetchGrossProfitData();
+      }
+    });
+  }
+
+  /// Call this manually when the UI is ready
+  Future<void> initializeData() async {
+    if (isInitialized.value) {
+      debugPrint('MonGrossProfitController: Already initialized, skipping');
+      return;
+    }
+    
+    debugPrint('MonGrossProfitController: Performing first data fetch');
+    await fetchGrossProfitData();
+    isInitialized.value = true;
   }
 
   Future<void> fetchGrossProfitData() async {
     try {
-      // Check if data was already loaded by splash page via SyncStateManager
-      // try {
-      //   if (Get.isRegistered<SyncStateManager>()) {
-      //     final syncManager = Get.find<SyncStateManager>();
-      //     if (!syncManager.shouldFetchTodayData()) {
-      //       print(
-      //           "MonGrossProfitController: Data already loaded, skipping fetch");
-      //       return;
-      //     }
-      //   }
-      // } catch (e) {
-      //   print(
-      //       "MonGrossProfitController: Error checking SyncStateManager: $e");
-      // }
-
       isLoading.value = true;
       hasError.value = false;
 
