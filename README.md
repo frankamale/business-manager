@@ -3,36 +3,51 @@
 ## Running the App
 
 ### Using Command Line
-
-**BAC flavor:**
+**Default BAC flavor:**
 ```
-flutter run --flavor bac -t lib/main.dart --dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"
+flutter run --flavor bac --dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"
 ```
 
-**Other flavors:** Use the corresponding args from the Available Flavors table.
+**Example of flavor with arguments, eg komusoft Flavor:**
+```
+flutter run --flavor komusoft -t lib/main.dart --dart-define=FLAVOR=komusoft --dart-define=APP_NAME="Komusoft Solns" --dart-define=COMPANY_NAME="Komusoft Solutions Ltd" --dart-define=BOT_USERNAME=test.account123@qc.com --dart-define=BOT_PASSWORD=Ba@123456
+```
 
 ### Using Android Studio
 
 1. Go to **Run > Edit Configurations**
 2. Click **+** and select **Flutter**
-3. Set:
+3. Configure as follows:
+
+   **For Default BAC flavor:**
+   - Flavor: `bac`
    - Dart entry point: `lib/main.dart`
-   - Build mode: **Debug** or **Release**
-   - Flavor: (select from table below)
-   - Additional run args: (see table below)
+   - Build mode: `Debug` or `Release`
+   - Additional run args: `--dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"`
+
+   **For other flavours like komusoft:**
+   - Flavor: `komusoft`
+   - Dart entry point: `lib/main.dart`
+   - Build mode: `Debug` or `Release`
+   - Additional run args: `--dart-define=FLAVOR=komusoft --dart-define=APP_NAME="Komusoft Solns" --dart-define=COMPANY_NAME="Komusoft Solutions Ltd" --dart-define=BOT_USERNAME=test.account123@qc.com --dart-define=BOT_PASSWORD=Ba@123456`
+
 4. Click **OK** and run from the device selector
 
 ---
 
 ## Building the App
 
-### Debug APK
+### Default release APK
 ```
-flutter build apk --debug --flavor <flavor> --dart-define=FLAVOR=<flavor> --dart-define=APP_NAME="<app_name>" --dart-define=COMPANY_NAME="<company_name>" --dart-define=BOT_USERNAME=<bot_username> --dart-define=BOT_PASSWORD=<bot_password>
+flutter build apk --debug --flavor bac --dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"
 ```
 
-### Release APK
-Same as above, replace `--debug` with `--release`.
+### FLavoredRelease APK
+```
+flutter build apk --release --flavor bac --dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"
+```
+
+Replace `--flavor bac` with `--flavor komusoft` and adjust the `--dart-define` values for other flavors.
 
 ---
 
@@ -66,7 +81,9 @@ Create file `strings.xml`:
 
 Create folder: `assets/flavors/newcompany/`
 
-Add files: `logo.png`, `app_icon.png`
+Add the following files:
+- `logo.png`
+- `app_icon.png`
 
 Then run:
 ```
