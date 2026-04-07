@@ -150,5 +150,4 @@ class _StoresState extends State<Stores> {
       ),
     );
   }
-
 }

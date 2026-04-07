@@ -285,7 +285,16 @@ class MonDataSyncController extends GetxController {
         debugPrint('[MonDataSyncController] Incremental sync skipped - cache still valid');
       }
     } catch (e) {
-      debugPrint('[MonDataSyncController] Incremental sync failed: $e');
+      debugPrint('[MonDataSyncController] Incremental KPI sync failed: $e');
+    }
+
+    // Also sync service points in incremental mode (they're small)
+    syncPhase.value = SyncPhase.baselineFetch;
+    syncStatusMessage.value = 'Syncing service points...';
+    try {
+      await _fetchAndStoreBaselineData();
+    } catch (e) {
+      debugPrint('[MonDataSyncController] Service points sync failed: $e');
     }
   }
 

@@ -187,7 +187,7 @@ class AuthController extends GetxController {
       String usernameLower = username;
       isLoggingIn.value = true;
 
-      // Close the existing database before new authentication (non-blocking if possible)
+      // Close the existing database before new authentication
       if (closeDatabase) {
         UnifiedDatabaseHelper.instance.close();
       }
@@ -195,10 +195,10 @@ class AuthController extends GetxController {
       // Authenticate with server
       final authResponse = await _apiService.adminSignIn(usernameLower, password);
 
-      // Save credentials in background (fire-and-forget)
+      // Save credentials in background
       _apiService.saveServerCredentials(usernameLower, password);
 
-      // Fetch company info (we need this)
+      // Fetch company info
       await _apiService.fetchAndStoreCompanyInfo();
 
       // Get company info

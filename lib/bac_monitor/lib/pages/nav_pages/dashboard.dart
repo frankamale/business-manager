@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
@@ -68,26 +69,26 @@ class _DashboardState extends State<Dashboard> {
     super.initState();
     // DashboardController must be initialized first as other controllers depend on it
     if (!Get.isRegistered<MonDashboardController>()) {
-      Get.put(MonDashboardController());
+      Get.put(MonDashboardController(), permanent: true);
     }
     if (!Get.isRegistered<MonOperatorController>()) {
-      Get.put(MonOperatorController());
+      Get.put(MonOperatorController(), permanent: true );
     }
     if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
-      Get.put(MonOutstandingPaymentsController());
+      Get.put(MonOutstandingPaymentsController(), permanent: true);
     }
     if (!Get.isRegistered<MonGrossProfitController>()) {
-      Get.put(MonGrossProfitController());
+      Get.put(MonGrossProfitController(), permanent: true);
     }
     if (!Get.isRegistered<MonSalesTrendsController>()) {
-      Get.put(MonSalesTrendsController());
+      Get.put(MonSalesTrendsController(), permanent: true);
     }
     if (!Get.isRegistered<MonKpiOverviewController>()) {
-      Get.put(MonKpiOverviewController());
+      Get.put(MonKpiOverviewController(), permanent: true);
     }
     // Initialize MonKpiController for detailed KPI data
     if (!Get.isRegistered<MonKpiController>()) {
-      Get.put(MonKpiController());
+      Get.put(MonKpiController(), permanent: true);
     }
     
     // Initialize controller data after first frame
@@ -102,23 +103,23 @@ class _DashboardState extends State<Dashboard> {
     
     // Initialize KPI overview data
     if (Get.isRegistered<MonKpiOverviewController>()) {
-      await Get.find<MonKpiOverviewController>().initializeData();
+      await Get.find<MonKpiOverviewController>().fetchKpiData();
     }
     // Initialize gross profit data
     if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>().initializeData();
+      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
     // Initialize sales trends data
     if (Get.isRegistered<MonSalesTrendsController>()) {
-      await Get.find<MonSalesTrendsController>().initializeData();
+      await Get.find<MonSalesTrendsController>().fetchAllData();
     }
     // Initialize outstanding payments data
     if (Get.isRegistered<MonOutstandingPaymentsController>()) {
-      await Get.find<MonOutstandingPaymentsController>().initializeData();
+      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
     }
     // Initialize KPI controller for detailed data
     if (Get.isRegistered<MonKpiController>()) {
-      await Get.find<MonKpiController>().initializeData();
+      await Get.find<MonKpiController>().fetchKpiData();
     }
   }
 
@@ -290,10 +291,14 @@ class _DashboardState extends State<Dashboard> {
                         final grossProfitValue = _parseCompactNumber(
                           controller.grossProfit.value,
                         );
+                        final isLoading = controller.isLoading.value;
 
-                        return GrossProfitCard(
-                          grossProfit: grossProfitValue,
-                          trend: controller.grossProfitTrend.value,
+                        return Skeletonizer(
+                          enabled: isLoading,
+                          child: GrossProfitCard(
+                            grossProfit: grossProfitValue,
+                            trend: controller.grossProfitTrend.value,
+                          ),
                         );
                       }),
                       const SizedBox(height: 8),
@@ -368,6 +373,9 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) {
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController(), permanent: true);
+    }
     final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
   }

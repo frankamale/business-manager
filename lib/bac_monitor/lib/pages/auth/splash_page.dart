@@ -22,7 +22,6 @@ import '../../controllers/mon_salestrends_controller.dart';
 import '../../controllers/mon_data_sync_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
-import '../../services/kpi_sync_service.dart';
 import '../../services/sync_state_manager.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../../../../initialise/splashscreen.dart';
@@ -93,7 +92,7 @@ class _SplashPageState extends State<SplashPage> {
 
       // Check if we have any sales data
       final salesCount = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM mon_sales',
+        'SELECT COUNT(*) as count FROM mon_kpi_sales',
       );
       final hasSales = (salesCount.first['count'] as int? ?? 0) > 0;
 
@@ -138,7 +137,7 @@ class _SplashPageState extends State<SplashPage> {
 
       // STEP 1: Check network connectivity first (if not already in offline mode)
       if (!widget.isOffline) {
-        _updateStatus('Checking network...');
+        _updateStatus('Loading ...');
         isOnline = await NetworkHelper.hasConnection();
         debugPrint(
           'SplashPage: Network check took ${stopwatch.elapsedMilliseconds}ms - Online: $isOnline',
@@ -155,20 +154,20 @@ class _SplashPageState extends State<SplashPage> {
       }
 
       // STEP 2: Initialize company ID FIRST (works offline)
-      _updateStatus('Initializing company...');
+      _updateStatus('Initializing data...');
       stopwatch.reset();
       await _initializeCompanyIdOfflineSafe();
       debugPrint(
         'SplashPage: Company init took ${stopwatch.elapsedMilliseconds}ms',
       );
 
-      // STEP 3: Ensure database is properly opened for the company
-      _updateStatus('Opening database...');
-      stopwatch.reset();
-      await _ensureDatabaseIsOpen();
-      debugPrint(
-        'SplashPage: Database check took ${stopwatch.elapsedMilliseconds}ms',
-      );
+      // // STEP 3: Ensure database is properly opened for the company
+      // _updateStatus('Opening database...');
+      // stopwatch.reset();
+      // await _ensureDatabaseIsOpen();
+      // debugPrint(
+      //   'SplashPage: Database check took ${stopwatch.elapsedMilliseconds}ms',
+      // );
 
       // STEP 4: Check credentials and token
       _updateStatus('Verifying credentials...');
@@ -186,7 +185,7 @@ class _SplashPageState extends State<SplashPage> {
         return;
       }
 
-      // STEP 5: Check if we have cached data (important for offline mode)
+      // STEP 5: Check if we have cached data
       stopwatch.reset();
       final hasCachedData = await _hasCachedData();
       debugPrint(
@@ -332,35 +331,35 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  Future<void> _ensureDatabaseIsOpen() async {
-    try {
-      // Check if database is open
-      if (!_dbHelper.isDatabaseOpen) {
-        debugPrint(
-          'SplashPage: Database not open, this should have been done in _initializeCompanyIdOfflineSafe',
-        );
-        throw Exception(
-          'Database was not opened during company initialization',
-        );
-      }
-
-      debugPrint(
-        'SplashPage: Database is open for company: ${_dbHelper.currentCompanyId}',
-      );
-
-      // Verify we can query the database
-      final db = _dbHelper.database;
-      final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM mon_service_points',
-      );
-      debugPrint(
-        'SplashPage: Database verification - service_points count: ${result.first['count']}',
-      );
-    } catch (e) {
-      debugPrint('SplashPage: Error verifying database - $e');
-      throw Exception('Failed to verify database: $e');
-    }
-  }
+  // Future<void> _ensureDatabaseIsOpen() async {
+  //   try {
+  //     // Check if database is open
+  //     if (!_dbHelper.isDatabaseOpen) {
+  //       debugPrint(
+  //         'SplashPage: Database not open, this should have been done in _initializeCompanyIdOfflineSafe',
+  //       );
+  //       throw Exception(
+  //         'Database was not opened during company initialization',
+  //       );
+  //     }
+  //
+  //     debugPrint(
+  //       'SplashPage: Database is open for company: ${_dbHelper.currentCompanyId}',
+  //     );
+  //
+  //     // Verify we can query the database
+  //     final db = _dbHelper.database;
+  //     final result = await db.rawQuery(
+  //       'SELECT COUNT(*) as count FROM mon_service_points',
+  //     );
+  //     debugPrint(
+  //       'SplashPage: Database verification - service_points count: ${result.first['count']}',
+  //     );
+  //   } catch (e) {
+  //     debugPrint('SplashPage: Error verifying database - $e');
+  //     throw Exception('Failed to verify database: $e');
+  //   }
+  // }
 
   /// Load company details from database (offline-safe)
   Future<void> _loadCompanyDetailsOffline() async {

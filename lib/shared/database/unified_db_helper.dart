@@ -30,7 +30,7 @@ class UnifiedDatabaseHelper {
     // Prevent concurrent opening with timeout to avoid infinite loops
     if (_isOpening) {
       int waitCount = 0;
-      const maxWaitCount = 200; // 200 * 50ms = 10 seconds timeout
+      const maxWaitCount = 200;
       while (_isOpening) {
         await Future.delayed(const Duration(milliseconds: 50));
         waitCount++;
@@ -747,7 +747,7 @@ class UnifiedDatabaseHelper {
     final db = database;
     final batch = db.batch();
     for (var sp in servicePoints) {
-      batch.insert('service_point', sp, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert('mon_service_points', sp, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }

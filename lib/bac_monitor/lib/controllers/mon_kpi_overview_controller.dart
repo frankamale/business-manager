@@ -42,21 +42,13 @@ class MonKpiOverviewController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // DON'T fetch data here - let the UI trigger it when ready
-    debugPrint('MonKpiOverviewController: onInit - NOT fetching data yet');
 
-    // Set up listeners for date changes
-    ever(dateController.selectedRange, (_) {
-      if (isInitialized.value) {
-        fetchKpiData();
-      }
-    });
+    // Load user role first before fetching data
+     loadUserRole();
+    debugPrint('User role loaded: ${userRole.value}');
 
-    ever(dateController.customRange, (_) {
-      if (isInitialized.value) {
-        fetchKpiData();
-      }
-    });
+    ever(dateController.selectedRange, (_) => fetchKpiData());
+    ever(dateController.customRange, (_) => fetchKpiData());
   }
 
   // Inside MonKpiOverviewController
@@ -71,17 +63,7 @@ class MonKpiOverviewController extends GetxController {
 
   /// Call this manually when the UI is ready
   Future<void> initializeData() async {
-    if (isInitialized.value) {
-      debugPrint('MonKpiOverviewController: Already initialized, skipping');
-      return;
-    }
-
-    debugPrint('MonKpiOverviewController: Performing first data fetch');
-    
-    // Load user role first before fetching data
-    await loadUserRole();
-    debugPrint('User role loaded: ${userRole.value}');
-    
+    if (isLoading.value) return;
     await fetchKpiData();
     isInitialized.value = true;
   }

@@ -430,9 +430,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     final Color errorTextColor = isDark ? Colors.red.shade300 : Colors.red;
 
     return Scaffold(
-      backgroundColor: Colors.blueAccent,
+      backgroundColor: Colors.blue.shade700,
       body: Container(
-        decoration: BoxDecoration(color: AppColors.getBackgroundColor(context)),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(

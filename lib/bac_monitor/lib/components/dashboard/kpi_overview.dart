@@ -20,16 +20,11 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
   void initState() {
     super.initState();
     controller = Get.find<MonKpiOverviewController>();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.initializeData();
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      controller.loadUserRole();
       final isGym = controller.userRole.value.toLowerCase().contains("fg");
       print(controller.userRole.value);
       print(isGym);

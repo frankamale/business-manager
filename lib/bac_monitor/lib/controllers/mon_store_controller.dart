@@ -44,16 +44,25 @@ class MonStoresController extends GetxController {
     isLoading.value = true;
     try {
       final db = dbHelper.database;
+      
+      // First check what's in the table
+      final allSp = await db.query('mon_service_points');
+      debugPrint('MonStoresController: Total service points in DB: ${allSp.length}');
+      
+      // Now query stores
       final result = await db.query(
         'mon_service_points',
         where: 'stores = ?',
         whereArgs: [1],
         orderBy: 'name ASC',
       );
+      debugPrint('MonStoresController: Stores query returned ${result.length} rows');
+      
       final storesFromDb = result
           .map((row) => Store(id: row['id'] as String, name: row['name'] as String))
           .toList();
       storeList.assignAll([Store.all, ...storesFromDb]);
+      debugPrint('MonStoresController: Loaded ${storesFromDb.length} stores + Store.all');
 
       if (storeList.isNotEmpty) {
         selectedStore.value = Store.all;
