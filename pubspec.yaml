@@ -49,6 +49,7 @@ dependencies:
   connectivity_plus: ^7.0.0
   skeletonizer: ^2.1.2
   bcrypt: ^1.1.3  # For bcrypt password verification
+  circle_nav_bar: ^2.2.0
 
 
 
@@ -92,6 +93,7 @@ flutter:
    - assets/flavors/top_grade/
    - assets/flavors/mega/
    - assets/flavors/fitzone/
+   - assets/flavors/bac/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

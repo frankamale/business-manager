@@ -1,4 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:get/get.dart';
@@ -10,6 +11,7 @@ import '../controllers/mon_operator_controller.dart';
 import '../controllers/mon_sync_controller.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../../../shared/services/token_refresh_interceptor.dart';
+import '../../../initialise/splashscreen.dart';
 
 /// Top-level function for isolate-based JSON decoding
 /// Must be top-level or static for compute() to work
@@ -30,6 +32,12 @@ double _parseDouble(dynamic value) {
     return double.tryParse(value) ?? 0.0;
   }
   return 0.0;
+}
+
+/// Extract date part from datetime string (e.g., "2026-04-02T00:00:00" -> "2026-04-02")
+String _extractDate(String dateTimeStr) {
+  if (dateTimeStr.isEmpty) return dateTimeStr;
+  return dateTimeStr.split('T')[0].split(' ')[0];
 }
 
 class MonitorApiService extends GetxService {
@@ -132,6 +140,15 @@ class MonitorApiService extends GetxService {
   Future<void> storeCompanyId(String companyId) async {
     await secureStorage.write(key: 'company_id', value: companyId);
     cachedCompanyId = companyId; // Update cache
+    
+    // Also store in GetStorage for offline access (survives app restarts)
+    try {
+      final box = GetStorage();
+      await box.write(kLastCompanyIdKey, companyId);
+      debugPrint('MonitorApiService: Company ID stored in GetStorage: $companyId');
+    } catch (e) {
+      debugPrint('MonitorApiService: Error storing company ID in GetStorage: $e');
+    }
   }
 
   Future<String?> getStoredCompanyId() async {
@@ -395,6 +412,15 @@ class MonitorApiService extends GetxService {
     await secureStorage.delete(key: 'company_id');
     await secureStorage.delete(key: 'initial_sync_completed');
 
+    // Also clear company ID from GetStorage
+    try {
+      final box = GetStorage();
+      await box.remove(kLastCompanyIdKey);
+      debugPrint('MonitorApiService: Company ID cleared from GetStorage');
+    } catch (e) {
+      debugPrint('MonitorApiService: Error clearing company ID from GetStorage: $e');
+    }
+
     // Clear all cached values - IMPORTANT: must be done AFTER storage is cleared
     _cachedToken = null;
     cachedCompanyId = null;
@@ -449,7 +475,7 @@ class MonitorApiService extends GetxService {
     try {
       final db = _dbHelper.database;
       final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM mon_sales',
+'SELECT COUNT(*) as count FROM mon_sales',
       );
       final count = result.first['count'] as int? ?? 0;
       // debugPrint("ApiService: Found $count sales records in database");
@@ -707,7 +733,7 @@ class MonitorApiService extends GetxService {
             // kpiId is passed separately, default to 0 (all transactions)
             kpiBatch.insert('mon_kpi_sales', {
               'kpi_id': 0, // Default to all transactions
-              'processing_date': sale['processingdate'] ?? '',
+              'processing_date': _extractDate(sale['processingdate'] ?? ''),
               'selling_point': sale['sellingpoint'] ?? '',
               'currency': sale['currency'] ?? '',
               'kpi': sale['kpi'] ?? '',
@@ -1017,12 +1043,10 @@ class MonitorApiService extends GetxService {
 
     final db = _dbHelper.database;
 
-    // Delete old KPI data for the date range
-    await db.delete(
-      'mon_kpi_sales',
-      where: 'processing_date >= ?',
-      whereArgs: [startDateStr],
-    );
+    // DO NOT DELETE - use ConflictAlgorithm.replace to update existing records
+    // This preserves all existing data and only inserts/updates new records
+    // Only delete when user explicitly triggers "Reload All Data" from More page
+    debugPrint("ApiService: Syncing KPI data (upsert mode - no deletions)");
 
     // Fetch and insert each KPI type
     for (final kpiType in kpiTypes) {
@@ -1047,7 +1071,7 @@ class MonitorApiService extends GetxService {
         for (final sale in salesData) {
           kpiBatch.insert('mon_kpi_sales', {
             'kpi_id': kpiType['id'],
-            'processing_date': sale['processingdate'] ?? '',
+            'processing_date': _extractDate(sale['processingdate'] ?? ''),
             'selling_point': sale['sellingpoint'] ?? '',
             'currency': sale['currency'] ?? '',
             'kpi': sale['kpi'] ?? '',
@@ -1064,5 +1088,101 @@ class MonitorApiService extends GetxService {
     }
 
     debugPrint("ApiService: Completed syncing all KPI data");
+  }
+
+  /// Fetches KPI metrics for the current day only.
+  /// This is the first data fetch operation during splash screen.
+  /// 
+  /// Returns: Map of kpiId to list of records for quick access
+  Future<Map<int, List<Map<String, dynamic>>>> fetchTodayKpiMetrics() async {
+    final now = DateTime.now();
+    final today = DateFormat('yyyy-MM-dd').format(now);
+    
+    final kpiTypes = [
+      {'id': kpiAllTransactions, 'name': 'all_transactions'},
+      {'id': kpiCash, 'name': 'cash'},
+      {'id': kpiPendingPayment, 'name': 'pending_payment'},
+      {'id': kpiPaymentModes, 'name': 'payment_modes'},
+      {'id': kpiSalesperson, 'name': 'salesperson'},
+      {'id': kpiProfit, 'name': 'profit'},
+      {'id': kpiEfrisStatus, 'name': 'efris_status'},
+      {'id': kpiStockCategory, 'name': 'stock_category'},
+      {'id': kpiByItem, 'name': 'by_item'},
+    ];
+    
+    final results = <int, List<Map<String, dynamic>>>{};
+    
+    for (final kpiType in kpiTypes) {
+      try {
+        debugPrint("ApiService: Fetching today's KPI ${kpiType['name']} (kpiId=${kpiType['id']})");
+        final response = await getWithAuth(
+          '/sales/reports/kpi?startDate=$today&endDate=$today&kpiId=${kpiType['id']}&timeframe=$timeframeNormal',
+        );
+        
+        final data = await compute(_decodeJsonList, response.body);
+        final records = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        
+        results[kpiType['id'] as int] = records;
+        debugPrint("ApiService: Fetched ${records.length} records for ${kpiType['name']}");
+      } catch (e) {
+        debugPrint('ApiService: Error fetching KPI ${kpiType['name']}: $e');
+        results[kpiType['id'] as int] = [];
+      }
+    }
+    
+    // Store to database
+    if (results.values.expand((e) => e).isNotEmpty) {
+      await syncAllKpiData(now, now);
+    }
+    
+    return results;
+  }
+
+  /// Fetches historical KPI data for the past N months.
+  /// Partitions data into monthly intervals to minimize server load.
+  /// 
+  /// [monthsBack] - Number of months to fetch (default: 12)
+  /// [onProgress] - Callback for progress updates (0.0 to 1.0)
+  Future<void> fetchHistoricalData({
+    int monthsBack = 12,
+    void Function(double progress)? onProgress,
+  }) async {
+    final now = DateTime.now();
+    final dateFormatter = DateFormat('yyyy-MM-dd');
+    final totalMonths = monthsBack;
+    int completedMonths = 0;
+    
+    debugPrint("ApiService: Starting historical data fetch for $totalMonths months");
+    
+    for (int i = 0; i < totalMonths; i++) {
+      final monthStart = DateTime(now.year, now.month - i, 1);
+      final monthEnd = DateTime(now.year, now.month - i + 1, 0);
+      
+      final startDateStr = dateFormatter.format(monthStart);
+      final endDateStr = dateFormatter.format(monthEnd);
+      
+      // Check if this month's data already exists
+      final hasData = await _dbHelper.hasKpiDataForDateRange(startDateStr, endDateStr);
+      if (hasData) {
+        debugPrint("ApiService: Month $startDateStr already has data, skipping");
+        completedMonths++;
+        onProgress?.call(completedMonths / totalMonths);
+        continue;
+      }
+      
+      // Fetch all KPI types for this month
+      debugPrint("ApiService: Fetching data for month: $startDateStr to $endDateStr");
+      await syncAllKpiData(monthStart, monthEnd);
+      
+      completedMonths++;
+      onProgress?.call(completedMonths / totalMonths);
+      
+      // Small delay between months to prevent server overload
+      if (i < totalMonths - 1) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    }
+    
+    debugPrint("ApiService: Historical data fetch complete for $totalMonths months");
   }
 }

@@ -1,3 +1,4 @@
+import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
@@ -62,7 +63,6 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         _isLoading = true;
       });
 
-      // Authenticate user
       final success = await _authController.login(
         selectedItem!,
         _passwordController.text,
@@ -72,7 +72,6 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         _isLoading = false;
       });
 
-      // Navigate to POS Screen if login successful
       if (success) {
         await Future.delayed(const Duration(milliseconds: 500));
         Get.off(() => const Homepage());
@@ -82,7 +81,6 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
 
   Future<void> _loadCompanyDetails() async {
     try {
-      // Try to fetch company details from API
       final companyDetails = await _apiService.fetchAndStoreCompanyInfo();
 
       if (companyDetails.containsKey('activeBranch') &&
@@ -103,10 +101,8 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         }
       }
 
-      // If we don't have the full structure, try to get basic company info
       final companyInfo = await _apiService.getCompanyInfo();
       if (companyInfo['companyId']?.isNotEmpty ?? false) {
-        // Use company ID as fallback
         setState(() {
           _companyName = companyInfo['companyId']!;
         });
@@ -118,13 +114,12 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     }
   }
 
-  /// Logout current account and navigate to unified login screen
   Future<void> _logoutAndGoToServerLogin() async {
     try {
       setState(() {
         _isLoading2 = true;
       });
-controller.signOut();
+      controller.signOut();
       print('DEBUG: Login._logoutAndGoToServerLogin() - Starting logout');
 
       setState(() {
@@ -139,20 +134,23 @@ controller.signOut();
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color cardColor = isDark ? const Color(0xFF1E1E2E) : Colors.white;
+    final Color inputFillColor = isDark ? const Color(0xFF2A2A3C) : Colors.grey.shade50;
+    final Color inputTextColor = isDark ? Colors.white : Colors.black87;
+    final Color labelColor = isDark ? Colors.white70 : Colors.black;
+    final Color iconColor = isDark ? Colors.white70 : Colors.black87;
+    final Color borderColor = isDark ? Colors.white24 : Colors.grey.shade500;
+    final Color footerTextColor = isDark ? Colors.white54 : Colors.grey.shade600;
+    final Color welcomeTextColor = isDark ? Colors.white70 : FlavorColors.current.primaryDark;
+    final Color titleTextColor = isDark ? Colors.white : (FlavorColors.current.primaryPlus ?? const Color(0xFF222222));
+    final Color linkColor = isDark ? Colors.blue.shade300 : Colors.blue.shade700;
+    final Color disabledBgColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
 
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              FlavorColors.current.primaryDark,
-              FlavorColors.current.light,
-              FlavorColors.current.primaryDark,
-
-            ],
-          ),
+         color: AppColors.getBackgroundColor(context)
         ),
         child: SafeArea(
           child: Center(
@@ -168,6 +166,7 @@ controller.signOut();
                     maxWidth: isSmallScreen ? 400 : 480,
                   ),
                   child: Card(
+                    color: cardColor,
                     elevation: 12,
                     shadowColor: Colors.black.withOpacity(0.3),
                     shape: RoundedRectangleBorder(
@@ -180,25 +179,24 @@ controller.signOut();
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Logo
                             Hero(
                               tag: 'logo',
                               child: AppLogoCircle(
                                 size: isSmallScreen ? 100 : 120,
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 15),
 
-                            // Title
                             Text(
                               _companyName.isNotEmpty
                                   ? "$_companyName "
                                   : "${AppConfig.companyName} ",
 
+                              textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: isSmallScreen ? 23 : 25,
+                                fontSize: isSmallScreen ? 25 : 29,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade800,
+                                color: titleTextColor,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -206,7 +204,7 @@ controller.signOut();
                               "Welcome Back",
                               style: TextStyle(
                                 fontSize: isSmallScreen ? 14 : 16,
-                                color: FlavorColors.current.primary,
+                                color: welcomeTextColor,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -215,22 +213,29 @@ controller.signOut();
                             Obx(
                               () => DropdownButtonFormField<String>(
                                 value: selectedItem,
+                                borderRadius: BorderRadius.circular(8),
+                                dropdownColor: cardColor,
+                                style: TextStyle(
+                                  color: inputTextColor,
+                                  fontSize: 16,
+                                ),
                                 decoration: InputDecoration(
                                   labelText: 'Select Account',
+                                  labelStyle: TextStyle(color: labelColor),
                                   prefixIcon: Icon(
                                     Icons.account_circle_outlined,
-                                    color: FlavorColors.current.primaryDark,
+                                    color: iconColor,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
+                                      color: borderColor,
                                     ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
+                                      color: borderColor,
                                     ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
@@ -241,7 +246,7 @@ controller.signOut();
                                     ),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey.shade50,
+                                  fillColor: inputFillColor,
                                 ),
                                 hint: const Text('Select your account'),
                                 items: _authController.userRoles.map((
@@ -267,13 +272,17 @@ controller.signOut();
                             ),
                             const SizedBox(height: 20),
 
-                            // Password Field
                             TextFormField(
                               controller: _passwordController,
+                              style: TextStyle(
+                                color: inputTextColor,
+                                fontSize: 16,
+                              ),
                               obscureText: _obscurePassword,
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: 'Passcode',
+                                labelStyle: TextStyle(color: labelColor),
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
                                   color: FlavorColors.current.primaryDark,
@@ -283,7 +292,7 @@ controller.signOut();
                                     _obscurePassword
                                         ? Icons.visibility_outlined
                                         : Icons.visibility_off_outlined,
-                                    color: Colors.grey.shade600,
+                                    color: isDark ? Colors.white54 : Colors.grey.shade600,
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -294,13 +303,13 @@ controller.signOut();
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
+                                    color: borderColor,
                                   ),
                                 ),
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                   borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
+                                    color: borderColor,
                                   ),
                                 ),
                                 focusedBorder: OutlineInputBorder(
@@ -311,7 +320,7 @@ controller.signOut();
                                   ),
                                 ),
                                 filled: true,
-                                fillColor: Colors.grey.shade50,
+                                fillColor: inputFillColor,
                               ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
@@ -325,21 +334,22 @@ controller.signOut();
                             ),
                             const SizedBox(height: 12),
 
-                            // Sign In Button
                             SizedBox(
                               width: double.infinity,
-                              height: 56,
+                              height: 50,
                               child: ElevatedButton(
                                 onPressed: _isLoading ? null : _handleLogin,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: FlavorColors.current.primaryDark,
-                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.blue.shade800,
+                                  foregroundColor:
+                                      FlavorColors.current.onPrimary,
                                   elevation: 4,
-                                  shadowColor: FlavorColors.current.primary.withOpacity(0.5),
+                                  shadowColor: FlavorColors.current.primaryDark
+                                      .withOpacity(0.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  disabledBackgroundColor: Colors.grey.shade300,
+                                  disabledBackgroundColor: disabledBgColor,
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(
@@ -365,22 +375,25 @@ controller.signOut();
                             ),
                             const SizedBox(height: 18),
                             GestureDetector(
-                              onTap: _isLoading2 ? null : _logoutAndGoToServerLogin,
+                              onTap: _isLoading2
+                                  ? null
+                                  : _logoutAndGoToServerLogin,
                               child: Text(
                                 "Login with server credentials",
                                 style: TextStyle(
-                                  color: _isLoading2 ? Colors.grey : FlavorColors.current.primary,
+                                  color: _isLoading2
+                                      ? FlavorColors.current.primary
+                                      : linkColor,
                                 ),
                               ),
                             ),
                             const SizedBox(height: 24),
 
-                            // Footer
                             Text(
                               AppConfig.copyright,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey.shade600,
+                                color: footerTextColor,
                               ),
                             ),
                           ],

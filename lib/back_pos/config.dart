@@ -3,7 +3,7 @@ import 'package:bac_pos/flavors/flavor_config.dart';
 class AppConfig {
   // authentication credentials
   static const String baseUrl = "http://52.30.142.12:8080/rest";
-  static const String description = "We serve with pride";
+  static const String description = "Your business partner...";
 
   static const String appName = FlavorConfig.appName;
 

@@ -15,18 +15,18 @@ class NetCashFlowChart extends StatelessWidget {
       aspectRatio: 1.4,
       child: LineChart(
         LineChartData(
-          backgroundColor: PrimaryColors.light.withOpacity(0.1),
+          backgroundColor: AppColors.getSurfaceColor(context).withOpacity(0.1),
           lineBarsData: [_mainLine(context)],
           borderData: FlBorderData(
             show: true, // Enable axes
             border: Border(
               left: BorderSide(
-                color: Colors.white.withOpacity(0.5),
+                color: AppColors.getBorderColor(context).withOpacity(0.5),
                 width: 1,
                 style: BorderStyle.solid,
               ),
               bottom: BorderSide(
-                color: Colors.white.withOpacity(0.5),
+                color: AppColors.getBorderColor(context).withOpacity(0.5),
                 width: 1,
                 style: BorderStyle.solid,
               ),
@@ -46,10 +46,10 @@ class NetCashFlowChart extends StatelessWidget {
                     .ceil()
                     .toDouble(), // Dynamic interval
               ),
-              axisNameWidget: const Text(
+              axisNameWidget: Text(
                 'Amount', // Match axis name
                 style: TextStyle(
-                  color: PrimaryColors.brightYellow,
+                  color: AppColors.getAccentColor(context),
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -65,10 +65,10 @@ class NetCashFlowChart extends StatelessWidget {
                 reservedSize: 38, // Match reserved size
                 interval: (data.length / 5).ceilToDouble(), // Match interval
               ),
-              axisNameWidget: const Text(
+              axisNameWidget: Text(
                 'Date', // Match axis name
                 style: TextStyle(
-                  color: PrimaryColors.brightYellow,
+                  color: AppColors.getAccentColor(context),
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -91,7 +91,7 @@ class NetCashFlowChart extends StatelessWidget {
           .map((e) => FlSpot(e.key.toDouble(), e.value.amount))
           .toList(),
       isCurved: true,
-      color: PrimaryColors.brightYellow, // Match line color
+      color: AppColors.getAccentColor(context), // Match line color
       barWidth: 4, // Match bar width
       isStrokeCapRound: true,
       dotData: const FlDotData(show: false), // Match: no dots
@@ -99,8 +99,8 @@ class NetCashFlowChart extends StatelessWidget {
         show: true,
         gradient: LinearGradient(
           colors: [
-            PrimaryColors.brightYellow.withOpacity(0.3), // Match gradient
-            PrimaryColors.brightYellow.withOpacity(0.0),
+            AppColors.getAccentColor(context).withOpacity(0.3), // Match gradient
+            AppColors.getAccentColor(context).withOpacity(0.0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -122,7 +122,7 @@ class NetCashFlowChart extends StatelessWidget {
           .toDouble(), // Match dynamic interval
       getDrawingHorizontalLine: (value) {
         return FlLine(
-          color: Colors.white.withOpacity(0.3), // Match grid color
+          // color: AppColors.getBorderColor(context).withOpacity(0.3), // Match grid color
           strokeWidth: 1,
           dashArray: [5, 5], // Match dash pattern
         );
@@ -142,11 +142,11 @@ class NetCashFlowChart extends StatelessWidget {
           final date = data[spot.spotIndex].date;
           return LineTooltipItem(
             '${DateFormat.MMMEd().format(date)}\n',
-            const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            TextStyle(color: AppColors.getTextPrimaryColor(context), fontWeight: FontWeight.bold),
             children: [
               TextSpan(
                 text: currencyFormatter.format(spot.y),
-                style: const TextStyle(fontWeight: FontWeight.normal),
+                style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontWeight: FontWeight.normal),
               ),
             ],
           );
@@ -163,10 +163,10 @@ class NetCashFlowChart extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8.0),
       child: Text(
         DateFormat.Md().format(data[index].date),
-        style: const TextStyle(
-          color: Colors.white, // Match label color
-          fontSize: 12, // Match font size
-        ),
+        // style: TextStyle(
+        //   color: AppColors.getTextPrimaryColor(context), // Match label color
+        //   fontSize: 12, // Match font size
+        // ),
       ),
     );
   }
@@ -175,10 +175,10 @@ class NetCashFlowChart extends StatelessWidget {
   Widget _leftTitles(double value, TitleMeta meta) {
     return Text(
       value.toInt().toString(),
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 12,
-      ),
+      // style: TextStyle(
+      //   color: AppColors.getTextSecondaryColor(context),
+      //   fontSize: 12,
+      // ),
     );
   }
 }

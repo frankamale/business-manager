@@ -11,6 +11,7 @@ class MonSalesTrendsController extends GetxController {
   final MonDashboardController dateController = Get.find();
   final dbHelper = UnifiedDatabaseHelper.instance;
 
+  var isInitialized = false.obs;
   var salesData = <SalesDataPoint>[].obs;
   var isLoadingSales = true.obs;
   var hasErrorSales = false.obs;
@@ -63,17 +64,31 @@ class MonSalesTrendsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    print("SalesTrendsController onInit - Starting initial data fetch");
+    debugPrint("SalesTrendsController onInit - NOT fetching data yet");
     print("Initial date range: ${dateController.selectedRange.value}");
-    fetchAllData();
+    
+    // Don't fetch data here - let the UI trigger it when ready
+    // Set up listeners for date changes
     ever(dateController.selectedRange, (_) {
-      print("Date range changed to: ${dateController.selectedRange.value}");
+      debugPrint("Date range changed to: ${dateController.selectedRange.value}");
       fetchAllData();
     });
     ever(dateController.customRange, (_) {
-      print("Custom range changed to: ${dateController.customRange.value}");
+      debugPrint("Custom range changed to: ${dateController.customRange.value}");
       fetchAllData();
     });
+  }
+
+  /// Call this manually when the UI is ready
+  Future<void> initializeData() async {
+    if (isInitialized.value) {
+      debugPrint('MonSalesTrendsController: Already initialized, skipping');
+      return;
+    }
+    
+    debugPrint('MonSalesTrendsController: Performing first data fetch');
+    await fetchAllData();
+    isInitialized.value = true;
   }
 
   Future<void> fetchAllData() async {
@@ -356,7 +371,7 @@ class MonSalesTrendsController extends GetxController {
 
       // Query using the new KPI table (kpiId=0 for all transactions)
       final query =
-          ''' SELECT date, SUM(amount2) as total FROM (SELECT $dateGroupClause as date, kpi_id, SUM(amount2) as amount2 FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? GROUP BY date, kpi_id) GROUP BY date ''';
+          ''' SELECT date, SUM(amount1) as total FROM (SELECT $dateGroupClause as date, kpi_id, SUM(amount1) as amount1 FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? GROUP BY date, kpi_id) GROUP BY date ''';
 
       print("Executing SQL query for aggregation type: ${aggregationType.value}");
       print("Query: $query");
@@ -425,13 +440,13 @@ class MonSalesTrendsController extends GetxController {
       const query = '''
         SELECT
           sp.name as storeName,
-          COALESCE(SUM(kpi.amount2), 0) as total
+          COALESCE(SUM(kpi.amount1), 0) as total
         FROM mon_service_points sp
-        LEFT JOIN (SELECT selling_point, SUM(amount2) as amount2 
-                   FROM mon_kpi_sales 
-                   WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? 
-                   GROUP BY selling_point) kpi 
-                   ON sp.name = kpi.selling_point OR sp.fullName = kpi.selling_point
+        LEFT JOIN (SELECT selling_point, SUM(amount1) as amount1
+                   FROM mon_kpi_sales
+                   WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ?
+                   GROUP BY selling_point) kpi
+                   ON (sp.name = kpi.selling_point OR sp.fullName = kpi.selling_point)
         WHERE sp.stores = 1
         GROUP BY sp.id, sp.name
         ORDER BY total DESC

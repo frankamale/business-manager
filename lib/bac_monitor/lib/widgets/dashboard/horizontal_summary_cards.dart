@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_salestrends_controller.dart';
 import '../../models/dashboard.dart';
@@ -25,6 +26,11 @@ class HorizontalSummaryCards extends StatelessWidget {
   ];
 
   List<PaymentData> _processPaymentData(List<dynamic> salesData) {
+    // If no data for kpi_id=3 (payment modes), use kpi_id=0 (all transactions) as fallback
+    if (salesData.isEmpty) {
+      return [];
+    }
+
     final Map<String, double> salesByMode = {};
     for (final sale in salesData) {
       String paymentMode = sale['kpi'] as String? ?? 'Cash';
@@ -53,6 +59,11 @@ class HorizontalSummaryCards extends StatelessWidget {
   }
 
   List<CashierData> _processCashierData(List<dynamic> salesData) {
+    // If no data for kpi_id=4 (salesperson), use kpi_id=0 (all transactions) as fallback
+    if (salesData.isEmpty) {
+      return [];
+    }
+
     final Map<String, double> salesByCashier = {};
 
     for (final sale in salesData) {
@@ -63,7 +74,8 @@ class HorizontalSummaryCards extends StatelessWidget {
         cashierName = 'Unknown Cashier';
       }
 
-      final amount = (sale['amount1'] as num?)?.toDouble() ?? 0.0;
+      // Salesperson uses amount2
+      final amount = (sale['amount2'] as num?)?.toDouble() ?? 0.0;
 
       salesByCashier.update(
         cashierName,
@@ -88,53 +100,67 @@ class HorizontalSummaryCards extends StatelessWidget {
     final controller = Get.find<MonSalesTrendsController>();
 
     return Obx(() {
+      final isLoading = controller.isLoadingSales.value;
       final paymentData = _processPaymentData(controller.rawSalesForKpi3.value);
       final cashierData = _processCashierData(controller.rawSalesForKpi4.value);
       final compactFormatter = NumberFormat.compact(locale: 'en_US');
 
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Cashier Summary Card
-            _buildSummaryCard(
-              title: 'Summary by Cashier',
-              totalSales: cashierData.fold(
-                0.0,
-                (sum, item) => sum + item.totalAmount,
+      return Skeletonizer(
+        enabled: isLoading,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cashier Summary Card
+              _buildSummaryCard(
+                context: context,
+                title: 'Summary by Cashier',
+                totalSales: cashierData.fold(
+                  0.0,
+                  (sum, item) => sum + item.totalAmount,
+                ),
+                items: cashierData,
+                colors: _cashierColors,
+                compactFormatter: compactFormatter,
               ),
-              items: cashierData,
-              colors: _cashierColors,
-              compactFormatter: compactFormatter,
-            ),
 
-            const SizedBox(width: 16),
+              const SizedBox(width: 16),
 
-            // Payment Summary Card
-            _buildSummaryCard(
-              title: 'Summary by Payment',
-              totalSales: paymentData.fold(
-                0.0,
-                (sum, item) => sum + item.totalAmount,
+              // Payment Summary Card
+              _buildSummaryCard(
+                context: context,
+                title: 'Summary by Payment Methods',
+                totalSales: paymentData.fold(
+                  0.0,
+                  (sum, item) => sum + item.totalAmount,
+                ),
+                items: paymentData,
+                colors: _paymentColors,
+                compactFormatter: compactFormatter,
               ),
-              items: paymentData,
-              colors: _paymentColors,
-              compactFormatter: compactFormatter,
-            ),
-          ],
+            ],
+          ),
         ),
       );
     });
   }
 
   Widget _buildSummaryCard<T>({
+    required BuildContext context,
     required String title,
     required double totalSales,
     required List<T> items,
     required List<Color> colors,
     required NumberFormat compactFormatter,
   }) {
+    final cardColor = AppColors.getCardColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final textDisabled = AppColors.getTextDisabledColor(context);
+    final borderLightColor = AppColors.getBorderLightColor(context);
+
     final double maxValue = items.isEmpty
         ? 0
         : items.fold(0.0, (max, item) {
@@ -144,174 +170,168 @@ class HorizontalSummaryCards extends StatelessWidget {
             return value > max ? value : max;
           });
 
+    final displayItems = items.take(5).toList();
+
     return Container(
-      width: 300,
-      padding: const EdgeInsets.all(16.0),
+      width: Get.width * 0.8,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: PrimaryColors.lightBlue.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: PrimaryColors.lightBlue.withOpacity(0.3),
-          width: 1,
-        ),
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
+
+        // subtle border like KPI
+        border: Border.all(color: borderColor, width: 1),
       ),
+
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: PrimaryColors.brightYellow.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'UGX ${compactFormatter.format(totalSales)}',
-                  style: const TextStyle(
-                    color: PrimaryColors.brightYellow,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
+          // HEADER
+          Text(
+            title,
+            style: TextStyle(
+              color: textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+
+          const SizedBox(height: 6),
+
+          // TOTAL (more prominent)
+          Text(
+            'UGX ${compactFormatter.format(totalSales)}',
+            style: TextStyle(
+              color: textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
           const SizedBox(height: 12),
-          const Divider(color: Colors.white24, height: 1),
-          const SizedBox(height: 8),
-          // Items list with bar charts
-          if (items.isEmpty)
-            const Center(
+
+          if (displayItems.isEmpty)
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
-                  'No data available',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                  'No data',
+                  style: TextStyle(
+                    color: textDisabled,
+                    fontSize: 12,
+                  ),
                 ),
               ),
             )
           else
             Column(
-              children: items.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final data = entry.value;
-                    final color = colors[index % colors.length];
-                    final double value = data is PaymentData
-                        ? data.totalAmount
-                        : (data as CashierData).totalAmount;
-                    final String name = data is PaymentData
-                        ? data.paymentMode
-                        : (data as CashierData).cashierName;
-                    final percentage = totalSales > 0
-                        ? (value / totalSales) * 100
-                        : 0.0;
+              children: displayItems.asMap().entries.map((entry) {
+                final index = entry.key;
+                final data = entry.value;
+                final color = colors[index % colors.length];
 
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                final double value = data is PaymentData
+                    ? data.totalAmount
+                    : (data as CashierData).totalAmount;
+
+                final String name = data is PaymentData
+                    ? data.paymentMode
+                    : (data as CashierData).cashierName;
+
+                final percentage = totalSales > 0
+                    ? (value / totalSales) * 100
+                    : 0.0;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // LABEL ROW
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  shape: BoxShape.circle,
-                                ),
+                          Expanded(
+                            child: Text(
+                              name,
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: color.withOpacity(0.3),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '${percentage.toStringAsFixed(0)}%',
-                                  style: TextStyle(
-                                    color: color,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'UGX ${compactFormatter.format(value)}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          const SizedBox(height: 6),
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final barWidth = maxValue > 0
-                                  ? (value / maxValue) * constraints.maxWidth
-                                  : 0.0;
-                              return Stack(
-                                children: [
-                                  Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  Container(
-                                    height: 8,
-                                    width: barWidth.isNaN ? 0 : barWidth,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(4),
-                                      gradient: LinearGradient(
-                                        colors: [color, color.withOpacity(0.6)],
-                                        begin: Alignment.centerLeft,
-                                        end: Alignment.centerRight,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+
+                          Text(
+                            compactFormatter.format(value),
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
+
+                      const SizedBox(height: 6),
+
+                      // BAR (cleaner)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final targetWidth = maxValue > 0
+                                ? (value / maxValue) * constraints.maxWidth
+                                : 0.0;
+
+                            return Stack(
+                              children: [
+                                // Background bar
+                                Container(
+                                  height: 10,
+                                  color: borderLightColor.withOpacity(0.4),
+                                ),
+
+                                // Animated foreground bar
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween(begin: 0, end: targetWidth),
+                                  duration: const Duration(milliseconds: 800),
+                                  curve: Curves.easeOutCubic,
+                                  builder: (context, animatedWidth, child) {
+                                    return Container(
+                                      height: 10,
+                                      width: animatedWidth,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            color,
+                                            color.withOpacity(0.7),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+
+                      // PERCENT (clean text instead of badge)
+                      Text(
+                        '${percentage.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
         ],
       ),

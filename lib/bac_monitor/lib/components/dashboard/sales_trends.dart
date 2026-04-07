@@ -17,14 +17,14 @@ class SalesTrendsSection extends StatelessWidget {
     final MonDashboardController dateController = Get.find<MonDashboardController>();
 
     return Container(
-      color: PrimaryColors.darkBlue,
+      color: AppColors.getBackgroundColor(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Sales Trends",
             style: TextStyle(
-              color: Colors.white,
+              color: AppColors.getTextPrimaryColor(context),
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -39,12 +39,12 @@ class SalesTrendsSection extends StatelessWidget {
               );
             }
             if (controller.hasErrorSales.value) {
-              return const SizedBox(
+              return SizedBox(
                 height: 300,
                 child: Center(
                   child: Text(
                     'Error loading sales data',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppColors.getErrorColor(context)),
                   ),
                 ),
               );
@@ -52,8 +52,12 @@ class SalesTrendsSection extends StatelessWidget {
             return Container(
               height: 300,
               decoration: BoxDecoration(
-                color: PrimaryColors.lightBlue.withOpacity(0.5),
-                borderRadius: const BorderRadius.all(Radius.circular(12)),
+                color: AppColors.getCardColor(context),
+                  borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.getBorderColor(context)
+                )
+               
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
@@ -66,7 +70,8 @@ class SalesTrendsSection extends StatelessWidget {
               ),
             );
           }),
-          buildTopStoresCard(controller),
+          SizedBox(height: 8,),
+          buildTopStoresCard(context, controller),
         ],
       ),
     );

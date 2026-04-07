@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/dashboard.dart';
+import '../../additions/colors.dart';
 
 class TopStoresBarChart extends StatelessWidget {
   final List<StorePerformance> storeData;
@@ -27,14 +28,15 @@ class TopStoresBarChart extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 3, child: _buildBarChart()),
+        Expanded(flex: 3, child: _buildBarChart(context)),
         const SizedBox(width: 20),
-        Expanded(flex: 2, child: _buildLegend()),
+        Expanded(flex: 2, child: _buildLegend(context)),
       ],
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildLegend(BuildContext context) {
+    final textSecondary = AppColors.getTextSecondaryColor(context);
     return Container(
       padding: const EdgeInsets.only(top: 20),
       child: SingleChildScrollView(
@@ -44,6 +46,7 @@ class TopStoresBarChart extends StatelessWidget {
             final index = entry.key;
             final data = entry.value;
             return _buildLegendItem(
+              context: context,
               color: _barColors[index % _barColors.length],
               text: data.storeName,
               index: index + 1,
@@ -55,10 +58,12 @@ class TopStoresBarChart extends StatelessWidget {
   }
 
   Widget _buildLegendItem({
+    required BuildContext context,
     required Color color,
     required String text,
     required int index,
   }) {
+    final textSecondary = AppColors.getTextSecondaryColor(context);
     final displayText = text.length > 20 ? '${text.substring(0, 17)}...' : text;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -77,7 +82,7 @@ class TopStoresBarChart extends StatelessWidget {
           Flexible(
             child: Text(
               '$index. $displayText',
-              style: const TextStyle(color: Colors.white70, fontSize: 9),
+              style: TextStyle(color: textSecondary, fontSize: 9),
             ),
           ),
         ],
@@ -85,7 +90,11 @@ class TopStoresBarChart extends StatelessWidget {
     );
   }
 
-  Widget _buildBarChart() {
+  Widget _buildBarChart(BuildContext context) {
+    final borderColor = AppColors.getBorderColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    
     final maxY = storeData.isNotEmpty
         ? storeData
                   .map((data) => data.performanceValue)
@@ -101,9 +110,9 @@ class TopStoresBarChart extends StatelessWidget {
         alignment: BarChartAlignment.spaceAround,
         borderData: FlBorderData(
           show: true,
-          border: const Border(
-            left: BorderSide(color: Colors.white70, width: 1),
-            bottom: BorderSide(color: Colors.white70, width: 1),
+          border: Border(
+            left: BorderSide(color: borderColor, width: 1),
+            bottom: BorderSide(color: borderColor, width: 1),
           ),
         ),
         gridData: FlGridData(
@@ -111,7 +120,7 @@ class TopStoresBarChart extends StatelessWidget {
           drawHorizontalLine: true,
           drawVerticalLine: false,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.white70.withOpacity(0.3),
+            color: borderColor.withOpacity(0.3),
             strokeWidth: 1,
             dashArray: [5, 5],
           ),
@@ -141,8 +150,8 @@ class TopStoresBarChart extends StatelessWidget {
                     angle: -0.785, // Rotates the text -45 degrees
                     child: Text(
                       formattedValue,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 10,
                       ),
@@ -159,12 +168,12 @@ class TopStoresBarChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 32,
-              getTitlesWidget: (value, meta) => _leftTitles(value, meta),
+              getTitlesWidget: (value, meta) => _leftTitles(value, meta, context),
             ),
-            axisNameWidget: const Text(
+            axisNameWidget: Text(
               'Sales (UGX)',
               style: TextStyle(
-                color: Colors.white70,
+                color: textSecondary,
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -175,7 +184,7 @@ class TopStoresBarChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 30,
-              getTitlesWidget: (value, meta) => _bottomTitles(value, meta),
+              getTitlesWidget: (value, meta) => _bottomTitles(value, meta, context),
               interval: 1,
             ),
           ),
@@ -202,16 +211,17 @@ class TopStoresBarChart extends StatelessWidget {
     );
   }
 
-  Widget _bottomTitles(double value, TitleMeta meta) {
+  Widget _bottomTitles(double value, TitleMeta meta, BuildContext context) {
     final int index = value.toInt();
+    final textSecondary = AppColors.getTextSecondaryColor(context);
     final String text = (index + 1).toString();
     return SideTitleWidget(
       axisSide: meta.axisSide,
       space: 8.0,
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: textSecondary,
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
@@ -219,11 +229,12 @@ class TopStoresBarChart extends StatelessWidget {
     );
   }
 
-  Widget _leftTitles(double value, TitleMeta meta) {
+  Widget _leftTitles(double value, TitleMeta meta, BuildContext context) {
     if (value == meta.max || value == meta.min) {
       return const Text('');
     }
 
+    final textSecondary = AppColors.getTextSecondaryColor(context);
     final formatter = NumberFormat.compact(locale: 'en_US');
     final String formattedValue = formatter.format(value);
 
@@ -231,7 +242,7 @@ class TopStoresBarChart extends StatelessWidget {
       padding: const EdgeInsets.only(right: 4.0),
       child: Text(
         formattedValue,
-        style: const TextStyle(color: Colors.white70, fontSize: 10),
+        style: TextStyle(color: textSecondary, fontSize: 10),
         textAlign: TextAlign.right,
       ),
     );

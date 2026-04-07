@@ -1,172 +1,133 @@
-import '../../additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import '../../additions/colors.dart';
 class GrossProfitCard extends StatelessWidget {
   final double grossProfit;
-  final String trend;
-
+  final String trend; // Expected format: "+12.5%" or "-8.3%"
   const GrossProfitCard({
     super.key,
     required this.grossProfit,
     required this.trend,
   });
-
   @override
   Widget build(BuildContext context) {
-    final compactFormatter = NumberFormat.compact(locale: 'en_US');
-
-    // Parse trend to determine direction
-    final trendValue = double.tryParse(
-      trend.replaceAll('%', '').replaceAll('+', '').replaceAll('-', '')
-    ) ?? 0.0;
-    final isPositive = trend.startsWith('+');
-
+    final compactFormatter = NumberFormat.compactCurrency(
+      decimalDigits: 0,
+      symbol: '', // Remove currency symbol if you just want number
+    );
+    
+    final cardColor = AppColors.getCardColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final secondaryColor = AppColors.getSecondaryColor(context);
+    final successColor = AppColors.getSuccessColor(context);
+    final errorColor = AppColors.getErrorColor(context);
+    final shadowColor = AppColors.getShadowColor(context);
+    
+    // Parse trend safely
+    final trendStr = trend.replaceAll('%', '').trim();
+    final trendValue = double.tryParse(trendStr) ?? 0.0;
+    final isPositive = trend.startsWith('+') || trendValue > 0;
+    final trendColor = isPositive ? successColor : errorColor;
+    
     return Container(
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: PrimaryColors.lightBlue,
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: borderColor,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: shadowColor,
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
+      child: Row(
         children: [
-          // Decorative glow blob top-right
-          Positioned(
-            top: -20,
-            right: -20,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFF26A69A).withOpacity(0.25),
-                    const Color(0xFF26A69A).withOpacity(0.05),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
+          // Icon Container
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: secondaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.trending_up_rounded,
+              color: secondaryColor,
+              size: 22,
             ),
           ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+          const SizedBox(width: 12),
+          // Main Content
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                // Category label pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF26A69A).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: const Color(0xFF26A69A).withOpacity(0.4),
-                      width: 1,
-                    ),
-                  ),
-                  child: const Text(
-                    'GROSS PROFIT',
-                    style: TextStyle(
-                      color: Color(0xFF26A69A),
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.4,
-                    ),
+                Text(
+                  'Gross Profit',
+                  style: TextStyle(
+                    color: textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
-
-                // Big value
+                const SizedBox(height: 4),
                 Text(
                   compactFormatter.format(grossProfit),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 24,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
                   ),
                 ),
-
-                // Trend row
-                const SizedBox(height: 6),
-                _TrendBadge(
-                  isPositive: isPositive,
-                  percentage: trendValue,
-                ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────
-// Trend badge
-// ─────────────────────────────────────────────────────────────
-class _TrendBadge extends StatelessWidget {
-  final bool isPositive;
-  final double percentage;
-
-  const _TrendBadge({
-    required this.isPositive,
-    required this.percentage,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isPositive ? const Color(0xFF4CAF50) : const Color(0xFFEF5350);
-    final bgColor = color.withOpacity(0.12);
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.35), width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          // Trend Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Icon(
-                isPositive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                color: color,
-                size: 12,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isPositive
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    color: trendColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${trendValue.abs().toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      color: trendColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 3),
+              const SizedBox(height: 3),
               Text(
-                '${percentage.toStringAsFixed(1)}%',
+                'vs last period',
                 style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+                  color: textSecondary.withOpacity(0.6),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          'vs last period',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.4),
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

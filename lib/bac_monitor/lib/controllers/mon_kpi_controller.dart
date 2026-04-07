@@ -34,6 +34,7 @@ class MonKpiController extends GetxController {
   // State variables
   var isLoading = false.obs;
   var hasError = false.obs;
+  var isInitialized = false.obs;
   var kpiData = <KpiSalesData>[].obs;
   
   // Selected filters
@@ -41,26 +42,44 @@ class MonKpiController extends GetxController {
   var selectedTimeframe = KpiTimeframe.normal.obs;
 
   @override
-  void onInit() { 
+  void onInit() {
     super.onInit();
-    debugPrint('MonKpiController: onInit - Setting up listeners');
+    debugPrint('MonKpiController: onInit - NOT fetching data yet');
     
-    // Listen for date range changes
+    // Set up listeners for date changes - only fetch after initialization
     ever(dateController.selectedRange, (_) {
-      debugPrint('MonKpiController: Date range changed, fetching data');
-      fetchKpiData();
+      if (isInitialized.value) {
+        debugPrint('MonKpiController: Date range changed, fetching data');
+        fetchKpiData();
+      }
     });
     
     ever(dateController.customRange, (_) {
-      debugPrint('MonKpiController: Custom range changed, fetching data');
-      fetchKpiData();
+      if (isInitialized.value) {
+        debugPrint('MonKpiController: Custom range changed, fetching data');
+        fetchKpiData();
+      }
     });
     
     // Listen for KPI ID changes
     ever(selectedKpiId, (_) {
-      debugPrint('MonKpiController: KPI ID changed to ${selectedKpiId.value}');
-      fetchKpiData();
+      if (isInitialized.value) {
+        debugPrint('MonKpiController: KPI ID changed to ${selectedKpiId.value}');
+        fetchKpiData();
+      }
     });
+  }
+
+  /// Call this manually when the UI is ready
+  Future<void> initializeData() async {
+    if (isInitialized.value) {
+      debugPrint('MonKpiController: Already initialized, skipping');
+      return;
+    }
+    
+    debugPrint('MonKpiController: Performing first data fetch');
+    await fetchKpiData();
+    isInitialized.value = true;
   }
 
   /// Fetch KPI data from database based on current date range and selected KPI

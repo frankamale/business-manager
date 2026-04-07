@@ -83,15 +83,24 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   @override
+  @override
+  @override
   Widget build(BuildContext context) {
     final color = _getColorForServicePoint();
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
+
       appBar: AppBar(
-        title: const Text('Expenses'),
-        backgroundColor: color,
-        foregroundColor: Colors.white,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.black,
+        title: const Text(
+          'Expenses',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
+
       body: Obx(() {
         final expenses = _expensesController.expenses;
 
@@ -101,27 +110,35 @@ class _ExpensesPageState extends State<ExpensesPage> {
 
         return Column(
           children: [
-            // Summary card
-            ExpenseSummaryCard(
-              totalExpenses: _expensesController.totalExpenses,
-              todayExpenses: _expensesController.totalTodayExpenses,
-              currencyFormatter: _currencyFormatter,
-              color: color,
+            // TOP SECTION (Summary with padding)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: ExpenseSummaryCard(
+                totalExpenses: _expensesController.totalExpenses,
+                todayExpenses: _expensesController.totalTodayExpenses,
+                currencyFormatter: _currencyFormatter,
+                color: color,
+              ),
             ),
-            // Expenses list
+
+            // LIST SECTION
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                 itemCount: expenses.length,
                 itemBuilder: (context, index) {
                   final expense = expenses[index];
-                  return ExpenseListItem(
-                    expense: expense,
-                    currencyFormatter: _currencyFormatter,
-                    dateFormatter: _dateFormatter,
-                    color: color,
-                    getUserName: _getUserName,
-                    onDelete: () => _showDeleteConfirmation(expense),
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: ExpenseListItem(
+                      expense: expense,
+                      currencyFormatter: _currencyFormatter,
+                      dateFormatter: _dateFormatter,
+                      color: color,
+                      getUserName: _getUserName,
+                      onDelete: () => _showDeleteConfirmation(expense),
+                    ),
                   );
                 },
               ),
@@ -129,11 +146,23 @@ class _ExpensesPageState extends State<ExpensesPage> {
           ],
         );
       }),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddExpenseDialog,
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+
+      // IMPROVED FAB
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: FloatingActionButton.extended(
+          onPressed: _showAddExpenseDialog,
+          backgroundColor: color,
+          elevation: 6,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          icon: const Icon(Icons.add),
+          label: const Text(
+            'Add Expense',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
     );
   }

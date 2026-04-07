@@ -21,7 +21,7 @@ class MonStoresController extends GetxController {
   var isInitialized = false.obs;
   var storeList = <Store>[].obs;
   var selectedStore = Rxn<Store>();
-  var selectedDateRange = DateRange.last7Days.obs;
+  var selectedDateRange = DateRange.today.obs;
   var customDateRange = Rxn<DateTimeRange>();
   var salesDataPoints = <SalesDataPoint>[].obs;
   var aggregationType = 'daily'.obs;
@@ -44,16 +44,25 @@ class MonStoresController extends GetxController {
     isLoading.value = true;
     try {
       final db = dbHelper.database;
+      
+      // First check what's in the table
+      final allSp = await db.query('mon_service_points');
+      debugPrint('MonStoresController: Total service points in DB: ${allSp.length}');
+      
+      // Now query stores
       final result = await db.query(
         'mon_service_points',
         where: 'stores = ?',
         whereArgs: [1],
         orderBy: 'name ASC',
       );
+      debugPrint('MonStoresController: Stores query returned ${result.length} rows');
+      
       final storesFromDb = result
           .map((row) => Store(id: row['id'] as String, name: row['name'] as String))
           .toList();
       storeList.assignAll([Store.all, ...storesFromDb]);
+      debugPrint('MonStoresController: Loaded ${storesFromDb.length} stores + Store.all');
 
       if (storeList.isNotEmpty) {
         selectedStore.value = Store.all;
@@ -187,7 +196,7 @@ class MonStoresController extends GetxController {
           : [selectedStore.value!.name, startDateStr, endDateStr];
 
       final query =
-      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, SUM(amount2) as grouped_amount FROM mon_kpi_sales $whereClause GROUP BY date) GROUP BY date ORDER BY date''';
+      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, SUM(amount1) as grouped_amount FROM mon_kpi_sales $whereClause GROUP BY date) GROUP BY date ORDER BY date''';
       final result = await db.rawQuery(query, args);
 
       for (var row in result) {
@@ -265,7 +274,7 @@ class MonStoresController extends GetxController {
 
       // The KPI table stores items with kpi field containing the item name
       final query = '''
-        SELECT kpi as inventoryname, SUM(quantity) as total_quantity, SUM(amount2) as total_revenue
+        SELECT kpi as inventoryname, SUM(quantity) as total_quantity, SUM(amount1) as total_revenue
         FROM mon_kpi_sales
         $whereClause
         GROUP BY kpi

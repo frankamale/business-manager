@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import '../../../../shared/database/unified_db_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
 import '../../components/dashboard/kpi_overview.dart';
@@ -65,25 +68,150 @@ class _DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
     // DashboardController must be initialized first as other controllers depend on it
-    Get.put(MonDashboardController());
-    Get.put(MonOperatorController());
-    Get.put(MonOutstandingPaymentsController());
-    Get.put(MonGrossProfitController());
-    Get.put(MonSalesTrendsController());
-    Get.put(MonKpiOverviewController());
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonOperatorController>()) {
+      Get.put(MonOperatorController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
+      Get.put(MonOutstandingPaymentsController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonGrossProfitController>()) {
+      Get.put(MonGrossProfitController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonSalesTrendsController>()) {
+      Get.put(MonSalesTrendsController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonKpiOverviewController>()) {
+      Get.put(MonKpiOverviewController(), permanent: true);
+    }
     // Initialize MonKpiController for detailed KPI data
-    Get.put(MonKpiController());
+    if (!Get.isRegistered<MonKpiController>()) {
+      Get.put(MonKpiController(), permanent: true);
+    }
+
+    // Initialize controller data after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeControllerData();
+    });
+  }
+
+  void _initializeControllerData() async {
+    // Initialize all controllers that load data from local DB
+    // Each controller will query the DB based on the current date range
+
+    // Initialize KPI overview data
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      await Get.find<MonKpiOverviewController>().fetchKpiData();
+    }
+    // Initialize gross profit data
+    if (Get.isRegistered<MonGrossProfitController>()) {
+      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
+    }
+    // Initialize sales trends data
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      await Get.find<MonSalesTrendsController>().fetchAllData();
+    }
+    // Initialize outstanding payments data
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      await Get.find<MonOutstandingPaymentsController>()
+          .fetchOutstandingPaymentsData();
+    }
+    // Initialize KPI controller for detailed data
+    if (Get.isRegistered<MonKpiController>()) {
+      await Get.find<MonKpiController>().fetchKpiData();
+    }
   }
 
   Future<void> _handleRefresh() async {
     final apiService = Get.find<MonitorApiService>();
-    await apiService.syncRecentSales();
+    final dashboardController = Get.find<MonDashboardController>();
 
+    // Get the selected date range
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final range = dashboardController.selectedRange.value;
+    final customRange = dashboardController.customRange.value;
+
+    switch (range) {
+      case DateRange.today:
+        startDate = DateTime(now.year, now.month, now.day);
+        break;
+      case DateRange.yesterday:
+        startDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(days: 1));
+        endDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(milliseconds: 1));
+        break;
+      case DateRange.last7Days:
+        startDate = now.subtract(const Duration(days: 6));
+        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        break;
+      case DateRange.monthToDate:
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      case DateRange.custom:
+        if (customRange != null) {
+          startDate = customRange.start;
+          endDate = customRange.end;
+        } else {
+          startDate = now.subtract(const Duration(days: 6));
+        }
+        break;
+    }
+
+    // Fetch KPI data for the selected date range from server and store in DB
+    try {
+      await apiService.syncAllKpiData(startDate, endDate);
+
+      // Also fetch service points to ensure they're up to date
+      try {
+        final servicePointsRes = await apiService.getWithAuth('/servicepoints');
+        if (servicePointsRes.body.isNotEmpty) {
+          final servicePointsData = json.decode(servicePointsRes.body) as List;
+          final filteredServicePoints = servicePointsData.map((e) {
+            final sp = Map<String, dynamic>.from(e as Map);
+            return {
+              'id': sp['id'],
+              'name': sp['name'],
+              'code': sp['code'],
+              'fullName': sp['fullName'] ?? sp['name'] ?? '',
+              'servicepointtype': sp['servicepointtype'] ?? '',
+              'facilityName': sp['facilityName'] ?? '',
+              'sales': (sp['sales'] == true || sp['sales'] == 1) ? 1 : 0,
+              'stores': (sp['stores'] == true || sp['stores'] == 1) ? 1 : 0,
+              'production': (sp['production'] == true || sp['production'] == 1)
+                  ? 1
+                  : 0,
+              'booking': (sp['booking'] == true || sp['booking'] == 1) ? 1 : 0,
+            };
+          }).toList();
+          await UnifiedDatabaseHelper.instance.deleteAllMonServicePoints();
+          await UnifiedDatabaseHelper.instance.insertServicePoints(
+            filteredServicePoints,
+          );
+        }
+      } catch (e) {
+        debugPrint('Dashboard: Service points fetch failed (non-critical): $e');
+      }
+    } catch (e) {
+      debugPrint('Dashboard: KPI data fetch failed: $e');
+    }
+
+    // Refresh all controllers with the new data from DB
     if (Get.isRegistered<MonKpiOverviewController>()) {
       await Get.find<MonKpiOverviewController>().fetchKpiData();
     }
     if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>();
+      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
     if (Get.isRegistered<MonOutstandingPaymentsController>()) {
       await Get.find<MonOutstandingPaymentsController>()
@@ -92,9 +220,6 @@ class _DashboardState extends State<Dashboard> {
     if (Get.isRegistered<MonSalesTrendsController>()) {
       await Get.find<MonSalesTrendsController>().fetchAllData();
     }
-    if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
-    }
   }
 
   @override
@@ -102,19 +227,17 @@ class _DashboardState extends State<Dashboard> {
     final operatorController = Get.find<MonOperatorController>();
     final size = MediaQuery.of(context).size;
 
-    final bool isSmallScreen = size.width < 600;
-
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
-        color: PrimaryColors.brightYellow,
-        backgroundColor: PrimaryColors.darkBlue,
+        color: AppColors.getAccentColor(context),
+        backgroundColor: AppColors.getCardColor(context),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: PrimaryColors.darkBlue,
-              elevation: 2,
+              backgroundColor: AppColors.getCardColor(context),
+              elevation: 0,
               pinned: true,
               centerTitle: true,
               title: Obx(
@@ -123,8 +246,8 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     Text(
                       operatorController.companyName.value,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: AppColors.getTextPrimaryColor(context),
                         fontWeight: FontWeight.bold,
                         fontSize: 18.0,
                       ),
@@ -133,7 +256,7 @@ class _DashboardState extends State<Dashboard> {
                     Text(
                       operatorController.companyAddress.value,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: AppColors.getTextSecondaryColor(context),
                         fontWeight: FontWeight.w400,
                         fontSize: 12.0,
                       ),
@@ -150,8 +273,11 @@ class _DashboardState extends State<Dashboard> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: IconButton(
-                    icon: const Icon(Icons.account_circle_outlined, size: 28),
-                    color: PrimaryColors.brightYellow,
+                    icon: Icon(
+                      Icons.account_circle_outlined,
+                      size: 28,
+                      color: AppColors.getTextPrimaryColor(context),
+                    ),
                     onPressed: () {
                       Get.to(() => ProfilePage());
                     },
@@ -167,13 +293,13 @@ class _DashboardState extends State<Dashboard> {
             ),
             SliverToBoxAdapter(
               child: Container(
-                color: PrimaryColors.darkBlue,
+                color: AppColors.getBackgroundColor(context),
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 2),
+                      SizedBox(height: 8),
                       KpiOverviewSection(),
                       SizedBox(height: 8),
                       Obx(() {
@@ -181,15 +307,19 @@ class _DashboardState extends State<Dashboard> {
                         final grossProfitValue = _parseCompactNumber(
                           controller.grossProfit.value,
                         );
+                        final isLoading = controller.isLoading.value;
 
-                        return GrossProfitCard(
-                          grossProfit: grossProfitValue,
-                          trend: controller.grossProfitTrend.value,
+                        return Skeletonizer(
+                          enabled: isLoading,
+                          child: GrossProfitCard(
+                            grossProfit: grossProfitValue,
+                            trend: controller.grossProfitTrend.value,
+                          ),
                         );
                       }),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
                       const HorizontalSummaryCards(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
                       // Obx(() {
                       //   final controller =
                       //       Get.find<MonOutstandingPaymentsController>();
@@ -242,9 +372,9 @@ class _DashboardState extends State<Dashboard> {
                           },
                         );
                       }),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       SalesTrendsSection(),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       // Detailed KPI Section with mode selector
                       // _buildDetailedKpiSection(),
                     ],
@@ -259,6 +389,9 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) {
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController(), permanent: true);
+    }
     final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
   }

@@ -26,125 +26,104 @@ class StoreOverview extends StatelessWidget {
       final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
       
       if (controller.isFetchingKpisAndCharts.value) {
-        return const Padding(
+        return Padding(
           padding: EdgeInsets.only(top: 100.0),
           child: Center(
-            child: CircularProgressIndicator(color: PrimaryColors.brightYellow),
+            child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
           ),
         );
       }
       return Container(
-        color: PrimaryColors.darkBlue,
+        color: AppColors.getBackgroundColor(context),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
+              // KPI Cards Section
               GridView.count(
                 padding: EdgeInsets.zero,
                 crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.5,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 1.6,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
                   _buildKpiCard(
+                    context,
                     title: isGym ? 'Total Revenue' : 'Total Sales',
                     value: kpiTrendController.totalSales.value,
                     unit: kpiTrendController.unit.value,
                     trend: kpiTrendController.salesTrend.value,
-                    trendDirection:
-                        kpiTrendController.salesTrendDirection.value,
+                    trendDirection: kpiTrendController.salesTrendDirection.value,
+                    icon: Icons.attach_money,
+                    iconColor: AppColors.getSuccessColor(context),
                   ),
                   _buildKpiCard(
-                    title: isGym ? 'Total Walk Ins' : 'Transactions',
-                    value: isGym 
+                    context,
+                    title: isGym ? 'Total Walk Ins' : 'Cash Sales',
+                    value: isGym
                         ? kpiTrendController.totalWalkIns.value.toString()
-                        : kpiTrendController.totalTransactions.value,
-                    trend: kpiTrendController.transactionsTrend.value,
-                    trendDirection:
-                        kpiTrendController.transactionsTrendDirection.value,
+                        : kpiTrendController.cashSales.value,
+                    unit: isGym ? '' : kpiTrendController.unit.value,
+                    trend: isGym ? null : kpiTrendController.cashSalesTrend.value,
+                    trendDirection: isGym ? null : kpiTrendController.cashSalesTrendDirection.value,
+                    icon: isGym ? Icons.people : Icons.payments,
+                    iconColor: isGym ? AppColors.getInfoColor(context) : AppColors.getSuccessColor(context),
                   ),
                   _buildKpiCard(
+                    context,
                     title: isGym ? 'Daily Subs' : 'Avg. Basket Size',
                     value: isGym
                         ? kpiTrendController.dailySubs.value.toString()
                         : kpiTrendController.avgBasketSize.value,
                     unit: isGym ? '' : kpiTrendController.unit.value,
                     trend: kpiTrendController.basketTrend.value,
-                    trendDirection:
-                        kpiTrendController.basketTrendDirection.value,
+                    trendDirection: kpiTrendController.basketTrendDirection.value,
+                    icon: Icons.shopping_basket,
+                    iconColor: AppColors.getWarningColor(context),
                   ),
                   _buildKpiCard(
-                    title: isGym ? 'Monthly Subs' : 'Staff on Duty',
+                    context,
+                    title: isGym ? 'Monthly Subs' : 'Pending Payments',
                     value: isGym
                         ? kpiTrendController.monthlySubs.value.toString()
-                        : '0',
+                        : kpiTrendController.pendingPayments.value,
+                    unit: isGym ? '' : kpiTrendController.unit.value,
+                    trend: isGym ? null : kpiTrendController.pendingPaymentsTrend.value,
+                    trendDirection: isGym ? null : kpiTrendController.pendingPaymentsTrendDirection.value,
+                    icon: isGym ? Icons.calendar_month : Icons.pending_actions,
+                    iconColor: isGym ? AppColors.getPrimaryColor(context) : AppColors.getWarningColor(context),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              Container(
-                padding: EdgeInsetsGeometry.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: PrimaryColors.lightBlue,
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      "Sales Trends",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      height: 250,
-                      child: SalesTrendLineGraph(
-                        salesData: controller.salesDataPoints,
-                        dateRange: controller.selectedDateRange.value,
-                        customRange: controller.customDateRange.value,
-                        aggregationType: controller.aggregationType.value,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 8),
+              // Sales Trends Section
+              _buildSectionCard(
+                context,
+                title: "Sales Trends",
+                icon: Icons.trending_up,
+                child: SizedBox(
+                  height: 250,
+                  child: SalesTrendLineGraph(
+                    salesData: controller.salesDataPoints,
+                    dateRange: controller.selectedDateRange.value,
+                    customRange: controller.customDateRange.value,
+                    aggregationType: controller.aggregationType.value,
+                  ),
                 ),
               ),
-              const SizedBox(height: 24),
-              // const Text(
-              //   "Hourly Customer Traffic",
-              //   style: TextStyle(
-              //     fontSize: 20,
-              //     fontWeight: FontWeight.bold,
-              //     color: Colors.white,
-              //   ),
-              // ),
-              //  const SizedBox(height: 10),
-              // SizedBox(
-              //   height: 250,
-              //   child: HourlyTrafficChart(trafficData: controller.hourlyTrafficData),
-              // ),
-              // const SizedBox(height: 24),
-              const Text(
-                "Top Selling Products",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              const SizedBox(height: 8),
+              // Top Selling Products Section
+              _buildSectionCard(
+                context,
+                title: "Top Selling Products",
+                icon: Icons.leaderboard,
+                child: TopProductsList(products: controller.topSellingProducts),
               ),
-              const SizedBox(height: 10),
-              TopProductsList(products: controller.topSellingProducts),
               const SizedBox(height: 24),
-
             ],
           ),
         ),
@@ -152,71 +131,197 @@ class StoreOverview extends StatelessWidget {
     });
   }
 
-  Widget _buildKpiCard({
+  Widget _buildSectionCard(
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.getCardColor(context),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.getShadowLightColor(context),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppColors.getTextPrimaryColor(context), size: 17),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextPrimaryColor(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKpiCard(
+    BuildContext context, {
     required String title,
     required String value,
     String? unit,
     String? trend,
     TrendDirection? trendDirection,
+    required IconData icon,
+    required Color iconColor,
   }) {
-    return Card(
-      color: PrimaryColors.lightBlue,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 140),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.getCardColor(context),
+              AppColors.getSurfaceColor(context),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.getShadowLightColor(context),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      '${unit != null && unit.isNotEmpty ? '$unit ' : ''}$value',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Background watermark icon
+            Positioned(
+              right: -12,
+              bottom: -12,
+              child: Opacity(
+                opacity: 0.08,
+                child: Icon(
+                  icon,
+                  size: 100,
+                  color: iconColor,
                 ),
-                if (trend != null && trendDirection != null) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    trendDirection == TrendDirection.up
-                        ? Icons.arrow_upward
-                        : trendDirection == TrendDirection.down
-                        ? Icons.arrow_downward
-                        : Icons.remove,
-                    color: trendDirection == TrendDirection.up
-                        ? Colors.green
-                        : trendDirection == TrendDirection.down
-                        ? Colors.red
-                        : Colors.white70,
-                    size: 16,
+              ),
+            ),
+            // Foreground content
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Top row: trend badge
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (trend != null && trendDirection != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: trendDirection == TrendDirection.up
+                                ? AppColors.getSuccessColor(context).withOpacity(0.2)
+                                : trendDirection == TrendDirection.down
+                                    ? AppColors.getErrorColor(context).withOpacity(0.2)
+                                    : AppColors.getTextDisabledColor(context).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                trendDirection == TrendDirection.up
+                                    ? Icons.arrow_upward
+                                    : trendDirection == TrendDirection.down
+                                        ? Icons.arrow_downward
+                                        : Icons.remove,
+                                color: trendDirection == TrendDirection.up
+                                    ? AppColors.getSuccessColor(context)
+                                    : trendDirection == TrendDirection.down
+                                        ? AppColors.getErrorColor(context)
+                                        : AppColors.getTextSecondaryColor(context),
+                                size: 10,
+                              ),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  trend,
+                                  style: TextStyle(
+                                    color: trendDirection == TrendDirection.up
+                                        ? AppColors.getSuccessColor(context)
+                                        : trendDirection == TrendDirection.down
+                                            ? AppColors.getErrorColor(context)
+                                            : AppColors.getTextSecondaryColor(context),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    trend,
-                    style: TextStyle(
-                      color: trendDirection == TrendDirection.up
-                          ? Colors.green
-                          : trendDirection == TrendDirection.down
-                          ? Colors.red
-                          : Colors.white70,
-                      fontSize: 12,
+                  // Bottom section: title and value
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              color: AppColors.getTextSecondaryColor(context),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '${unit != null && unit.isNotEmpty ? '$unit ' : ''}$value',
+                            style: TextStyle(
+                              color: AppColors.getTextPrimaryColor(context),
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
           ],
         ),

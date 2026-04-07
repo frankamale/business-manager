@@ -139,7 +139,7 @@ class InventoryController extends GetxController {
     }
   }
 
-  // Get inventory count
+  // Get inventory count 
   Future<int> getInventoryCount() async {
     try {
       return await _dbHelper.getInventoryCount();

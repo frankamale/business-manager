@@ -5,13 +5,21 @@ import '../../additions/colors.dart';
 import '../../controllers/mon_salestrends_controller.dart';
 import 'bar_chat.dart';
 
-Widget buildTopStoresCard(MonSalesTrendsController controller) {
+Widget buildTopStoresCard(
+  BuildContext context,
+  MonSalesTrendsController controller,
+) {
   final stores = "Store";
+  final cardColor = AppColors.getCardColor(context);
+  final shadowColor = AppColors.getShadowLightColor(context);
+  final textPrimary = AppColors.getTextPrimaryColor(context);
+  final errorColor = AppColors.getErrorColor(context);
 
   return Card(
-    color: PrimaryColors.lightBlue,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    elevation: 2,
+    color: cardColor,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    elevation: 0,
+    shadowColor: shadowColor,
     child: Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
@@ -19,8 +27,8 @@ Widget buildTopStoresCard(MonSalesTrendsController controller) {
         children: [
           Text(
             "Top $stores by Sales (UGX)",
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: textPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -34,12 +42,12 @@ Widget buildTopStoresCard(MonSalesTrendsController controller) {
               );
             }
             if (controller.hasErrorStores.value) {
-              return const SizedBox(
+              return SizedBox(
                 height: 200,
                 child: Center(
                   child: Text(
                     'Error loading store data',
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: errorColor),
                   ),
                 ),
               );

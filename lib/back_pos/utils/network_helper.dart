@@ -1,35 +1,46 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import '../config.dart';
 
 class NetworkHelper {
-  /// Check if the device has an active internet connection by pinging the API server
+  static final Connectivity _connectivity = Connectivity();
+  static DateTime? _lastCheck;
+  static bool? _cachedResult;
+  static const Duration _cacheDuration = Duration(seconds: 10);
+
   static Future<bool> hasConnection() async {
-    try {
-      // Try to connect to the API server with a timeout
-      final response = await http.get(
-        Uri.parse('${AppConfig.baseUrl}/auth/ping'),
-      ).timeout(const Duration(seconds: 5));
+    final now = DateTime.now();
+    if (_lastCheck != null && 
+        _cachedResult != null &&
+        now.difference(_lastCheck!) < _cacheDuration) {
+      return _cachedResult!;
+    }
 
-      // If we get any response (even if not 200), we have connectivity
-      return response.statusCode >= 200 && response.statusCode < 500;
+    try {
+      final result = await _connectivity.checkConnectivity();
+      final isConnected = !result.contains(ConnectivityResult.none);
+      
+      _cachedResult = isConnected;
+      _lastCheck = now;
+      
+      return isConnected;
     } catch (e) {
-      // If there's any error (timeout, no connection, etc.), we're offline
-      print(' No network connection: $e');
       return false;
     }
   }
 
-  /// Check connectivity with custom timeout
-  static Future<bool> hasConnectionWithTimeout(Duration timeout) async {
+  static Future<bool> hasInternetAccess() async {
     try {
       final response = await http.get(
         Uri.parse('${AppConfig.baseUrl}/auth/ping'),
-      ).timeout(timeout);
-
+      ).timeout(const Duration(seconds: 3));
       return response.statusCode >= 200 && response.statusCode < 500;
     } catch (e) {
-      print(' No network connection: $e');
       return false;
     }
   }
+
+  static Stream<List<ConnectivityResult>> get connectivityStream => 
+      _connectivity.onConnectivityChanged;
 }

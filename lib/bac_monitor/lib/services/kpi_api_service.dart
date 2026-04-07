@@ -99,12 +99,9 @@ class KpiApiService extends GetxService {
 
     final db = _dbHelper.database;
 
-    // Delete old KPI data for the date range
-    await db.delete(
-      'mon_kpi_sales',
-      where: 'processing_date >= ?',
-      whereArgs: [startDateStr],
-    );
+    // DO NOT DELETE - use ConflictAlgorithm.replace to update existing records
+    // This preserves all existing data and only inserts/updates new records
+    debugPrint('KpiApiService: Syncing KPI data (upsert mode - no deletions)');
 
     // Fetch and insert each KPI type
     for (final kpiId in kpiTypes) {

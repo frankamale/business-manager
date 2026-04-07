@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../additions/colors.dart';
 import '../../../../shared/database/unified_db_helper.dart';
+import '../../controllers/mon_inventory_controller.dart';
 import '../../models/inventory_data.dart';
 import '../../models/service_points.dart';
+import '../../services/api_services.dart';
 import '../../widgets/inventory/data_table.dart';
 import '../../widgets/inventory/floating_search_bar.dart';
 
@@ -19,6 +23,7 @@ class InventoryPage extends StatefulWidget {
 class _InventoryPageState extends State<InventoryPage>
     with SingleTickerProviderStateMixin {
   final _dbHelper = UnifiedDatabaseHelper.instance;
+  late MonInventoryController _inventoryController;
 
   List<MonitorInventoryItem> _allItems = [];
   List<MonitorInventoryItem> _filteredItems = [];
@@ -41,7 +46,24 @@ class _InventoryPageState extends State<InventoryPage>
     _searchFocusNode = FocusNode();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
-    _loadInventoryFromDb();
+    
+    // Initialize controller
+    if (Get.isRegistered<MonInventoryController>()) {
+      _inventoryController = Get.find<MonInventoryController>();
+    } else {
+      _inventoryController = Get.put(MonInventoryController());
+    }
+    
+    // Load first page of inventory from DB
+    _inventoryController.loadInventoryFromDb();
+    
+    // Listen to controller changes
+    _inventoryController.inventoryItems.listen((_) {
+      if (mounted) {
+        _applyFiltersFromController();
+      }
+    });
+    
     _loadServicePoints();
   }
 
@@ -52,6 +74,21 @@ class _InventoryPageState extends State<InventoryPage>
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _applyFiltersFromController() {
+    setState(() {
+      _allItems = List.from(_inventoryController.inventoryItems);
+      _filteredItems = _getFilteredItems();
+      _isLoading = _inventoryController.isLoading.value && _allItems.isEmpty;
+    });
+  }
+
+  /// Build search results into MonitorInventoryItem list
+  List<MonitorInventoryItem> _buildSearchResults() {
+    return _inventoryController.searchResults
+        .map((e) => MonitorInventoryItem.fromJson(e))
+        .toList();
   }
 
   Future<void> _loadServicePoints() async {
@@ -84,20 +121,9 @@ class _InventoryPageState extends State<InventoryPage>
     }
   }
 
-  Future<void> _loadInventoryFromDb() async {
-    setState(() => _isLoading = true);
-    try {
-      final db = _dbHelper.database;
-      final List<Map<String, dynamic>> maps = await db.query('mon_inventory');
-      _allItems = maps.map((map) => MonitorInventoryItem.fromJson(map)).toList();
-      setState(() {
-        _filteredItems = _getFilteredItems();
-        _isLoading = false;
-      });
-    } catch (e) {
-      debugPrint("Error loading inventory from DB: $e");
-      setState(() => _isLoading = false);
-    }
+  /// Fetch inventory from server and store in DB, then reload from DB
+  Future<void> _refreshInventoryFromServer() async {
+    await _inventoryController.refreshInventoryFromServer();
   }
 
   void _handleTabChange() {
@@ -110,14 +136,7 @@ class _InventoryPageState extends State<InventoryPage>
   }
 
   void _handleSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      setState(() {
-        _searchQuery = query.toLowerCase();
-        _filteredItems = _getFilteredItems();
-        if (_searchQuery.isEmpty) _searchFocusNode.unfocus();
-      });
-    });
+    _inventoryController.searchInventory(query);
   }
 
   List<MonitorInventoryItem> _getFilteredItems() {
@@ -170,25 +189,25 @@ class _InventoryPageState extends State<InventoryPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverOverlapAbsorber(
               handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
               sliver: SliverAppBar(
-                backgroundColor: PrimaryColors.darkBlue,
+                backgroundColor: AppColors.getCardColor(context),
                 pinned: true,
                 floating: true,
                 snap: true,
                 forceElevated: innerBoxIsScrolled,
-                iconTheme: const IconThemeData(color: Colors.white),
+                iconTheme: IconThemeData(color: AppColors.getTextPrimaryColor(context)),
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildViewDropdown(),
+                    _buildViewDropdown(context),
                     const SizedBox(width: 10),
-                    _buildServicePointDropdown(),
+                    _buildServicePointDropdown(context),
                   ],
                 ),
                 expandedHeight: _selectedView == "Services" ? 120.0 : 180,
@@ -209,17 +228,18 @@ class _InventoryPageState extends State<InventoryPage>
                 bottom: _selectedView == "Inventory"
                     ? TabBar(
                         controller: _tabController,
-                        indicatorColor: PrimaryColors.brightYellow,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white54,
+                        indicatorColor: AppColors.getAccentColor(context),
+                        labelColor: AppColors.getTextPrimaryColor(context),
+                        unselectedLabelColor: AppColors.getTextSecondaryColor(context),
                         labelStyle: const TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
                         indicatorWeight: 3.0,
                         tabs: const [
+                          Tab(text: 'All Items'),
                           Tab(text: 'Low Stock'),
                           Tab(text: 'Overstocked'),
-                          Tab(text: 'All Items'),
+
                         ],
                       )
                     : null,
@@ -229,7 +249,7 @@ class _InventoryPageState extends State<InventoryPage>
         },
         body: Builder(
           builder: (innerContext) => RefreshIndicator(
-            onRefresh: _loadInventoryFromDb,
+            onRefresh: _refreshInventoryFromServer,
             child: _selectedView == "Inventory"
                 ? TabBarView(
                     controller: _tabController,
@@ -246,13 +266,13 @@ class _InventoryPageState extends State<InventoryPage>
     );
   }
 
-  Widget _buildViewDropdown() {
+  Widget _buildViewDropdown(BuildContext context) {
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
-        dropdownColor: PrimaryColors.lightBlue,
-        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-        style: const TextStyle(
-          color: Colors.white,
+        dropdownColor: AppColors.getCardColor(context),
+        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
+        style: TextStyle(
+          color: AppColors.getTextPrimaryColor(context),
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
@@ -272,13 +292,13 @@ class _InventoryPageState extends State<InventoryPage>
     );
   }
 
-  Widget _buildServicePointDropdown() {
+  Widget _buildServicePointDropdown(BuildContext context) {
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
-        dropdownColor: PrimaryColors.lightBlue,
-        icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-        style: const TextStyle(
-          color: Colors.white,
+        dropdownColor: AppColors.getCardColor(context),
+        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
+        style: TextStyle(
+          color: AppColors.getTextPrimaryColor(context),
           fontWeight: FontWeight.w600,
           fontSize: 15,
         ),
@@ -302,38 +322,77 @@ class _InventoryPageState extends State<InventoryPage>
   }
 
   Widget _buildInventoryList(BuildContext context) {
-    if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.white),
-      );
-    }
+    return Obx(() {
+      final isSearching = _inventoryController.isSearching.value;
+      final searchResults = _inventoryController.searchResults;
+      final inventoryItems = _inventoryController.inventoryItems;
+      final hasMore = _inventoryController.hasMoreItems.value;
 
-    if (_filteredItems.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text(
-            "No items found.",
-            style: TextStyle(color: Colors.white54, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      );
-    }
+      // Use search results when searching, otherwise use normal inventory
+      final List<MonitorInventoryItem> displayItems;
+      if (searchResults.isNotEmpty) {
+        displayItems = searchResults
+            .map((e) => MonitorInventoryItem.fromJson(e))
+            .toList();
+      } else {
+        displayItems = _filteredItems;
+      }
 
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverOverlapInjector(
-          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
-          sliver:  SliverToBoxAdapter(
-              child: InventoryDataTable(items: _filteredItems, isServicesView: _selectedView == "Services"),
+      if (_isLoading && displayItems.isEmpty) {
+        return Center(
+          child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
+        );
+      }
+
+      if (displayItems.isEmpty && !hasMore) {
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Text(
+              "No items found.",
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 16),
+              textAlign: TextAlign.center,
             ),
           ),
-      ],
-    );
+        );
+      }
+
+      return NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification scrollInfo) {
+          // Only load more for normal inventory, not search results
+          if (searchResults.isEmpty &&
+              scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent * 0.8) {
+            if (_inventoryController.hasMoreItems.value && !_inventoryController.isLoading.value) {
+              _inventoryController.loadMoreInventory();
+            }
+          }
+          return false;
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverOverlapInjector(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 7.0, vertical: 8.0),
+              sliver: SliverToBoxAdapter(
+                child: InventoryDataTable(items: displayItems, isServicesView: _selectedView == "Services"),
+              ),
+            ),
+            // Loading indicator at bottom when loading more
+            if (_inventoryController.isLoading.value && displayItems.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    });
   }
 }

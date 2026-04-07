@@ -26,18 +26,24 @@ class KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final primaryLight = AppColors.getPrimaryLightColor(context);
+
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: PrimaryColors.lightBlue
-
+        borderRadius: BorderRadius.circular(8),
+        color: AppColors.getCardColor(context),
+        border: Border.all(color: AppColors.getBorderColor(context)),
       ),
       child: Stack(
         children: [
           // Decorative glow blob top-right
-
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 16.0,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -50,20 +56,15 @@ class KpiCard extends StatelessWidget {
                       // Category label pill
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFC107).withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                              color: const Color(0xFFFFC107).withOpacity(0.4),
-                              width: 1),
+                          horizontal: 10,
+                          vertical: 3,
                         ),
                         child: Text(
                           title.toUpperCase(),
-                          style: const TextStyle(
-                            color: Color(0xFFFFC107),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                          style: TextStyle(
+                            color: primaryLight,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
                             letterSpacing: 1.4,
                           ),
                         ),
@@ -77,8 +78,8 @@ class KpiCard extends StatelessWidget {
                             if (unit != null)
                               TextSpan(
                                 text: '$unit  ',
-                                style: const TextStyle(
-                                  color: Color(0xFF90A8D0),
+                                style: TextStyle(
+                                  color: textSecondary,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
@@ -86,8 +87,8 @@ class KpiCard extends StatelessWidget {
                               ),
                             TextSpan(
                               text: value,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: textPrimary,
                                 fontSize: 26,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.5,
@@ -119,9 +120,9 @@ class KpiCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.white.withOpacity(0),
-                        Colors.white.withOpacity(0.18),
-                        Colors.white.withOpacity(0),
+                        textPrimary.withOpacity(0),
+                        textPrimary.withOpacity(0.18),
+                        textPrimary.withOpacity(0),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -169,11 +170,15 @@ class MiniKpiData {
 // ─────────────────────────────────────────────────────────────
 class _MiniKpiRow extends StatelessWidget {
   final MiniKpiData data;
+
   const _MiniKpiRow({required this.data});
 
   @override
   Widget build(BuildContext context) {
-    final accent = data.accentColor ?? const Color(0xFF4FC3F7);
+    final accent = data.accentColor ?? AppColors.getInfoColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: Column(
@@ -193,7 +198,7 @@ class _MiniKpiRow extends StatelessWidget {
               Text(
                 data.label,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.55),
+                  color: textSecondary.withOpacity(0.55),
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.3,
@@ -204,14 +209,26 @@ class _MiniKpiRow extends StatelessWidget {
           const SizedBox(height: 2),
           Padding(
             padding: const EdgeInsets.only(left: 12),
-            child: Text(
-              data.value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-              ),
+            child: Row(
+              children: [
+                Text(
+                  "UGX",
+                  style: TextStyle(
+                    color: textSecondary.withOpacity(0.55),
+                    fontSize: 12,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  data.value,
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -237,23 +254,22 @@ class _TrendBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isUp = direction == TrendDirection.up;
-    final color = isUp ? const Color(0xFF4CAF50) : const Color(0xFFEF5350);
-    final bgColor = color.withOpacity(0.12);
+    final color = isUp ? AppColors.getSuccessColor(context) : AppColors.getErrorColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
 
     return Row(
       children: [
+
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.35), width: 1),
-          ),
+
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                isUp
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
                 color: color,
                 size: 12,
               ),
@@ -274,7 +290,7 @@ class _TrendBadge extends StatelessWidget {
           Text(
             reference!,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.4),
+              color: textSecondary.withOpacity(0.4),
               fontSize: 10,
               fontWeight: FontWeight.w500,
             ),
@@ -284,5 +300,3 @@ class _TrendBadge extends StatelessWidget {
     );
   }
 }
-
-

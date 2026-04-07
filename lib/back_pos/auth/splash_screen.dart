@@ -180,15 +180,12 @@ class _SplashScreenState extends State<SplashScreen>
       _log('authenticateApp: Initializing controllers');
       _initializeControllers();
 
-      // Ensure database is open if we have company info
-      _log('authenticateApp: Checking if database needs to be opened');
-      await _ensureDatabaseIsOpen();
-
       // Initialize POS-specific data (cash accounts, currency, etc.)
+      // This also opens the database for the company
       _log('authenticateApp: Initializing POS data');
       await _initializePosData();
 
-      // Ensure database is open before smart sync
+      // Final verification that database is open before smart sync
       _log('authenticateApp: Ensuring database is open for smart sync');
       await _ensureDatabaseIsOpenForSmartSync();
 

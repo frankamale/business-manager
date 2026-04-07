@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
@@ -6,11 +7,12 @@ import 'mon_dashboard_controller.dart';
 
 class MonOutstandingPaymentsController extends GetxController {
   final dbHelper = UnifiedDatabaseHelper.instance;
-  final MonDashboardController dashboardController = Get.find<MonDashboardController>();
+  final MonDashboardController dateController = Get.find<MonDashboardController>();
 
   // Observables for selected period
   var isLoading = false.obs;
   var hasError = false.obs;
+  var isInitialized = false.obs;
   var outstandingSelectedPeriod = '0'.obs;
   var outstandingSelectedPeriodTrend = '0%'.obs;
 
@@ -24,14 +26,39 @@ class MonOutstandingPaymentsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchOutstandingPaymentsData();
-    // Listen to date range changes
-    ever(dashboardController.selectedRange, (_) => fetchOutstandingPaymentsData());
-    ever(dashboardController.customRange, (_) => fetchOutstandingPaymentsData());
+    // Don't fetch data here - let the UI trigger it when ready
+    debugPrint('MonOutstandingPaymentsController: onInit - NOT fetching data yet');
+    
+    // Set up listeners for date changes
+    ever(dateController.selectedRange, (_) {
+      if (isInitialized.value) {
+        fetchOutstandingPaymentsData();
+      }
+    });
+    ever(dateController.customRange, (_) {
+      if (isInitialized.value) {
+        fetchOutstandingPaymentsData();
+      }
+    });
+  }
+
+  /// Call this manually when the UI is ready
+  Future<void> initializeData() async {
+    if (isInitialized.value) {
+      debugPrint('MonOutstandingPaymentsController: Already initialized, skipping');
+      return;
+    }
+    
+    debugPrint('MonOutstandingPaymentsController: Performing first data fetch');
+    await fetchOutstandingPaymentsData();
+    isInitialized.value = true;
   }
 
   Future<void> fetchOutstandingPaymentsData() async {
     try {
+      // Always fetch data from local DB - date range specific data should be queried each time
+      // Do NOT skip based on SyncStateManager as date ranges change and need fresh data
+
       isLoading.value = true;
       hasError.value = false;
 
@@ -42,8 +69,8 @@ class MonOutstandingPaymentsController extends GetxController {
       late DateTime startDate, endDate;
       late DateTime prevStartDate, prevEndDate;
 
-      final range = dashboardController.selectedRange.value;
-      final customRange = dashboardController.customRange.value;
+      final range = dateController.selectedRange.value;
+      final customRange = dateController.customRange.value;
 
       switch (range) {
         case DateRange.today:

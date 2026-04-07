@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../additions/colors.dart';
+import '../../controllers/mon_inventory_controller.dart';
 
 class FloatingSearchBar extends StatefulWidget {
   final Function(String) onSearchChanged;
@@ -16,20 +18,17 @@ class _FloatingSearchBarState extends State<FloatingSearchBar> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    widget.focusNode.addListener(() {
-      if (!widget.focusNode.hasFocus && _searchController.text.isNotEmpty) {
-        _searchController.clear();
-        widget.onSearchChanged('');
-      }
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    if (Get.isRegistered<MonInventoryController>()) {
+      Get.find<MonInventoryController>().clearSearch();
+    }
+    widget.onSearchChanged('');
   }
 
   @override
@@ -40,17 +39,28 @@ class _FloatingSearchBarState extends State<FloatingSearchBar> {
         focusNode: widget.focusNode,
         controller: _searchController,
         onChanged: widget.onSearchChanged,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-        cursorColor: PrimaryColors.brightYellow,
+        style: TextStyle(color: AppColors.getTextPrimaryColor(context), fontSize: 16),
+        cursorColor: AppColors.getAccentColor(context),
         decoration: InputDecoration(
           filled: true,
-          fillColor: PrimaryColors.lightBlue,
+          fillColor: AppColors.getSurfaceColor(context),
           hintText: 'Search for products...',
-          hintStyle: const TextStyle(color: Colors.white54),
+          hintStyle: TextStyle(color: AppColors.getTextHintColor(context)),
           prefixIcon: Icon(
             Icons.search,
-            color: PrimaryColors.brightYellow,
+            color: AppColors.getAccentColor(context),
             size: 24,
+          ),
+          suffixIcon: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _searchController,
+            builder: (context, value, child) {
+              return value.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: _clearSearch,
+                    )
+                  : const SizedBox.shrink();
+            },
           ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(30.0),
