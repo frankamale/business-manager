@@ -465,7 +465,7 @@ class PosApiService extends GetxService {
 
   Future<Map<String, dynamic>> postSale(Map<String, dynamic> saleData) async {
     try {
-      final request = http.Request('POST', Uri.parse("$baseurl/payment/"));
+      final request = http.Request('POST', Uri.parse("$baseurl/payment/sale"));
       request.headers['Content-Type'] = 'application/json';
       request.body = json.encode(saleData);
 
