@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_salestrends_controller.dart';
 import '../../models/dashboard.dart';
@@ -25,6 +26,11 @@ class HorizontalSummaryCards extends StatelessWidget {
   ];
 
   List<PaymentData> _processPaymentData(List<dynamic> salesData) {
+    // If no data for kpi_id=3 (payment modes), use kpi_id=0 (all transactions) as fallback
+    if (salesData.isEmpty) {
+      return [];
+    }
+
     final Map<String, double> salesByMode = {};
     for (final sale in salesData) {
       String paymentMode = sale['kpi'] as String? ?? 'Cash';
@@ -53,6 +59,11 @@ class HorizontalSummaryCards extends StatelessWidget {
   }
 
   List<CashierData> _processCashierData(List<dynamic> salesData) {
+    // If no data for kpi_id=4 (salesperson), use kpi_id=0 (all transactions) as fallback
+    if (salesData.isEmpty) {
+      return [];
+    }
+
     final Map<String, double> salesByCashier = {};
 
     for (final sale in salesData) {
@@ -63,7 +74,8 @@ class HorizontalSummaryCards extends StatelessWidget {
         cashierName = 'Unknown Cashier';
       }
 
-      final amount = (sale['amount1'] as num?)?.toDouble() ?? 0.0;
+      // Salesperson uses amount2
+      final amount = (sale['amount2'] as num?)?.toDouble() ?? 0.0;
 
       salesByCashier.update(
         cashierName,
@@ -88,43 +100,47 @@ class HorizontalSummaryCards extends StatelessWidget {
     final controller = Get.find<MonSalesTrendsController>();
 
     return Obx(() {
+      final isLoading = controller.isLoadingSales.value;
       final paymentData = _processPaymentData(controller.rawSalesForKpi3.value);
       final cashierData = _processCashierData(controller.rawSalesForKpi4.value);
       final compactFormatter = NumberFormat.compact(locale: 'en_US');
 
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Cashier Summary Card
-            _buildSummaryCard(
-              context: context,
-              title: 'Summary by Cashier',
-              totalSales: cashierData.fold(
-                0.0,
-                (sum, item) => sum + item.totalAmount,
+      return Skeletonizer(
+        enabled: isLoading,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Cashier Summary Card
+              _buildSummaryCard(
+                context: context,
+                title: 'Summary by Cashier',
+                totalSales: cashierData.fold(
+                  0.0,
+                  (sum, item) => sum + item.totalAmount,
+                ),
+                items: cashierData,
+                colors: _cashierColors,
+                compactFormatter: compactFormatter,
               ),
-              items: cashierData,
-              colors: _cashierColors,
-              compactFormatter: compactFormatter,
-            ),
 
-            const SizedBox(width: 16),
+              const SizedBox(width: 16),
 
-            // Payment Summary Card
-            _buildSummaryCard(
-              context: context,
-              title: 'Summary by Payment Methods',
-              totalSales: paymentData.fold(
-                0.0,
-                (sum, item) => sum + item.totalAmount,
+              // Payment Summary Card
+              _buildSummaryCard(
+                context: context,
+                title: 'Summary by Payment Methods',
+                totalSales: paymentData.fold(
+                  0.0,
+                  (sum, item) => sum + item.totalAmount,
+                ),
+                items: paymentData,
+                colors: _paymentColors,
+                compactFormatter: compactFormatter,
               ),
-              items: paymentData,
-              colors: _paymentColors,
-              compactFormatter: compactFormatter,
-            ),
-          ],
+            ],
+          ),
         ),
       );
     });

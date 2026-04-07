@@ -135,6 +135,7 @@ class MonStoreKpiTrendController extends GetxController {
       final storeName = storesController.selectedStore.value!.name;
 
       // Using new KPI table (mon_kpi_sales) for aggregated data
+      // kpiId=0: all transactions - amount1 = transaction value
       final salesQuery = isAllStores
           ? 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
           : 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
@@ -150,15 +151,15 @@ class MonStoreKpiTrendController extends GetxController {
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
-      // Cash sales queries (kpi_id = 1)
+      // Cash sales = amount1 from kpi_id=1 (cash transactions) + amount1 from kpi_id=2 (partial payments on credit)
       final cashSalesQuery = isAllStores
-          ? 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?'
-          : 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 1 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+          ? 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id IN (1, 2) AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id IN (1, 2) AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
 
-      // Pending payments queries (kpi_id = 2)
+      // Pending payments queries (kpi_id = 2) - amount2 - amount1 = pending amount
       final pendingPaymentsQuery = isAllStores
-          ? 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?'
-          : 'SELECT SUM(amount2) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+          ? 'SELECT SUM(amount2 - amount1) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount2 - amount1) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
 
       // Gym-specific subscription queries (using kpi_id = 4 for salesperson which includes subscriptions)
       final subscriptionQuery = isAllStores

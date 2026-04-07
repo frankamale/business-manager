@@ -196,7 +196,7 @@ class MonStoresController extends GetxController {
           : [selectedStore.value!.name, startDateStr, endDateStr];
 
       final query =
-      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, SUM(amount2) as grouped_amount FROM mon_kpi_sales $whereClause GROUP BY date) GROUP BY date ORDER BY date''';
+      ''' SELECT date, SUM(grouped_amount) as total FROM (SELECT $dateGroupClause as date, SUM(amount1) as grouped_amount FROM mon_kpi_sales $whereClause GROUP BY date) GROUP BY date ORDER BY date''';
       final result = await db.rawQuery(query, args);
 
       for (var row in result) {
@@ -274,7 +274,7 @@ class MonStoresController extends GetxController {
 
       // The KPI table stores items with kpi field containing the item name
       final query = '''
-        SELECT kpi as inventoryname, SUM(quantity) as total_quantity, SUM(amount2) as total_revenue
+        SELECT kpi as inventoryname, SUM(quantity) as total_quantity, SUM(amount1) as total_revenue
         FROM mon_kpi_sales
         $whereClause
         GROUP BY kpi

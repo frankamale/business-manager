@@ -159,16 +159,16 @@ class MonKpiOverviewController extends GetxController {
       // KPI ID 1 = Cash Transactions
       // KPI ID 5 = Profit
       
-      // Query for total sales (kpiId=0, sum of amount2 = transaction value)
+      // Query for total sales (kpiId=0, sum of amount1 = transaction value)
       const salesQuery = '''
         SELECT SUM(amount1) as total, SUM(quantity) as qty
         FROM mon_kpi_sales
         WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
       ''';
       
-      // Query for previous period sales
+      // Query for previous period sales (same column as current - amount1)
       const prevSalesQuery = '''
-        SELECT SUM(amount2) as total, SUM(quantity) as qty
+        SELECT SUM(amount1) as total, SUM(quantity) as qty
         FROM mon_kpi_sales
         WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
       ''';
@@ -226,7 +226,7 @@ class MonKpiOverviewController extends GetxController {
       // Query for avg basket size (total amount / distinct days or transactions)
       const basketQuery = '''
         SELECT AVG(daily_total) as avg FROM (
-          SELECT processing_date, SUM(amount2) as daily_total 
+          SELECT processing_date, SUM(amount1) as daily_total 
           FROM mon_kpi_sales 
           WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?
           GROUP BY processing_date
@@ -236,20 +236,20 @@ class MonKpiOverviewController extends GetxController {
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
       const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
 
-      // Query for cash sales (kpiId=1 based on actual data)
-      // amount1 = amount actually paid (cash received)
+      // Cash sales = amount1 from kpi_id=1 (cash transactions) + amount1 from kpi_id=2 (partial payments on credit)
       const cashSalesQuery = '''
         SELECT SUM(amount1) as total
         FROM mon_kpi_sales
-        WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
+        WHERE kpi_id IN (1, 2) AND processing_date BETWEEN ? AND ?
       ''';
       const prevCashSalesQuery = '''
         SELECT SUM(amount1) as total
         FROM mon_kpi_sales
-        WHERE kpi_id = 1 AND processing_date BETWEEN ? AND ?
+        WHERE kpi_id IN (1, 2) AND processing_date BETWEEN ? AND ?
       ''';
 
-      // Query for pending payment sales (kpiId=2 based on actual data)
+      // Query for pending payment sales (kpiId=2 - amount2 = pending amount)
+      // Credit/pending payment = amount2 (total) - amount1 (already paid) = pending amount
       const creditSalesQuery = '''
         SELECT SUM(amount2 - amount1) as total
         FROM mon_kpi_sales

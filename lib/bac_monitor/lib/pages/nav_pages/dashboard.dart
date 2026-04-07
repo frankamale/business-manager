@@ -72,7 +72,7 @@ class _DashboardState extends State<Dashboard> {
       Get.put(MonDashboardController(), permanent: true);
     }
     if (!Get.isRegistered<MonOperatorController>()) {
-      Get.put(MonOperatorController(), permanent: true );
+      Get.put(MonOperatorController(), permanent: true);
     }
     if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
       Get.put(MonOutstandingPaymentsController(), permanent: true);
@@ -90,7 +90,7 @@ class _DashboardState extends State<Dashboard> {
     if (!Get.isRegistered<MonKpiController>()) {
       Get.put(MonKpiController(), permanent: true);
     }
-    
+
     // Initialize controller data after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeControllerData();
@@ -100,7 +100,7 @@ class _DashboardState extends State<Dashboard> {
   void _initializeControllerData() async {
     // Initialize all controllers that load data from local DB
     // Each controller will query the DB based on the current date range
-    
+
     // Initialize KPI overview data
     if (Get.isRegistered<MonKpiOverviewController>()) {
       await Get.find<MonKpiOverviewController>().fetchKpiData();
@@ -115,7 +115,8 @@ class _DashboardState extends State<Dashboard> {
     }
     // Initialize outstanding payments data
     if (Get.isRegistered<MonOutstandingPaymentsController>()) {
-      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
+      await Get.find<MonOutstandingPaymentsController>()
+          .fetchOutstandingPaymentsData();
     }
     // Initialize KPI controller for detailed data
     if (Get.isRegistered<MonKpiController>()) {
@@ -126,21 +127,29 @@ class _DashboardState extends State<Dashboard> {
   Future<void> _handleRefresh() async {
     final apiService = Get.find<MonitorApiService>();
     final dashboardController = Get.find<MonDashboardController>();
-    
+
     // Get the selected date range
     final now = DateTime.now();
     DateTime startDate;
     DateTime endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     final range = dashboardController.selectedRange.value;
     final customRange = dashboardController.customRange.value;
-    
+
     switch (range) {
       case DateRange.today:
         startDate = DateTime(now.year, now.month, now.day);
         break;
       case DateRange.yesterday:
-        startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
-        endDate = DateTime(now.year, now.month, now.day).subtract(const Duration(milliseconds: 1));
+        startDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(days: 1));
+        endDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(milliseconds: 1));
         break;
       case DateRange.last7Days:
         startDate = now.subtract(const Duration(days: 6));
@@ -158,35 +167,37 @@ class _DashboardState extends State<Dashboard> {
         }
         break;
     }
-    
+
     // Fetch KPI data for the selected date range from server and store in DB
     try {
       await apiService.syncAllKpiData(startDate, endDate);
-      
+
       // Also fetch service points to ensure they're up to date
       try {
         final servicePointsRes = await apiService.getWithAuth('/servicepoints');
         if (servicePointsRes.body.isNotEmpty) {
           final servicePointsData = json.decode(servicePointsRes.body) as List;
-          final filteredServicePoints = servicePointsData
-              .map((e) {
-                final sp = Map<String, dynamic>.from(e as Map);
-                return {
-                  'id': sp['id'],
-                  'name': sp['name'],
-                  'code': sp['code'],
-                  'fullName': sp['fullName'] ?? sp['name'] ?? '',
-                  'servicepointtype': sp['servicepointtype'] ?? '',
-                  'facilityName': sp['facilityName'] ?? '',
-                  'sales': (sp['sales'] == true || sp['sales'] == 1) ? 1 : 0,
-                  'stores': (sp['stores'] == true || sp['stores'] == 1) ? 1 : 0,
-                  'production': (sp['production'] == true || sp['production'] == 1) ? 1 : 0,
-                  'booking': (sp['booking'] == true || sp['booking'] == 1) ? 1 : 0,
-                };
-              })
-              .toList();
+          final filteredServicePoints = servicePointsData.map((e) {
+            final sp = Map<String, dynamic>.from(e as Map);
+            return {
+              'id': sp['id'],
+              'name': sp['name'],
+              'code': sp['code'],
+              'fullName': sp['fullName'] ?? sp['name'] ?? '',
+              'servicepointtype': sp['servicepointtype'] ?? '',
+              'facilityName': sp['facilityName'] ?? '',
+              'sales': (sp['sales'] == true || sp['sales'] == 1) ? 1 : 0,
+              'stores': (sp['stores'] == true || sp['stores'] == 1) ? 1 : 0,
+              'production': (sp['production'] == true || sp['production'] == 1)
+                  ? 1
+                  : 0,
+              'booking': (sp['booking'] == true || sp['booking'] == 1) ? 1 : 0,
+            };
+          }).toList();
           await UnifiedDatabaseHelper.instance.deleteAllMonServicePoints();
-          await UnifiedDatabaseHelper.instance.insertServicePoints(filteredServicePoints);
+          await UnifiedDatabaseHelper.instance.insertServicePoints(
+            filteredServicePoints,
+          );
         }
       } catch (e) {
         debugPrint('Dashboard: Service points fetch failed (non-critical): $e');
@@ -203,7 +214,8 @@ class _DashboardState extends State<Dashboard> {
       await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
     if (Get.isRegistered<MonOutstandingPaymentsController>()) {
-      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
+      await Get.find<MonOutstandingPaymentsController>()
+          .fetchOutstandingPaymentsData();
     }
     if (Get.isRegistered<MonSalesTrendsController>()) {
       await Get.find<MonSalesTrendsController>().fetchAllData();
@@ -261,7 +273,11 @@ class _DashboardState extends State<Dashboard> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: IconButton(
-                    icon: Icon(Icons.account_circle_outlined, size: 28, color: AppColors.getTextPrimaryColor(context)),
+                    icon: Icon(
+                      Icons.account_circle_outlined,
+                      size: 28,
+                      color: AppColors.getTextPrimaryColor(context),
+                    ),
                     onPressed: () {
                       Get.to(() => ProfilePage());
                     },
@@ -283,7 +299,7 @@ class _DashboardState extends State<Dashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 8,),
+                      SizedBox(height: 8),
                       KpiOverviewSection(),
                       SizedBox(height: 8),
                       Obx(() {

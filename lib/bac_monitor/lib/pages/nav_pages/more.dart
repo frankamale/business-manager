@@ -268,6 +268,10 @@ class _MoreState extends State<More> {
         await dbHelper.insertMonInventoryItems(inventory);
       }
 
+      // Clear ALL existing KPI data before full reload (user explicitly requested this)
+      await dbHelper.deleteAllKpiSales();
+      debugPrint("More: Cleared all existing KPI data for fresh sync");
+
       // Fetch 3 years of KPI data
       final now = DateTime.now();
       final threeYearsAgo = DateTime(now.year - 3, now.month, now.day);

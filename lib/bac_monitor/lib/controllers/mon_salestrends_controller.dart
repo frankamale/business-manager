@@ -371,7 +371,7 @@ class MonSalesTrendsController extends GetxController {
 
       // Query using the new KPI table (kpiId=0 for all transactions)
       final query =
-          ''' SELECT date, SUM(amount2) as total FROM (SELECT $dateGroupClause as date, kpi_id, SUM(amount2) as amount2 FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? GROUP BY date, kpi_id) GROUP BY date ''';
+          ''' SELECT date, SUM(amount1) as total FROM (SELECT $dateGroupClause as date, kpi_id, SUM(amount1) as amount1 FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ? GROUP BY date, kpi_id) GROUP BY date ''';
 
       print("Executing SQL query for aggregation type: ${aggregationType.value}");
       print("Query: $query");
@@ -440,9 +440,9 @@ class MonSalesTrendsController extends GetxController {
       const query = '''
         SELECT
           sp.name as storeName,
-          COALESCE(SUM(kpi.amount2), 0) as total
+          COALESCE(SUM(kpi.amount1), 0) as total
         FROM mon_service_points sp
-        LEFT JOIN (SELECT selling_point, SUM(amount2) as amount2
+        LEFT JOIN (SELECT selling_point, SUM(amount1) as amount1
                    FROM mon_kpi_sales
                    WHERE kpi_id = 0 AND processing_date >= ? AND processing_date <= ?
                    GROUP BY selling_point) kpi
