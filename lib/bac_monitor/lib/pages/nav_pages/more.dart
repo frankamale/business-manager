@@ -114,7 +114,6 @@ class _MoreState extends State<More> {
     );
   }
 
-  // -------------------- RELOAD DATA --------------------
 
   void _showReloadDataDialog(BuildContext context) {
     showDialog(
@@ -146,7 +145,8 @@ class _MoreState extends State<More> {
               Navigator.of(context).pop();
               _performFullReload(context);
             },
-            child: const Text('Reload'),
+            child: const  Text('Reload')
+
           ),
         ],
       ),
