@@ -829,8 +829,8 @@ class MonitorApiService extends GetxService {
   static const int kpiPaymentModes = 3;
   static const int kpiSalesperson = 4;
   static const int kpiProfit = 5;
-  static const int kpiEfrisStatus = 6;
-  static const int kpiStockCategory = 7;
+  // static const int kpiEfrisStatus = 6;
+  // static const int kpiStockCategory = 7;
   static const int kpiByItem = 8;
 
   /// Timeframe definitions
@@ -951,32 +951,32 @@ class MonitorApiService extends GetxService {
 
   /// Fetch EFRIS status KPI (kpiId=6)
   /// [efrisStatus] - 1 for pending, 2 for uploaded, 3 for failed
-  Future<http.Response> getEfrisStatusData({
-    required String startDate,
-    required String endDate,
-    int efrisStatus = 1,
-    int timeframe = timeframeNormal,
-  }) async {
-    // For EFRIS status, the status is passed as part of the query
-    final endpoint =
-        '/sales/reports/kpi?startDate=$startDate&endDate=$endDate&kpiId=$kpiEfrisStatus&efrisStatus=$efrisStatus&timeframe=$timeframe';
-    debugPrint("ApiService: Fetching EFRIS status data with status=$efrisStatus");
-    return await getWithAuth(endpoint);
-  }
+  // Future<http.Response> getEfrisStatusData({
+  //   required String startDate,
+  //   required String endDate,
+  //   int efrisStatus = 1,
+  //   int timeframe = timeframeNormal,
+  // }) async {
+  //   // For EFRIS status, the status is passed as part of the query
+  //   final endpoint =
+  //       '/sales/reports/kpi?startDate=$startDate&endDate=$endDate&kpiId=$kpiEfrisStatus&efrisStatus=$efrisStatus&timeframe=$timeframe';
+  //   debugPrint("ApiService: Fetching EFRIS status data with status=$efrisStatus");
+  //   return await getWithAuth(endpoint);
+  // }
 
   /// Fetch stock category KPI (kpiId=7)
-  Future<http.Response> getStockCategoryData({
-    required String startDate,
-    required String endDate,
-    int timeframe = timeframeNormal,
-  }) async {
-    return await getKpiSalesData(
-      startDate: startDate,
-      endDate: endDate,
-      kpiId: kpiStockCategory,
-      timeframe: timeframe,
-    );
-  }
+  // Future<http.Response> getStockCategoryData({
+  //   required String startDate,
+  //   required String endDate,
+  //   int timeframe = timeframeNormal,
+  // }) async {
+  //   return await getKpiSalesData(
+  //     startDate: startDate,
+  //     endDate: endDate,
+  //     kpiId: kpiStockCategory,
+  //     timeframe: timeframe,
+  //   );
+  // }
 
   /// Fetch by item KPI (kpiId=8)
   Future<http.Response> getByItemData({
@@ -1037,7 +1037,7 @@ class MonitorApiService extends GetxService {
       {'id': kpiPaymentModes, 'name': 'payment_modes'},
       {'id': kpiSalesperson, 'name': 'salesperson'},
       {'id': kpiProfit, 'name': 'profit'},
-      {'id': kpiStockCategory, 'name': 'stock_category'},
+      // {'id': kpiStockCategory, 'name': 'stock_category'},
       {'id': kpiByItem, 'name': 'by_item'},
     ];
 
@@ -1105,8 +1105,8 @@ class MonitorApiService extends GetxService {
       {'id': kpiPaymentModes, 'name': 'payment_modes'},
       {'id': kpiSalesperson, 'name': 'salesperson'},
       {'id': kpiProfit, 'name': 'profit'},
-      {'id': kpiEfrisStatus, 'name': 'efris_status'},
-      {'id': kpiStockCategory, 'name': 'stock_category'},
+      // {'id': kpiEfrisStatus, 'name': 'efris_status'},
+      // {'id': kpiStockCategory, 'name': 'stock_category'},
       {'id': kpiByItem, 'name': 'by_item'},
     ];
     

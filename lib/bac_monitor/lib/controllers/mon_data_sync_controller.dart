@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/sync_tracker.dart';
 import '../services/kpi_sync_service.dart';
 import '../services/api_services.dart';
+import '../services/sync_state_manager.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../../../initialise/splashscreen.dart';
 
@@ -16,6 +17,7 @@ class MonDataSyncController extends GetxController {
   final KpiSyncService _kpiSyncService = Get.find<KpiSyncService>();
   final MonitorApiService _apiService = Get.find<MonitorApiService>();
   final UnifiedDatabaseHelper _dbHelper = UnifiedDatabaseHelper.instance;
+  final SyncStateManager _syncStateManager = Get.find<SyncStateManager>();
 
   // Sync state observables
   final isSyncing = false.obs;
@@ -288,13 +290,19 @@ class MonDataSyncController extends GetxController {
       debugPrint('[MonDataSyncController] Incremental KPI sync failed: $e');
     }
 
-    // Also sync service points in incremental mode (they're small)
-    syncPhase.value = SyncPhase.baselineFetch;
-    syncStatusMessage.value = 'Syncing service points...';
-    try {
-      await _fetchAndStoreBaselineData();
-    } catch (e) {
-      debugPrint('[MonDataSyncController] Service points sync failed: $e');
+    // Check if baseline data needs fetching
+    final needsBaseline = await _syncStateManager.needsBaselineFetch();
+    if (needsBaseline) {
+      syncPhase.value = SyncPhase.baselineFetch;
+      syncStatusMessage.value = 'Syncing baseline data...';
+      try {
+        await _fetchAndStoreBaselineData();
+        _syncStateManager.markBaselineLoaded();
+      } catch (e) {
+        debugPrint('[MonDataSyncController] Baseline data sync failed: $e');
+      }
+    } else {
+      debugPrint('[MonDataSyncController] Baseline data already exists - skipping fetch');
     }
   }
 
