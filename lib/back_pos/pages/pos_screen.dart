@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -629,6 +630,7 @@ class _PosScreenState extends State<PosScreen> {
       child: InkWell(
         onTap: () {
           _addItemToCart(item);
+          inventoryController.clearSearch();
           Navigator.of(context).pop();
         },
         borderRadius: BorderRadius.circular(10),
@@ -1399,7 +1401,10 @@ class _PosScreenState extends State<PosScreen> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(),
+                            onPressed: () {
+                              inventoryController.clearSearch();
+                              Navigator.of(context).pop();
+                            },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               backgroundColor: FlavorColors.current.primaryDark,
@@ -1682,21 +1687,63 @@ class _PosScreenState extends State<PosScreen> {
                                                     );
                                                   }
 
-                                                  return ListView.builder(
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    itemCount:
-                                                        inventoryController
-                                                            .filteredItems
-                                                            .length,
-                                                    itemBuilder: (context, index) {
-                                                      final item =
+                                                  return NotificationListener<ScrollNotification>(
+                                                    onNotification:
+                                                        (ScrollNotification scrollInfo) {
+                                                      if (scrollInfo
+                                                                  .metrics
+                                                                  .pixels >=
+                                                              scrollInfo
+                                                                      .metrics
+                                                                      .maxScrollExtent *
+                                                                  0.8) {
+                                                        if (inventoryController
+                                                                .hasMoreItems
+                                                                .value &&
+                                                            !inventoryController
+                                                                .isLoadingInventory
+                                                                .value) {
                                                           inventoryController
-                                                              .filteredItems[index];
-                                                      return _buildItemCard(
-                                                        item,
-                                                      );
+                                                              .loadMoreInventory();
+                                                        }
+                                                      }
+                                                      return false;
                                                     },
+                                                    child: ListView.builder(
+                                                      padding:
+                                                          const EdgeInsets.all(8),
+                                                      itemCount:
+                                                          inventoryController
+                                                                  .filteredItems
+                                                                  .length +
+                                                              (inventoryController
+                                                                      .isLoadingInventory
+                                                                      .value
+                                                                  ? 1
+                                                                  : 0),
+                                                      itemBuilder: (context, index) {
+                                                        if (index >=
+                                                            inventoryController
+                                                                .filteredItems
+                                                                .length) {
+                                                          return const Center(
+                                                            child: Padding(
+                                                              padding:
+                                                                  EdgeInsets.all(
+                                                                      8.0),
+                                                              child:
+                                                                  CircularProgressIndicator(),
+                                                            ),
+                                                          );
+                                                        }
+                                                        final item =
+                                                            inventoryController
+                                                                .filteredItems[index];
+                                                        return _buildItemCard(
+                                                          item,
+                                                        );
+                                                      },
+                                                    ),
                                                   );
                                                 }),
                                               ),

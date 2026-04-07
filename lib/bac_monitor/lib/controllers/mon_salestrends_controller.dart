@@ -409,7 +409,7 @@ class MonSalesTrendsController extends GetxController {
           // Fallback to current time if parsing fails
           date = DateTime.now();
         }
-        return SalesDataPoint(date, entry.value);
+        return SalesDataPoint(date: date, amount: entry.value);
       }).toList()..sort((a, b) => a.date.compareTo(b.date));
 
       print("Formatted data has ${formattedData.length} points");

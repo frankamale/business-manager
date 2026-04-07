@@ -148,10 +148,11 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     final Color disabledBgColor = isDark ? Colors.grey.shade700 : Colors.grey.shade300;
 
     return Scaffold(
+      backgroundColor: Colors.blue.shade700,
       body: Container(
-        decoration: BoxDecoration(
-         color: AppColors.getBackgroundColor(context)
-        ),
+        // decoration: BoxDecoration(
+        //  color: AppColors.getBackgroundColor(context)
+        // ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -160,6 +161,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                 vertical: 24.0,
               ),
               child: FadeTransition(
+
                 opacity: _fadeAnimation,
                 child: Container(
                   constraints: BoxConstraints(

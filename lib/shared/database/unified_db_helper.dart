@@ -801,19 +801,31 @@ class UnifiedDatabaseHelper {
     await batch.commit(noResult: true);
   }
 
-  Future<List<InventoryItem>> getInventoryItems() async {
+  Future<List<InventoryItem>> getInventoryItems({int limit = 100, int offset = 0}) async {
     final db = database;
-    final maps = await db.query('inventory');
+    final maps = await db.query(
+      'inventory',
+      orderBy: 'name ASC',
+      limit: limit,
+      offset: offset,
+    );
     return maps.map((map) => InventoryItem.fromMap(map)).toList();
   }
 
-  Future<List<InventoryItem>> searchInventoryItems(String query) async {
+  Future<int> getInventoryTotalCount() async {
+    final db = database;
+    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM inventory'));
+    return count ?? 0;
+  }
+
+  Future<List<InventoryItem>> searchInventoryItems(String query, {int limit = 200}) async {
     final db = database;
     final maps = await db.query(
       'inventory',
       where: 'name LIKE ? OR code LIKE ? OR category LIKE ?',
       whereArgs: ['%$query%', '%$query%', '%$query%'],
       orderBy: 'name ASC',
+      limit: limit,
     );
     return maps.map((map) => InventoryItem.fromMap(map)).toList();
   }

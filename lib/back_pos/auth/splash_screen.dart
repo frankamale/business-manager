@@ -501,6 +501,7 @@ class _SplashScreenState extends State<SplashScreen>
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
     return Scaffold(
+      backgroundColor: Colors.blue.shade700,
       body: Center(
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 10),

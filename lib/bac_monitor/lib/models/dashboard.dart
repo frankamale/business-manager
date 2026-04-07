@@ -2,7 +2,7 @@ class SalesDataPoint {
   final DateTime date;
   final double amount;
 
-  SalesDataPoint(this.date, this.amount);
+  SalesDataPoint({required this.date, required this.amount});
 }
 
 class StockAlert {

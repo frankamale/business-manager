@@ -211,7 +211,7 @@ class MonStoresController extends GetxController {
         DateTime date = (aggregationType.value == 'hourly')
             ? hourlyFormatter.parse(entry.key)
             : dateFormatter.parse(entry.key);
-        return SalesDataPoint(date, entry.value);
+        return SalesDataPoint(date: date, amount: entry.value);
       }).toList()..sort((a, b) => a.date.compareTo(b.date));
       salesDataPoints.assignAll(formattedData);
     } catch (e) {
