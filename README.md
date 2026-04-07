@@ -102,7 +102,7 @@ Add the new asset path:
 ## Available Flavors
 
 | Flavor | App Name | COMPANY_NAME |
-|--------|----------|--------------|--------------|--------------|
+|--------|----------|--------------|
 | bac | BAC manager | Business Manager | 
 | komusoft | Komusoft Solns | Komusoft Solutions Ltd |
 | fitzone | Fitzone Gym | Fitzone Gym |
