@@ -15,6 +15,7 @@ import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
 import '../../controllers/mon_outstanding_payments_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
+import '../../services/account_manager.dart';
 import '../../models/kpi_sales_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
@@ -224,7 +225,9 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final operatorController = Get.find<MonOperatorController>();
+    final operatorController = Get.isRegistered<MonOperatorController>()
+        ? Get.find<MonOperatorController>()
+        : null;
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -240,31 +243,53 @@ class _DashboardState extends State<Dashboard> {
               elevation: 0,
               pinned: true,
               centerTitle: true,
-              title: Obx(
-                () => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      operatorController.companyName.value,
-                      style: TextStyle(
-                        color: AppColors.getTextPrimary(context),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18.0,
+              title: operatorController != null
+                  ? Obx(
+                      () => Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            operatorController!.companyName.value,
+                            style: TextStyle(
+                              color: AppColors.getTextPrimary(context),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.0,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            operatorController!.companyAddress.value,
+                            style: TextStyle(
+                              color: AppColors.getTextPrimary(context),
+                              fontWeight: FontWeight.w400,
+                              fontSize: 12.0,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
+                    )
+                  : const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Loading...',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18.0,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w400,
+                            fontSize: 12.0,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    Text(
-                      operatorController.companyAddress.value,
-                      style: TextStyle(
-                        color: AppColors.getTextPrimary(context),
-                        fontWeight: FontWeight.w400,
-                        fontSize: 12.0,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
               leading: Padding(
                 padding: const EdgeInsets.only(left: 20.0),
                 child: AppLogo(width: 100, height: 100),

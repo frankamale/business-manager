@@ -238,8 +238,9 @@ class _InventoryPageState extends State<InventoryPage>
                         indicatorWeight: 3.0,
                         tabs: const [
                           Tab(text: 'All Items'),
-                          Tab(text: 'Low Stock'),
                           Tab(text: 'Overstocked'),
+                          Tab(text: 'Low Stock'),
+
 
                         ],
                       )

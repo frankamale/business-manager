@@ -4,7 +4,7 @@ import '../services/account_manager.dart';
 
 class MonOperatorController extends GetxController {
   final dbHelper = UnifiedDatabaseHelper.instance;
-  final AccountManager _accountManager = Get.find();
+  late final AccountManager _accountManager;
 
   var companyName = "Loading...".obs;
   var companyAddress = "".obs;
@@ -12,6 +12,13 @@ class MonOperatorController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    try {
+      _accountManager = Get.find<AccountManager>();
+    } catch (e) {
+      print('AccountManager not available yet: $e');
+      return;
+    }
 
     _tryLoadCompanyDetails();
 
