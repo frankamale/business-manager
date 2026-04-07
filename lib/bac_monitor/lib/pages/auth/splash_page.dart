@@ -208,7 +208,7 @@ class _SplashPageState extends State<SplashPage> {
         
         switch (scenario) {
           case SyncScenario.firstLogin:
-            _updateStatus('First login - fetching today\'s data...');
+            _updateStatus('Fetching recent data...');
             await _performFirstLoginSync(syncManager);
             break;
             
@@ -375,7 +375,7 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  /// First login sync: fetch today's KPI + baseline data only
+  /// First login sync: fetch recent KPI (last 7 days) + baseline data only
   Future<void> _performFirstLoginSync(SyncStateManager syncManager) async {
     final stopwatch = Stopwatch()..start();
     
@@ -393,7 +393,7 @@ class _SplashPageState extends State<SplashPage> {
         }
       });
 
-      // Only fetch today + baseline (NO historical)
+      // Only fetch recent + baseline (NO further historical)
       await dataSyncController?.performInitialSyncWithBaseline();
       syncManager.markBaselineLoaded();
       

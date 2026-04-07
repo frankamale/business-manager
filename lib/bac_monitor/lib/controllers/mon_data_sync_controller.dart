@@ -97,7 +97,7 @@ class MonDataSyncController extends GetxController {
     }
   }
 
-  /// Executes initial sync with ONLY today's KPI + baseline data.
+  /// Executes initial sync with recent KPI (last 7 days) + baseline data.
   /// This is used on first app launch to get minimal data for the UI.
   /// Historical data is fetched later via pull-to-refresh on respective pages.
   Future<void> performInitialSyncWithBaseline() async {
@@ -308,7 +308,7 @@ class MonDataSyncController extends GetxController {
 
   Future<void> _fetchTodayKpiMetrics() async {
     syncPhase.value = SyncPhase.kpiFetch;
-    syncStatusMessage.value = 'Fetching today\'s metrics...';
+    syncStatusMessage.value = 'Fetching recent metrics...';
 
     try {
       final results = await _kpiSyncService.fetchTodayKpiMetrics();
