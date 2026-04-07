@@ -236,7 +236,7 @@ class _DashboardState extends State<Dashboard> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: AppColors.getCardColor(context),
+              backgroundColor: AppColors.getHeaderColor(context),
               elevation: 0,
               pinned: true,
               centerTitle: true,
@@ -247,7 +247,7 @@ class _DashboardState extends State<Dashboard> {
                     Text(
                       operatorController.companyName.value,
                       style: TextStyle(
-                        color: AppColors.getTextPrimaryColor(context),
+                        color: AppColors.getTextPrimary(context),
                         fontWeight: FontWeight.bold,
                         fontSize: 18.0,
                       ),
@@ -256,7 +256,7 @@ class _DashboardState extends State<Dashboard> {
                     Text(
                       operatorController.companyAddress.value,
                       style: TextStyle(
-                        color: AppColors.getTextSecondaryColor(context),
+                        color: AppColors.getTextPrimary(context),
                         fontWeight: FontWeight.w400,
                         fontSize: 12.0,
                       ),
@@ -276,7 +276,7 @@ class _DashboardState extends State<Dashboard> {
                     icon: Icon(
                       Icons.account_circle_outlined,
                       size: 28,
-                      color: AppColors.getTextPrimaryColor(context),
+                      color: AppColors.getTextPrimary(context),
                     ),
                     onPressed: () {
                       Get.to(() => ProfilePage());

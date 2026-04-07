@@ -284,7 +284,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
           label: Text(
             _getDisplayLabel(),
             style: TextStyle(
-              color: AppColors.getTextPrimaryColor(context),
+              color: AppColors.getTextPrimary(context),
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),

@@ -6,6 +6,7 @@ class LightColors {
   static const Color background = Color(0xFFFAFAFA);
   static const Color surface = Color(0xFFF4F6F8);
   static const Color card = Color(0xFFFFFFFF);
+  static const Color darkCard = Color(0xFF001B38);
 
   // Text colors (IMPROVED)
   static const Color textPrimary = Color(
@@ -105,10 +106,24 @@ class AppColors {
         : LightColors.card;
   }
 
+  static Color getHeaderColor(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? DarkColors.card
+        : LightColors.darkCard;
+  }
+
+
+
   static Color getTextPrimaryColor(BuildContext context) {
     return Theme.of(context).brightness == Brightness.dark
         ? DarkColors.textPrimary
         : LightColors.textPrimary;
+  }
+
+  static Color getTextPrimary(BuildContext context) {
+    return Theme.of(context).brightness == Brightness.dark
+        ? DarkColors.textPrimary
+        : LightColors.border;
   }
 
   static Color getTextSecondaryColor(BuildContext context) {
