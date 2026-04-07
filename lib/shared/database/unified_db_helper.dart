@@ -1,10 +1,13 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter/foundation.dart';
 import '../../back_pos/models/users.dart';
 import '../../back_pos/models/service_point.dart';
 import '../../back_pos/models/inventory_item.dart';
 import '../../back_pos/models/sale_transaction.dart';
 import '../../back_pos/models/customer.dart';
+import '../../back_pos/models/expense.dart';
+import '../../bac_monitor/lib/models/sync_tracker.dart';
 
 /// Unified Database Helper that combines POS and Monitor databases
 
@@ -24,10 +27,18 @@ class UnifiedDatabaseHelper {
   /// Opens the database for a specific company
   /// If force is false and database is already open for this company, returns early
   Future<void> openForCompany(String companyId, {bool force = false}) async {
-    // Prevent concurrent opening
+    // Prevent concurrent opening with timeout to avoid infinite loops
     if (_isOpening) {
+      int waitCount = 0;
+      const maxWaitCount = 200;
       while (_isOpening) {
         await Future.delayed(const Duration(milliseconds: 50));
+        waitCount++;
+        if (waitCount >= maxWaitCount) {
+          debugPrint('UnifiedDatabaseHelper: Timeout waiting for database to open, resetting mutex');
+          _isOpening = false;
+          break;
+        }
       }
       if (_currentCompanyId == companyId && _database != null) {
         return;
@@ -55,7 +66,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 2,
+        version: 3,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -454,6 +465,28 @@ class UnifiedDatabaseHelper {
       )
     ''');
 
+    // Monitor KPI aggregated sales table (replaces mon_sales for new KPI endpoints)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS mon_kpi_sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        kpi_id INTEGER NOT NULL,
+        processing_date TEXT NOT NULL,
+        selling_point TEXT,
+        currency TEXT,
+        kpi TEXT NOT NULL,
+        quantity INTEGER DEFAULT 0,
+        amount1 REAL DEFAULT 0,
+        amount2 REAL DEFAULT 0,
+        created_at INTEGER DEFAULT (strftime('%s', 'now')),
+        UNIQUE(kpi_id, processing_date, selling_point, kpi)
+      )
+    ''');
+
+    // Create indexes for KPI sales table
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi_id ON mon_kpi_sales(kpi_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_processing_date ON mon_kpi_sales(processing_date)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi ON mon_kpi_sales(kpi)');
+
     // Monitor inventory table
     await db.execute('''
       CREATE TABLE IF NOT EXISTS mon_inventory (
@@ -482,7 +515,20 @@ class UnifiedDatabaseHelper {
       )
     ''');
 
-    // ========== INDEXES ==========
+    // Expenses table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS expenses (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        amount REAL NOT NULL,
+        category TEXT NOT NULL,
+        date INTEGER NOT NULL,
+        servicePointId TEXT,
+        subject TEXT
+      )
+    ''');
+
 
     // POS indexes
     await db.execute('CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)');
@@ -498,13 +544,64 @@ class UnifiedDatabaseHelper {
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_transactiondate ON mon_sales(transactiondate)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_service_point ON mon_sales(service_point_id)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+
+    // Sync tracker table (for incremental sync support)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_tracker (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sync_type TEXT NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'in_progress',
+        start_timestamp INTEGER NOT NULL,
+        end_timestamp INTEGER,
+        records_fetched INTEGER DEFAULT 0,
+        date_range_start TEXT,
+        date_range_end TEXT,
+        error_message TEXT,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    ''');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Future migrations will be handled here
-    // Add missing index for existing databases
+    // Migrate expenses table for existing databases (added in version 2)
     if (oldVersion < 2) {
+      // Create expenses table if it doesn't exist (for databases created before version 2)
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS expenses (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT,
+          amount REAL NOT NULL,
+          category TEXT NOT NULL,
+          date INTEGER NOT NULL,
+          servicePointId TEXT,
+          subject TEXT
+        )
+      ''');
+      // Also add the missing index for existing databases
       await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+    }
+
+    // Migration to version 3 - Add sync_tracker table
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sync_tracker (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sync_type TEXT NOT NULL,
+          sync_status TEXT NOT NULL DEFAULT 'in_progress',
+          start_timestamp INTEGER NOT NULL,
+          end_timestamp INTEGER,
+          records_fetched INTEGER DEFAULT 0,
+          date_range_start TEXT,
+          date_range_end TEXT,
+          error_message TEXT,
+          created_at INTEGER DEFAULT (strftime('%s', 'now'))
+        )
+      ''');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)');
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)');
     }
   }
 
@@ -650,7 +747,7 @@ class UnifiedDatabaseHelper {
     final db = database;
     final batch = db.batch();
     for (var sp in servicePoints) {
-      batch.insert('service_point', sp, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert('mon_service_points', sp, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }
@@ -748,6 +845,56 @@ class UnifiedDatabaseHelper {
     final db = database;
     final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM inventory'));
     return count ?? 0;
+  }
+
+  // ========================================================================
+  // EXPENSE METHODS
+  // ========================================================================
+
+  Future<int> insertExpense(Expense expense) async {
+    final db = database;
+    return await db.insert('expenses', expense.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<Expense>> getExpenses() async {
+    final db = database;
+    final maps = await db.query('expenses', orderBy: 'date DESC');
+    return maps.map((map) => Expense.fromMap(map)).toList();
+  }
+
+  Future<List<Expense>> getExpensesByServicePoint(String servicePointId) async {
+    final db = database;
+    final maps = await db.query(
+      'expenses',
+      where: 'servicePointId = ?',
+      whereArgs: [servicePointId],
+      orderBy: 'date DESC',
+    );
+    return maps.map((map) => Expense.fromMap(map)).toList();
+  }
+
+  Future<int> updateExpense(Expense expense) async {
+    final db = database;
+    return await db.update(
+      'expenses',
+      expense.toMap(),
+      where: 'id = ?',
+      whereArgs: [expense.id],
+    );
+  }
+
+  Future<int> deleteExpense(String id) async {
+    final db = database;
+    return await db.delete(
+      'expenses',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteAllExpenses() async {
+    final db = database;
+    await db.delete('expenses');
   }
 
   // ========================================================================
@@ -1344,6 +1491,115 @@ class UnifiedDatabaseHelper {
   }
 
   // ========================================================================
+  // MONITOR KPI SALES METHODS (mon_kpi_sales)
+  // ========================================================================
+
+  /// Insert a KPI sales record
+  Future<void> insertKpiSale(Map<String, dynamic> kpiData, {DatabaseExecutor? db}) async {
+    final executor = db ?? database;
+    await executor.insert('mon_kpi_sales', {
+      'kpi_id': kpiData['kpi_id'] ?? 0,
+      'processing_date': kpiData['processing_date'] ?? '',
+      'selling_point': kpiData['selling_point'] ?? '',
+      'currency': kpiData['currency'] ?? '',
+      'kpi': kpiData['kpi'] ?? '',
+      'quantity': kpiData['quantity'] ?? 0,
+      'amount1': kpiData['amount1'] ?? 0.0,
+      'amount2': kpiData['amount2'] ?? 0.0,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Insert multiple KPI sales records in a batch
+  Future<void> insertKpiSalesBatch(List<Map<String, dynamic>> kpiDataList, {DatabaseExecutor? db}) async {
+    final executor = db ?? database;
+    final batch = executor.batch();
+    for (final kpiData in kpiDataList) {
+      batch.insert('mon_kpi_sales', {
+        'kpi_id': kpiData['kpi_id'] ?? 0,
+        'processing_date': kpiData['processing_date'] ?? '',
+        'selling_point': kpiData['selling_point'] ?? '',
+        'currency': kpiData['currency'] ?? '',
+        'kpi': kpiData['kpi'] ?? '',
+        'quantity': kpiData['quantity'] ?? 0,
+        'amount1': kpiData['amount1'] ?? 0.0,
+        'amount2': kpiData['amount2'] ?? 0.0,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Get all KPI sales records
+  Future<List<Map<String, dynamic>>> getKpiSales({int? kpiId}) async {
+    final db = database;
+    if (kpiId != null) {
+      return await db.query(
+        'mon_kpi_sales',
+        where: 'kpi_id = ?',
+        whereArgs: [kpiId],
+        orderBy: 'processing_date DESC',
+      );
+    }
+    return await db.query('mon_kpi_sales', orderBy: 'processing_date DESC');
+  }
+
+  /// Get KPI sales by date range
+  Future<List<Map<String, dynamic>>> getKpiSalesByDateRange({
+    required String startDate,
+    required String endDate,
+    int? kpiId,
+  }) async {
+    final db = database;
+    String where = 'processing_date BETWEEN ? AND ?';
+    List<dynamic> whereArgs = [startDate, endDate];
+    
+    if (kpiId != null) {
+      where += ' AND kpi_id = ?';
+      whereArgs.add(kpiId);
+    }
+    
+    return await db.query(
+      'mon_kpi_sales',
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'processing_date DESC',
+    );
+  }
+
+  /// Delete all KPI sales records
+  Future<void> deleteAllKpiSales({int? kpiId}) async {
+    final db = database;
+    if (kpiId != null) {
+      await db.delete('mon_kpi_sales', where: 'kpi_id = ?', whereArgs: [kpiId]);
+    } else {
+      await db.delete('mon_kpi_sales');
+    }
+  }
+
+  /// Get KPI sales summary (totals by kpi)
+  Future<List<Map<String, dynamic>>> getKpiSalesSummary({String? startDate, String? endDate}) async {
+    final db = database;
+    String sql = '''
+      SELECT 
+        kpi_id,
+        kpi,
+        SUM(quantity) as total_quantity,
+        SUM(amount1) as total_amount1,
+        SUM(amount2) as total_amount2
+      FROM mon_kpi_sales
+    ''';
+    
+    List<dynamic> args = [];
+    if (startDate != null && endDate != null) {
+      sql += ' WHERE processing_date BETWEEN ? AND ?';
+      args = [startDate, endDate];
+    }
+    
+    sql += ' GROUP BY kpi_id, kpi ORDER BY total_amount2 DESC';
+    
+    return await db.rawQuery(sql, args);
+  }
+
+  // ========================================================================
   // MONITOR INVENTORY METHODS (mon_inventory)
   // ========================================================================
 
@@ -1385,6 +1641,120 @@ class UnifiedDatabaseHelper {
     await db.delete('mon_inventory');
   }
 
+  /// Insert multiple inventory items at once
+  Future<void> insertMonInventoryItems(List<Map<String, dynamic>> items) async {
+    final db = database;
+    final batch = db.batch();
+    for (final item in items) {
+      batch.insert('mon_inventory', {
+        'id': item['id'],
+        'ipdid': item['ipdid'],
+        'code': item['code'],
+        'externalserial': item['externalserial'],
+        'name': item['name'],
+        'category': item['category'],
+        'price': item['price'],
+        'packsize': item['packsize'],
+        'packaging': item['packaging'],
+        'packagingid': item['packagingid'],
+        'soldfrom': item['soldfrom'],
+        'shortform': item['shortform'],
+        'packagingcode': item['packagingcode'],
+        'efris': item['efris'] == true ? 1 : 0,
+        'efrisid': item['efrisid'],
+        'measurmentunitidefris': item['measurmentunitidefris'],
+        'measurmentunit': item['measurmentunit'],
+        'measurmentunitid': item['measurmentunitid'],
+        'vatcategoryid': item['vatcategoryid'],
+        'branchid': item['branchid'],
+        'companyid': item['companyid'],
+        'downloadlink': item['downloadlink'],
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  // ========================================================================
+  // SYNC TRACKER METHODS
+  // ========================================================================
+
+  /// Records a completed sync operation
+  Future<int> insertSyncRecord(SyncRecord record) async {
+    final db = database;
+    return await db.insert('sync_tracker', record.toMap(), 
+      conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Gets the timestamp of the most recent successful sync
+  Future<DateTime?> getLastSyncTimestamp() async {
+    final db = database;
+    final result = await db.query(
+      'sync_tracker',
+      columns: ['end_timestamp'],
+      where: 'sync_status = ?',
+      whereArgs: ['completed'],
+      orderBy: 'end_timestamp DESC',
+      limit: 1,
+    );
+    
+    if (result.isEmpty) return null;
+    return DateTime.fromMillisecondsSinceEpoch(
+      (result.first['end_timestamp'] as int) * 1000,
+    );
+  }
+
+  /// Checks if KPI data exists for a given date range
+  Future<bool> hasKpiDataForDateRange(String startDate, String endDate) async {
+    final db = database;
+    final result = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM mon_kpi_sales 
+      WHERE processing_date >= ? AND processing_date <= ?
+      ''',
+      [startDate, endDate],
+    );
+    return (result.first['count'] as int? ?? 0) > 0;
+  }
+
+  /// Deletes sync tracker records older than 90 days (cleanup)
+  Future<void> cleanupOldSyncRecords({int daysToKeep = 90}) async {
+    final db = database;
+    final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
+    final cutoffTimestamp = cutoffDate.millisecondsSinceEpoch ~/ 1000;
+    
+    await db.delete(
+      'sync_tracker',
+      where: 'end_timestamp < ?',
+      whereArgs: [cutoffTimestamp],
+    );
+  }
+
+  /// Get all sync records for a specific sync type
+  Future<List<SyncRecord>> getSyncRecordsByType(String syncType) async {
+    final db = database;
+    final result = await db.query(
+      'sync_tracker',
+      where: 'sync_type = ?',
+      whereArgs: [syncType],
+      orderBy: 'end_timestamp DESC',
+    );
+    return result.map((map) => SyncRecord.fromMap(map)).toList();
+  }
+
+  /// Get the most recent sync record for a specific sync type
+  Future<SyncRecord?> getLatestSyncRecord(String syncType) async {
+    final db = database;
+    final result = await db.query(
+      'sync_tracker',
+      where: 'sync_type = ? AND sync_status = ?',
+      whereArgs: [syncType, 'completed'],
+      orderBy: 'end_timestamp DESC',
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return SyncRecord.fromMap(result.first);
+  }
+
   // ========================================================================
   // UTILITY METHODS
   // ========================================================================
@@ -1410,5 +1780,45 @@ class UnifiedDatabaseHelper {
   Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
     final db = database;
     return await db.transaction(action);
+  }
+
+  // ========================================================================
+  // DATA EXISTENCE CHECK METHODS
+  // ========================================================================
+
+  /// Check if company details exist in the database
+  Future<bool> hasCompanyDetails() async {
+    try {
+      final db = database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM company_details');
+      return (result.first['count'] as int? ?? 0) > 0;
+    } catch (e) {
+      debugPrint('[UnifiedDatabaseHelper] Error checking company details: $e');
+      return false;
+    }
+  }
+
+  /// Check if service points exist in the database
+  Future<bool> hasServicePoints() async {
+    try {
+      final db = database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_service_points');
+      return (result.first['count'] as int? ?? 0) > 0;
+    } catch (e) {
+      debugPrint('[UnifiedDatabaseHelper] Error checking service points: $e');
+      return false;
+    }
+  }
+
+  /// Check if inventory items exist in the database
+  Future<bool> hasInventory() async {
+    try {
+      final db = database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_inventory');
+      return (result.first['count'] as int? ?? 0) > 0;
+    } catch (e) {
+      debugPrint('[UnifiedDatabaseHelper] Error checking inventory: $e');
+      return false;
+    }
   }
 }

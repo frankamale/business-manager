@@ -1,24 +1,29 @@
-
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import '../../../../shared/database/unified_db_helper.dart';
+import '../../../../shared/widgets/app_logo.dart';
 import '../../additions/colors.dart';
 import '../../components/dashboard/kpi_overview.dart';
 import '../../components/dashboard/sales_trends.dart';
 import '../../controllers/mon_dashboard_controller.dart';
 import '../../controllers/mon_gross_profit_controller.dart';
+import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
 import '../../controllers/mon_outstanding_payments_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
+import '../../models/kpi_sales_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
 import '../../widgets/dashboard/outstanding_payments.dart';
 import '../../widgets/dashboard/expenses_card.dart';
+import '../../widgets/dashboard/horizontal_summary_cards.dart';
 import '../../widgets/finance/date_range.dart';
 import '../profile.dart';
 import '../expenses_detail_page.dart';
-import '../../models/trend_direction.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -28,7 +33,6 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  // Add this helper in _DashboardState class
   double _parseCompactNumber(String formatted) {
     formatted = formatted.replaceAll(',', '').toUpperCase();
     if (formatted.endsWith('K')) {
@@ -64,50 +68,176 @@ class _DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
     // DashboardController must be initialized first as other controllers depend on it
-    Get.put(MonDashboardController());
-    Get.put(MonOperatorController());
-    Get.put(MonOutstandingPaymentsController());
-    Get.put(MonGrossProfitController());
-    Get.put(MonSalesTrendsController());
-    Get.put(MonKpiOverviewController());
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonOperatorController>()) {
+      Get.put(MonOperatorController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
+      Get.put(MonOutstandingPaymentsController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonGrossProfitController>()) {
+      Get.put(MonGrossProfitController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonSalesTrendsController>()) {
+      Get.put(MonSalesTrendsController(), permanent: true);
+    }
+    if (!Get.isRegistered<MonKpiOverviewController>()) {
+      Get.put(MonKpiOverviewController(), permanent: true);
+    }
+    // Initialize MonKpiController for detailed KPI data
+    if (!Get.isRegistered<MonKpiController>()) {
+      Get.put(MonKpiController(), permanent: true);
+    }
+
+    // Initialize controller data after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeControllerData();
+    });
+  }
+
+  void _initializeControllerData() async {
+    // Initialize all controllers that load data from local DB
+    // Each controller will query the DB based on the current date range
+
+    // Initialize KPI overview data
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      await Get.find<MonKpiOverviewController>().fetchKpiData();
+    }
+    // Initialize gross profit data
+    if (Get.isRegistered<MonGrossProfitController>()) {
+      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
+    }
+    // Initialize sales trends data
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      await Get.find<MonSalesTrendsController>().fetchAllData();
+    }
+    // Initialize outstanding payments data
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      await Get.find<MonOutstandingPaymentsController>()
+          .fetchOutstandingPaymentsData();
+    }
+    // Initialize KPI controller for detailed data
+    if (Get.isRegistered<MonKpiController>()) {
+      await Get.find<MonKpiController>().fetchKpiData();
+    }
   }
 
   Future<void> _handleRefresh() async {
     final apiService = Get.find<MonitorApiService>();
-    await apiService.syncRecentSales();
+    final dashboardController = Get.find<MonDashboardController>();
 
+    // Get the selected date range
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    final range = dashboardController.selectedRange.value;
+    final customRange = dashboardController.customRange.value;
+
+    switch (range) {
+      case DateRange.today:
+        startDate = DateTime(now.year, now.month, now.day);
+        break;
+      case DateRange.yesterday:
+        startDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(days: 1));
+        endDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(const Duration(milliseconds: 1));
+        break;
+      case DateRange.last7Days:
+        startDate = now.subtract(const Duration(days: 6));
+        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        break;
+      case DateRange.monthToDate:
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      case DateRange.custom:
+        if (customRange != null) {
+          startDate = customRange.start;
+          endDate = customRange.end;
+        } else {
+          startDate = now.subtract(const Duration(days: 6));
+        }
+        break;
+    }
+
+    // Fetch KPI data for the selected date range from server and store in DB
+    try {
+      await apiService.syncAllKpiData(startDate, endDate);
+
+      // Also fetch service points to ensure they're up to date
+      try {
+        final servicePointsRes = await apiService.getWithAuth('/servicepoints');
+        if (servicePointsRes.body.isNotEmpty) {
+          final servicePointsData = json.decode(servicePointsRes.body) as List;
+          final filteredServicePoints = servicePointsData.map((e) {
+            final sp = Map<String, dynamic>.from(e as Map);
+            return {
+              'id': sp['id'],
+              'name': sp['name'],
+              'code': sp['code'],
+              'fullName': sp['fullName'] ?? sp['name'] ?? '',
+              'servicepointtype': sp['servicepointtype'] ?? '',
+              'facilityName': sp['facilityName'] ?? '',
+              'sales': (sp['sales'] == true || sp['sales'] == 1) ? 1 : 0,
+              'stores': (sp['stores'] == true || sp['stores'] == 1) ? 1 : 0,
+              'production': (sp['production'] == true || sp['production'] == 1)
+                  ? 1
+                  : 0,
+              'booking': (sp['booking'] == true || sp['booking'] == 1) ? 1 : 0,
+            };
+          }).toList();
+          await UnifiedDatabaseHelper.instance.deleteAllMonServicePoints();
+          await UnifiedDatabaseHelper.instance.insertServicePoints(
+            filteredServicePoints,
+          );
+        }
+      } catch (e) {
+        debugPrint('Dashboard: Service points fetch failed (non-critical): $e');
+      }
+    } catch (e) {
+      debugPrint('Dashboard: KPI data fetch failed: $e');
+    }
+
+    // Refresh all controllers with the new data from DB
     if (Get.isRegistered<MonKpiOverviewController>()) {
       await Get.find<MonKpiOverviewController>().fetchKpiData();
     }
     if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>();
+      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
     if (Get.isRegistered<MonOutstandingPaymentsController>()) {
-      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
+      await Get.find<MonOutstandingPaymentsController>()
+          .fetchOutstandingPaymentsData();
     }
     if (Get.isRegistered<MonSalesTrendsController>()) {
       await Get.find<MonSalesTrendsController>().fetchAllData();
-    }
-    if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final operatorController = Get.find<MonOperatorController>();
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
-        color: PrimaryColors.brightYellow,
-        backgroundColor: PrimaryColors.darkBlue,
+        color: AppColors.getAccentColor(context),
+        backgroundColor: AppColors.getCardColor(context),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: PrimaryColors.darkBlue,
-              elevation: 2,
+              backgroundColor: AppColors.getCardColor(context),
+              elevation: 0,
               pinned: true,
               centerTitle: true,
               title: Obx(
@@ -116,8 +246,8 @@ class _DashboardState extends State<Dashboard> {
                   children: [
                     Text(
                       operatorController.companyName.value,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: AppColors.getTextPrimaryColor(context),
                         fontWeight: FontWeight.bold,
                         fontSize: 18.0,
                       ),
@@ -126,7 +256,7 @@ class _DashboardState extends State<Dashboard> {
                     Text(
                       operatorController.companyAddress.value,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: AppColors.getTextSecondaryColor(context),
                         fontWeight: FontWeight.w400,
                         fontSize: 12.0,
                       ),
@@ -136,21 +266,18 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ),
               leading: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: CircleAvatar(
-                  backgroundColor: Colors.transparent,
-                  child: Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: Image.asset('assets/images/logo.jpeg'),
-                  ),
-                ),
+                padding: const EdgeInsets.only(left: 20.0),
+                child: AppLogo(width: 100, height: 100),
               ),
               actions: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: IconButton(
-                    icon: const Icon(Icons.account_circle_outlined, size: 28),
-                    color: PrimaryColors.brightYellow,
+                    icon: Icon(
+                      Icons.account_circle_outlined,
+                      size: 28,
+                      color: AppColors.getTextPrimaryColor(context),
+                    ),
                     onPressed: () {
                       Get.to(() => ProfilePage());
                     },
@@ -166,68 +293,58 @@ class _DashboardState extends State<Dashboard> {
             ),
             SliverToBoxAdapter(
               child: Container(
-                color: PrimaryColors.darkBlue,
+                color: AppColors.getBackgroundColor(context),
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 16),
+                      SizedBox(height: 8),
                       KpiOverviewSection(),
-                      SizedBox(height: 24),
+                      SizedBox(height: 8),
                       Obx(() {
                         final controller = Get.find<MonGrossProfitController>();
-                        // Then in the Obx block:
-                        final grossProfitValue = _parseCompactNumber(controller.grossProfit.value);
-                        final totalSalesValue = _parseCompactNumber(controller.totalSales.value);
-                        final cogsValue = _parseCompactNumber(controller.cogs.value);
+                        final grossProfitValue = _parseCompactNumber(
+                          controller.grossProfit.value,
+                        );
+                        final isLoading = controller.isLoading.value;
 
-                        // Calculate previous period profit based on trend
-                        final trendPercent =
-                            double.tryParse(
-                              controller.grossProfitTrend.value
-                                  .replaceAll('%', '')
-                                  .replaceAll('+', '')
-                                  .replaceAll('-', ''),
-                            ) ??
-                            0.0;
-                        final prevProfitValue =
-                            controller.grossProfitTrendDirection.value ==
-                                TrendDirection.up
-                            ? grossProfitValue / (1 + trendPercent / 100)
-                            : controller.grossProfitTrendDirection.value ==
-                                  TrendDirection.down
-                            ? grossProfitValue / (1 - trendPercent / 100)
-                            : grossProfitValue;
-
-                        return GrossProfitCard(
-                          grossProfit: grossProfitValue,
-                          totalSales: totalSalesValue,
-                          cogs: cogsValue,
-                          previousPeriodProfit: prevProfitValue,
+                        return Skeletonizer(
+                          enabled: isLoading,
+                          child: GrossProfitCard(
+                            grossProfit: grossProfitValue,
+                            trend: controller.grossProfitTrend.value,
+                          ),
                         );
                       }),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 8),
+                      const HorizontalSummaryCards(),
+                      const SizedBox(height: 8),
+                      // Obx(() {
+                      //   final controller =
+                      //       Get.find<MonOutstandingPaymentsController>();
+                      //   final dashboardController =
+                      //       Get.find<MonDashboardController>();
+                      //   final periodLabel = _getPeriodLabel(
+                      //     dashboardController.selectedRange.value,
+                      //     dashboardController.customRange.value,
+                      //   );
+                      //
+                      //   return OutstandingPaymentsCard(
+                      //     outstandingSelectedPeriod:
+                      //         controller.outstandingSelectedPeriod.value,
+                      //     outstandingSelectedPeriodTrend:
+                      //         controller.outstandingSelectedPeriodTrend.value,
+                      //     outstandingMTD: controller.outstandingMTD.value,
+                      //     outstandingYTD: controller.outstandingYTD.value,
+                      //     periodLabel: periodLabel,
+                      //   );
+                      // }),
+                      // const SizedBox(height: 24),
+                      // // Expenses Card
                       Obx(() {
-                        final controller = Get.find<MonOutstandingPaymentsController>();
-                        final dashboardController = Get.find<MonDashboardController>();
-                        final periodLabel = _getPeriodLabel(
-                          dashboardController.selectedRange.value,
-                          dashboardController.customRange.value,
-                        );
-
-                        return OutstandingPaymentsCard(
-                          outstandingSelectedPeriod: controller.outstandingSelectedPeriod.value,
-                          outstandingSelectedPeriodTrend: controller.outstandingSelectedPeriodTrend.value,
-                          outstandingMTD: controller.outstandingMTD.value,
-                          outstandingYTD: controller.outstandingYTD.value,
-                          periodLabel: periodLabel,
-                        );
-                      }),
-                      const SizedBox(height: 24),
-                      // Expenses Card
-                      Obx(() {
-                        final dashboardController = Get.find<MonDashboardController>();
+                        final dashboardController =
+                            Get.find<MonDashboardController>();
                         final periodLabel = _getPeriodLabel(
                           dashboardController.selectedRange.value,
                           dashboardController.customRange.value,
@@ -238,21 +355,28 @@ class _DashboardState extends State<Dashboard> {
                           nonStockExpenses: 0.0,
                           periodLabel: periodLabel,
                           onStockExpensesTap: () {
-                            Get.to(() => ExpensesDetailPage(
-                              expenseType: 'stock',
-                              periodLabel: periodLabel,
-                            ));
+                            Get.to(
+                              () => ExpensesDetailPage(
+                                expenseType: 'stock',
+                                periodLabel: periodLabel,
+                              ),
+                            );
                           },
                           onNonStockExpensesTap: () {
-                            Get.to(() => ExpensesDetailPage(
-                              expenseType: 'non-stock',
-                              periodLabel: periodLabel,
-                            ));
+                            Get.to(
+                              () => ExpensesDetailPage(
+                                expenseType: 'non-stock',
+                                periodLabel: periodLabel,
+                              ),
+                            );
                           },
                         );
                       }),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       SalesTrendsSection(),
+                      const SizedBox(height: 12),
+                      // Detailed KPI Section with mode selector
+                      // _buildDetailedKpiSection(),
                     ],
                   ),
                 ),
@@ -265,6 +389,9 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) {
+    if (!Get.isRegistered<MonDashboardController>()) {
+      Get.put(MonDashboardController(), permanent: true);
+    }
     final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
   }

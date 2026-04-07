@@ -9,7 +9,7 @@ import 'payment_controller.dart';
 
 class SalesController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
-  final _apiService = PosApiService();
+  final _apiService = Get.find<PosApiService>();
 
   // Reactive list of sale transactions
   var salesTransactions = <SaleTransaction>[].obs;
@@ -166,6 +166,7 @@ class SalesController extends GetxController {
           "remarks": "",
           "transactionstatusid": 1,
           "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
+          "complimentaryid": transaction.complimentaryid,
         };
       }).toList();
 
@@ -183,9 +184,17 @@ class SalesController extends GetxController {
         "servicepointid": servicePointId,
         "salespersonid": salespersonId,
         "modeid": 2,
-        "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+        "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
         "lineItems": lineItems,
         "saleActionId": 1,
+        "efris": 0,
+        "efriscode": "",
+        "efrisinvoiceid": "",
+        "efrisstatus": "",
+        "qrcode": "",
+        "efrismessage": "",
+        "taxamount": "",
+        "taxrate": "",
       };
 
       // Create or update sale on server
@@ -265,7 +274,8 @@ class SalesController extends GetxController {
             servicePointId: servicePointId,
             customerId: customerId,
             companyId: companyId,
-            currencyid: null, 
+            currencyid: null,
+            categoryid: "44444444-1111-1111-1111-111111111111",
           );
 
           // Log the payment payload being sent to server

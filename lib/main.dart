@@ -4,6 +4,11 @@ import 'package:get_storage/get_storage.dart';
 
 // Package imports for external dependencies
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'package:bac_pos/bac_monitor/lib/services/kpi_sync_service.dart';
+import 'bac_monitor/lib/controllers/mon_kpi_controller.dart';
+import 'bac_monitor/lib/repositories/kpi_repository.dart';
+import 'bac_monitor/lib/additions/colors.dart';
+import 'bac_monitor/lib/controllers/mon_data_sync_controller.dart';
 import 'flavors/flavor_colors.dart';
 import 'flavors/flavor_config.dart';
 
@@ -65,28 +70,31 @@ void main() async {
   // Monitor Services
   Get.put(MonitorApiService());
   Get.put(AccountManager());
+  Get.put(KpiSyncService());
 
   Get.put(AuthController());
   Get.put(CustomerController());
   Get.put(InventoryController());
+  Get.put(KpiRepository());
   Get.put(PaymentController());
   Get.put(SalesController());
   Get.put(UserController());
   Get.put(SettingsController());
   Get.put(ServicePointController());
 
-  Get.put(MonDashboardController());
-  Get.put(MonGrossProfitController());
-  Get.put(MonKpiOverviewController());
-  Get.put(MonMainNavigationController());
-  Get.put(MonOperatorController());
-  Get.put(MonOutstandingPaymentsController());
-  Get.put(MonSalesTrendsController());
-  Get.put(MonStoresController());
-  Get.put(MonStoreKpiTrendController());
-  Get.put(MonSyncController());
+  Get.lazyPut<MonDashboardController>(() => MonDashboardController());
+  Get.lazyPut<MonKpiController>(() => MonKpiController());
+  Get.lazyPut<MonGrossProfitController>(() => MonGrossProfitController());
+  Get.lazyPut<MonKpiOverviewController>(() => MonKpiOverviewController());
+  Get.lazyPut<MonMainNavigationController>(() => MonMainNavigationController());
+  Get.lazyPut<MonOperatorController>(() => MonOperatorController());
+  Get.lazyPut<MonOutstandingPaymentsController>(() => MonOutstandingPaymentsController());
+  Get.lazyPut<MonSalesTrendsController>(() => MonSalesTrendsController());
+  Get.lazyPut<MonStoresController>(() => MonStoresController());
+  Get.lazyPut<MonStoreKpiTrendController>(() => MonStoreKpiTrendController());
+  Get.lazyPut<MonSyncController>(() => MonSyncController());
+  Get.lazyPut<MonDataSyncController>(() => MonDataSyncController());
   Get.put(ProfileController());
-
   runApp(const MyApp());
 }
 
@@ -98,13 +106,60 @@ class MyApp extends StatelessWidget {
     return GetMaterialApp(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: true,
+      
+      // Light theme configuration
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: FlavorColors.current.primary,
+          brightness: Brightness.light,
         ),
-
+        scaffoldBackgroundColor: LightColors.background,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: LightColors.background, 
+          foregroundColor: LightColors.textPrimary,
+        ),
+        cardTheme: CardThemeData(
+          color: LightColors.card,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: LightColors.border),
+          ),
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: LightColors.textPrimary),
+          bodyMedium: TextStyle(color: LightColors.textSecondary),
+        ),
         useMaterial3: true,
       ),
+      
+      // Dark theme configuration
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: FlavorColors.current.primary,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: DarkColors.background,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: DarkColors.background,
+          foregroundColor: DarkColors.textPrimary,
+        ),
+        cardTheme: CardThemeData(
+          color: DarkColors.card,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: DarkColors.border),
+          ),
+        ),
+        textTheme: TextTheme(
+          bodyLarge: TextStyle(color: DarkColors.textPrimary),
+          bodyMedium: TextStyle(color: DarkColors.textSecondary),
+        ),
+        useMaterial3: true,
+      ),
+      
+      // Follow device's system theme
+      themeMode: ThemeMode.system,
+      
       fallbackLocale: const Locale('en', 'US_store'),
       home: const SplashScreen(),
     );

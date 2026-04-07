@@ -4,13 +4,27 @@ import '../../models/dashboard.dart';
 
 class CategorizedStockAlertsList extends StatelessWidget {
   final List<CategorizedStockAlert> alerts;
+  final BuildContext? contextOverride;
 
-  const CategorizedStockAlertsList({super.key, required this.alerts});
+  const CategorizedStockAlertsList({
+    super.key,
+    required this.alerts,
+    this.contextOverride,
+    required BuildContext context,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final buildContext = contextOverride ?? context;
+    final successColor = AppColors.getSuccessColor(buildContext);
+    final errorColor = AppColors.getErrorColor(buildContext);
+    final accentColor = AppColors.getAccentColor(buildContext);
+    final borderColor = AppColors.getBorderColor(buildContext);
+    final textPrimary = AppColors.getTextPrimaryColor(buildContext);
+    final textSecondary = AppColors.getTextSecondaryColor(buildContext);
+
     if (alerts.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 40.0),
           child: Column(
@@ -18,13 +32,13 @@ class CategorizedStockAlertsList extends StatelessWidget {
             children: [
               Icon(
                 Icons.check_circle_outline,
-                color: Colors.greenAccent,
+                color: successColor,
                 size: 40,
               ),
               SizedBox(height: 8),
               Text(
                 'All stock levels are healthy!',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+                style: TextStyle(color: textSecondary, fontSize: 16),
               ),
             ],
           ),
@@ -43,23 +57,25 @@ class CategorizedStockAlertsList extends StatelessWidget {
         // Conditionally build the "Critical Stock" section
         if (criticalAlerts.isNotEmpty)
           _buildAlertSection(
+            context: buildContext,
             title: 'Critical Stock (<=5)',
             alerts: criticalAlerts,
             icon: Icons.error_outline,
-            color: Colors.red.shade400,
+            color: errorColor,
           ),
 
         // Add a divider if both sections are present
         if (criticalAlerts.isNotEmpty && lowAlerts.isNotEmpty)
-          const Divider(color: Colors.white24, height: 24, thickness: 1),
+          Divider(color: borderColor, height: 24, thickness: 1),
 
         // Conditionally build the "Low Stock" section
         if (lowAlerts.isNotEmpty)
           _buildAlertSection(
+            context: buildContext,
             title: 'Low Stock (6-10)',
             alerts: lowAlerts,
             icon: Icons.warning_amber_rounded,
-            color: PrimaryColors.brightYellow,
+            color: accentColor,
           ),
       ],
     );
@@ -67,6 +83,7 @@ class CategorizedStockAlertsList extends StatelessWidget {
 
   // A helper widget to build each section (Critical or Low)
   Widget _buildAlertSection({
+    required BuildContext context,
     required String title,
     required List<CategorizedStockAlert> alerts,
     required IconData icon,
@@ -84,17 +101,19 @@ class CategorizedStockAlertsList extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        ...alerts.map((alert) => _buildAlertItem(alert, icon, color)),
+        ...alerts.map((alert) => _buildAlertItem(context, alert, icon, color)),
       ],
     );
   }
 
   // A helper widget for a single alert item row
   Widget _buildAlertItem(
+    BuildContext context,
     CategorizedStockAlert alert,
     IconData icon,
     Color color,
   ) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -104,7 +123,7 @@ class CategorizedStockAlertsList extends StatelessWidget {
           Expanded(
             child: Text(
               alert.name,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: textPrimary, fontSize: 14),
               overflow: TextOverflow.ellipsis,
             ),
           ),

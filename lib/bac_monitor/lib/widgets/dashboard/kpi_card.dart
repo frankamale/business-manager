@@ -10,6 +10,9 @@ class KpiCard extends StatelessWidget {
   final TrendDirection trendDirection;
   final String? trendReference;
 
+  // Sub-metrics shown on the right side
+  final List<MiniKpiData> miniKpis;
+
   const KpiCard({
     super.key,
     required this.title,
@@ -18,119 +21,281 @@ class KpiCard extends StatelessWidget {
     this.trendValue,
     this.trendReference,
     this.trendDirection = TrendDirection.none,
+    this.miniKpis = const [],
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: PrimaryColors.lightBlue,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center, // Center vertically
-          children: [
-            // Title remains aligned to the start
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: PrimaryColors.brightYellow,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 1,
-              ),
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final primaryLight = AppColors.getPrimaryLightColor(context);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: AppColors.getCardColor(context),
+        border: Border.all(color: AppColors.getBorderColor(context)),
+      ),
+      child: Stack(
+        children: [
+          // Decorative glow blob top-right
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 16.0,
             ),
-            const SizedBox(height: 6),
-            // Center the Row containing unit and value
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (unit != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 4.0, bottom: 1.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Category label pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 3,
+                        ),
                         child: Text(
-                          unit!,
-                          style: const TextStyle(
-                            color: Colors.white60,
-                            fontSize: 16,
+                          title.toUpperCase(),
+                          style: TextStyle(
+                            color: primaryLight,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.4,
                           ),
                         ),
                       ),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      const SizedBox(height: 8),
+
+                      // Big value
+                      RichText(
+                        text: TextSpan(
+                          children: [
+                            if (unit != null)
+                              TextSpan(
+                                text: '$unit  ',
+                                style: TextStyle(
+                                  color: textSecondary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            TextSpan(
+                              text: value,
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Trend row
+                      if (trendDirection != TrendDirection.none &&
+                          trendValue != null) ...[
+                        const SizedBox(height: 6),
+                        _TrendBadge(
+                          value: trendValue!,
+                          direction: trendDirection,
+                          reference: trendReference,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                // Vertical divider
+                Container(
+                  width: 1,
+                  height: 64,
+                  margin: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        textPrimary.withOpacity(0),
+                        textPrimary.withOpacity(0.18),
+                        textPrimary.withOpacity(0),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                     ),
                   ),
-                ],
-              ),
+                ),
+
+                // ── RIGHT: mini KPIs ────────────────────────────────────
+                Expanded(
+                  flex: 4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: miniKpis
+                        .map((kpi) => _MiniKpiRow(data: kpi))
+                        .toList(),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 6),
-            if (trendValue != null) _buildTrendSection(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  /// Helper widget to build a more compact trend section.
-  Widget _buildTrendSection() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (trendDirection != TrendDirection.none)
-              Icon(
-                trendDirection == TrendDirection.up
-                    ? Icons.arrow_upward
-                    : Icons.arrow_downward,
-                color: trendDirection == TrendDirection.up
-                    ? Colors.greenAccent
-                    : Colors.redAccent,
-                size: 15,
-              ),
-            if (trendDirection != TrendDirection.none) const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                trendValue!,
-                style: TextStyle(
-                  color: trendDirection == TrendDirection.up
-                      ? Colors.greenAccent
-                      : Colors.redAccent,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+// ─────────────────────────────────────────────────────────────
+// Mini KPI data model
+// ─────────────────────────────────────────────────────────────
+class MiniKpiData {
+  final String label;
+  final String value;
+  final Color? accentColor;
+
+  const MiniKpiData({
+    required this.label,
+    required this.value,
+    this.accentColor,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Mini KPI row
+// ─────────────────────────────────────────────────────────────
+class _MiniKpiRow extends StatelessWidget {
+  final MiniKpiData data;
+
+  const _MiniKpiRow({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = data.accentColor ?? AppColors.getInfoColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accent,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
-        ),
-        if (trendReference != null)
+              const SizedBox(width: 6),
+              Text(
+                data.label,
+                style: TextStyle(
+                  color: textSecondary.withOpacity(0.55),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
           Padding(
-            padding: const EdgeInsets.only(top: 2.0),
-            child: Text(
-              trendReference!,
-              style: const TextStyle(
-                color: PrimaryColors.brightYellow,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            padding: const EdgeInsets.only(left: 12),
+            child: Row(
+              children: [
+                Text(
+                  "UGX",
+                  style: TextStyle(
+                    color: textSecondary.withOpacity(0.55),
+                    fontSize: 12,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Text(
+                  data.value,
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Trend badge
+// ─────────────────────────────────────────────────────────────
+class _TrendBadge extends StatelessWidget {
+  final String value;
+  final TrendDirection direction;
+  final String? reference;
+
+  const _TrendBadge({
+    required this.value,
+    required this.direction,
+    this.reference,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isUp = direction == TrendDirection.up;
+    final color = isUp ? AppColors.getSuccessColor(context) : AppColors.getErrorColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+
+    return Row(
+      children: [
+
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isUp
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                color: color,
+                size: 12,
+              ),
+              const SizedBox(width: 3),
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (reference != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            reference!,
+            style: TextStyle(
+              color: textSecondary.withOpacity(0.4),
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ],
     );
   }

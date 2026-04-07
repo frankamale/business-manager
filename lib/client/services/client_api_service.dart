@@ -84,12 +84,34 @@ class ClientApiService {
     required String phone,
     required String address,
     required String password,
-     String category = "Retail Customer(Bulk Purchase)",
+    required int service,
+    String? subcategoryid,
+    required int activationrequired,
+    String category = "Retail Customer(Bulk Purchase)",
     String gender = 'Male',
     String status = 'Active/In Use',
-    String statusId = '00000000-0000-0000-0000-000000000000',
+    String statusId = "99999999-9999-9999-9999-999999999999",
   }) async {
-    final uri = Uri.parse('$baseUrl/bp/postcustomer');
+      if (subcategoryid == null) {
+        final subcategories = await getSubcategories();
+        if (subcategories.isNotEmpty) {
+          subcategoryid = subcategories[0]['id'];
+        } else {
+          subcategoryid = "00000000-0000-0000-000000000000";
+        }
+      }
+
+    String endpoint;
+
+    if (service == 2) {
+      endpoint = "bp/vendor";
+    } else if (service == 3) {
+      endpoint = "bp/staff";
+    } else {
+      endpoint = "bp/postcustomer";
+    }
+
+    final uri = Uri.parse('$baseUrl/$endpoint');
 
     final body = {
       'id': id,
@@ -106,7 +128,8 @@ class ClientApiService {
       'address': address,
       'pospassword': password,
       'statusid': statusId,
-      category : "Retail Customer(Bulk Purchase)",
+      "activationrequired": activationrequired,
+      "subcategoryid": subcategoryid,
       'mode': 1,
     };
 
@@ -132,6 +155,20 @@ class ClientApiService {
       throw Exception('An error occurred');
     } else {
       throw Exception('Failed to create customer: ${response.statusCode}');
+    }
+  }
+
+  Future<List<dynamic>> getSubcategories() async {
+    final uri = Uri.parse('$baseUrl/bp/subcategories');
+    final headers = await _getAuthHeaders();
+
+    final response = await http.get(uri, headers: headers);
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(response.body);
+      return data;
+    } else {
+      throw Exception('Failed to load subcategories');
     }
   }
 }

@@ -3,7 +3,7 @@ import 'package:bac_pos/flavors/flavor_config.dart';
 class AppConfig {
   // authentication credentials
   static const String baseUrl = "http://52.30.142.12:8080/rest";
-  static const String description = "We serve with pride";
+  static const String description = "Your business partner...";
 
   static const String appName = FlavorConfig.appName;
 
@@ -19,6 +19,7 @@ class AppConfig {
 
   /// Copyright text
   static const String copyright = '© 2025 Komusoft Solutions';
+  static const String phone = '(+256) 705 344 416';
 
   /// Primary color theme (used in gradients and branding)
   static const int primaryColorValue = 0xFF1976D2; // Blue shade 700

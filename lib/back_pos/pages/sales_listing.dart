@@ -13,6 +13,7 @@ import '../services/sales_sync_service.dart';
 import 'pos_screen.dart';
 import 'payment_screen.dart';
 import 'settle_bill_screen.dart';
+import '../../flavors/flavor_colors.dart';
 
 class SalesListing extends StatefulWidget {
   final ServicePoint? servicePoint;
@@ -95,7 +96,7 @@ class _SalesListingState extends State<SalesListing> {
         'No Pending Sales',
         'All sales have already been uploaded',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: FlavorColors.current.primaryDark,
         colorText: Colors.white,
       );
       return;
@@ -299,7 +300,6 @@ class _SalesListingState extends State<SalesListing> {
   Widget build(BuildContext context) {
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         title: isSearching
             ? TextField(
@@ -313,7 +313,7 @@ class _SalesListingState extends State<SalesListing> {
                 ),
               )
             : Text("Sales Orders / Bills"),
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: FlavorColors.current.primaryDark,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -336,7 +336,7 @@ class _SalesListingState extends State<SalesListing> {
                   value: 'refresh',
                   child: Row(
                     children: [
-                      Icon(Icons.refresh, size: 20, color: Colors.blue.shade700),
+                      Icon(Icons.refresh, size: 20, color: FlavorColors.current.primaryDark),
                       SizedBox(width: 12),
                       Text('Refresh'),
                     ],
@@ -535,7 +535,7 @@ class _SalesListingState extends State<SalesListing> {
                         ];
                       },
                       icon: Icon(Icons.print),
-                      color: Colors.blue.shade600,
+                      color: FlavorColors.current.primary,
                       tooltip: 'Print Options',
                       padding: EdgeInsets.all(8),
                     ),
@@ -605,7 +605,7 @@ class _SalesListingState extends State<SalesListing> {
                         ],
                       ],
                       icon: Icon(Icons.more_vert),
-                      color: Colors.blue.shade600,
+                      color: FlavorColors.current.primary,
                       tooltip: 'Actions',
                       padding: EdgeInsets.all(8),
                     ),
@@ -914,7 +914,7 @@ class _SalesListingState extends State<SalesListing> {
             'Already Uploaded',
             'Sale $receiptNumber has already been uploaded to the server',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.blue.shade700,
+            backgroundColor: FlavorColors.current.primaryDark,
             colorText: Colors.white,
             duration: Duration(seconds: 2),
           );
@@ -1002,7 +1002,7 @@ class _SalesListingState extends State<SalesListing> {
             'No Balance',
             'This sale has no outstanding balance to settle',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.blue.shade700,
+            backgroundColor: FlavorColors.current.primaryDark,
             colorText: Colors.white,
           );
           return;
@@ -1290,6 +1290,7 @@ class _SalesListingState extends State<SalesListing> {
           'price': transaction.sellingprice,
           'amount': transaction.amount,
           'item': inventoryItem,
+          'complimentary': transaction.complimentaryid > 0,
         });
       }
 

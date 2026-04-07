@@ -20,18 +20,18 @@ class ExpensesDetailPage extends StatelessWidget {
     final currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX', decimalDigits: 0);
 
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: LightColors.background,
       appBar: AppBar(
-        backgroundColor: PrimaryColors.darkBlue,
+        backgroundColor: LightColors.card,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: LightColors.textPrimary),
           onPressed: () => Get.back(),
         ),
         title: Text(
           isStockExpense ? 'Stock Expenses' : 'Non-Stock Expenses',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: LightColors.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -42,7 +42,7 @@ class ExpensesDetailPage extends StatelessWidget {
               child: Text(
                 periodLabel,
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: LightColors.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -63,10 +63,10 @@ class ExpensesDetailPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Breakdown Section
-            const Text(
+            Text(
               'Expense Breakdown',
               style: TextStyle(
-                color: Colors.white,
+                color: LightColors.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -95,17 +95,15 @@ class ExpensesDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            isStockExpense
-                ? Colors.orangeAccent.withOpacity(0.3)
-                : Colors.purpleAccent.withOpacity(0.3),
-            PrimaryColors.lightBlue.withOpacity(0.5),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: LightColors.card,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: LightColors.shadowLight,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -115,13 +113,12 @@ class ExpensesDetailPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (isStockExpense ? Colors.orangeAccent : Colors.purpleAccent)
-                      .withOpacity(0.3),
+                  color: LightColors.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   isStockExpense ? Icons.inventory_2_outlined : Icons.receipt_long_outlined,
-                  color: isStockExpense ? Colors.orangeAccent : Colors.purpleAccent,
+                  color: LightColors.textPrimary,
                   size: 32,
                 ),
               ),
@@ -133,15 +130,15 @@ class ExpensesDetailPage extends StatelessWidget {
                     Text(
                       'Total ${isStockExpense ? 'Stock' : 'Non-Stock'} Expenses',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: LightColors.textSecondary,
                         fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'UGX${compactFormatter.format(totalExpense)}',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: LightColors.textPrimary,
                         fontSize: 32,
                         fontWeight: FontWeight.w900,
                       ),
@@ -152,7 +149,7 @@ class ExpensesDetailPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          Divider(color: Colors.white.withOpacity(0.2)),
+          Divider(color: LightColors.border),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -173,15 +170,15 @@ class ExpensesDetailPage extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: LightColors.textSecondary,
             fontSize: 12,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: LightColors.textPrimary,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -198,21 +195,25 @@ class ExpensesDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
-        color: PrimaryColors.lightBlue.withOpacity(0.3),
+        color: LightColors.card,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: LightColors.border,
+          width: 1,
+        ),
       ),
       child: Column(
         children: [
           Icon(
             Icons.data_usage_outlined,
-            color: Colors.white.withOpacity(0.5),
+            color: LightColors.textHint,
             size: 48,
           ),
           const SizedBox(height: 16),
           Text(
             'No expense data available',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: LightColors.textSecondary,
               fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
@@ -222,7 +223,7 @@ class ExpensesDetailPage extends StatelessWidget {
             'Expense tracking endpoint is not yet implemented.\nData will appear here once the API is ready.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
+              color: LightColors.textHint,
               fontSize: 12,
             ),
           ),
@@ -259,8 +260,12 @@ class ExpensesDetailPage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: PrimaryColors.lightBlue.withOpacity(0.3),
+        color: LightColors.card,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: LightColors.border,
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -270,8 +275,8 @@ class ExpensesDetailPage extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: LightColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -280,7 +285,7 @@ class ExpensesDetailPage extends StatelessWidget {
                 Text(
                   date,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
+                    color: LightColors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -289,13 +294,13 @@ class ExpensesDetailPage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: LightColors.surface,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       category,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: LightColors.textSecondary,
                         fontSize: 10,
                       ),
                     ),
@@ -306,8 +311,8 @@ class ExpensesDetailPage extends StatelessWidget {
           ),
           Text(
             amount,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: LightColors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),

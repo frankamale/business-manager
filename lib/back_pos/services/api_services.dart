@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../shared/services/token_refresh_interceptor.dart';
 import '../models/users.dart';
 import '../models/auth_response.dart';
 import '../models/service_point.dart';
@@ -21,7 +22,27 @@ class PosApiService extends GetxService {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
+  // Token refresh interceptor for automatic token refresh on 401 errors
+  late final TokenRefreshInterceptor _tokenRefreshInterceptor;
+
   final _dbHelper = UnifiedDatabaseHelper.instance;
+
+  @override
+  void onInit() {
+    super.onInit();
+    // Initialize the token refresh interceptor with base URL and secure storage
+    _tokenRefreshInterceptor = TokenRefreshInterceptor(
+      baseUrl: baseurl,
+      secureStorage: _secureStorage,
+    );
+  }
+
+  @override
+  void onClose() {
+    // Close the interceptor when the service is disposed
+    _tokenRefreshInterceptor.close();
+    super.onClose();
+  }
 
   // Keys for secure storage
   static const String _tokenKey = 'access_token';
@@ -195,17 +216,11 @@ class PosApiService extends GetxService {
   }
 
   Future<List<Map<String, dynamic>>> fetchCashAccounts() async {
-    final token = await getAccessToken();
+    final request = http.Request('GET', Uri.parse('$baseurl/cashaccounts'));
+    request.headers['Content-Type'] = 'application/json';
 
-    final headers = {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
-
-    final response = await http.get(
-      Uri.parse('$baseurl/cashaccounts'),
-      headers: headers,
-    );
+    final streamedResponse = await _tokenRefreshInterceptor.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(json.decode(response.body));
@@ -261,18 +276,11 @@ class PosApiService extends GetxService {
   // Fetch company info from API and store it
   Future<Map<String, dynamic>> fetchAndStoreCompanyInfo() async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('GET', Uri.parse("$baseurl/company/details"));
+      request.headers['Content-Type'] = 'application/json';
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.get(
-        Uri.parse("$baseurl/company/details"),
-        headers: headers,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -288,18 +296,11 @@ class PosApiService extends GetxService {
 
   Future<List<User>> fetchUsers() async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('GET', Uri.parse("$baseurl/users"));
+      request.headers['Content-Type'] = 'application/json';
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.get(
-        Uri.parse("$baseurl/users"),
-        headers: headers,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
@@ -315,18 +316,11 @@ class PosApiService extends GetxService {
 
   Future<List<ServicePoint>> fetchServicePoints() async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('GET', Uri.parse("$baseurl/servicepoints"));
+      request.headers['Content-Type'] = 'application/json';
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.get(
-        Uri.parse("$baseurl/servicepoints"),
-        headers: headers,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
@@ -344,18 +338,11 @@ class PosApiService extends GetxService {
 
   Future<List<InventoryItem>> fetchInventory() async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('GET', Uri.parse("$baseurl/inventory/"));
+      request.headers['Content-Type'] = 'application/json';
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.get(
-        Uri.parse("$baseurl/inventory/"),
-        headers: headers,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
@@ -373,18 +360,11 @@ class PosApiService extends GetxService {
 
   Future<List<Customer>> fetchCustomers() async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('GET', Uri.parse("$baseurl/bp/customers"));
+      request.headers['Content-Type'] = 'application/json';
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.get(
-        Uri.parse("$baseurl/bp/customers"),
-        headers: headers,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
@@ -400,21 +380,12 @@ class PosApiService extends GetxService {
 
   Future<Map<String, dynamic>> createSale(Map<String, dynamic> saleData) async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('POST', Uri.parse("$baseurl/sales/"));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode(saleData);
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final jsonPayload = json.encode(saleData);
-
-      final response = await http.post(
-        Uri.parse("$baseurl/sales/"),
-        headers: headers,
-        body: jsonPayload,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -433,21 +404,12 @@ class PosApiService extends GetxService {
     Map<String, dynamic> saleData,
   ) async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('PUT', Uri.parse("$baseurl/sales/$saleId"));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode(saleData);
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final jsonPayload = json.encode(saleData);
-
-      final response = await http.put(
-        Uri.parse("$baseurl/sales/$saleId"),
-        headers: headers,
-        body: jsonPayload,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -463,18 +425,11 @@ class PosApiService extends GetxService {
 
   Future<Map<String, dynamic>> fetchSingleTransaction(String saleId) async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('GET', Uri.parse("$baseurl/sales/$saleId"));
+      request.headers['Content-Type'] = 'application/json';
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.get(
-        Uri.parse("$baseurl/sales/$saleId"),
-        headers: headers,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);
@@ -489,20 +444,14 @@ class PosApiService extends GetxService {
   Future<Map<String, dynamic>> createPayment(
     Map<String, dynamic> paymentData,
   ) async {
+
     try {
-      final token = await getAccessToken();
+      final request = http.Request('POST', Uri.parse("$baseurl/payments/"));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode(paymentData);
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await http.post(
-        Uri.parse("$baseurl/payments/"),
-        headers: headers,
-        body: json.encode(paymentData),
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -516,21 +465,12 @@ class PosApiService extends GetxService {
 
   Future<Map<String, dynamic>> postSale(Map<String, dynamic> saleData) async {
     try {
-      final token = await getAccessToken();
+      final request = http.Request('POST', Uri.parse("$baseurl/payment/"));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode(saleData);
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final jsonPayload = json.encode(saleData);
-
-      final response = await http.post(
-        Uri.parse("$baseurl/payment/"),
-        headers: headers,
-        body: jsonPayload,
-      );
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
@@ -552,14 +492,6 @@ class PosApiService extends GetxService {
     int pageSize = 20,
   }) async {
     try {
-      final token = await getAccessToken();
-
-      final headers = <String, String>{'Content-Type': 'application/json'};
-
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
       final queryParams = {
         'pagecount': pageCount.toString(),
         'pagesize': pageSize.toString(),
@@ -572,7 +504,11 @@ class PosApiService extends GetxService {
         "$baseurl/sales/",
       ).replace(queryParameters: queryParams);
 
-      final response = await http.get(uri, headers: headers);
+      final request = http.Request('GET', uri);
+      request.headers['Content-Type'] = 'application/json';
+
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         final List data = json.decode(response.body);
@@ -591,8 +527,6 @@ class PosApiService extends GetxService {
     required String newPassword,
   }) async {
     try {
-      final token = await getAccessToken();
-
       final uri = Uri.parse(
         '$baseurl/password/'
         '?t=$userId'
@@ -600,12 +534,11 @@ class PosApiService extends GetxService {
         '&s=${Uri.encodeComponent('password change')}',
       );
 
-      final headers = <String, String>{'Content-Type': 'application/json'};
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
+      final request = http.Request('GET', uri);
+      request.headers['Content-Type'] = 'application/json';
 
-      final response = await http.get(uri, headers: headers);
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
         return json.decode(response.body);

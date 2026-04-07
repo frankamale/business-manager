@@ -170,7 +170,7 @@ class CustomerAuthService {
     final passwordHash = BCrypt.hashpw(password, BCrypt.gensalt());
 
     final account = {
-      'username': username.toLowerCase(),
+      'username': username,
       'passwordHash': passwordHash,
       'companyId': companyId,
       'roles': roles,
@@ -183,7 +183,7 @@ class CustomerAuthService {
 
     // Remove existing entry for this username if exists
     accounts.removeWhere(
-      (a) => a['username']?.toString().toLowerCase() == username.toLowerCase(),
+          (a) => a['username']?.toString() == username,
     );
 
     // Add the new/updated account
@@ -220,7 +220,7 @@ class CustomerAuthService {
 
     // Find account by username
     final account = accounts.cast<Map<String, dynamic>?>().firstWhere(
-      (a) => a?['username']?.toString().toLowerCase() == username.toLowerCase(),
+          (a) => a?['username']?.toString() == username,
       orElse: () => null,
     );
 
@@ -266,7 +266,7 @@ class CustomerAuthService {
   Future<bool> hasCachedStaffAccount(String username) async {
     final accounts = await _getCachedStaffAccounts();
     final account = accounts.cast<Map<String, dynamic>?>().firstWhere(
-      (a) => a?['username']?.toString().toLowerCase() == username.toLowerCase(),
+          (a) => a?['username']?.toString() == username,
       orElse: () => null,
     );
 
@@ -285,7 +285,7 @@ class CustomerAuthService {
   Future<void> clearCachedStaffAccount(String username) async {
     final accounts = await _getCachedStaffAccounts();
     accounts.removeWhere(
-      (a) => a['username']?.toString().toLowerCase() == username.toLowerCase(),
+          (a) => a['username']?.toString() == username,
     );
     await _secureStorage.write(
       key: _cachedStaffAccountsKey,
@@ -335,7 +335,7 @@ class CustomerAuthService {
       final data = a['customerData'] as Map<String, dynamic>?;
       if (data == null) return false;
       return data['email']?.toString().toLowerCase() ==
-              customer.email?.toLowerCase() ||
+          customer.email?.toLowerCase() ||
           data['phone1'] == customer.phone1 ||
           data['posusername']?.toString().toLowerCase() ==
               customer.posusername?.toLowerCase();
@@ -418,7 +418,8 @@ class CustomerAuthService {
     final customer = Customer.fromMap(customerData);
 
     // Check if customer account is enabled
-    if (customer.posenabled != true) {
+    if (customer.statusid !=  "00000000-0000-0000-0000-000000000000") {
+      print("Customer not activated");
       return null;
     }
 
@@ -515,7 +516,7 @@ class CustomerAuthService {
 
     for (int i = 0; i < accounts.length; i++) {
       if (accounts[i]['username']?.toString().toLowerCase() ==
-          username.toLowerCase()) {
+          username) {
         // Generate new bcrypt hash
         final newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
 
@@ -560,9 +561,9 @@ class CustomerAuthService {
 
   /// Find customer by email, phone, or posusername
   Customer? findCustomerByIdentifier(
-    List<Customer> customers,
-    String identifier,
-  ) {
+      List<Customer> customers,
+      String identifier,
+      ) {
     final normalized = identifier.toLowerCase().trim();
     for (final customer in customers) {
       if (customer.email?.toLowerCase() == normalized ||

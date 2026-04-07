@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:sqflite/sqflite.dart';
@@ -45,18 +46,24 @@ class PaymentController extends GetxController {
   }
 
   Future<Map<String, dynamic>> _getDefaultCashAccount() async {
+    debugPrint('=== DEBUG: _getDefaultCashAccount START ===');
     final db = await _dbHelper.database;
+    debugPrint('Database instance: ${db != null ? "available" : "NULL"}');
 
     final result = await db!.query(
       'cash_accounts',
       where: 'pos = 1 AND main_currency = 1',
       limit: 1,
     );
+    debugPrint('Cash accounts query result count: ${result.length}');
+    debugPrint('Cash accounts query result: $result');
 
     if (result.isEmpty) {
+      debugPrint('=== DEBUG: ERROR - No POS cash account configured ===');
       throw Exception('No POS cash account configured');
     }
 
+    debugPrint('=== DEBUG: _getDefaultCashAccount END ===');
     return result.first;
   }
 
@@ -148,6 +155,7 @@ class PaymentController extends GetxController {
         "remarks": item['notes'] ?? "",
         "transactionstatusid": 1,
         "sellingprice_original": inventoryItem.price.toInt(),
+        "complimentaryid": item['complimentary'] == true ? 1 : 0,
       };
     }).toList();
 
@@ -165,9 +173,10 @@ class PaymentController extends GetxController {
       "servicepointid": servicePointId,
       "salespersonid": salespersonId ?? "00000000-0000-0000-0000-000000000000",
       "modeid": 2,
-      "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+      "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
       "lineItems": lineItems,
       "saleActionId": 1,
+      "categoryid": "44444444-1111-1111-1111-111111111111",
     };
   }
 
@@ -180,14 +189,24 @@ class PaymentController extends GetxController {
     required String? customerId,
     required String? companyId,
     required String? currencyid,
+    required String? categoryid,
   }) async {
+    debugPrint('=== DEBUG: createPaymentPayload START ===');
+    debugPrint('saleId: $saleId');
+    debugPrint('paymentAmount: $paymentAmount');
+    debugPrint('paymentTimestamp: $paymentTimestamp');
+    debugPrint('servicePointId: $servicePointId');
+    
     const uuid = Uuid();
 
+    debugPrint('Getting default cash account...');
     final cashAccount = await _getDefaultCashAccount();
+    debugPrint('Cash account found: ${cashAccount['id']} - ${cashAccount['paymentmode_name']}');
 
-    return {
+    final paymentPayload = {
       "id": uuid.v4(),
       "currencyid": cashAccount['currency_id'],
+      "categoryid": "44444444-1111-1111-1111-111111111111",
       "referenceid": saleId,
       "servicepointid": servicePointId,
       "transactiontypeid": 1,
@@ -202,8 +221,13 @@ class PaymentController extends GetxController {
       "type": "Sales",
       "bp": customerId ?? "",
       "direction": 1,
-      "glproxySubCategoryId": "44444444-4444-4444-4444-444444444444",
+      "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
+
     };
+    
+    debugPrint('Payment payload created: $paymentPayload');
+    debugPrint('=== DEBUG: createPaymentPayload END ===');
+    return paymentPayload;
   }
 
   // Save sale and payment locally to SQLite
@@ -240,7 +264,6 @@ class PaymentController extends GetxController {
           (item['price'] as num?)?.toDouble() ?? inventoryItem.price;
       final quantity = (item['quantity'] as num).toDouble();
       final itemAmount = sellingPrice * quantity;
-
       // Calculate this item's share of the payment
       final itemPaymentShare = totalAmount > 0
           ? (itemAmount / totalAmount) * paymentAmount
@@ -283,7 +306,7 @@ class PaymentController extends GetxController {
         'department': '',
         'packsize': inventoryItem.packsize.toInt(),
         'packaging': inventoryItem.packaging,
-        'complimentaryid': 0,
+        'complimentaryid': item['complimentary'] == true ? 1 : 0,
         'salesId': saleId,
         'upload_status': 'pending',
         'uploaded_at': null,
@@ -527,20 +550,30 @@ class PaymentController extends GetxController {
 
   // Settle an uploaded sale by posting payment directly
   Future<void> settleUploadedSale(String salesId, double amountTendered) async {
+    debugPrint('=== DEBUG: settleUploadedSale START ===');
+    debugPrint('salesId: $salesId');
+    debugPrint('amountTendered: $amountTendered');
+    
     try {
       isProcessing.value = true;
 
+      debugPrint('Fetching transaction details from server...');
       // Fetch transaction details from server to get proper data
       final transactionData = await _apiService.fetchSingleTransaction(salesId);
+      debugPrint('Transaction data fetched: $transactionData');
 
       // Calculate outstanding balance from server data
       final lineItemsList =
           transactionData['lineItems'] as List<dynamic>? ?? [];
+      debugPrint('Line items count: ${lineItemsList.length}');
+      
       final totalAmount = lineItemsList.fold<double>(
         0.0,
         (sum, item) =>
             sum + ((item['sellingprice'] ?? 0.0) * (item['quantity'] ?? 0.0)),
       );
+      debugPrint('Total amount: $totalAmount');
+      
       final currentPaid =
           double.tryParse(
             transactionData['amountpaid']?.toString() ??
@@ -548,12 +581,16 @@ class PaymentController extends GetxController {
                 '0',
           ) ??
           0.0;
+      debugPrint('Current paid: $currentPaid');
+      
       final outstandingBalance = totalAmount - currentPaid;
+      debugPrint('Outstanding balance: $outstandingBalance');
 
       // Only pay up to the outstanding balance
       final paymentAmount = amountTendered < outstandingBalance
           ? amountTendered
           : outstandingBalance;
+      debugPrint('Payment amount to process: $paymentAmount');
 
       if (paymentAmount <= 0) {
         throw Exception('No payment amount to process');
@@ -562,12 +599,15 @@ class PaymentController extends GetxController {
       // Get service point ID from transaction data
       final servicePointId = transactionData['servicepointid'] ?? '';
       final customerId = transactionData['clientid'];
+      debugPrint('servicePointId: $servicePointId, customerId: $customerId');
 
       // Get current timestamp for payment
       final paymentTimestamp = DateTime.now().millisecondsSinceEpoch;
+      debugPrint('paymentTimestamp: $paymentTimestamp');
 
       // Create payment payload
-      final paymentPayload = createPaymentPayload(
+      debugPrint('Creating payment payload...');
+      final paymentPayload = await createPaymentPayload(
         saleId: salesId,
         paymentAmount: paymentAmount,
         paymentTimestamp: paymentTimestamp,
@@ -575,7 +615,10 @@ class PaymentController extends GetxController {
         customerId: customerId,
         companyId: transactionData['companyId'],
         currencyid : transactionData['currencyid'],
+        categoryid: "44444444-1111-1111-1111-111111111111",
+
       );
+      debugPrint('Payment payload created: $paymentPayload');
 
       // Log the payment payload being sent to server
       print('=== SETTLE BILL PAYMENT PAYLOAD BEING SENT TO SERVER ===');
@@ -586,7 +629,15 @@ class PaymentController extends GetxController {
       print('=== END SETTLE BILL PAYMENT PAYLOAD ===');
 
       // Post payment to server
-      await _apiService.postSale(await paymentPayload);
+      debugPrint('=== DEBUG: Posting payment to server ===');
+      try {
+        final response = await _apiService.postSale(paymentPayload);
+        debugPrint('Server response: $response');
+        debugPrint('=== DEBUG: Payment posted successfully ===');
+      } catch (e) {
+        debugPrint('=== DEBUG: ERROR posting payment: $e ===');
+        rethrow;
+      }
 
       // Update local database with new payment amount
       final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(

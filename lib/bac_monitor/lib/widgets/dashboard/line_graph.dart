@@ -25,20 +25,20 @@ class SalesTrendLineGraph extends StatelessWidget {
   Widget build(BuildContext context) {
     // Show empty state if no data
     if (salesData.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No sales data available for this period',
-          style: TextStyle(color: Colors.white70, fontSize: 14),
+          style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 14),
         ),
       );
     }
 
     final maxY = _calculateMaxY();
-    final lineBarData = _mainLine();
+    final lineBarData = _mainLine(context);
 
     return LineChart(
       LineChartData(
-        backgroundColor: PrimaryColors.light.withOpacity(0.1),
+        backgroundColor: AppColors.getSurfaceColor(context).withOpacity(0.1),
         showingTooltipIndicators: salesData.asMap().entries.map((entry) {
           return ShowingTooltipIndicators([
             LineBarSpot(lineBarData, entry.key, lineBarData.spots[entry.key]),
@@ -47,33 +47,33 @@ class SalesTrendLineGraph extends StatelessWidget {
         lineBarsData: [lineBarData],
         borderData: FlBorderData(
           show: true,
-          border: const Border(
+          border: Border(
             left: BorderSide(
-              color: Colors.white70,
+              color: AppColors.getBorderColor(context),
               width: 1,
               style: BorderStyle.solid,
             ),
             bottom: BorderSide(
-              color: Colors.white70,
+              color: AppColors.getBorderColor(context),
               width: 1,
               style: BorderStyle.solid,
             ),
           ),
         ),
-        gridData: _mainGridData(maxY),
+        gridData: _mainGridData(context, maxY),
         titlesData: FlTitlesData(
           show: true,
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              getTitlesWidget: (value, meta) => _leftTitles(value, meta),
+              getTitlesWidget: (value, meta) => _leftTitles(context, value, meta),
               reservedSize: 50,
               interval: maxY / 5,
             ),
-            axisNameWidget: const Text(
+            axisNameWidget: Text(
               'Amount (UGX)',
               style: TextStyle(
-                color: Colors.white70,
+                color: AppColors.getTextSecondaryColor(context),
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -89,14 +89,14 @@ class SalesTrendLineGraph extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              getTitlesWidget: (value, meta) => _bottomTitles(value, meta),
+              getTitlesWidget: (value, meta) => _bottomTitles(context, value, meta),
               reservedSize: 42,
               interval: _getBottomTitleInterval(),
             ),
-            axisNameWidget: const Text(
+            axisNameWidget: Text(
               'Time Period',
               style: TextStyle(
-                color: Colors.white70,
+                color: AppColors.getTextSecondaryColor(context),
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
               ),
@@ -106,7 +106,7 @@ class SalesTrendLineGraph extends StatelessWidget {
         ),
         minY: 0,
         maxY: maxY,
-        lineTouchData: _lineTouchData(),
+        lineTouchData: _lineTouchData(context),
         clipData: const FlClipData.none(),
       ),
     );
@@ -202,7 +202,7 @@ class SalesTrendLineGraph extends StatelessWidget {
 
   // -------------------- CHART APPEARANCE --------------------
 
-  LineChartBarData _mainLine() {
+  LineChartBarData _mainLine(BuildContext context) {
     return LineChartBarData(
       spots: salesData
           .asMap()
@@ -210,24 +210,24 @@ class SalesTrendLineGraph extends StatelessWidget {
           .map((e) => FlSpot(e.key.toDouble(), e.value.amount))
           .toList(),
       isCurved: true,
-      color: PrimaryColors.brightYellow,
+      color: AppColors.getAccentColor(context),
       barWidth: 4,
       isStrokeCapRound: true,
       dotData: FlDotData(
         show: true,
         getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
           radius: 4,
-          color: PrimaryColors.brightYellow,
+          color: AppColors.getAccentColor(context),
           strokeWidth: 2,
-          strokeColor: Colors.white70,
+          strokeColor: AppColors.getBorderColor(context),
         ),
       ),
       belowBarData: BarAreaData(
         show: true,
         gradient: LinearGradient(
           colors: [
-            PrimaryColors.brightYellow.withOpacity(0.3),
-            PrimaryColors.brightYellow.withOpacity(0.0),
+            AppColors.getAccentColor(context).withOpacity(0.3),
+            AppColors.getAccentColor(context).withOpacity(0.0),
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -236,7 +236,7 @@ class SalesTrendLineGraph extends StatelessWidget {
     );
   }
 
-  FlGridData _mainGridData(double maxY) {
+  FlGridData _mainGridData(BuildContext context, double maxY) {
     return FlGridData(
       show: true,
       drawVerticalLine: false,
@@ -244,7 +244,7 @@ class SalesTrendLineGraph extends StatelessWidget {
       horizontalInterval: maxY / 5,
       getDrawingHorizontalLine: (value) {
         return FlLine(
-          color: Colors.white70.withOpacity(0.3),
+          color: AppColors.getBorderColor(context).withOpacity(0.3),
           strokeWidth: 1,
           dashArray: [5, 5],
         );
@@ -252,7 +252,7 @@ class SalesTrendLineGraph extends StatelessWidget {
     );
   }
 
-  LineTouchData _lineTouchData() {
+  LineTouchData _lineTouchData(BuildContext context) {
     return LineTouchData(
       enabled: true,
       handleBuiltInTouches: false,
@@ -278,8 +278,8 @@ class SalesTrendLineGraph extends StatelessWidget {
 
             return LineTooltipItem(
               formattedValue,
-              const TextStyle(
-                color: Colors.white,
+              TextStyle(
+                color: AppColors.getTextPrimaryColor(context),
                 fontWeight: FontWeight.bold,
                 fontSize: 11,
               ),
@@ -302,7 +302,7 @@ class SalesTrendLineGraph extends StatelessWidget {
 
   // -------------------- LABELS --------------------
 
-  Widget _bottomTitles(double value, TitleMeta meta) {
+  Widget _bottomTitles(BuildContext context, double value, TitleMeta meta) {
     final int index = value.toInt();
     if (index < 0 || index >= salesData.length) return const Text('');
 
@@ -406,8 +406,8 @@ class SalesTrendLineGraph extends StatelessWidget {
       padding: const EdgeInsets.only(top: 8.0),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: AppColors.getTextSecondaryColor(context),
           fontSize: 10,
           height: 1.2,
         ),
@@ -416,7 +416,7 @@ class SalesTrendLineGraph extends StatelessWidget {
     );
   }
 
-  Widget _leftTitles(double value, TitleMeta meta) {
+  Widget _leftTitles(BuildContext context, double value, TitleMeta meta) {
     // Don't show label at the very top to avoid overlap
     if (value == meta.max) return const Text('');
 
@@ -446,8 +446,8 @@ class SalesTrendLineGraph extends StatelessWidget {
       padding: const EdgeInsets.only(right: 4.0),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white70,
+        style: TextStyle(
+          color: AppColors.getTextSecondaryColor(context),
           fontSize: 11,
           fontWeight: FontWeight.w500,
         ),

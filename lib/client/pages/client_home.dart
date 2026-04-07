@@ -2,6 +2,7 @@ import 'package:bac_pos/back_pos/config.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../flavors/flavor_colors.dart';
 import '../../initialise/unified_login_screen.dart';
 import '../auth/reset_passcode.dart';
 import '../controllers/client_home_controller.dart';
@@ -21,7 +22,7 @@ class ClientHome extends StatelessWidget {
       appBar: AppBar(
         title: const Text(AppConfig.companyName),
         centerTitle: true,
-        backgroundColor: colorScheme.primary,
+        backgroundColor:  FlavorColors.current.primary,
         foregroundColor: colorScheme.onPrimary,
         elevation: 0,
         actions: [
@@ -81,7 +82,7 @@ class ClientHome extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: colorScheme.primary,
+                color:  FlavorColors.current.primary,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
@@ -137,7 +138,7 @@ class ClientHome extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: colorScheme.primary,
+                  color:  FlavorColors.current.primaryDark,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(

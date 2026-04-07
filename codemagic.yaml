@@ -1,0 +1,145 @@
+workflows:
+
+  # ── Komusoft (Android) ────────────────────────
+  komusoft-android:
+    name: Komusoft Android Release
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - android_signing
+        - komusoft_credentials
+    scripts:
+      - name: Set up local.properties
+        script: echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+
+      - name: Set up keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/android/app/release-keystore.jks
+          cat > $CM_BUILD_DIR/android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_BUILD_DIR/android/app/release-keystore.jks
+          EOF
+
+      - name: Get dependencies
+        script: flutter pub get
+
+      - name: Build APK
+        script: |
+          flutter build apk --release \
+            --flavor komusoft \
+            --dart-define=FLAVOR=komusoft \
+            --dart-define=APP_NAME="Business Manager" \
+            --dart-define=COMPANY_NAME="Komusoft Solutions" \
+            --dart-define=BOT_USERNAME="$BOT_USERNAME" \
+            --dart-define=BOT_PASSWORD="$BOT_PASSWORD"
+
+    artifacts:
+      - build/**/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - dev@komusoft.com
+        notify:
+          success: true
+          failure: true
+
+  # ── Sassy (Android) ──────────────────────────
+  sassy-android:
+    name: Sassy Android Release
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - android_signing
+        - sassy_credentials
+    scripts:
+      - name: Set up local.properties
+        script: echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+
+      - name: Set up keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/android/app/release-keystore.jks
+          cat > $CM_BUILD_DIR/android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_BUILD_DIR/android/app/release-keystore.jks
+          EOF
+
+      - name: Get dependencies
+        script: flutter pub get
+
+      - name: Build APK
+        script: |
+          flutter build apk --release \
+            --flavor sassy \
+            --dart-define=FLAVOR=sassy \
+            --dart-define=APP_NAME="Sassy Dry Cleaners" \
+            --dart-define=COMPANY_NAME="Sassy" \
+            --dart-define=BOT_USERNAME="$BOT_USERNAME" \
+            --dart-define=BOT_PASSWORD="$BOT_PASSWORD"
+
+    artifacts:
+      - build/**/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - dev@komusoft.com
+        notify:
+          success: true
+          failure: true
+
+  # ── Top Grade (Android) ──────────────────────
+  top-grade-android:
+    name: Top Grade Android Release
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      java: 17
+      groups:
+        - android_signing
+        - top_grade_credentials
+    scripts:
+      - name: Set up local.properties
+        script: echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+
+      - name: Set up keystore
+        script: |
+          echo $CM_KEYSTORE | base64 --decode > $CM_BUILD_DIR/android/app/release-keystore.jks
+          cat > $CM_BUILD_DIR/android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_BUILD_DIR/android/app/release-keystore.jks
+          EOF
+
+      - name: Get dependencies
+        script: flutter pub get
+
+      - name: Build APK
+        script: |
+          flutter build apk --release \
+            --flavor top_grade \
+            --dart-define=FLAVOR=top_grade \
+            --dart-define=APP_NAME="Top Grade" \
+            --dart-define=COMPANY_NAME="Top Grade" \
+            --dart-define=BOT_USERNAME="$BOT_USERNAME" \
+            --dart-define=BOT_PASSWORD="$BOT_PASSWORD"
+
+    artifacts:
+      - build/**/outputs/**/*.apk
+    publishing:
+      email:
+        recipients:
+          - dev@komusoft.com
+        notify:
+          success: true
+          failure: true

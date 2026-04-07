@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 import '../../back_pos/config.dart';
+import '../../flavors/flavor_colors.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../controllers/register_controller.dart';
 import 'account_pending_screen.dart';
@@ -26,9 +27,9 @@ class SetPasscode extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              colorScheme.primary,
-              colorScheme.secondary,
-              colorScheme.tertiary,
+              FlavorColors.current.primaryDark,
+              FlavorColors.current.secondary,
+              FlavorColors.current.primaryDark,
             ],
           ),
         ),
@@ -121,17 +122,22 @@ class SetPasscode extends StatelessWidget {
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.primary,
+                                backgroundColor:
+                                    FlavorColors.current.primaryDark,
+
                                 foregroundColor: colorScheme.onPrimary,
                                 elevation: 4,
-                                shadowColor: colorScheme.shadow.withValues(alpha: 0.5),
+                                shadowColor: colorScheme.shadow.withValues(
+                                  alpha: 0.5,
+                                ),
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 16,
                                 ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                                disabledBackgroundColor:
+                                    colorScheme.surfaceContainerHighest,
                               ),
                               onPressed: controller.isRegistering.value
                                   ? null
@@ -140,16 +146,18 @@ class SetPasscode extends StatelessWidget {
                                           .completeRegistration();
                                       if (success) {
                                         final email = controller
-                                            .emailController.text
+                                            .emailController
+                                            .text
                                             .trim();
                                         final box = GetStorage();
-                                        await box.write(
-                                            'pending_registration', {
-                                          'email': email,
-                                          'name': controller
-                                              .nameController.text
-                                              .trim(),
-                                        });
+                                        await box
+                                            .write('pending_registration', {
+                                              'email': email,
+                                              'name': controller
+                                                  .nameController
+                                                  .text
+                                                  .trim(),
+                                            });
                                         Get.offAll(
                                           () => AccountPendingScreen(
                                             email: email,
@@ -288,12 +296,19 @@ class SetPasscode extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.error_outline, color: colorScheme.onErrorContainer, size: 20),
+            Icon(
+              Icons.error_outline,
+              color: colorScheme.onErrorContainer,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 controller.errorMessage.value,
-                style: TextStyle(color: colorScheme.onErrorContainer, fontSize: 13),
+                style: TextStyle(
+                  color: colorScheme.onErrorContainer,
+                  fontSize: 13,
+                ),
               ),
             ),
           ],
@@ -301,5 +316,4 @@ class SetPasscode extends StatelessWidget {
       ),
     );
   }
-
 }

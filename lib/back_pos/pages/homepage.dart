@@ -10,6 +10,7 @@ import '../models/service_point.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../services/api_services.dart';
+import '../../flavors/flavor_colors.dart';
 import '../utils/network_helper.dart';
 
 class Homepage extends StatefulWidget {
@@ -30,7 +31,7 @@ class _HomepageState extends State<Homepage>
   final CustomerController _customerController =
       Get.find<CustomerController>();
   final AuthController authController = Get.find();
-  final PosApiService _apiService = PosApiService();
+  final PosApiService _apiService = Get.find<PosApiService>();
   String _companyName = '';
   bool _isRefreshing = false;
 
@@ -130,11 +131,12 @@ class _HomepageState extends State<Homepage>
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Failed to refresh some data',
+        'Failed to refresh some data $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade900,
       );
+      print(" error : $e");
     } finally {
       setState(() {
         _isRefreshing = false;
@@ -167,7 +169,7 @@ class _HomepageState extends State<Homepage>
     if (lowerType.contains('hardware'))
       return [Colors.orange.shade400, Colors.orange.shade700];
     if (lowerType.contains('shop'))
-      return [Colors.blue.shade400, Colors.blue.shade700];
+      return [FlavorColors.current.tertiary, FlavorColors.current.primaryDark];
     return [Colors.teal.shade400, Colors.teal.shade700];
   }
 
@@ -183,10 +185,10 @@ class _HomepageState extends State<Homepage>
         : 1;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: FlavorColors.current.background,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: FlavorColors.current.primaryDark,
         foregroundColor: Colors.white,
         centerTitle: true,
         title: Row(
@@ -198,13 +200,13 @@ class _HomepageState extends State<Homepage>
               ),
               child: const AppLogo(width: 40, height: 40),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             Text(
                 _companyName.isNotEmpty
                     ? "$_companyName "
                     : "${AppConfig.companyName} ",
 
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ],
         ),
@@ -220,8 +222,8 @@ class _HomepageState extends State<Homepage>
               ? const Padding(
                   padding: EdgeInsets.all(12.0),
                   child: SizedBox(
-                    width: 24,
-                    height: 24,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: Colors.white,
@@ -257,7 +259,7 @@ class _HomepageState extends State<Homepage>
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF151b50),
+                          color: FlavorColors.current.primaryDark,
                         ),
                       ),
                     ],
@@ -275,6 +277,8 @@ class _HomepageState extends State<Homepage>
                     }
 
                     final servicePoints = _servicePointController.servicePoints;
+
+                    print("service point controller : ${servicePoints.length}");
 
                     if (servicePoints.isEmpty) {
                       return Center(

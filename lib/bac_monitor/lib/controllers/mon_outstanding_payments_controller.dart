@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
@@ -6,11 +7,12 @@ import 'mon_dashboard_controller.dart';
 
 class MonOutstandingPaymentsController extends GetxController {
   final dbHelper = UnifiedDatabaseHelper.instance;
-  final MonDashboardController dashboardController = Get.find<MonDashboardController>();
+  final MonDashboardController dateController = Get.find<MonDashboardController>();
 
   // Observables for selected period
   var isLoading = false.obs;
   var hasError = false.obs;
+  var isInitialized = false.obs;
   var outstandingSelectedPeriod = '0'.obs;
   var outstandingSelectedPeriodTrend = '0%'.obs;
 
@@ -24,14 +26,39 @@ class MonOutstandingPaymentsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    fetchOutstandingPaymentsData();
-    // Listen to date range changes
-    ever(dashboardController.selectedRange, (_) => fetchOutstandingPaymentsData());
-    ever(dashboardController.customRange, (_) => fetchOutstandingPaymentsData());
+    // Don't fetch data here - let the UI trigger it when ready
+    debugPrint('MonOutstandingPaymentsController: onInit - NOT fetching data yet');
+    
+    // Set up listeners for date changes
+    ever(dateController.selectedRange, (_) {
+      if (isInitialized.value) {
+        fetchOutstandingPaymentsData();
+      }
+    });
+    ever(dateController.customRange, (_) {
+      if (isInitialized.value) {
+        fetchOutstandingPaymentsData();
+      }
+    });
+  }
+
+  /// Call this manually when the UI is ready
+  Future<void> initializeData() async {
+    if (isInitialized.value) {
+      debugPrint('MonOutstandingPaymentsController: Already initialized, skipping');
+      return;
+    }
+    
+    debugPrint('MonOutstandingPaymentsController: Performing first data fetch');
+    await fetchOutstandingPaymentsData();
+    isInitialized.value = true;
   }
 
   Future<void> fetchOutstandingPaymentsData() async {
     try {
+      // Always fetch data from local DB - date range specific data should be queried each time
+      // Do NOT skip based on SyncStateManager as date ranges change and need fresh data
+
       isLoading.value = true;
       hasError.value = false;
 
@@ -42,8 +69,8 @@ class MonOutstandingPaymentsController extends GetxController {
       late DateTime startDate, endDate;
       late DateTime prevStartDate, prevEndDate;
 
-      final range = dashboardController.selectedRange.value;
-      final customRange = dashboardController.customRange.value;
+      final range = dateController.selectedRange.value;
+      final customRange = dateController.customRange.value;
 
       switch (range) {
         case DateRange.today:
@@ -90,54 +117,58 @@ class MonOutstandingPaymentsController extends GetxController {
           break;
       }
 
-      // Convert to milliseconds for database query
-      final startMillis = startDate.millisecondsSinceEpoch;
-      final endMillis = endDate.millisecondsSinceEpoch;
-      final prevStartMillis = prevStartDate.millisecondsSinceEpoch;
-      final prevEndMillis = prevEndDate.millisecondsSinceEpoch;
+      // Format dates for KPI queries (yyyy-MM-dd)
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(startDate);
+      final endDateStr = dateFormatter.format(endDate);
+      final prevStartDateStr = dateFormatter.format(prevStartDate);
+      final prevEndDateStr = dateFormatter.format(prevEndDate);
 
       // Query for selected period outstanding payments
+      // Using kpiId=2 (pending payment / credit transactions)
+      // amount1 = amount paid, amount2 = amount supposed to be paid
+      // Outstanding = amount2 - amount1 (pending amount)
       const outstandingQuery = '''
-        SELECT SUM(balance) as total
-        FROM mon_sales
-        WHERE transactiondate BETWEEN ? AND ?
-        AND balance > 0
+        SELECT SUM(amount2 - amount1) as total
+        FROM mon_kpi_sales
+        WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?
       ''';
 
       final currentResult = await db.rawQuery(
         outstandingQuery,
-        [startMillis, endMillis],
+        [startDateStr, endDateStr],
       );
       final currentOutstanding = (currentResult.first['total'] as num? ?? 0.0).toDouble();
 
       // Query for previous period (for trend calculation)
       final prevResult = await db.rawQuery(
         outstandingQuery,
-        [prevStartMillis, prevEndMillis],
+        [prevStartDateStr, prevEndDateStr],
       );
       final prevOutstanding = (prevResult.first['total'] as num? ?? 0.0).toDouble();
 
       // Calculate MTD (always calculate regardless of selection)
       final mtdStartDate = DateTime(now.year, now.month, 1);
       final mtdEndDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
-      final mtdStartMillis = mtdStartDate.millisecondsSinceEpoch;
-      final mtdEndMillis = mtdEndDate.millisecondsSinceEpoch;
+      final mtdStartStr = dateFormatter.format(mtdStartDate);
+      final mtdEndStr = dateFormatter.format(mtdEndDate);
+
 
       final mtdResult = await db.rawQuery(
         outstandingQuery,
-        [mtdStartMillis, mtdEndMillis],
+        [mtdStartStr, mtdEndStr],
       );
       final mtdOutstanding = (mtdResult.first['total'] as num? ?? 0.0).toDouble();
 
       // Calculate YTD (always calculate regardless of selection)
       final ytdStartDate = DateTime(now.year, 1, 1);
       final ytdEndDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
-      final ytdStartMillis = ytdStartDate.millisecondsSinceEpoch;
-      final ytdEndMillis = ytdEndDate.millisecondsSinceEpoch;
+      final ytdStartStr = dateFormatter.format(ytdStartDate);
+      final ytdEndStr = dateFormatter.format(ytdEndDate);
 
       final ytdResult = await db.rawQuery(
         outstandingQuery,
-        [ytdStartMillis, ytdEndMillis],
+        [ytdStartStr, ytdEndStr],
       );
       final ytdOutstanding = (ytdResult.first['total'] as num? ?? 0.0).toDouble();
 

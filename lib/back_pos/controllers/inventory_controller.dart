@@ -6,7 +6,7 @@ import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class InventoryController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
-  final _apiService = PosApiService();
+  final _apiService = Get.find<PosApiService>();
 
   // Reactive list of inventory items
   var inventoryItems = <InventoryItem>[].obs;
@@ -139,7 +139,7 @@ class InventoryController extends GetxController {
     }
   }
 
-  // Get inventory count
+  // Get inventory count 
   Future<int> getInventoryCount() async {
     try {
       return await _dbHelper.getInventoryCount();

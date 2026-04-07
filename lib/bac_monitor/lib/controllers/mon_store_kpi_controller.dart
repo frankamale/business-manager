@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
@@ -27,13 +28,39 @@ class MonStoreKpiTrendController extends GetxController {
   var basketTrendDirection = TrendDirection.none.obs;
   var unit = "UGX".obs;
 
+  // Gym-specific KPIs
+  var totalWalkIns = "0".obs;
+  var dailySubs = "0".obs;
+  var monthlySubs = "0".obs;
+  var userRole = "".obs;
+
+  // Additional KPI modes for non-gym users
+  var cashSales = "0".obs;
+  var cashSalesTrend = "0%".obs;
+  var cashSalesTrendDirection = TrendDirection.none.obs;
+  var pendingPayments = "0".obs;
+  var pendingPaymentsTrend = "0%".obs;
+  var pendingPaymentsTrendDirection = TrendDirection.none.obs;
+
   @override
   void onInit() {
     super.onInit(); 
+    _loadUserRole();
     fetchKpiTrendData();
     ever(storesController.selectedStore, (_) => fetchKpiTrendData());
     ever(storesController.selectedDateRange, (_) => fetchKpiTrendData());
     ever(storesController.customDateRange, (_) => fetchKpiTrendData());
+  }
+
+  Future<void> loadUserRole() async {
+    const storage = FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    );
+    userRole.value = await storage.read(key: "user_role") ?? "";
+  }
+
+  Future<void> _loadUserRole() async {
+    await loadUserRole();
   }
 
   Future<void> fetchKpiTrendData() async {
@@ -98,42 +125,59 @@ class MonStoreKpiTrendController extends GetxController {
           break;
       }
 
-      final startMillis = startDate.millisecondsSinceEpoch;
-      final endMillis = endDate.millisecondsSinceEpoch;
-      final prevStartMillis = prevStartDate.millisecondsSinceEpoch;
-      final prevEndMillis = prevEndDate.millisecondsSinceEpoch;
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final startDateStr = dateFormatter.format(startDate);
+      final endDateStr = dateFormatter.format(endDate);
+      final prevStartDateStr = dateFormatter.format(prevStartDate);
+      final prevEndDateStr = dateFormatter.format(prevEndDate);
 
       final isAllStores = storesController.selectedStore.value!.id == Store.all.id;
       final storeName = storesController.selectedStore.value!.name;
 
-      // print('DEBUG: Selected store: ${storesController.selectedStore.value!.name}, isAllStores: $isAllStores, storeName: $storeName');
-      if (isAllStores) {
-        // print('DEBUG: Filtering disabled - querying all stores (no sourcefacility filter)');
-      } else {
-        // print('DEBUG: Filtering enabled - querying only for sourcefacility = "$storeName"');
-      }
-
+      // Using new KPI table (mon_kpi_sales) for aggregated data
+      // kpiId=0: all transactions - amount1 = transaction value
       final salesQuery = isAllStores
-          ? 'SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT SUM(amount) as total FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final transactionsQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT salesId) as count FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final activeStoresQuery = isAllStores
-          ? 'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE transactiondate BETWEEN ? AND ?'
-          : 'SELECT COUNT(DISTINCT sourcefacility) as active FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ?';
+          ? 'SELECT COUNT(DISTINCT selling_point) as active FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(DISTINCT selling_point) as active FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
       final basketQuery = isAllStores
-          ? 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM mon_sales WHERE transactiondate BETWEEN ? AND ? GROUP BY salesId)'
-          : 'SELECT AVG(total) FROM (SELECT SUM(amount) as total FROM mon_sales WHERE sourcefacility = ? AND transactiondate BETWEEN ? AND ? GROUP BY salesId)';
+          ? 'SELECT AVG(total) FROM (SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)'
+          : 'SELECT AVG(total) FROM (SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id = 0 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ? GROUP BY selling_point, processing_date, kpi)';
       const totalStoresQuery = 'SELECT COUNT(DISTINCT name) as total FROM mon_service_points';
-      const currencyQuery = 'SELECT currency FROM mon_sales LIMIT 1';
+      const currencyQuery = 'SELECT currency FROM mon_kpi_sales LIMIT 1';
+
+      // Cash sales = amount1 from kpi_id=1 (cash transactions) + amount1 from kpi_id=2 (partial payments on credit)
+      final cashSalesQuery = isAllStores
+          ? 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id IN (1, 2) AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount1) as total FROM mon_kpi_sales WHERE kpi_id IN (1, 2) AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+
+      // Pending payments queries (kpi_id = 2) - amount2 - amount1 = pending amount
+      final pendingPaymentsQuery = isAllStores
+          ? 'SELECT SUM(amount2 - amount1) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT SUM(amount2 - amount1) as total FROM mon_kpi_sales WHERE kpi_id = 2 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+
+      // Gym-specific subscription queries (using kpi_id = 4 for salesperson which includes subscriptions)
+      final subscriptionQuery = isAllStores
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+      final dailySubQuery = isAllStores
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
+      final monthlySubQuery = isAllStores
+          ? 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND processing_date BETWEEN ? AND ?'
+          : 'SELECT COUNT(*) as count FROM mon_kpi_sales WHERE kpi_id = 4 AND (selling_point = ? OR selling_point IS NULL) AND processing_date BETWEEN ? AND ?';
 
       final argsCurrent = isAllStores
-          ? [startMillis, endMillis]
-          : [storeName, startMillis, endMillis];
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
       final argsPrev = isAllStores
-          ? [prevStartMillis, prevEndMillis]
-          : [storeName, prevStartMillis, prevEndMillis];
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
 
       // print('DEBUG: Sales Query: $salesQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
       // print('DEBUG: Transactions Query: $transactionsQuery, Args Current: $argsCurrent, Args Prev: $argsPrev');
@@ -150,6 +194,42 @@ class MonStoreKpiTrendController extends GetxController {
       final prevBasketResult = await db.rawQuery(basketQuery, argsPrev);
       final totalStoresResult = await db.rawQuery(totalStoresQuery);
       final currencyResult = await db.rawQuery(currencyQuery);
+
+      // Execute cash sales queries
+      final currentCashSalesResult = await db.rawQuery(cashSalesQuery, argsCurrent);
+      final prevCashSalesResult = await db.rawQuery(cashSalesQuery, argsPrev);
+
+      // Execute pending payments queries
+      final currentPendingPaymentsResult = await db.rawQuery(pendingPaymentsQuery, argsCurrent);
+      final prevPendingPaymentsResult = await db.rawQuery(pendingPaymentsQuery, argsPrev);
+
+      // Execute gym-specific subscription queries
+      // Using kpi_id=4 for salesperson (gym subscriptions)
+      final argsCurrentWithCategory = isAllStores
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
+      final argsPrevWithCategory = isAllStores
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
+      final argsCurrentWithSubcategory = isAllStores
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
+      final argsPrevWithSubcategory = isAllStores
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
+      final argsCurrentMonthly = isAllStores
+          ? [startDateStr, endDateStr]
+          : [storeName, startDateStr, endDateStr];
+      final argsPrevMonthly = isAllStores
+          ? [prevStartDateStr, prevEndDateStr]
+          : [storeName, prevStartDateStr, prevEndDateStr];
+
+      final currentSubscriptionResult = await db.rawQuery(subscriptionQuery, argsCurrentWithCategory);
+      final prevSubscriptionResult = await db.rawQuery(subscriptionQuery, argsPrevWithCategory);
+      final currentDailySubResult = await db.rawQuery(dailySubQuery, argsCurrentWithSubcategory);
+      final prevDailySubResult = await db.rawQuery(dailySubQuery, argsPrevWithSubcategory);
+      final currentMonthlySubResult = await db.rawQuery(monthlySubQuery, argsCurrentMonthly);
+      final prevMonthlySubResult = await db.rawQuery(monthlySubQuery, argsPrevMonthly);
 
       // print('DEBUG: Current Sales Result: $currentSalesResult');
       // print('DEBUG: Prev Sales Result: $prevSalesResult');
@@ -182,6 +262,27 @@ class MonStoreKpiTrendController extends GetxController {
 
       unit.value = currency;
 
+      // Extract gym-specific subscription values
+      final currentSubscriptions = currentSubscriptionResult.first['count'] as int? ?? 0;
+      final prevSubscriptions = prevSubscriptionResult.first['count'] as int? ?? 0;
+      final currentDailySubs = currentDailySubResult.first['count'] as int? ?? 0;
+      final prevDailySubs = prevDailySubResult.first['count'] as int? ?? 0;
+      final currentMonthlySubs = currentMonthlySubResult.first['count'] as int? ?? 0;
+      final prevMonthlySubs = prevMonthlySubResult.first['count'] as int? ?? 0;
+
+      // Extract cash sales values
+      final currentCashSales = (currentCashSalesResult.first['total'] as num? ?? 0.0).toDouble();
+      final prevCashSales = (prevCashSalesResult.first['total'] as num? ?? 0.0).toDouble();
+
+      // Extract pending payments values
+      final currentPendingPayments = (currentPendingPaymentsResult.first['total'] as num? ?? 0.0).toDouble();
+      final prevPendingPayments = (prevPendingPaymentsResult.first['total'] as num? ?? 0.0).toDouble();
+
+      // Update gym-specific observables
+      totalWalkIns.value = currentSubscriptions.toString();
+      dailySubs.value = currentDailySubs.toString();
+      monthlySubs.value = currentMonthlySubs.toString();
+
       final compactFormatter = NumberFormat.compact();
       final fullNumberFormatter = NumberFormat('#,##0');
 
@@ -190,16 +291,24 @@ class MonStoreKpiTrendController extends GetxController {
       final transactionsTrendValue = (currentTransactions - prevTransactions) / (prevTransactions.abs() + epsilon);
       final storesTrendValue = (currentActiveStores - prevActiveStores) / (prevActiveStores.abs() + epsilon);
       final basketTrendValue = (currentBasket - prevBasket) / (prevBasket.abs() + epsilon);
+      final cashSalesTrendValue = (currentCashSales - prevCashSales) / (prevCashSales.abs() + epsilon);
+      final pendingPaymentsTrendValue = (currentPendingPayments - prevPendingPayments) / (prevPendingPayments.abs() + epsilon);
 
-      // Helper to format trend as percentage
+      // Gym-specific trend calculations
+      final walkInsTrendValue = (currentSubscriptions - prevSubscriptions) / (prevSubscriptions.abs() + epsilon);
+      final dailySubsTrendValue = (currentDailySubs - prevDailySubs) / (prevDailySubs.abs() + epsilon);
+      final monthlySubsTrendValue = (currentMonthlySubs - prevMonthlySubs) / (prevMonthlySubs.abs() + epsilon);
+
+      // Helper to format trend as percentage (cap at 100%)
       String formatTrendPercent(double value) {
         final percent = (value * 100).abs();
-        if (percent >= 100) {
-          return '${percent.toStringAsFixed(0)}%';
-        } else if (percent >= 10) {
-          return '${percent.toStringAsFixed(0)}%';
+        final cappedPercent = percent > 100 ? 100 : percent;
+        if (cappedPercent >= 100) {
+          return '${cappedPercent.toStringAsFixed(0)}%';
+        } else if (cappedPercent >= 10) {
+          return '${cappedPercent.toStringAsFixed(0)}%';
         } else {
-          return '${percent.toStringAsFixed(1)}%';
+          return '${cappedPercent.toStringAsFixed(1)}%';
         }
       }
 
@@ -227,6 +336,35 @@ class MonStoreKpiTrendController extends GetxController {
           ? TrendDirection.up
           : (basketTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
 
+      // Gym-specific KPI trends
+      final isGym = userRole.value.toLowerCase().contains('fg');
+      if (isGym) {
+        // For gym, use subscription counts
+        transactionsTrend.value = formatTrendPercent(walkInsTrendValue);
+        transactionsTrendDirection.value = walkInsTrendValue > 0.01
+            ? TrendDirection.up
+            : (walkInsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+        
+        basketTrend.value = formatTrendPercent(dailySubsTrendValue);
+        basketTrendDirection.value = dailySubsTrendValue > 0.01
+            ? TrendDirection.up
+            : (dailySubsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+      }
+
+      // Cash sales trends
+      cashSales.value = compactFormatter.format(currentCashSales);
+      cashSalesTrend.value = formatTrendPercent(cashSalesTrendValue);
+      cashSalesTrendDirection.value = cashSalesTrendValue > 0.01
+          ? TrendDirection.up
+          : (cashSalesTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+
+      // Pending payments trends
+      pendingPayments.value = compactFormatter.format(currentPendingPayments);
+      pendingPaymentsTrend.value = formatTrendPercent(pendingPaymentsTrendValue);
+      pendingPaymentsTrendDirection.value = pendingPaymentsTrendValue > 0.01
+          ? TrendDirection.up
+          : (pendingPaymentsTrendValue < -0.01 ? TrendDirection.down : TrendDirection.none);
+
       // print('DEBUG: Final KPI Values - Total Sales: ${totalSales.value}, Transactions: ${totalTransactions.value}, Active Stores: ${activeTotalStores.value}, Avg Basket: ${avgBasketSize.value}');
       // print('DEBUG: Trends - Sales: ${salesTrend.value}, Transactions: ${transactionsTrend.value}, Stores: ${storesTrend.value}, Basket: ${basketTrend.value}');
     } catch (e) {
@@ -236,6 +374,12 @@ class MonStoreKpiTrendController extends GetxController {
       totalTransactions.value = "-";
       activeTotalStores.value = "- / -";
       avgBasketSize.value = "-";
+      cashSales.value = "-";
+      cashSalesTrend.value = "0%";
+      cashSalesTrendDirection.value = TrendDirection.none;
+      pendingPayments.value = "-";
+      pendingPaymentsTrend.value = "0%";
+      pendingPaymentsTrendDirection.value = TrendDirection.none;
       salesTrend.value = "0%";
       transactionsTrend.value = "0%";
       storesTrend.value = "0%";

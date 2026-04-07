@@ -22,19 +22,20 @@ class CashierSalesChart extends StatelessWidget {
     Color(0xffA846A0),
   ];
 
-  /// Processes raw sales data to group totals by 'salesperson'.
+  /// Processes raw sales data to group totals by 'kpi' field (kpiId=4 for cashiers).
   List<CashierData> _processData() {
     final Map<String, double> salesByCashier = {};
 
     for (final sale in salesData) {
-      String cashierName = (sale['salesperson'] as String?)?.trim() ?? 'Unknown Cashier';
+      // Cashier name is in 'kpi' field, amount in 'amount1'
+      String cashierName = (sale['kpi'] as String?)?.trim() ?? 'Unknown Cashier';
 
       // Handle empty cashier names
       if (cashierName.isEmpty) {
         cashierName = 'Unknown Cashier';
       }
 
-      final amount = (sale['amount'] as num?)?.toDouble() ?? 0.0;
+      final amount = (sale['amount1'] as num?)?.toDouble() ?? 0.0;
 
       salesByCashier.update(
         cashierName,
@@ -57,6 +58,12 @@ class CashierSalesChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cardColor = AppColors.getCardColor(context);
+    final shadowColor = AppColors.getShadowLightColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+
     final processedData = _processData();
     final double totalSales = processedData.fold(
       0.0,
@@ -71,13 +78,13 @@ class CashierSalesChart extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: PrimaryColors.lightBlue.withOpacity(0.8),
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             "No cashier sales data available.",
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: textSecondary),
           ),
         ),
       );
@@ -88,8 +95,15 @@ class CashierSalesChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: PrimaryColors.lightBlue.withOpacity(0.8),
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,10 +116,10 @@ class CashierSalesChart extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "Summary by Cashier",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
@@ -115,7 +129,7 @@ class CashierSalesChart extends StatelessWidget {
                       Text(
                         periodLabel!,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: textSecondary.withOpacity(0.7),
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
                         ),
@@ -130,14 +144,14 @@ class CashierSalesChart extends StatelessWidget {
                   Text(
                     'Total',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: textSecondary.withOpacity(0.7),
                       fontSize: 11,
                     ),
                   ),
                   Text(
                     'UGX ${compactFormatter.format(totalSales)}',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -147,7 +161,7 @@ class CashierSalesChart extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Divider(color: Colors.white.withOpacity(0.2)),
+          Divider(color: borderColor),
           const SizedBox(height: 12),
 
           Column(
@@ -156,6 +170,7 @@ class CashierSalesChart extends StatelessWidget {
               final data = entry.value;
               final color = _barColors[index % _barColors.length];
               return _buildBarRow(
+                context: context,
                 name: data.cashierName,
                 value: data.totalAmount,
                 totalValue: totalSales,
@@ -170,12 +185,15 @@ class CashierSalesChart extends StatelessWidget {
   }
 
   Widget _buildBarRow({
+    required BuildContext context,
     required String name,
     required double value,
     required double totalValue,
     required double maxValue,
     required Color color,
   }) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final borderColor = AppColors.getBorderColor(context);
     final compactFormatter = NumberFormat.compact(locale: 'en_US');
     final formattedValue = compactFormatter.format(value);
     final percentage = totalValue > 0 ? (value / totalValue) * 100 : 0.0;
@@ -190,8 +208,8 @@ class CashierSalesChart extends StatelessWidget {
               Expanded(
                 child: Text(
                   name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -217,8 +235,8 @@ class CashierSalesChart extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 formattedValue,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -234,7 +252,7 @@ class CashierSalesChart extends StatelessWidget {
                   Container(
                     height: 10,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.2),
+                      color: borderColor.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),

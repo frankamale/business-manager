@@ -1,3 +1,4 @@
+import 'package:bac_pos/flavors/flavor_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -18,7 +19,7 @@ class ResetPasscode extends StatelessWidget {
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: const Text('Reset Passcode'),
-        backgroundColor: colorScheme.primary,
+        backgroundColor: FlavorColors.current.primary,
         foregroundColor: colorScheme.onPrimary,
         elevation: 0,
       ),
@@ -29,7 +30,7 @@ class ResetPasscode extends StatelessWidget {
             Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: colorScheme.primary,
+                color:  FlavorColors.current.primary,
                 borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
@@ -192,7 +193,7 @@ class ResetPasscode extends StatelessWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
+                          backgroundColor:  FlavorColors.current.primaryDark,
                           foregroundColor: colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(

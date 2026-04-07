@@ -203,7 +203,6 @@ class PrintService {
                       style: pw.TextStyle(fontSize: 12)),
                 ],
               ),
-              if (balance > 0) ...[
                 pw.SizedBox(height: 2),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -213,7 +212,7 @@ class PrintService {
                         style: pw.TextStyle(fontSize: 12)),
                   ],
                 ),
-              ],
+
               pw.SizedBox(height: 2),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

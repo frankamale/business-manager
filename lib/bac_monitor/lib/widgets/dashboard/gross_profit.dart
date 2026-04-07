@@ -1,148 +1,133 @@
-import '../../additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import '../../additions/colors.dart';
 class GrossProfitCard extends StatelessWidget {
   final double grossProfit;
-  final double totalSales;
-  final double cogs;
-  final double previousPeriodProfit;
-
+  final String trend; // Expected format: "+12.5%" or "-8.3%"
   const GrossProfitCard({
     super.key,
     required this.grossProfit,
-    required this.totalSales,
-    required this.cogs,
-    required this.previousPeriodProfit,
+    required this.trend,
   });
-
   @override
   Widget build(BuildContext context) {
-    final double changePercentage = previousPeriodProfit > 0
-        ? ((grossProfit - previousPeriodProfit) / previousPeriodProfit) * 100
-        : (grossProfit > 0 ? 100.0 : 0.0);
-
-    final double profitMargin = totalSales > 0 ? (grossProfit / totalSales) * 100 : 0.0;
-
-    final bool isPositiveChange = grossProfit >= previousPeriodProfit;
-    final compactFormatter = NumberFormat.compact(locale: 'en_US');
-
+    final compactFormatter = NumberFormat.compactCurrency(
+      decimalDigits: 0,
+      symbol: '', // Remove currency symbol if you just want number
+    );
+    
+    final cardColor = AppColors.getCardColor(context);
+    final borderColor = AppColors.getBorderColor(context);
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final secondaryColor = AppColors.getSecondaryColor(context);
+    final successColor = AppColors.getSuccessColor(context);
+    final errorColor = AppColors.getErrorColor(context);
+    final shadowColor = AppColors.getShadowColor(context);
+    
+    // Parse trend safely
+    final trendStr = trend.replaceAll('%', '').trim();
+    final trendValue = double.tryParse(trendStr) ?? 0.0;
+    final isPositive = trend.startsWith('+') || trendValue > 0;
+    final trendColor = isPositive ? successColor : errorColor;
+    
     return Container(
-      padding: const EdgeInsets.all(20.0),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            PrimaryColors.lightBlue.withOpacity(0.9),
-            PrimaryColors.darkBlue.withOpacity(0.7),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: cardColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: borderColor,
+          width: 1,
         ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Title
-          const Text(
-            'Gross Profit',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // 2. Hero Metric and Trend Indicator
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                compactFormatter.format(grossProfit),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 36,
-                ),
-              ),
-              const SizedBox(width: 12),
-              _buildTrendIndicator(isPositiveChange, changePercentage),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          Divider(color: Colors.white.withOpacity(0.2)),
-          const SizedBox(height: 12),
-
-          _buildDetailRow('Total Sales', compactFormatter.format(totalSales)),
-          const SizedBox(height: 8),
-          _buildDetailRow('Cost of Goods Sold (COGS)', compactFormatter.format(cogs)),
-
-          const SizedBox(height: 12),
-          Divider(color: Colors.white.withOpacity(0.2)),
-          const SizedBox(height: 12),
-
-          _buildDetailRow(
-              'Profit Margin',
-              '${profitMargin.toStringAsFixed(1)}%',
-              isHighlighted: true
+        boxShadow: [
+          BoxShadow(
+            color: shadowColor,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
-      ),
-    );
-  }
-
-  /// A helper widget for the trend indicator (e.g., +15.2%)
-  Widget _buildTrendIndicator(bool isPositive, double percentage) {
-    final Color trendColor = isPositive ? Colors.greenAccent[400]! : Colors.redAccent[400]!;
-    final IconData trendIcon = isPositive ? Icons.arrow_upward : Icons.arrow_downward;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: trendColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(trendIcon, color: trendColor, size: 16),
-          const SizedBox(width: 4),
-          Text(
-            '${percentage.toStringAsFixed(1)}%',
-            style: TextStyle(
-              color: trendColor,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+          // Icon Container
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: secondaryColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(
+              Icons.trending_up_rounded,
+              color: secondaryColor,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Main Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Gross Profit',
+                  style: TextStyle(
+                    color: textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  compactFormatter.format(grossProfit),
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Trend Section
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isPositive
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
+                    color: trendColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    '${trendValue.abs().toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      color: trendColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'vs last period',
+                style: TextStyle(
+                  color: textSecondary.withOpacity(0.6),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ],
       ),
-    );
-  }
-
-  /// A helper widget to create consistent rows for the breakdown.
-  Widget _buildDetailRow(String label, String value, {bool isHighlighted = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
-            fontSize: 14,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: isHighlighted ? Colors.cyanAccent[100] : Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: isHighlighted ? 16 : 14,
-          ),
-        ),
-      ],
     );
   }
 }

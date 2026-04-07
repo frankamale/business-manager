@@ -5,7 +5,7 @@ import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 
 class CustomerController extends GetxController {
-  final _apiService = PosApiService();
+  final _apiService = Get.find<PosApiService>();
   final _dbHelper = UnifiedDatabaseHelper.instance;
 
   // Reactive list of customers
@@ -17,7 +17,7 @@ class CustomerController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Don't load on init - will be handled by splash screen
+
   }
 
   // Load customers from cache (database)
@@ -36,6 +36,7 @@ class CustomerController extends GetxController {
       isLoadingCustomers.value = true;
 
       final fetchedCustomers = await _apiService.fetchCustomers();
+      print("Fth ustomrs");
 
       // Save to database
       await _dbHelper.deleteAllCustomers();

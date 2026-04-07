@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../additions/colors.dart';
 
 class MoreListItem extends StatelessWidget {
   final String title;
@@ -18,17 +19,17 @@ class MoreListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: color ?? Colors.white70, size: 24),
+      leading: Icon(icon, color: color ?? AppColors.getTextSecondaryColor(context), size: 24),
       title: Text(
         title,
         style: TextStyle(
-          color: color ?? Colors.white,
+          color: color ?? AppColors.getTextPrimaryColor(context),
           fontSize: 16,
           fontWeight: FontWeight.w500,
         ),
       ),
       trailing: color == null
-          ? const Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 16)
+          ? Icon(Icons.arrow_forward_ios, color: AppColors.getTextHintColor(context), size: 16)
           : null,
     );
   }

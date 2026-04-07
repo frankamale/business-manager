@@ -8,6 +8,7 @@ import '../controllers/auth_controller.dart';
 import '../services/print_service.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
+import '../../flavors/flavor_colors.dart';
 
 class PaymentScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -225,7 +226,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        backgroundColor: Colors.blue,
+        backgroundColor: FlavorColors.current.primary,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SafeArea(
@@ -304,21 +305,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: Colors.blue[300]!,
+                            color: FlavorColors.current.light,
                             width: 2,
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: Colors.blue[200]!,
+                            color: FlavorColors.current.light,
                             width: 2,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(
-                            color: Colors.blue,
+                          borderSide: BorderSide(
+                            color: FlavorColors.current.primary,
                             width: 2,
                           ),
                         ),

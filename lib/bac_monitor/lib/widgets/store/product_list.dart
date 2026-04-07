@@ -12,12 +12,12 @@ class TopProductsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.symmetric(vertical: 40.0),
           child: Text(
             'No top selling products found for this period.',
-            style: TextStyle(color: Colors.white54, fontSize: 16),
+            style: TextStyle(color: AppColors.getTextDisabledColor(context), fontSize: 16),
           ),
         ),
       );
@@ -38,7 +38,7 @@ class TopProductsList extends StatelessWidget {
 
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4.0),
-          color: PrimaryColors.lightBlue,
+          color: AppColors.getCardColor(context),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -49,12 +49,12 @@ class TopProductsList extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(30),
-                    color: PrimaryColors.darkBlue,
+                    color: AppColors.getSurfaceColor(context),
                   ),
                   child: Text(
                     '#${product.rank}',
-                    style: const TextStyle(
-                      color: PrimaryColors.brightYellow,
+                    style: TextStyle(
+                      color: AppColors.getAccentColor(context),
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -76,12 +76,12 @@ class TopProductsList extends StatelessWidget {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: AppColors.getSurfaceColor(context),
                             borderRadius: BorderRadius.circular(8.0),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.image_not_supported_outlined,
-                            color: Colors.white38,
+                            color: AppColors.getTextHintColor(context),
                           ),
                         );
                       },
@@ -92,12 +92,12 @@ class TopProductsList extends StatelessWidget {
                     width: 50,
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
+                      color: AppColors.getSurfaceColor(context),
                       borderRadius: BorderRadius.circular(8.0),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.inventory_2_outlined,
-                      color: Colors.white38,
+                      color: AppColors.getTextHintColor(context),
                     ),
                   ),
                 const SizedBox(width: 16),
@@ -107,10 +107,10 @@ class TopProductsList extends StatelessWidget {
                     children: [
                       Text(
                         product.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Colors.white,
+                          color: AppColors.getTextPrimaryColor(context),
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -118,8 +118,8 @@ class TopProductsList extends StatelessWidget {
                       const SizedBox(height: 5),
                       Text(
                         '${numberFormatter.format(product.unitsSold)} units • UGX ${numberFormatter.format(product.revenue)}',
-                        style: const TextStyle(
-                          color: Colors.white60,
+                        style: TextStyle(
+                          color: AppColors.getTextSecondaryColor(context),
                           fontSize: 13,
                         ),
                       ),

@@ -12,6 +12,7 @@ class FlavorColorPalette {
   final Color icon;
   final Color onPrimary;
   final Color background;
+  final Color? primaryPlus;
 
   const FlavorColorPalette({
     required this.primary,
@@ -23,6 +24,7 @@ class FlavorColorPalette {
     required this.icon,
     required this.onPrimary,
     required this.background,
+    this.primaryPlus,
   });
 
   /// Gradient for full-page backgrounds (top to bottom)
@@ -48,6 +50,7 @@ class Palettes {
     icon: Color(0xFF0D47A1),
     onPrimary: Colors.white,
     background: Color(0xFFF9FAFB),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const darkBlue = FlavorColorPalette(
@@ -60,6 +63,7 @@ class Palettes {
     icon: Color(0xFF002171),
     onPrimary: Colors.white,
     background: Color(0xFFF5F7FA),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const green = FlavorColorPalette(
@@ -71,7 +75,8 @@ class Palettes {
     surface: Color(0xFFE8F5E9),
     icon: Color(0xFF1B5E20),
     onPrimary: Colors.white,
-    background: Color(0xFFF9FAFB),
+    background: Color(0xFFF9FAFB), 
+    primaryPlus: Color(0xFFBC0000),
   );
 
   static const darkGreen = FlavorColorPalette(
@@ -84,6 +89,7 @@ class Palettes {
     icon: Color(0xFF003300),
     onPrimary: Colors.white,
     background: Color(0xFFF5F7F5),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const red = FlavorColorPalette(
@@ -96,6 +102,7 @@ class Palettes {
     icon: Color(0xFFB71C1C),
     onPrimary: Colors.white,
     background: Color(0xFFFAF9F9),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const yellow = FlavorColorPalette(
@@ -108,6 +115,7 @@ class Palettes {
     icon: Color(0xFFF57F17),
     onPrimary: Color(0xFF212121),
     background: Color(0xFFFFFDF5),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const orange = FlavorColorPalette(
@@ -120,6 +128,7 @@ class Palettes {
     icon: Color(0xFFE65100),
     onPrimary: Colors.white,
     background: Color(0xFFFFFAF5),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const purple = FlavorColorPalette(
@@ -132,6 +141,7 @@ class Palettes {
     icon: Color(0xFF4A148C),
     onPrimary: Colors.white,
     background: Color(0xFFF5F5F5),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const grey = FlavorColorPalette(
@@ -144,6 +154,7 @@ class Palettes {
     icon: Color(0xFF263238),
     onPrimary: Colors.white,
     background: Color(0xFFFAFAFA),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const black = FlavorColorPalette(
@@ -156,6 +167,7 @@ class Palettes {
     icon: Color(0xFF000000),
     onPrimary: Colors.white,
     background: Color(0xFFFAFAFA),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const teal = FlavorColorPalette(
@@ -168,6 +180,7 @@ class Palettes {
     icon: Color(0xFF004D40),
     onPrimary: Colors.white,
     background: Color(0xFFF5FAFA),
+    primaryPlus: Color(0xFF222222),
   );
 
   static const pink = FlavorColorPalette(
@@ -180,19 +193,30 @@ class Palettes {
     icon: Color(0xFF880E4F),
     onPrimary: Colors.white,
     background: Color(0xFFFFF5F7),
+    primaryPlus: Color(0xFF222222),
   );
   static const white = FlavorColorPalette(
-    primary: Color(0xFFFFFFFF),       // Pure white
-    primaryDark: Color(0xFFF5F5F5),   // Slight grey for contrast
-    secondary: Color(0xFFE0E0E0),     // Light grey accents
-    tertiary: Color(0xFFBDBDBD),      // Medium grey for depth
-    light: Color(0xFFFFFFFF),         // Still white
+    primary: Color(0xFFFFFFFF),
+    // Pure white
+    primaryDark: Color(0xFFF5F5F5),
+    // Slight grey for contrast
+    secondary: Color(0xFFE0E0E0),
+    // Light grey accents
+    tertiary: Color(0xFFBDBDBD),
+    // Medium grey for depth
+    light: Color(0xFFFFFFFF),
 
-    surface: Color(0xFFF9F9F9),       // Soft surface white
-    icon: Color(0xFF212121),          // Dark icons for visibility
+    // Still white
+    surface: Color(0xFFF9F9F9),
+    // Soft surface white
+    icon: Color(0xFF212121),
 
-    onPrimary: Color(0xFF212121),     // Dark text on white
-    background: Color(0xFFFFFFFF),    // Full white background
+    // Dark icons for visibility
+    onPrimary: Color(0xFF212121),
+    // Dark text on white
+    background: Color(0xFFFFFFFF),
+    // Full white background
+    primaryPlus: Color(0xFF222222),
   );
 
   /// All available palettes by name
@@ -209,6 +233,7 @@ class Palettes {
     'black': black,
     'teal': teal,
     'pink': pink,
+    'white': white,
   };
 
   /// Get a palette by name, defaults to blue
@@ -216,7 +241,6 @@ class Palettes {
     return all[name] ?? blue;
   }
 }
-
 
 class FlavorColors {
   FlavorColors._();
@@ -226,6 +250,8 @@ class FlavorColors {
     'komusoft': Palettes.blue,
     'sassy': Palettes.purple,
     'top_grade': Palettes.orange,
+    'mega': Palettes.green,
+    'bac': Palettes.black,
   };
 
   /// Get the color palette for the current flavor/company
@@ -247,8 +273,8 @@ class FlavorColors {
 
   /// Get palette with runtime overrides taking priority
   static FlavorColorPalette getForCompany(String companyName) {
-    return _runtimePalettes[companyName]
-        ?? _companyPalettes[companyName]
-        ?? Palettes.blue;
+    return _runtimePalettes[companyName] ??
+        _companyPalettes[companyName] ??
+        Palettes.blue;
   }
 }

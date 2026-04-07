@@ -15,7 +15,7 @@ android {
         create("komusoft") {
             dimension = "company"
             applicationId = "com.komusoft.businessmanager"
-            resValue("string", "app_name", "Business Manager")
+            resValue("string", "app_name", "Komusoft Solns")
         }
         create("sassy") {
             dimension = "company"
@@ -26,6 +26,26 @@ android {
             dimension = "company"
             applicationId = "com.nvuma.businessmanager"
             resValue("string", "app_name", "Top Grade")
+        }
+     create("mega") {
+            dimension = "company"
+            applicationId = "com.mega.businessmanager"
+            resValue("string", "app_name", "Standard Supermarket")
+        }
+        create("fitzone") {
+            dimension = "company"
+            applicationId = "com.fitzone.businessmanager"
+            resValue("string", "app_name", "Fitzone Gym")
+        }
+        create("wise_farmer") {
+            dimension = "company"
+            applicationId = "com.wise_farmer.businessmanager"
+            resValue("string", "app_name", "Wize Farmer")
+        }
+        create("bac") {
+            dimension = "company"
+            applicationId = "com.bac.businessmanager"
+            resValue("string", "app_name", "BAC manager")
         }
     }
 

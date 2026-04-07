@@ -23,15 +23,11 @@ class ItemDetailsDialog extends StatelessWidget {
       child: Container(
         width: MediaQuery.of(context).size.width,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [PrimaryColors.lightBlue, PrimaryColors.darkBlue],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppColors.getCardColor(context),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: AppColors.getShadowColor(context),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -44,25 +40,25 @@ class ItemDetailsDialog extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header Section
-                _buildHeaderSection(),
+                _buildHeaderSection(context),
                 const SizedBox(height: 24),
 
                 // Product Info Section
-                _buildSectionHeader('Product Information', Icons.info_outline),
+                _buildSectionHeader(context, 'Product Information', Icons.info_outline),
                 const SizedBox(height: 16),
-                _buildProductInfoSection(),
+                _buildProductInfoSection(context),
                 const SizedBox(height: 24),
 
                 // Pricing Section
-                _buildSectionHeader('Pricing Details', Icons.attach_money),
+                _buildSectionHeader(context, 'Pricing Details', Icons.attach_money),
                 const SizedBox(height: 16),
-                _buildPricingSection(),
+                _buildPricingSection(context),
                 const SizedBox(height: 24),
 
                 // Stock Details Section
-                _buildSectionHeader('Stock Details', Icons.inventory),
+                _buildSectionHeader(context, 'Stock Details', Icons.inventory),
                 const SizedBox(height: 16),
-                _buildStockSection(),
+                _buildStockSection(context),
                 const SizedBox(height: 24),
               ],
             ),
@@ -72,7 +68,7 @@ class ItemDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(BuildContext context) {
     return Row(
       children: [
         Container(
@@ -82,7 +78,7 @@ class ItemDetailsDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: AppColors.getShadowLightColor(context),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -95,9 +91,9 @@ class ItemDetailsDialog extends StatelessWidget {
                     item.imageUrl!,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) =>
-                        _buildFallbackImage(),
+                        _buildFallbackImage(context),
                   )
-                : _buildFallbackImage(),
+                : _buildFallbackImage(context),
           ),
         ),
         const SizedBox(width: 16),
@@ -107,8 +103,8 @@ class ItemDetailsDialog extends StatelessWidget {
             children: [
               Text(
                 item.name,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppColors.getTextPrimaryColor(context),
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -119,8 +115,8 @@ class ItemDetailsDialog extends StatelessWidget {
               Wrap(
                 spacing: 8,
                 children: [
-                  _buildBadge(item.category, PrimaryColors.brightYellow),
-                  _buildBadge('SKU: ${item.sku}', PrimaryColors.greenBlue),
+                  _buildBadge(context, item.category, AppColors.getAccentColor(context)),
+                  _buildBadge(context, 'SKU: ${item.sku}', AppColors.getSecondaryColor(context)),
                 ],
               ),
             ],
@@ -130,15 +126,15 @@ class ItemDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
     return Row(
       children: [
-        Icon(icon, color: PrimaryColors.brightYellow, size: 20),
+        Icon(icon, color: AppColors.getAccentColor(context), size: 20),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: AppColors.getTextPrimaryColor(context),
             fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
@@ -147,20 +143,21 @@ class ItemDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildProductInfoSection() {
+  Widget _buildProductInfoSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: AppColors.getSurfaceColor(context),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          _buildInfoRow('Category', item.category, Icons.category),
+          _buildInfoRow(context, 'Category', item.category, Icons.category),
           Wrap(
             children: [
-              _buildInfoRow('Supplier', item.servicePoint, Icons.business),
+              _buildInfoRow(context, 'Supplier', item.servicePoint, Icons.business),
               _buildInfoRow(
+                context,
                 'Last Updated',
                 DateFormat('dd/MM/yyyy').format(item.lastUpdated),
                 Icons.update,
@@ -168,27 +165,29 @@ class ItemDetailsDialog extends StatelessWidget {
             ],
           ),
           if (item.expiryDate != null && item.expiryDate!.isNotEmpty)
-            _buildInfoRow('Expiry Date', item.expiryDate!, Icons.date_range),
+            _buildInfoRow(context, 'Expiry Date', item.expiryDate!, Icons.date_range),
         ],
       ),
     );
   }
 
-  Widget _buildPricingSection() {
+  Widget _buildPricingSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: AppColors.getSurfaceColor(context),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Wrap(
         children: [
           _buildInfoRow(
+            context,
             'Cost Price',
             currencyFormatter.format(item.costPrice),
             Icons.trending_down,
           ),
           _buildInfoRow(
+            context,
             'Selling Price',
             currencyFormatter.format(item.sellingPrice),
             Icons.trending_up,
@@ -198,14 +197,14 @@ class ItemDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildStockSection() {
+  Widget _buildStockSection(BuildContext context) {
     final bool isLowStock = item.isLowStock;
     final bool isOverstocked = item.quantityOnHand > 100;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: AppColors.getSurfaceColor(context),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Wrap(
@@ -214,6 +213,7 @@ class ItemDetailsDialog extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildInfoRow(
+                  context,
                   'Quantity on Hand',
                   item.quantityOnHand.toString(),
                   Icons.inventory_2,
@@ -223,10 +223,10 @@ class ItemDetailsDialog extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: isLowStock
-                      ? Colors.red.withOpacity(0.2)
+                      ? AppColors.getErrorColor(context).withOpacity(0.2)
                       : isOverstocked
-                      ? Colors.green.withOpacity(0.2)
-                      : Colors.yellow.withOpacity(0.2),
+                      ? AppColors.getSuccessColor(context).withOpacity(0.2)
+                      : AppColors.getWarningColor(context).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -237,10 +237,10 @@ class ItemDetailsDialog extends StatelessWidget {
                       : 'Normal',
                   style: TextStyle(
                     color: isLowStock
-                        ? Colors.red
+                        ? AppColors.getErrorColor(context)
                         : isOverstocked
-                        ? Colors.green
-                        : Colors.yellow,
+                        ? AppColors.getSuccessColor(context)
+                        : AppColors.getWarningColor(context),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -249,6 +249,7 @@ class ItemDetailsDialog extends StatelessWidget {
             ],
           ),
           _buildInfoRow(
+            context,
             'Reorder Level',
             item.reorderLevel.toString(),
             Icons.warning,
@@ -258,12 +259,12 @@ class ItemDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, IconData icon) {
+  Widget _buildInfoRow(BuildContext context, String label, String value, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          Icon(icon, color: PrimaryColors.brightYellow, size: 20),
+          Icon(icon, color: AppColors.getAccentColor(context), size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -271,16 +272,16 @@ class ItemDetailsDialog extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: AppColors.getTextSecondaryColor(context),
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppColors.getTextPrimaryColor(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -295,7 +296,7 @@ class ItemDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildBadge(String text, Color color) {
+  Widget _buildBadge(BuildContext context, String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -316,13 +317,13 @@ class ItemDetailsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildFallbackImage() {
+  Widget _buildFallbackImage(BuildContext context) {
     return Container(
-      color: Colors.grey.shade700,
-      child: const Icon(
+      color: AppColors.getSurfaceColor(context),
+      child: Icon(
         Icons.image_not_supported_outlined,
         size: 20,
-        color: Colors.grey,
+        color: AppColors.getTextSecondaryColor(context),
       ),
     );
   }

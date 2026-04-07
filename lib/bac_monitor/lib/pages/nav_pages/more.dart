@@ -1,6 +1,11 @@
+import 'dart:io';
+
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:path/path.dart' as path;
+import 'package:sqflite/sqflite.dart';
 
 import '../../additions/colors.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
@@ -9,6 +14,8 @@ import '../../controllers/mon_salestrends_controller.dart';
 import '../../controllers/mon_sync_controller.dart';
 import '../../controllers/profile_controller.dart';
 import '../../services/api_services.dart';
+import '../../services/kpi_sync_service.dart';
+import '../../../../shared/database/unified_db_helper.dart';
 import '../../widgets/more/more_data.dart';
 import '../../widgets/more/profile_page.dart';
 import '../../widgets/more/section_header.dart';
@@ -29,21 +36,24 @@ class _MoreState extends State<More> {
     Get.lazyPut(() => MonSyncController());
 
     return Scaffold(
-      backgroundColor: PrimaryColors.darkBlue,
+      backgroundColor: AppColors.getBackgroundColor(context),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'More',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.getTextPrimaryColor(context),
+          ),
         ),
-        backgroundColor: PrimaryColors.darkBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.getCardColor(context),
+        foregroundColor: AppColors.getTextPrimaryColor(context),
         elevation: 0,
       ),
       body: Obx(() {
         if (_profileController.isLoading.value) {
-          return const Center(
+          return Center(
             child: CircularProgressIndicator(
-              color: PrimaryColors.brightYellow,
+              color: AppColors.getAccentColor(context),
             ),
           );
         }
@@ -58,7 +68,10 @@ class _MoreState extends State<More> {
               avatarInitial: _profileController.userInitial,
             ),
 
-            const SectionHeader(title: "ACCOUNT"),
+            SectionHeader(
+              title: "ACCOUNT",
+              textColor: AppColors.getTextSecondaryColor(context),
+            ),
 
             MoreListItem(
               title: "Profile & Settings",
@@ -80,13 +93,17 @@ class _MoreState extends State<More> {
               onTap: () => _showReloadDataDialog(context),
             ),
 
-            const Divider(color: Colors.white12, indent: 16, endIndent: 16),
+            Divider(
+              color: AppColors.getBorderColor(context),
+              indent: 16,
+              endIndent: 16,
+            ),
             const SizedBox(height: 8),
 
             MoreListItem(
               title: "Log Out",
               icon: Icons.logout,
-              color: Colors.red.shade400,
+              color: AppColors.getErrorColor(context),
               onTap: () => _showLogoutDialog(context),
             ),
 
@@ -97,39 +114,39 @@ class _MoreState extends State<More> {
     );
   }
 
-  // -------------------- RELOAD DATA --------------------
 
   void _showReloadDataDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: PrimaryColors.lightBlue,
-        title: const Text(
+        backgroundColor: AppColors.getCardColor(context),
+        title: Text(
           'Reload All Data?',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.getTextPrimaryColor(context)),
         ),
-        content: const Text(
+        content: Text(
           'This will sync everything with the server. This can take a moment. Are you sure?',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
             ),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: PrimaryColors.brightYellow,
-              foregroundColor: PrimaryColors.darkBlue,
+              backgroundColor: AppColors.getAccentColor(context),
+              foregroundColor: AppColors.getTextPrimaryColor(context),
             ),
             onPressed: () {
               Navigator.of(context).pop();
               _performFullReload(context);
             },
-            child: const Text('Reload'),
+            child: const  Text('Reload')
+
           ),
         ],
       ),
@@ -138,11 +155,55 @@ class _MoreState extends State<More> {
 
   Future<void> _performFullReload(BuildContext context) async {
     Get.dialog(
-      const PopScope(
+      PopScope(
         canPop: false,
         child: Center(
-          child: CircularProgressIndicator(
-            color: PrimaryColors.brightYellow,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            decoration: BoxDecoration(
+              color: AppColors.getCardColor(context),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AppColors.getAccentColor(context),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Fetching Data',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.getTextPrimaryColor(context),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Optional subtle progress hint (fake or real)
+                LinearProgressIndicator(
+                  minHeight: 4,
+                  borderRadius: BorderRadius.circular(10),
+                  backgroundColor: AppColors.getTextSecondaryColor(
+                    context,
+                  ).withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation(
+                    AppColors.getAccentColor(context),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -151,8 +212,72 @@ class _MoreState extends State<More> {
 
     try {
       final apiService = Get.find<MonitorApiService>();
-      await apiService.fetchAndCacheAllData(force: true);
+      final dbHelper = UnifiedDatabaseHelper.instance;
 
+      // Close and delete the database
+      await dbHelper.close();
+
+      // Delete the database file
+      final dbPath = await getDatabasesPath();
+      final companyId = await apiService.getStoredCompanyId();
+      if (companyId != null && companyId.isNotEmpty) {
+        final dbFile = '$dbPath/unified_db_company_$companyId.db';
+        final file = File(dbFile);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+
+      // Reopen the database
+      if (companyId != null && companyId.isNotEmpty) {
+        await dbHelper.openForCompany(companyId);
+      }
+
+      // Fetch baseline data (service points, inventory, company details)
+      final kpiSyncService = Get.find<KpiSyncService>();
+      final baselineResult = await kpiSyncService.fetchBaselineDatasets();
+
+      // Store baseline data
+      if (baselineResult.servicePoints.isNotEmpty) {
+        final servicePoints = baselineResult.servicePoints
+            .map((e) {
+              final sp = Map<String, dynamic>.from(e as Map);
+              return {
+                'id': sp['id'],
+                'name': sp['name'],
+                'code': sp['code'],
+                'fullName': sp['fullName'] ?? sp['name'] ?? '',
+                'servicepointtype': sp['servicepointtype'] ?? '',
+                'facilityName': sp['facilityName'] ?? '',
+                'sales': (sp['sales'] == true || sp['sales'] == 1) ? 1 : 0,
+                'stores': (sp['stores'] == true || sp['stores'] == 1) ? 1 : 0,
+                'production': (sp['production'] == true || sp['production'] == 1) ? 1 : 0,
+                'booking': (sp['booking'] == true || sp['booking'] == 1) ? 1 : 0,
+              };
+            })
+            .toList();
+        await dbHelper.insertServicePoints(servicePoints);
+      }
+      if (baselineResult.companyDetails.isNotEmpty) {
+        await dbHelper.insertCompanyDetails(baselineResult.companyDetails);
+      }
+      if (baselineResult.inventory.isNotEmpty) {
+        final inventory = baselineResult.inventory
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        await dbHelper.insertMonInventoryItems(inventory);
+      }
+
+      // Clear ALL existing KPI data before full reload (user explicitly requested this)
+      await dbHelper.deleteAllKpiSales();
+      debugPrint("More: Cleared all existing KPI data for fresh sync");
+
+      // Fetch 3 years of KPI data
+      final now = DateTime.now();
+      final threeYearsAgo = DateTime(now.year - 3, now.month, now.day);
+      await apiService.syncAllKpiData(threeYearsAgo, now);
+
+      // Refresh all controllers with the new data from DB
       if (Get.isRegistered<MonKpiOverviewController>()) {
         await Get.find<MonKpiOverviewController>().fetchKpiData();
       }
@@ -167,10 +292,10 @@ class _MoreState extends State<More> {
 
       Get.snackbar(
         "Success",
-        "All data has been reloaded from the server.",
+        "All data has been reloaded from the server (3 years).",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
+        backgroundColor: AppColors.getSuccessColor(context),
+        colorText: LightColors.card,
       );
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
@@ -179,37 +304,36 @@ class _MoreState extends State<More> {
         "Error",
         "Failed to reload data.\n${e.toString()}",
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
+        backgroundColor: AppColors.getErrorColor(context),
+        colorText: LightColors.card,
       );
     }
   }
-
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: PrimaryColors.lightBlue,
-        title: const Text(
+        backgroundColor: AppColors.getCardColor(context),
+        title: Text(
           'Confirm Log Out',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: AppColors.getTextPrimaryColor(context)),
         ),
-        content: const Text(
+        content: Text(
           'Are you sure you want to log out?',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
             ),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red.shade400,
+              backgroundColor: AppColors.getErrorColor(context),
             ),
             onPressed: () async {
               final apiService = Get.find<MonitorApiService>();
