@@ -38,14 +38,15 @@ class _MoreState extends State<More> {
     return Scaffold(
       backgroundColor: AppColors.getBackgroundColor(context),
       appBar: AppBar(
+
         title: Text(
           'More',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: AppColors.getTextPrimaryColor(context),
+            color: AppColors.getTextPrimary(context),
           ),
         ),
-        backgroundColor: AppColors.getCardColor(context),
+        backgroundColor: AppColors.getHeaderColor(context),
         foregroundColor: AppColors.getTextPrimaryColor(context),
         elevation: 0,
       ),
