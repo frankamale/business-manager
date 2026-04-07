@@ -13,8 +13,10 @@ class SalesTrendsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MonSalesTrendsController controller = Get.find<MonSalesTrendsController>();
-    final MonDashboardController dateController = Get.find<MonDashboardController>();
+    final MonSalesTrendsController controller =
+        Get.find<MonSalesTrendsController>();
+    final MonDashboardController dateController =
+        Get.find<MonDashboardController>();
 
     return Container(
       color: AppColors.getBackgroundColor(context),
@@ -53,11 +55,8 @@ class SalesTrendsSection extends StatelessWidget {
               height: 300,
               decoration: BoxDecoration(
                 color: AppColors.getCardColor(context),
-                  borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.getBorderColor(context)
-                )
-               
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.getBorderColor(context)),
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 16, 16, 16),
@@ -70,8 +69,8 @@ class SalesTrendsSection extends StatelessWidget {
               ),
             );
           }),
-          SizedBox(height: 8,),
-          buildTopStoresCard(context, controller),
+          // SizedBox(height: 8,),
+          // buildTopStoresCard(context, controller),
         ],
       ),
     );
