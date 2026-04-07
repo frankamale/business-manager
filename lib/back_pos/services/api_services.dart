@@ -521,6 +521,30 @@ class PosApiService extends GetxService {
     }
   }
 
+  /// Create adhoc payment (expense)
+  Future<Map<String, dynamic>> createAdhocPayment(
+    Map<String, dynamic> paymentData,
+  ) async {
+    try {
+      final request = http.Request('POST', Uri.parse("$baseurl/payment/adhoc"));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode(paymentData);
+
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        throw Exception(
+          "Failed to create adhoc payment: ${response.statusCode} - ${response.body}",
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Change password for the currently logged in user
   Future<Map<String, dynamic>> changePassword({
     required String userId,

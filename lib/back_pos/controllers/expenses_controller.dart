@@ -2,10 +2,12 @@ import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
+import 'package:bac_pos/back_pos/services/api_services.dart';
 
 class ExpensesController extends GetxController {
   final _uuid = const Uuid();
   final _db = UnifiedDatabaseHelper.instance;
+  final _apiService = Get.find<PosApiService>();
 
   // Reactive list of expenses
   var expenses = <Expense>[].obs;
@@ -16,11 +18,16 @@ class ExpensesController extends GetxController {
   // Loading state
   var isLoading = false.obs;
 
+  // Cash accounts for currency and account selection
+  var cashAccounts = <Map<String, dynamic>>[].obs;
+
   @override
   void onInit() {
     super.onInit();
     // Load expenses from database
     loadExpensesFromDatabase();
+    // Load cash accounts for API calls
+    loadCashAccounts();
   }
 
   Future<void> loadExpensesFromDatabase() async {
@@ -39,6 +46,16 @@ class ExpensesController extends GetxController {
       _loadSampleExpenses();
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> loadCashAccounts() async {
+    try {
+      final accounts = await _apiService.fetchCashAccounts();
+      cashAccounts.value = accounts;
+    } catch (e) {
+      // If failed to load, continue with empty list
+      cashAccounts.value = [];
     }
   }
 
@@ -78,6 +95,24 @@ class ExpensesController extends GetxController {
     ];
   }
 
+  Map<String, dynamic> _getDefaultCashAccount() {
+    if (cashAccounts.isEmpty) {
+      // Return hardcoded defaults if no accounts loaded
+      return {
+        'id': '11111111-1111-1111-1111-111111111111',
+        'currencyid': '3a0e97b4-c13a-4a49-9205-182e62039a5a',
+        'currency': 'Uganda Shillings',
+      };
+    }
+    // Use the first cash account
+    final account = cashAccounts.first;
+    return {
+      'id': account['id'] ?? '11111111-1111-1111-1111-111111111111',
+      'currencyid': account['currencyid'] ?? '3a0e97b4-c13a-4a49-9205-182e62039a5a',
+      'currency': account['currency'] ?? 'Uganda Shillings',
+    };
+  }
+
   // Add a new expense
   Future<void> addExpense({
     required String title,
@@ -88,32 +123,71 @@ class ExpensesController extends GetxController {
     String? servicePointId,
     String? subject,
   }) async {
-    final expense = Expense(
-      id: _uuid.v4(),
-      title: title,
-      description: description,
-      amount: amount,
-      category: category,
-      date: date ?? DateTime.now(),
-      servicePointId: servicePointId ?? currentServicePointId.value,
-      subject: subject,
-    );
+    final expenseId = _uuid.v4();
+    final expenseDate = date ?? DateTime.now();
 
-    expenses.insert(0, expense); // Add to beginning of list
+    // Get cash account details
+    final cashAccount = _getDefaultCashAccount();
 
-    // Save to database
+    // Prepare API payload
+    final paymentData = {
+      "id": expenseId,
+      "currencyid": cashAccount['currencyid'],
+      "servicepointid": servicePointId ?? currentServicePointId.value ?? '',
+      "bpid": subject ?? '', // business partner id from subject
+      "transactiontypeid": 1,
+      "amount": amount,
+      "method": "Cash",
+      "methodId": 1,
+      "chequeno": "",
+      "cashaccountid": cashAccount['id'],
+      "paydate": expenseDate.millisecondsSinceEpoch,
+      "receipt": true,
+      "currency": cashAccount['currency'],
+      "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
+      "direction": 1,
+      "categoryid": "44444444-1111-1111-1111-111111111111"
+    };
+
     try {
-      await _db.insertExpense(expense);
-    } catch (e) {
-      // Database might not be open, continue without saving
-    }
+      // Call API first
+      await _apiService.createAdhocPayment(paymentData);
 
-    Get.snackbar(
-      'Success',
-      'Expense added successfully',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
-    );
+      // Create local expense object
+      final expense = Expense(
+        id: expenseId,
+        title: title,
+        description: description,
+        amount: amount,
+        category: category,
+        date: expenseDate,
+        servicePointId: servicePointId ?? currentServicePointId.value,
+        subject: subject,
+      );
+
+      expenses.insert(0, expense); // Add to beginning of list
+
+      // Save to database
+      try {
+        await _db.insertExpense(expense);
+      } catch (e) {
+        // Database might not be open, continue without saving
+      }
+
+      Get.snackbar(
+        'Success',
+        'Expense added successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to add expense: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 3),
+      );
+    }
   }
 
   // Delete an expense
