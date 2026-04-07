@@ -719,7 +719,7 @@ class _PosScreenState extends State<PosScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: FlavorColors.current.primary,
+                      color: Colors.grey.shade900,
                     ),
                   ),
                   if (item.costprice != null && item.costprice! > 0) ...[
@@ -1350,13 +1350,17 @@ class _PosScreenState extends State<PosScreen> {
                                                               4,
                                                             ),
                                                         border: Border.all(
-                                                          color: Colors.green.shade900
+                                                          color: Colors
+                                                              .green
+                                                              .shade900,
                                                         ),
                                                       ),
                                                       child: Icon(
                                                         Icons.add,
                                                         size: 16,
-                                                        color: Colors.green.shade900
+                                                        color: Colors
+                                                            .green
+                                                            .shade900,
                                                       ),
                                                     ),
                                                   ),
@@ -1687,40 +1691,47 @@ class _PosScreenState extends State<PosScreen> {
                                                     );
                                                   }
 
-                                                  return NotificationListener<ScrollNotification>(
+                                                  return NotificationListener<
+                                                    ScrollNotification
+                                                  >(
                                                     onNotification:
-                                                        (ScrollNotification scrollInfo) {
-                                                      if (scrollInfo
+                                                        (
+                                                          ScrollNotification
+                                                          scrollInfo,
+                                                        ) {
+                                                          if (scrollInfo
                                                                   .metrics
                                                                   .pixels >=
                                                               scrollInfo
                                                                       .metrics
                                                                       .maxScrollExtent *
                                                                   0.8) {
-                                                        if (inventoryController
-                                                                .hasMoreItems
-                                                                .value &&
-                                                            !inventoryController
-                                                                .isLoadingInventory
-                                                                .value) {
-                                                          inventoryController
-                                                              .loadMoreInventory();
-                                                        }
-                                                      }
-                                                      return false;
-                                                    },
+                                                            if (inventoryController
+                                                                    .hasMoreItems
+                                                                    .value &&
+                                                                !inventoryController
+                                                                    .isLoadingInventory
+                                                                    .value) {
+                                                              inventoryController
+                                                                  .loadMoreInventory();
+                                                            }
+                                                          }
+                                                          return false;
+                                                        },
                                                     child: ListView.builder(
                                                       padding:
-                                                          const EdgeInsets.all(8),
+                                                          const EdgeInsets.all(
+                                                            8,
+                                                          ),
                                                       itemCount:
                                                           inventoryController
-                                                                  .filteredItems
-                                                                  .length +
-                                                              (inventoryController
-                                                                      .isLoadingInventory
-                                                                      .value
-                                                                  ? 1
-                                                                  : 0),
+                                                              .filteredItems
+                                                              .length +
+                                                          (inventoryController
+                                                                  .isLoadingInventory
+                                                                  .value
+                                                              ? 1
+                                                              : 0),
                                                       itemBuilder: (context, index) {
                                                         if (index >=
                                                             inventoryController
@@ -1730,7 +1741,8 @@ class _PosScreenState extends State<PosScreen> {
                                                             child: Padding(
                                                               padding:
                                                                   EdgeInsets.all(
-                                                                      8.0),
+                                                                    8.0,
+                                                                  ),
                                                               child:
                                                                   CircularProgressIndicator(),
                                                             ),
