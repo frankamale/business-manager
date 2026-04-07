@@ -109,6 +109,7 @@ class MyApp extends StatelessWidget {
       
       // Light theme configuration
       theme: ThemeData(
+        fontFamily: 'FiraSans',
         colorScheme: ColorScheme.fromSeed(
           seedColor: FlavorColors.current.primary,
           brightness: Brightness.light,
@@ -134,6 +135,8 @@ class MyApp extends StatelessWidget {
       
       // Dark theme configuration
       darkTheme: ThemeData(
+        fontFamily: 'FiraSans',
+
         colorScheme: ColorScheme.fromSeed(
           seedColor: FlavorColors.current.primary,
           brightness: Brightness.dark,
