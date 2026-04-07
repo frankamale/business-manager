@@ -3,18 +3,12 @@
 ## Running the App
 
 ### Using Command Line
-
 **Default BAC flavor:**
-```
-flutter run -t lib/main.dart
-```
-
-**BAC flavor with arguments:**
 ```
 flutter run --flavor bac --dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"
 ```
 
-**Komusoft flavor:**
+**Example of flavor with arguments, eg komusoft Flavor:**
 ```
 flutter run --flavor komusoft -t lib/main.dart --dart-define=FLAVOR=komusoft --dart-define=APP_NAME="Komusoft Solns" --dart-define=COMPANY_NAME="Komusoft Solutions Ltd" --dart-define=BOT_USERNAME=test.account123@qc.com --dart-define=BOT_PASSWORD=Ba@123456
 ```
@@ -25,13 +19,13 @@ flutter run --flavor komusoft -t lib/main.dart --dart-define=FLAVOR=komusoft --d
 2. Click **+** and select **Flutter**
 3. Configure as follows:
 
-   **For BAC:**
+   **For Default BAC flavor:**
    - Flavor: `bac`
    - Dart entry point: `lib/main.dart`
    - Build mode: `Debug` or `Release`
    - Additional run args: `--dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"`
 
-   **For Komusoft:**
+   **For other flavours like komusoft:**
    - Flavor: `komusoft`
    - Dart entry point: `lib/main.dart`
    - Build mode: `Debug` or `Release`
@@ -43,12 +37,12 @@ flutter run --flavor komusoft -t lib/main.dart --dart-define=FLAVOR=komusoft --d
 
 ## Building the App
 
-### Debug APK
+### Default release APK
 ```
 flutter build apk --debug --flavor bac --dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"
 ```
 
-### Release APK
+### FLavoredRelease APK
 ```
 flutter build apk --release --flavor bac --dart-define=FLAVOR=bac --dart-define=APP_NAME="BAC manager" --dart-define=COMPANY_NAME="Business Manager"
 ```
@@ -108,7 +102,9 @@ Add the new asset path:
 ## Available Flavors
 
 | Flavor | App Name | COMPANY_NAME |
-|--------|----------|---------------|
-| bac | BAC manager | Business Manager |
+|--------|----------|--------------|
+| bac | BAC manager | Business Manager | 
 | komusoft | Komusoft Solns | Komusoft Solutions Ltd |
-| (add new) | (custom) | (custom) |
+| fitzone | Fitzone Gym | Fitzone Gym |
+| mega | Standard Supermarket | Standard Supermarket |
+| top_grade | Top Grade | Top Grade Genetics |
