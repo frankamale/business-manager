@@ -24,7 +24,8 @@ class StoreOverview extends StatelessWidget {
     return Obx(() {
       // Load user role and check if user role contains 'fg' (gym)
       kpiTrendController.loadUserRole();
-      final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
+      //final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
+      final isGym = false;
 
       return Container(
         color: AppColors.getBackgroundColor(context),
@@ -128,11 +129,11 @@ class StoreOverview extends StatelessWidget {
   }
 
   Widget _buildSectionCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
+      BuildContext context, {
+        required String title,
+        required IconData icon,
+        required Widget child,
+      }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -171,15 +172,15 @@ class StoreOverview extends StatelessWidget {
   }
 
   Widget _buildKpiCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    String? unit,
-    String? trend,
-    TrendDirection? trendDirection,
-    required IconData icon,
-    required Color iconColor,
-  }) {
+      BuildContext context, {
+        required String title,
+        required String value,
+        String? unit,
+        String? trend,
+        TrendDirection? trendDirection,
+        required IconData icon,
+        required Color iconColor,
+      }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -239,8 +240,8 @@ class StoreOverview extends StatelessWidget {
                             color: trendDirection == TrendDirection.up
                                 ? AppColors.getSuccessColor(context).withOpacity(0.2)
                                 : trendDirection == TrendDirection.down
-                                    ? AppColors.getErrorColor(context).withOpacity(0.2)
-                                    : AppColors.getTextDisabledColor(context).withOpacity(0.1),
+                                ? AppColors.getErrorColor(context).withOpacity(0.2)
+                                : AppColors.getTextDisabledColor(context).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -250,13 +251,13 @@ class StoreOverview extends StatelessWidget {
                                 trendDirection == TrendDirection.up
                                     ? Icons.arrow_upward
                                     : trendDirection == TrendDirection.down
-                                        ? Icons.arrow_downward
-                                        : Icons.remove,
+                                    ? Icons.arrow_downward
+                                    : Icons.remove,
                                 color: trendDirection == TrendDirection.up
                                     ? AppColors.getSuccessColor(context)
                                     : trendDirection == TrendDirection.down
-                                        ? AppColors.getErrorColor(context)
-                                        : AppColors.getTextSecondaryColor(context),
+                                    ? AppColors.getErrorColor(context)
+                                    : AppColors.getTextSecondaryColor(context),
                                 size: 10,
                               ),
                               const SizedBox(width: 2),
@@ -267,8 +268,8 @@ class StoreOverview extends StatelessWidget {
                                     color: trendDirection == TrendDirection.up
                                         ? AppColors.getSuccessColor(context)
                                         : trendDirection == TrendDirection.down
-                                            ? AppColors.getErrorColor(context)
-                                            : AppColors.getTextSecondaryColor(context),
+                                        ? AppColors.getErrorColor(context)
+                                        : AppColors.getTextSecondaryColor(context),
                                     fontSize: 9,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -325,5 +326,5 @@ class StoreOverview extends StatelessWidget {
     );
   }
 
- 
+
 }
