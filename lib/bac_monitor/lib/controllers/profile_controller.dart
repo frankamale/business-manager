@@ -1,5 +1,6 @@
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../../back_pos/services/api_services.dart';
 import '../../../initialise/app_roots.dart';
 import '../services/api_services.dart';
@@ -228,6 +229,12 @@ class ProfileController extends GetxController {
           }
         } else {
           // print('WARNING: ProfileController.switchSystem() - No companyId found!');
+        }
+
+        // Set switching flag for POS
+        if (system == 'pos') {
+          final box = GetStorage();
+          await box.write('switching_to_pos', true);
         }
 
         // Navigate to the appropriate app

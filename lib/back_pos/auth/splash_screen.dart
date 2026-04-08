@@ -1,6 +1,7 @@
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'dart:developer' as developer;
 import 'login.dart';
 import '../services/api_services.dart';
@@ -85,6 +86,16 @@ class _SplashScreenState extends State<SplashScreen>
     _log('authenticateApp: Starting authentication process');
 
     try {
+      // Check if switching from Monitor
+      final box = GetStorage();
+      final isSwitching = box.read('switching_to_pos') ?? false;
+      if (isSwitching) {
+        _log('authenticateApp: Switching from Monitor, skipping authentication');
+        await box.remove('switching_to_pos');
+        await _handleSwitchingMode();
+        return;
+      }
+
       setState(() {
         _statusMessage = 'Checking server credentials...';
       });
@@ -226,6 +237,116 @@ class _SplashScreenState extends State<SplashScreen>
       Get.snackbar(
         'Error',
         'Network Error, please check your internet connection and try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade900,
+        duration: const Duration(seconds: 4),
+      );
+    }
+  }
+
+  Future<void> _handleSwitchingMode() async {
+    _log('handleSwitchingMode: Handling switch from Monitor to POS');
+
+    try {
+      setState(() {
+        _statusMessage = 'Switching to POS...';
+      });
+
+      // Get stored company info
+      final companyInfo = await _apiService.getCompanyInfo();
+      final storedCompanyId = companyInfo['companyId'];
+
+      if (storedCompanyId == null || storedCompanyId.isEmpty) {
+        _log('handleSwitchingMode: No stored company ID, falling back to login');
+        if (mounted) {
+          Get.off(() => const UnifiedLoginScreen());
+        }
+        return;
+      }
+
+      // Initialize controllers
+      _initializeControllers();
+
+      // Open database for the company
+      await _dbHelper.openForCompany(storedCompanyId);
+
+      // Check network for data sync
+      final hasNetwork = await NetworkHelper.hasConnection();
+      _log('handleSwitchingMode: Network available = $hasNetwork');
+
+      if (hasNetwork) {
+        setState(() {
+          _statusMessage = 'Syncing data...';
+        });
+
+        // Load data with smart sync (TokenRefreshInterceptor handles 401 automatically)
+        await _loadDataWithSmartSync();
+
+        // Check if we have minimum required data
+        final hasUsers = await _checkCachedDataSafely('users');
+        final hasServicePoints = await _checkCachedDataSafely('service_points');
+
+        if (hasUsers && hasServicePoints) {
+          _log('handleSwitchingMode: Data available, navigating to POS');
+          setState(() {
+            _statusMessage = 'Starting POS...';
+          });
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Get.off(() => const Login());
+          }
+        } else {
+          _log('handleSwitchingMode: Insufficient data, showing offline mode');
+          setState(() {
+            _hasError = true;
+            _isOfflineMode = true;
+            _statusMessage = 'Limited data available - offline mode';
+            _hasCachedData = true; // Allow continue offline
+          });
+        }
+      } else {
+        // Offline mode
+        _log('handleSwitchingMode: Offline mode, checking cached data');
+        setState(() {
+          _statusMessage = 'Loading offline data...';
+        });
+
+        // Load cached data only
+        final hasUsers = await _checkCachedDataSafely('users');
+        final hasServicePoints = await _checkCachedDataSafely('service_points');
+
+        if (hasUsers && hasServicePoints) {
+          await _loadDataWithSmartSync(); // This will load from cache
+          setState(() {
+            _statusMessage = 'Starting POS offline...';
+          });
+          await Future.delayed(const Duration(milliseconds: 500));
+          if (mounted) {
+            Get.off(() => const Login());
+          }
+        } else {
+          _log('handleSwitchingMode: No cached data in offline mode');
+          setState(() {
+            _hasError = true;
+            _isOfflineMode = true;
+            _statusMessage = 'No cached data available';
+          });
+        }
+      }
+
+    } catch (e, stackTrace) {
+      _log('handleSwitchingMode: Error - $e', level: 'ERROR');
+      _log('handleSwitchingMode: Stack trace - $stackTrace', level: 'ERROR');
+
+      setState(() {
+        _hasError = true;
+        _statusMessage = 'Error switching to POS';
+      });
+
+      Get.snackbar(
+        'Switch Error',
+        'Failed to switch to POS. Please try again.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade100,
         colorText: Colors.red.shade900,
