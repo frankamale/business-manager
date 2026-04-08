@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:circle_nav_bar/circle_nav_bar.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -29,7 +29,7 @@ class _BottomNavState extends State<BottomNav> {
 
   // Track offline status
   final RxBool isOffline = false.obs;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<InternetConnectionStatus>? _connectivitySubscription;
 
   final List<Widget> screens = [
     Dashboard(),
@@ -62,11 +62,10 @@ class _BottomNavState extends State<BottomNav> {
 
   /// Listen to connectivity changes
   void _startConnectivityListener() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
-      results,
+    _connectivitySubscription = InternetConnectionChecker.instance.onStatusChange.listen((
+      status,
     ) {
-      final result = results.first;
-      isOffline.value = result == ConnectivityResult.none;
+      isOffline.value = status == InternetConnectionStatus.disconnected;
     });
   }
 

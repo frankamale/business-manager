@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -10,6 +10,7 @@ import 'mon_kpi_overview_controller.dart';
 import 'mon_salestrends_controller.dart';
 import 'mon_data_sync_controller.dart';
 import '../../../shared/database/unified_db_helper.dart';
+import '../../../back_pos/services/api_services.dart' as pos_api;
 import '../../../back_pos/utils/network_helper.dart';
 
 class MonSyncController extends GetxController {
@@ -19,7 +20,7 @@ class MonSyncController extends GetxController {
   // Track sync state
   var isSyncPaused = false.obs;
   var connectivityStatus = 'unknown'.obs;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<InternetConnectionStatus>? _connectivitySubscription;
 
   // Reference to data sync controller for incremental sync
   MonDataSyncController? get dataSyncController => 
@@ -36,18 +37,16 @@ class MonSyncController extends GetxController {
 
   /// Start listening to connectivity changes
   void _startConnectivityListener() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
-      // Handle the first result from the list
-      final result = results.first;
-      _handleConnectivityChange(result);
+    _connectivitySubscription = InternetConnectionChecker.instance.onStatusChange.listen((status) {
+      _handleConnectivityChange(status);
     });
   }
 
   /// Handle connectivity state changes
-  void _handleConnectivityChange(ConnectivityResult result) {
+  void _handleConnectivityChange(InternetConnectionStatus status) {
     final wasOnline = connectivityStatus.value == 'connected';
-    
-    if (result == ConnectivityResult.none) {
+
+    if (status == InternetConnectionStatus.disconnected) {
       connectivityStatus.value = 'disconnected';
       debugPrint('MonSyncController: Network disconnected - pausing sync');
       pausePeriodicSync();

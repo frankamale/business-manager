@@ -11,6 +11,7 @@ import '../services/api_services.dart';
 import '../services/settings_service.dart';
 import '../utils/network_helper.dart';
 import '../../shared/database/unified_db_helper.dart';
+import '../../shared/utils/connectivity_helper.dart';
 import '../../flavors/flavor_colors.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -247,19 +248,13 @@ class SettingsPage extends StatelessWidget {
                       : () async {
                           isLoading.value = true;
 
-                          try {
-                            // Check network connectivity
-                            final hasNetwork = await NetworkHelper.hasConnection();
-                            if (!hasNetwork) {
-                              Get.snackbar(
-                                'No Internet',
-                                'Please connect to the internet to reload data',
-                                snackPosition: SnackPosition.BOTTOM,
-                                backgroundColor: Colors.orange.shade100,
-                              );
-                              Navigator.of(dialogContext).pop();
-                              return;
-                            }
+                           try {
+                             // Check network connectivity with enhanced feedback
+                             final isOnline = await ConnectivityHelper.checkConnectivityAndNotify();
+                             if (!isOnline) {
+                               Navigator.of(dialogContext).pop();
+                               return;
+                             }
 
                             // Get controllers
                             final authController = Get.find<AuthController>();

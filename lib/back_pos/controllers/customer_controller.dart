@@ -3,6 +3,7 @@ import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/customer.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
+import 'package:bac_pos/shared/utils/connectivity_helper.dart';
 
 class CustomerController extends GetxController {
   final _apiService = Get.find<PosApiService>();
@@ -33,6 +34,12 @@ class CustomerController extends GetxController {
   // Sync customers from API and save to database
   Future<void> syncCustomersFromAPI({bool showMessage = false}) async {
     try {
+      // Check connectivity before attempting sync
+      final isOnline = await ConnectivityHelper.checkConnectivityAndNotify();
+      if (!isOnline) {
+        return;
+      }
+
       isLoadingCustomers.value = true;
 
       final fetchedCustomers = await _apiService.fetchCustomers();
