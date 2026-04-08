@@ -741,31 +741,36 @@ class _SplashPageState extends State<SplashPage> {
               child: AppLogoCircle(size: isSmallScreen ? 100 : 120),
             ),
             const SizedBox(height: 24),
-            Obx(() {
-              if (!Get.isRegistered<MonOperatorController>()) {
-                return Text(
-                  'Welcome ',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              }
+            Builder(
+              builder: (context) {
+                if (!Get.isRegistered<MonOperatorController>()) {
+                  return Text(
+                    'Welcome',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }
 
-              final operatorController = Get.find<MonOperatorController>();
-              final companyName = operatorController.companyName.value;
-              return Text(
-                companyName.isNotEmpty && companyName != 'Loading...'
-                    ? companyName
-                    : 'Welcome',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              );
-            }),
+                return GetBuilder<MonOperatorController>(
+                  builder: (operatorController) {
+                    final companyName = operatorController.companyName.value;
+                    return Text(
+                      companyName.isNotEmpty && companyName != 'Loading...'
+                          ? companyName
+                          : 'Welcome',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 40),
             MonSplashLoader(
               statusMessage: _statusMessage,

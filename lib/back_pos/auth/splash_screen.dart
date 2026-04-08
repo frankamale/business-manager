@@ -2,6 +2,7 @@ import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:sqflite/sqflite.dart';
 import 'dart:developer' as developer;
 import 'login.dart';
 import '../services/api_services.dart';
@@ -245,6 +246,76 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  Future<void> _loadCompleteDataForSwitching() async {
+    _log('loadCompleteDataForSwitching: Loading comprehensive data for POS switching');
+
+    // Get controllers
+    final authController = Get.find<AuthController>();
+    final servicePointController = Get.find<ServicePointController>();
+    final inventoryController = Get.find<InventoryController>();
+    final salesController = Get.find<SalesController>();
+    final customerController = Get.find<CustomerController>();
+
+    try {
+      // 1. Users (always sync for switching)
+      setState(() {
+        _statusMessage = 'Loading users...';
+      });
+      await authController.syncUsersFromAPI();
+      _log('loadCompleteDataForSwitching: Users synced');
+
+      // 2. Service Points (always sync for switching)
+      setState(() {
+        _statusMessage = 'Loading service points...';
+      });
+      await servicePointController.syncServicePointsFromAPI();
+      _log('loadCompleteDataForSwitching: Service points synced');
+
+      // 3. Full Inventory (sync all inventory for switching)
+      setState(() {
+        _statusMessage = 'Loading complete inventory...';
+      });
+      await inventoryController.syncInventoryFromAPI();
+      _log('loadCompleteDataForSwitching: Full inventory synced');
+
+      // 4. Sales (local data)
+      setState(() {
+        _statusMessage = 'Loading sales data...';
+      });
+      await salesController.loadSalesFromCache();
+      _log('loadCompleteDataForSwitching: Sales data loaded');
+
+      // 5. All Customers (sync all customers for switching)
+      setState(() {
+        _statusMessage = 'Loading all customers...';
+      });
+      await customerController.syncCustomersFromAPI();
+      _log('loadCompleteDataForSwitching: All customers synced');
+
+      // 6. Additional data that might be needed for POS
+      setState(() {
+        _statusMessage = 'Finalizing data setup...';
+      });
+
+      // Ensure cash accounts are loaded
+      try {
+        final cashAccounts = await _apiService.fetchCashAccounts();
+        await _dbHelper.insertCashAccounts(cashAccounts);
+        _log('loadCompleteDataForSwitching: Cash accounts loaded');
+      } catch (e) {
+        _log('loadCompleteDataForSwitching: Cash accounts sync failed (non-critical): $e');
+      }
+
+      _log('loadCompleteDataForSwitching: Complete data loading finished');
+
+    } catch (e, stackTrace) {
+      _log('loadCompleteDataForSwitching: Error loading complete data - $e', level: 'ERROR');
+      _log('loadCompleteDataForSwitching: Stack trace - $stackTrace', level: 'ERROR');
+      // Continue anyway - some data might have been loaded
+      throw e; // Re-throw to let caller handle
+    }
+  }
+
   Future<void> _handleSwitchingMode() async {
     _log('handleSwitchingMode: Handling switch from Monitor to POS');
 
@@ -277,18 +348,34 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (hasNetwork) {
         setState(() {
-          _statusMessage = 'Syncing data...';
+          _statusMessage = 'Fetching complete data for POS...';
         });
 
-        // Load data with smart sync (TokenRefreshInterceptor handles 401 automatically)
-        await _loadDataWithSmartSync();
+        // Load ALL data for first-time switching to ensure persistence
+        await _loadCompleteDataForSwitching();
 
-        // Check if we have minimum required data
+        // Verify all essential data is cached
         final hasUsers = await _checkCachedDataSafely('users');
         final hasServicePoints = await _checkCachedDataSafely('service_points');
+        final hasInventory = await _checkCachedDataSafely('inventory');
+        final hasCustomers = await _checkCachedDataSafely('customers');
+
+        _log('handleSwitchingMode: Data check - Users: $hasUsers, ServicePoints: $hasServicePoints, Inventory: $hasInventory, Customers: $hasCustomers');
+
+        // Debug: Check actual counts
+        if (!hasUsers || !hasServicePoints) {
+          try {
+            final db = _dbHelper.database;
+            final userCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM user')) ?? 0;
+            final spCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM service_point')) ?? 0;
+            _log('handleSwitchingMode: Debug counts - Users: $userCount, ServicePoints: $spCount');
+          } catch (e) {
+            _log('handleSwitchingMode: Debug count error: $e');
+          }
+        }
 
         if (hasUsers && hasServicePoints) {
-          _log('handleSwitchingMode: Data available, navigating to POS');
+          _log('handleSwitchingMode: Essential data available, navigating to POS');
           setState(() {
             _statusMessage = 'Starting POS...';
           });
@@ -297,7 +384,7 @@ class _SplashScreenState extends State<SplashScreen>
             Get.off(() => const Login());
           }
         } else {
-          _log('handleSwitchingMode: Insufficient data, showing offline mode');
+          _log('handleSwitchingMode: Insufficient data even after sync, showing offline mode');
           setState(() {
             _hasError = true;
             _isOfflineMode = true;
@@ -306,18 +393,17 @@ class _SplashScreenState extends State<SplashScreen>
           });
         }
       } else {
-        // Offline mode
+        // Offline mode - check if we have cached data from previous sessions
         _log('handleSwitchingMode: Offline mode, checking cached data');
         setState(() {
-          _statusMessage = 'Loading offline data...';
+          _statusMessage = 'Loading cached data...';
         });
 
-        // Load cached data only
         final hasUsers = await _checkCachedDataSafely('users');
         final hasServicePoints = await _checkCachedDataSafely('service_points');
 
         if (hasUsers && hasServicePoints) {
-          await _loadDataWithSmartSync(); // This will load from cache
+          _log('handleSwitchingMode: Cached data available, starting POS offline');
           setState(() {
             _statusMessage = 'Starting POS offline...';
           });
@@ -326,11 +412,11 @@ class _SplashScreenState extends State<SplashScreen>
             Get.off(() => const Login());
           }
         } else {
-          _log('handleSwitchingMode: No cached data in offline mode');
+          _log('handleSwitchingMode: No cached data available offline');
           setState(() {
             _hasError = true;
             _isOfflineMode = true;
-            _statusMessage = 'No cached data available';
+            _statusMessage = 'No cached data available - connect to internet first';
           });
         }
       }

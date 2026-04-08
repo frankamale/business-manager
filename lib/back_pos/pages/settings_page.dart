@@ -3,10 +3,14 @@ import 'package:get/get.dart';
 import '../../shared/services/customer_auth_service.dart';
 import '../auth/login.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/service_point_controller.dart';
+import '../controllers/inventory_controller.dart';
+import '../controllers/customer_controller.dart';
 import '../controllers/settings_controller.dart';
 import '../services/api_services.dart';
 import '../services/settings_service.dart';
 import '../utils/network_helper.dart';
+import '../../shared/database/unified_db_helper.dart';
 import '../../flavors/flavor_colors.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -112,6 +116,13 @@ class SettingsPage extends StatelessWidget {
                     onChanged: (value) => settingsController.togglePriceEditing(value),
                   )),
                 ),
+                ListTile(
+                  leading: const Icon(Icons.refresh),
+                  title: const Text('Reload POS Data'),
+                  subtitle: const Text('Refresh all app data'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () => _showReloadDataDialog(context),
+                ),
                 // ListTile(
                 //   leading: const Icon(Icons.lock_outline),
                 //   title: const Text('Change Password'),
@@ -181,6 +192,134 @@ class SettingsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showReloadDataDialog(BuildContext context) {
+    final isLoading = ValueNotifier<bool>(false);
+    final progressMessage = ValueNotifier<String>('Preparing to reload data...');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Reload POS Data'),
+          content: ValueListenableBuilder<String>(
+            valueListenable: progressMessage,
+            builder: (context, message, child) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ValueListenableBuilder<bool>(
+                    valueListenable: isLoading,
+                    builder: (context, loading, child) {
+                      if (loading) {
+                        return Column(
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            Text(message, textAlign: TextAlign.center),
+                          ],
+                        );
+                      }
+                      return Text(
+                        'This will take a while. Continue?',
+                        textAlign: TextAlign.center,
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ValueListenableBuilder<bool>(
+              valueListenable: isLoading,
+              builder: (context, loading, child) {
+                return ElevatedButton(
+                  onPressed: loading
+                      ? null
+                      : () async {
+                          isLoading.value = true;
+
+                          try {
+                            // Check network connectivity
+                            final hasNetwork = await NetworkHelper.hasConnection();
+                            if (!hasNetwork) {
+                              Get.snackbar(
+                                'No Internet',
+                                'Please connect to the internet to reload data',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: Colors.orange.shade100,
+                              );
+                              Navigator.of(dialogContext).pop();
+                              return;
+                            }
+
+                            // Get controllers
+                            final authController = Get.find<AuthController>();
+                            final servicePointController = Get.find<ServicePointController>();
+                            final inventoryController = Get.find<InventoryController>();
+                            final customerController = Get.find<CustomerController>();
+                            final apiService = Get.find<PosApiService>();
+
+                            // Reload data in sequence with progress updates
+                            progressMessage.value = 'Reloading users...';
+                            await authController.syncUsersFromAPI();
+
+                            progressMessage.value = 'Reloading service points...';
+                            await servicePointController.syncServicePointsFromAPI();
+
+                            progressMessage.value = 'Reloading inventory...';
+                            await inventoryController.syncInventoryFromAPI();
+
+                            progressMessage.value = 'Reloading customers...';
+                            await customerController.syncCustomersFromAPI();
+
+                            progressMessage.value = 'Reloading cash accounts...';
+                            try {
+                              final cashAccounts = await apiService.fetchCashAccounts();
+                              await Get.find<UnifiedDatabaseHelper>().insertCashAccounts(cashAccounts);
+                            } catch (e) {
+                              // Cash accounts are not critical, continue
+                            }
+
+                            progressMessage.value = 'Data reload complete!';
+
+                            // Close dialog and show success
+                            Navigator.of(dialogContext).pop();
+
+                            Get.snackbar(
+                              'Success',
+                              'All POS data has been reloaded successfully',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: Colors.green.shade100,
+                            );
+
+                          } catch (e) {
+                            Navigator.of(dialogContext).pop();
+                            Get.snackbar(
+                              'Error',
+                              'Failed to reload data: ${e.toString()}',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: Colors.red.shade100,
+                            );
+                          } finally {
+                            isLoading.value = false;
+                          }
+                        },
+                  child: loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Reload'),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }
