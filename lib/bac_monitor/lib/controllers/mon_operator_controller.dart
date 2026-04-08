@@ -12,6 +12,7 @@ class MonOperatorController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    print('MonOperatorController onInit called');
 
     try {
       _accountManager = Get.find<AccountManager>();
@@ -41,6 +42,7 @@ class MonOperatorController extends GetxController {
 
   /// Fetches the company details from the local database.
   Future<void> loadCompanyDetailsFromDb() async {
+    print('MonOperatorController: loadCompanyDetailsFromDb called');
     // Check if database is open before accessing
     if (!dbHelper.isDatabaseOpen) {
       print('MonOperatorController: Database not open, cannot load company details');
@@ -53,6 +55,7 @@ class MonOperatorController extends GetxController {
       final db = dbHelper.database;
 
       final result = await db.query('company_details', limit: 1);
+      print('MonOperatorController: Query result length: ${result.length}');
 
       if (result.isNotEmpty) {
         final details = result.first;
@@ -61,9 +64,11 @@ class MonOperatorController extends GetxController {
 
         companyAddress.value =
             details['activeBranchAddress'] as String? ?? 'No Address Provided';
+        print('MonOperatorController: Company name set to ${companyName.value}');
       } else {
         companyName.value = 'Welcome';
         companyAddress.value = '';
+        print('MonOperatorController: No company details found, set to Welcome');
       }
     } catch (e) {
       print("Error loading company details from DB: $e");

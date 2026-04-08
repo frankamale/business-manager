@@ -107,19 +107,18 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
-    - family: FiraSans
+    - family: JosefinSans
       fonts:
-        - asset: assets/fonts/FiraSans-Regular.ttf
-        - asset: assets/fonts/FiraSans-Bold.ttf
+        - asset: assets/fonts/JosefinSans-Regular.ttf
+        - asset: assets/fonts/JosefinSans-Bold.ttf
           weight: 700
-        - asset: assets/fonts/FiraSans-Italic.ttf
+        - asset: assets/fonts/JosefinSans-Italic.ttf
           style: italic
-        - asset: assets/fonts/FiraSans-Light.ttf
+        - asset: assets/fonts/JosefinSans-Light.ttf
           weight: 300
-        - asset: assets/fonts/FiraSans-SemiBold.ttf
+        - asset: assets/fonts/JosefinSans-SemiBold.ttf
           weight: 600
-        - asset: assets/fonts/FiraSans-Black.ttf
-          weight: 900
+
     # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 

@@ -101,7 +101,7 @@ class _BottomNavState extends State<BottomNav> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        backgroundColor: AppColors.getBackgroundColor(context),
+        backgroundColor: AppColors.getSurfaceColor(context),
         body: Obx(
           () => Column(
             children: [
@@ -154,12 +154,12 @@ class _BottomNavState extends State<BottomNav> {
                 children: [
                   Icon(
                     Icons.dashboard,
-                    color: AppColors.getSurfaceColor(context),
+                    color: AppColors.getTextPrimary(context),
                   ),
                   Text(
                     'Dashboard',
                     style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
+                      color: AppColors.getTextPrimary(context),
                       fontSize: 10,
                     ),
                   ),
@@ -170,12 +170,12 @@ class _BottomNavState extends State<BottomNav> {
                 children: [
                   Icon(
                     Icons.inventory_2,
-                    color: AppColors.getSurfaceColor(context),
+                    color: AppColors.getTextPrimary(context),
                   ),
                   Text(
                     'Inventory',
                     style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
+                      color: AppColors.getTextPrimary(context),
                       fontSize: 10,
                     ),
                   ),
@@ -184,11 +184,11 @@ class _BottomNavState extends State<BottomNav> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.store, color: AppColors.getSurfaceColor(context)),
+                  Icon(Icons.store, color: AppColors.getTextPrimary(context)),
                   Text(
                     'Stores',
                     style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
+                      color: AppColors.getTextPrimary(context),
                       fontSize: 10,
                     ),
                   ),
@@ -199,12 +199,12 @@ class _BottomNavState extends State<BottomNav> {
                 children: [
                   Icon(
                     Icons.more_horiz,
-                    color: AppColors.getSurfaceColor(context),
+                    color: AppColors.getTextPrimary(context),
                   ),
                   Text(
                     'More',
                     style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
+                      color: AppColors.getTextPrimary(context),
                       fontSize: 10,
                     ),
                   ),
@@ -214,19 +214,19 @@ class _BottomNavState extends State<BottomNav> {
             activeIcons: [
               Icon(
                 Icons.dashboard_outlined,
-                color: AppColors.getSurfaceColor(context),
+                color: AppColors.getTextPrimary(context),
               ),
               Icon(
                 Icons.inventory_2_outlined,
-                color: AppColors.getSurfaceColor(context),
+                color: AppColors.getTextPrimary(context),
               ),
               Icon(
                 Icons.store_outlined,
-                color: AppColors.getSurfaceColor(context),
+                color: AppColors.getTextPrimary(context),
               ),
-              Icon(Icons.more_horiz, color: AppColors.getSurfaceColor(context)),
+              Icon(Icons.more_horiz, color: AppColors.getTextPrimary(context)),
             ],
-            color: PrimaryColors.darkBlue,
+            color: AppColors.getHeaderColor(context),
             circleWidth: 50,
           ),
         ),
