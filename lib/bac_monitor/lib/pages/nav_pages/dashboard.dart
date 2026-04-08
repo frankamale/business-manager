@@ -76,9 +76,6 @@ class _DashboardState extends State<Dashboard> {
     if (!Get.isRegistered<MonOperatorController>()) {
       Get.put(MonOperatorController(), permanent: true);
     }
-    if (!Get.isRegistered<ProfileController>()) {
-      Get.put(ProfileController(), permanent: true);
-    }
     if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
       Get.put(MonOutstandingPaymentsController(), permanent: true);
     }
@@ -232,11 +229,7 @@ class _DashboardState extends State<Dashboard> {
     final operatorController = Get.isRegistered<MonOperatorController>()
         ? Get.find<MonOperatorController>()
         : null;
-    final profileController = Get.isRegistered<ProfileController>()
-        ? Get.find<ProfileController>()
-        : null;
     debugPrint('Dashboard build: operatorController is ${operatorController == null ? 'null' : 'registered'}');
-    debugPrint('Dashboard build: profileController is ${profileController == null ? 'null' : 'registered'}');
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -252,13 +245,13 @@ class _DashboardState extends State<Dashboard> {
               elevation: 0,
               pinned: true,
               centerTitle: true,
-              title: profileController != null
+              title: operatorController != null
                   ? Obx(
                       () => Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            profileController!.companyName,
+                            operatorController!.companyName.value,
                             style: TextStyle(
                               color: AppColors.getTextPrimary(context),
                               fontWeight: FontWeight.bold,
@@ -267,7 +260,7 @@ class _DashboardState extends State<Dashboard> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            profileController!.companyAddress,
+                            operatorController!.companyAddress.value,
                             style: TextStyle(
                               color: AppColors.getTextPrimary(context),
                               fontWeight: FontWeight.w400,
@@ -278,27 +271,53 @@ class _DashboardState extends State<Dashboard> {
                         ],
                       ),
                     )
-                  : const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Loading...',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18.0,
+                  : operatorController != null
+                      ? Obx(
+                          () => Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                operatorController!.companyName.value,
+                                style: TextStyle(
+                                  color: AppColors.getTextPrimary(context),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18.0,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                operatorController!.companyAddress.value,
+                                style: TextStyle(
+                                  color: AppColors.getTextPrimary(context),
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 12.0,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          overflow: TextOverflow.ellipsis,
+                        )
+                      : const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Loading...',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18.0,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12.0,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        Text(
-                          '',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w400,
-                            fontSize: 12.0,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
               leading: Padding(
                 padding: const EdgeInsets.only(left: 20.0),
                 child: AppLogo(width: 100, height: 100),

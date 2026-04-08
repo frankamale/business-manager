@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../models/inventory_data.dart';
 import '../services/kpi_sync_service.dart';
+import '../../../shared/utils/connectivity_helper.dart';
 
 class MonInventoryController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
@@ -113,6 +114,12 @@ class MonInventoryController extends GetxController {
   /// Fetch inventory from server, save to DB, then reload first page
   Future<void> refreshInventoryFromServer() async {
     try {
+      // Check connectivity before attempting to refresh from server
+      final isOnline = await ConnectivityHelper.checkConnectivityAndNotify();
+      if (!isOnline) {
+        return;
+      }
+
       debugPrint('MonInventoryController: Fetching inventory from server...');
       isLoading.value = true;
       

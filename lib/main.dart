@@ -29,6 +29,7 @@ import 'back_pos/config.dart';
 import 'initialise/unified_login_screen.dart';
 import 'initialise/splashscreen.dart';
 import 'shared/services/customer_auth_service.dart';
+import 'shared/widgets/offline_banner.dart';
 
 // Monitor Module imports
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_dashboard_controller.dart';
@@ -163,8 +164,8 @@ class MyApp extends StatelessWidget {
       // Follow device's system theme
       themeMode: ThemeMode.system,
       
-      fallbackLocale: const Locale('en', 'US_store'),
-      home: const SplashScreen(),
+       fallbackLocale: const Locale('en', 'US_store'),
+       home: const OfflineBanner(child: SplashScreen()),
     );
   }
 }

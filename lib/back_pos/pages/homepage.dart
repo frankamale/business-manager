@@ -12,6 +12,7 @@ import '../config.dart';
 import '../services/api_services.dart';
 import '../../flavors/flavor_colors.dart';
 import '../utils/network_helper.dart';
+import '../../shared/utils/connectivity_helper.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -95,25 +96,13 @@ class _HomepageState extends State<Homepage>
   }
 
   Future<void> _refreshAllData() async {
-    if (_isRefreshing) return;
-
-    final hasNetwork = await NetworkHelper.hasConnection();
-    if (!hasNetwork) {
-      Get.snackbar(
-        'Offline',
-        'Cannot refresh without internet connection',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.shade100,
-        colorText: Colors.orange.shade900,
-      );
-      return;
-    }
-
-    setState(() {
-      _isRefreshing = true;
-    });
-
     try {
+      // Check connectivity before refreshing data
+      final isOnline = await ConnectivityHelper.checkConnectivityAndNotify();
+      if (!isOnline) {
+        return;
+      }
+
       // Refresh all POS data in parallel
       await Future.wait([
         _inventoryController.syncInventoryFromAPI(),

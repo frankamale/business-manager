@@ -156,6 +156,12 @@ class _MoreState extends State<More> {
   }
 
   Future<void> _performFullReload(BuildContext context) async {
+    // Check connectivity BEFORE starting any destructive operations
+    final isOnline = await ConnectivityHelper.checkConnectivityAndNotify();
+    if (!isOnline) {
+      return;
+    }
+
     Get.dialog(
       PopScope(
         canPop: false,

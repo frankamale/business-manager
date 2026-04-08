@@ -4,7 +4,6 @@ import 'package:bac_pos/bac_monitor/lib/pages/auth/splash_page.dart';
 import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/bac_monitor/lib/pages/bottom_nav.dart';
 import 'package:bac_pos/client/pages/client_home.dart';
-import 'package:bac_pos/shared/widgets/offline_banner.dart';
 
 /// Root widget for the POS app
 class PosAppRoot extends StatelessWidget {
@@ -12,7 +11,7 @@ class PosAppRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const OfflineBanner(child: SplashScreen());
+    return const SplashScreen();
   }
 }
 
@@ -22,7 +21,7 @@ class MonitorAppRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const OfflineBanner(child: SplashPage());
+    return const SplashPage();
   }
 }
 
@@ -32,6 +31,6 @@ class ClientAppRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return OfflineBanner(child: ClientHome());
+    return ClientHome();
   }
 }

@@ -56,9 +56,9 @@ class _OfflineBannerState extends State<OfflineBanner> {
               location: BannerLocation.topStart,
               color: Colors.red,
               textStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                fontSize: 12 * 0.85,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
               ),
             ),
           ),
