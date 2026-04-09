@@ -31,7 +31,6 @@ class NetworkHelper {
   }
 
   static Future<bool> hasInternetAccess() async {
-    // Use the same reliable method as hasConnection for consistency
     return await hasConnection();
   }
 
