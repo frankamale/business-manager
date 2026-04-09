@@ -173,25 +173,15 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    // Email
-                    Text(
-                      controller.userEmail,
-                      style: TextStyle(
-                        color: AppColors.getTextSecondaryColor(context),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Company & Role
+
                     Obx(
                       () => Column(
                         children: [
                           Text(
                             operatorController.companyName.value,
                             style: TextStyle(
-                              color: AppColors.getTextPrimaryColor(context),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18.0,
+                              color: AppColors.getTextSecondaryColor(context),
+                              fontSize: 14,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
