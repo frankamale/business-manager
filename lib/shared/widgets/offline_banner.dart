@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import '../../../back_pos/utils/network_helper.dart';
 
 /// Offline banner widget that shows in the top-left corner when offline
@@ -13,12 +15,25 @@ class OfflineBanner extends StatefulWidget {
 
 class _OfflineBannerState extends State<OfflineBanner> {
   bool _isOffline = false;
+  StreamSubscription? _subscription;
+  Timer? _periodicCheck;
 
   @override
   void initState() {
     super.initState();
     _checkConnectivity();
     _setupConnectivityListener();
+    // Also set up periodic check every 5 seconds as backup
+    _periodicCheck = Timer.periodic(const Duration(seconds: 5), (_) {
+      _checkConnectivity();
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    _periodicCheck?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkConnectivity() async {
@@ -31,12 +46,12 @@ class _OfflineBannerState extends State<OfflineBanner> {
   }
 
   void _setupConnectivityListener() {
-    NetworkHelper.connectivityStream.listen((status) {
+    _subscription = NetworkHelper.connectivityStream.listen((status) {
       if (mounted) {
         // Check if the status indicates disconnection
-        final statusString = status.toString().toLowerCase();
+        final isOffline = status == InternetConnectionStatus.disconnected;
         setState(() {
-          _isOffline = statusString.contains('disconnect') || !statusString.contains('connect');
+          _isOffline = isOffline;
         });
       }
     });

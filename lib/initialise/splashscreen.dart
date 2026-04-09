@@ -371,9 +371,6 @@ class ConnectivityController extends GetxController {
           } else {
             Get.offAll(() => const PosAppRoot());
           }
-          
-          // Show offline mode notification
-          UIHelper.showOfflineSnackbar();
         } catch (e) {
           debugPrint('SplashScreen: Error opening offline database - $e');
           _setError();

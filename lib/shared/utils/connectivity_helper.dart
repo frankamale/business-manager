@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../back_pos/utils/network_helper.dart';
-import '../widgets/ui_helper.dart';
 
 /// Utility class for handling offline notifications and connectivity checks
 class ConnectivityHelper {
@@ -10,12 +9,7 @@ class ConnectivityHelper {
   static Future<bool> checkConnectivityAndNotify() async {
     final isOnline = await NetworkHelper.hasConnection();
 
-    if (!isOnline) {
-      UIHelper.showOfflineSnackbar();
-      return false;
-    }
-
-    return true;
+    return isOnline;
   }
 
   /// Wrapper for async operations that require network

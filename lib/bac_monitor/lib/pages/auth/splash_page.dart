@@ -252,11 +252,6 @@ class _SplashPageState extends State<SplashPage> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.offAll(() => const BottomNav());
         
-        // Show offline mode snackbar if in offline mode
-        if (widget.isOffline) {
-          UIHelper.showOfflineSnackbar();
-        }
-        
         // STEP 10: Post-mount historical sync (background task)
         // Trigger historical data fetch after UI is mounted (only if online)
         if (!widget.isOffline) {
@@ -660,9 +655,6 @@ class _SplashPageState extends State<SplashPage> {
         // Navigate to main screen
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Get.offAll(() => const BottomNav());
-          
-          // Show offline snackbar
-          UIHelper.showOfflineSnackbar();
         });
       } else {
         debugPrint('SplashPage: No offline credentials found');

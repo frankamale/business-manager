@@ -169,7 +169,10 @@ class MyApp extends StatelessWidget {
         themeMode: controller.themeMode.value,
 
          fallbackLocale: const Locale('en', 'US_store'),
-         home: const OfflineBanner(child: SplashScreen()),
+         builder: (context, child) {
+           return OfflineBanner(child: child ?? const SplashScreen());
+         },
+         home: const SplashScreen(),
       );
     });
   }

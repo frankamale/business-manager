@@ -104,35 +104,6 @@ class _BottomNavState extends State<BottomNav> {
         body: Obx(
           () => Column(
             children: [
-              // Offline indicator banner
-              if (isOffline.value)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  color: Colors.orange,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.cloud_off,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'OFFLINE MODE - Showing cached data',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               // Main content
               Expanded(
                 child: IndexedStack(
