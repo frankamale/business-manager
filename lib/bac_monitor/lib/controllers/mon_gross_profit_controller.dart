@@ -29,11 +29,13 @@ class MonGrossProfitController extends GetxController {
     
     // Set up listeners for date changes
     ever(dateController.selectedRange, (_) {
+      debugPrint('MonGrossProfitController: selectedRange changed to ${dateController.selectedRange.value}, isInitialized: ${isInitialized.value}');
       if (isInitialized.value) {
         fetchGrossProfitData();
       }
     });
     ever(dateController.customRange, (_) {
+      debugPrint('MonGrossProfitController: customRange changed to ${dateController.customRange.value}, isInitialized: ${isInitialized.value}');
       if (isInitialized.value) {
         fetchGrossProfitData();
       }
@@ -53,6 +55,7 @@ class MonGrossProfitController extends GetxController {
   }
 
   Future<void> fetchGrossProfitData() async {
+    debugPrint('MonGrossProfitController: fetchGrossProfitData called. isInitialized: ${isInitialized.value}');
     try {
       isLoading.value = true;
       hasError.value = false;
@@ -66,6 +69,8 @@ class MonGrossProfitController extends GetxController {
 
       final range = dateController.selectedRange.value;
       final customRange = dateController.customRange.value;
+
+      debugPrint('MonGrossProfitController: Fetching data for range: $range, customRange: $customRange');
 
       // Determine date ranges based on selection
       switch (range) {
@@ -127,6 +132,8 @@ class MonGrossProfitController extends GetxController {
       final prevStartDateStr = dateFormatter.format(prevStartDate);
       final prevEndDateStr = dateFormatter.format(prevEndDate);
 
+      debugPrint('MonGrossProfitController: Date range - start: $startDateStr, end: $endDateStr, prevStart: $prevStartDateStr, prevEnd: $prevEndDateStr');
+
       // SQL Query using the KPI table
       // kpiId=5 is Profit (amount1=profit, amount2=transaction value during that day)
 
@@ -157,10 +164,10 @@ class MonGrossProfitController extends GetxController {
       final prevTransactionValue = (prevProfitResult.first['sales'] as num? ??
           0.0).toDouble();
 
-      print("Current Profit: $currentProfit");
-      print("Current Transaction Value: $currentTransactionValue");
-      print("Previous Profit: $prevProfit");
-      print("Previous Transaction Value: $prevTransactionValue");
+      debugPrint("MonGrossProfitController: Current Profit: $currentProfit");
+      debugPrint("MonGrossProfitController: Current Transaction Value: $currentTransactionValue");
+      debugPrint("MonGrossProfitController: Previous Profit: $prevProfit");
+      debugPrint("MonGrossProfitController: Previous Transaction Value: $prevTransactionValue");
 
       // Determine currency
       String currency = 'UGX';
@@ -186,6 +193,8 @@ class MonGrossProfitController extends GetxController {
       totalSales.value = compactFormatter.format(currentTransactionValue);
       cogs.value = '0'; // Not provided by KPI, set to 0
       grossProfitTrend.value = percentFormatter.format(grossProfitTrendValue);
+
+      debugPrint('MonGrossProfitController: Updated values - grossProfit: ${grossProfit.value}, trend: ${grossProfitTrend.value}');
     } catch (e) {
       hasError.value = true;
       print("Error fetching gross profit data: $e");

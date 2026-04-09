@@ -109,7 +109,7 @@ class _DashboardState extends State<Dashboard> {
     }
     // Initialize gross profit data
     if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
+      await Get.find<MonGrossProfitController>().initializeData();
     }
     // Initialize sales trends data
     if (Get.isRegistered<MonSalesTrendsController>()) {
@@ -441,11 +441,28 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  void _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) {
+  Future<void> _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) async {
+    debugPrint('Dashboard: _onDateRangeChanged called with range: $newRange, customRange: $customRange');
     if (!Get.isRegistered<MonDashboardController>()) {
       Get.put(MonDashboardController(), permanent: true);
     }
     final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
+    debugPrint('Dashboard: Updated date range in controller');
+
+    // Fetch updated data for the new date range
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      await Get.find<MonKpiOverviewController>().fetchKpiData();
+    }
+    // Note: MonGrossProfitController has listeners that will automatically fetch data when date range changes
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      await Get.find<MonSalesTrendsController>().fetchAllData();
+    }
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
+    }
+    if (Get.isRegistered<MonKpiController>()) {
+      await Get.find<MonKpiController>().fetchKpiData();
+    }
   }
 }
