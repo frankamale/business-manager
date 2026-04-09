@@ -39,10 +39,9 @@ class MonSalesTrendsController extends GetxController {
 
     switch (range) {
       case DateRange.today:
-        return 'For ${formatter.format(DateTime.now())}';
       case DateRange.yesterday:
-        final yesterday = DateTime.now().subtract(const Duration(days: 1));
-        return 'For ${formatter.format(yesterday)}';
+        // Show "Last 7 Days" label for both since data is for the week
+        return 'Last 7 Days';
       case DateRange.last7Days:
         final now = DateTime.now();
         final start = now.subtract(const Duration(days: 6));
@@ -115,13 +114,11 @@ class MonSalesTrendsController extends GetxController {
 
     switch (range) {
       case DateRange.today:
-        startDate = DateTime(now.year, now.month, now.day);
-        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        break;
       case DateRange.yesterday:
-        final yesterday = now.subtract(const Duration(days: 1));
-        startDate = DateTime(yesterday.year, yesterday.month, yesterday.day);
-        endDate = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+        // Use last 7 days range for both today and yesterday
+        startDate = now.subtract(const Duration(days: 6));
+        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
       case DateRange.last7Days:
         startDate = now.subtract(const Duration(days: 6));
@@ -261,7 +258,7 @@ class MonSalesTrendsController extends GetxController {
 
       print("Date range: $startDate to $endDate ($days days, range type: $range)");
 
-      if (range == DateRange.today || range == DateRange.yesterday || days <= 1) {
+      if (days <= 1) {
         aggregationType.value = 'hourly';
       } else if (range == DateRange.last7Days || (days > 1 && days <= 7)) {
         aggregationType.value = 'daily';

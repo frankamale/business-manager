@@ -32,7 +32,6 @@ class _DateRangePickerState extends State<DateRangePicker> {
       widget.onDateRangeSelected(_selectedRange, _customDateRange);
     });
   }
-
   Future<DateTime?> _showCustomDatePicker({
     required BuildContext context,
     DateTime? initialDate,
