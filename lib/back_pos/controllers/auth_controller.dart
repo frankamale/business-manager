@@ -25,6 +25,8 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // Load user roles from database for login screen
+    loadUserRoles();
   }
 
   // Load all user roles from database (including duplicates)
