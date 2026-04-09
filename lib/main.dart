@@ -42,6 +42,7 @@ import 'package:bac_pos/bac_monitor/lib/controllers/mon_salestrends_controller.d
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_store_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_store_kpi_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_sync_controller.dart';
+import 'package:bac_pos/bac_monitor/lib/controllers/theme_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -96,6 +97,7 @@ void main() async {
   Get.lazyPut<MonSyncController>(() => MonSyncController());
   Get.lazyPut<MonDataSyncController>(() => MonDataSyncController());
   Get.put(ProfileController());
+  Get.put(ThemeController());
   runApp(const MyApp());
 }
 
@@ -104,68 +106,71 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: AppConfig.appName,
-      debugShowCheckedModeBanner: true,
-      
-      // Light theme configuration
-      theme: ThemeData(
-        fontFamily: 'JosefinSans',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: FlavorColors.current.primary,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: LightColors.background,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: LightColors.background, 
-          foregroundColor: LightColors.textPrimary,
-        ),
-        cardTheme: CardThemeData(
-          color: LightColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(color: LightColors.border),
-          ),
-        ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(color: LightColors.textPrimary),
-          bodyMedium: TextStyle(color: LightColors.textSecondary),
-        ),
-        useMaterial3: true,
-      ),
-      
-      // Dark theme configuration
-      darkTheme: ThemeData(
-        fontFamily: 'JosefinSans',
+    return Obx(() {
+      final controller = Get.find<ThemeController>();
+      return GetMaterialApp(
+        title: AppConfig.appName,
+        debugShowCheckedModeBanner: true,
 
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: FlavorColors.current.primary,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: DarkColors.background,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: DarkColors.background,
-          foregroundColor: DarkColors.textPrimary,
-        ),
-        cardTheme: CardThemeData(
-          color: DarkColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(color: DarkColors.border),
+        // Light theme configuration
+        theme: ThemeData(
+          fontFamily: 'JosefinSans',
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: FlavorColors.current.primary,
+            brightness: Brightness.light,
           ),
+          scaffoldBackgroundColor: LightColors.background,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: LightColors.background,
+            foregroundColor: LightColors.textPrimary,
+          ),
+          cardTheme: CardThemeData(
+            color: LightColors.card,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: LightColors.border),
+            ),
+          ),
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(color: LightColors.textPrimary),
+            bodyMedium: TextStyle(color: LightColors.textSecondary),
+          ),
+          useMaterial3: true,
         ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(color: DarkColors.textPrimary),
-          bodyMedium: TextStyle(color: DarkColors.textSecondary),
+
+        // Dark theme configuration
+        darkTheme: ThemeData(
+          fontFamily: 'JosefinSans',
+
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: FlavorColors.current.primary,
+            brightness: Brightness.dark,
+          ),
+          scaffoldBackgroundColor: DarkColors.background,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: DarkColors.background,
+            foregroundColor: DarkColors.textPrimary,
+          ),
+          cardTheme: CardThemeData(
+            color: DarkColors.card,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: DarkColors.border),
+            ),
+          ),
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(color: DarkColors.textPrimary),
+            bodyMedium: TextStyle(color: DarkColors.textSecondary),
+          ),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
-      ),
-      
-      // Follow device's system theme
-      themeMode: ThemeMode.system,
-      
-       fallbackLocale: const Locale('en', 'US_store'),
-       home: const OfflineBanner(child: SplashScreen()),
-    );
+
+        // Follow device's system theme or manual setting
+        themeMode: controller.themeMode.value,
+
+         fallbackLocale: const Locale('en', 'US_store'),
+         home: const OfflineBanner(child: SplashScreen()),
+      );
+    });
   }
 }
