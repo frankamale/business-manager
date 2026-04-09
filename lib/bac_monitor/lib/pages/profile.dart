@@ -165,7 +165,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 16),
                     // Name
                     Text(
-                      operatorController.companyName.value,
+                      controller.userName,
                       style: TextStyle(
                         color: AppColors.getTextPrimaryColor(context),
                         fontSize: 24,
@@ -182,8 +182,31 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-
                     // Company & Role
+                    Obx(
+                      () => Column(
+                        children: [
+                          Text(
+                            operatorController.companyName.value,
+                            style: TextStyle(
+                              color: AppColors.getTextPrimaryColor(context),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.0,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            operatorController.companyAddress.value,
+                            style: TextStyle(
+                              color: AppColors.getTextPrimaryColor(context),
+                              fontWeight: FontWeight.w400,
+                              fontSize: 12.0,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
