@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../back_pos/utils/network_helper.dart';
+import '../widgets/ui_helper.dart';
 
 /// Utility class for handling offline notifications and connectivity checks
 class ConnectivityHelper {
@@ -10,38 +11,11 @@ class ConnectivityHelper {
     final isOnline = await NetworkHelper.hasConnection();
 
     if (!isOnline) {
-      Get.snackbar(
-        'No Internet Connection',
-        'This action requires an internet connection. Please check your network and try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.shade100,
-        colorText: Colors.red.shade800,
-        duration: const Duration(seconds: 4),
-        icon: Icon(
-          Icons.wifi_off,
-          color: Colors.red.shade800,
-        ),
-      );
+      UIHelper.showOfflineSnackbar();
       return false;
     }
 
     return true;
-  }
-
-  /// Shows a banner notification when offline for critical operations
-  static void showOfflineBanner(String action) {
-    Get.snackbar(
-      'Offline Mode',
-      'Cannot $action without internet connection',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.orange.shade100,
-      colorText: Colors.orange.shade800,
-      duration: const Duration(seconds: 3),
-      icon: Icon(
-        Icons.cloud_off,
-        color: Colors.orange.shade800,
-      ),
-    );
   }
 
   /// Wrapper for async operations that require network
