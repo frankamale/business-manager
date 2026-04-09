@@ -187,21 +187,22 @@ class ProfileController extends GetxController {
 
       currentSystem.value = system;
 
-      // Get admin accounts for the target system
+      // FIX: When switching to POS, always use current company's credentials
+      // Don't rely on previously cached POS accounts (they may be for different companies)
+      if (system == 'pos') {
+        await _switchToPosWithCurrentCompany();
+        return;
+      }
+
+      // Existing code for other systems (monitor)
       final systemAccounts = _accountManager.getAdminAccountsForSwitch(system: system);
 
       if (systemAccounts.isNotEmpty) {
-        // Switch to the most recently used account for this system
-        // print('DEBUG: ProfileController.switchSystem() - Found existing account, using switchToAccount');
         await switchToAccount(systemAccounts.first);
       } else {
-        // No accounts for this system - ensure database is open before navigation
-        // print('DEBUG: ProfileController.switchSystem() - No existing account, opening database manually');
-
         final dbHelper = UnifiedDatabaseHelper.instance;
         String? companyId;
 
-        // Try to find companyId from various sources
         final currentAccount = _accountManager.currentAccount.value;
         if (currentAccount != null && currentAccount.userData.containsKey('companyId')) {
           companyId = currentAccount.userData['companyId']?.toString();
@@ -211,38 +212,12 @@ class ProfileController extends GetxController {
           companyId = await _monitorApiService.getStoredCompanyId();
         }
 
-        if (companyId == null || companyId.isEmpty) {
-          final companyInfo = await _posApiService.getCompanyInfo();
-          companyId = companyInfo['companyId'];
-        }
-
-        // Ensure database is open
         if (companyId != null && companyId.isNotEmpty) {
-          // print('DEBUG: ProfileController.switchSystem() - Opening database for company: $companyId');
           await dbHelper.openForCompany(companyId);
-
-          // Store companyId for the target system
-          if (system == 'pos') {
-            await _posApiService.saveCompanyInfo({'company': companyId, 'branch': '', 'sellingPointId': ''});
-          } else {
-            await _monitorApiService.storeCompanyId(companyId);
-          }
-        } else {
-          // print('WARNING: ProfileController.switchSystem() - No companyId found!');
+          await _monitorApiService.storeCompanyId(companyId);
         }
 
-        // Set switching flag for POS
-        if (system == 'pos') {
-          final box = GetStorage();
-          await box.write('switching_to_pos', true);
-        }
-
-        // Navigate to the appropriate app
-        if (system == 'pos') {
-          Get.offAll(() => const PosAppRoot());
-        } else {
-          Get.offAll(() => const MonitorAppRoot());
-        }
+        Get.offAll(() => const MonitorAppRoot());
       }
     } catch (e) {
       errorMessage.value = 'Failed to switch system: $e';
@@ -250,6 +225,83 @@ class ProfileController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  Future<void> _switchToPosWithCurrentCompany() async {
+    final dbHelper = UnifiedDatabaseHelper.instance;
+    
+    // Get companyId from current monitor session (PRIMARY SOURCE)
+    String? companyId;
+    final currentAccount = _accountManager.currentAccount.value;
+    
+    if (currentAccount != null) {
+      companyId = currentAccount.userData['companyId']?.toString();
+    }
+    
+    if (companyId == null || companyId.isEmpty) {
+      companyId = await _monitorApiService.getStoredCompanyId();
+    }
+    
+    if (companyId == null || companyId.isEmpty) {
+      errorMessage.value = 'No company found. Please log in to Monitor first.';
+      isLoading.value = false;
+      return;
+    }
+
+    // Open database for the company
+    await dbHelper.openForCompany(companyId);
+    
+    // Clear old POS auth to force fresh session
+    await _posApiService.clearAuthData();
+    
+    // Store company info in POS service
+    await _posApiService.saveCompanyInfo({
+      'company': companyId, 
+      'branch': '', 
+      'sellingPointId': ''
+    });
+    
+    // Store company ID also via Monitor service for consistency
+    await _monitorApiService.storeCompanyId(companyId);
+    
+    // Store switching context for POS to use
+    final box = GetStorage();
+    await box.write('switching_to_pos', true);
+    await box.write('switching_company_id', companyId);
+    
+    // Store current user's credentials for offline POS login
+    // Priority: 1) credentials from current account's userData, 2) server credentials
+    if (currentAccount != null) {
+      final userData = currentAccount.userData;
+      String? posUsername;
+      String? posPassword;
+      
+      // Try to get POS credentials from userData (stored during login)
+      if (userData.containsKey('posCredentials')) {
+        final posCreds = userData['posCredentials'] as Map<String, dynamic>?;
+        if (posCreds != null) {
+          posUsername = posCreds['username']?.toString();
+          posPassword = posCreds['password']?.toString();
+        }
+      }
+      
+      // Fallback to stored credentials in userData directly
+      if (posUsername == null && userData.containsKey('username')) {
+        posUsername = userData['username']?.toString();
+      }
+      
+      // Store credentials in GetStorage for POS access
+      if (posUsername != null) {
+        await box.write('pos_switch_username', posUsername);
+        // Password may be empty/null - user will need to enter it manually
+        if (posPassword != null && posPassword.isNotEmpty) {
+          await box.write('pos_switch_password', posPassword);
+        }
+      }
+    }
+
+    isLoading.value = false;
+    Get.offAll(() => const PosAppRoot());
   }
 
   Future<void> switchToAccount(UserAccount account) async {

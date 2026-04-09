@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:developer' as developer;
 import 'login.dart';
+import '../pages/homepage.dart';
 import '../services/api_services.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/service_point_controller.dart';
@@ -324,11 +325,20 @@ class _SplashScreenState extends State<SplashScreen>
         _statusMessage = 'Switching to POS...';
       });
 
-      // Get stored company info
-      final companyInfo = await _apiService.getCompanyInfo();
-      final storedCompanyId = companyInfo['companyId'];
+      // FIX: Get company from GetStorage (set by Monitor) first, not from POS cache
+      final box = GetStorage();
+      String? companyId = box.read('switching_company_id');
+      
+      // Fallback to POS cache if not in storage
+      if (companyId == null || companyId.isEmpty) {
+        final companyInfo = await _apiService.getCompanyInfo();
+        companyId = companyInfo['companyId'];
+      }
+      
+      // Clean up storage
+      await box.remove('switching_company_id');
 
-      if (storedCompanyId == null || storedCompanyId.isEmpty) {
+      if (companyId == null || companyId.isEmpty) {
         _log('handleSwitchingMode: No stored company ID, falling back to login');
         if (mounted) {
           Get.off(() => const UnifiedLoginScreen());
@@ -340,7 +350,14 @@ class _SplashScreenState extends State<SplashScreen>
       _initializeControllers();
 
       // Open database for the company
-      await _dbHelper.openForCompany(storedCompanyId);
+      await _dbHelper.openForCompany(companyId);
+      
+      // Save company info to POS service for consistency
+      await _apiService.saveCompanyInfo({
+        'company': companyId, 
+        'branch': '', 
+        'sellingPointId': ''
+      });
 
       // Check network for data sync
       final hasNetwork = await NetworkHelper.hasConnection();
@@ -375,22 +392,13 @@ class _SplashScreenState extends State<SplashScreen>
         }
 
         if (hasUsers && hasServicePoints) {
-          _log('handleSwitchingMode: Essential data available, navigating to POS');
-          setState(() {
-            _statusMessage = 'Starting POS...';
-          });
-          await Future.delayed(const Duration(milliseconds: 500));
+          _log('handleSwitchingMode: Essential data available, trying auto-login');
+          await _tryAutoLoginOffline();
+        } else {
+          _log('handleSwitchingMode: Insufficient data even after sync, showing login');
           if (mounted) {
             Get.off(() => const Login());
           }
-        } else {
-          _log('handleSwitchingMode: Insufficient data even after sync, showing offline mode');
-          setState(() {
-            _hasError = true;
-            _isOfflineMode = true;
-            _statusMessage = 'Limited data available - offline mode';
-            _hasCachedData = true; // Allow continue offline
-          });
         }
       } else {
         // Offline mode - check if we have cached data from previous sessions
@@ -403,14 +411,8 @@ class _SplashScreenState extends State<SplashScreen>
         final hasServicePoints = await _checkCachedDataSafely('service_points');
 
         if (hasUsers && hasServicePoints) {
-          _log('handleSwitchingMode: Cached data available, starting POS offline');
-          setState(() {
-            _statusMessage = 'Starting POS offline...';
-          });
-          await Future.delayed(const Duration(milliseconds: 500));
-          if (mounted) {
-            Get.off(() => const Login());
-          }
+          _log('handleSwitchingMode: Cached data available, trying auto-login offline');
+          await _tryAutoLoginOffline();
         } else {
           _log('handleSwitchingMode: No cached data available offline');
           setState(() {
@@ -438,6 +440,63 @@ class _SplashScreenState extends State<SplashScreen>
         colorText: Colors.red.shade900,
         duration: const Duration(seconds: 4),
       );
+    }
+  }
+
+  // Auto-login helper for offline switching
+  Future<void> _tryAutoLoginOffline() async {
+    try {
+      // Priority 1: Try credentials from GetStorage (set during switch from Monitor)
+      final box = GetStorage();
+      String? username = box.read('pos_switch_username');
+      String? password = box.read('pos_switch_password');
+      
+      // Priority 2: Fall back to PosApiService stored credentials
+      if (username == null) {
+        final creds = await _apiService.getServerCredentials();
+        username = creds['username'];
+        password = creds['password'];
+      }
+      
+      if (username != null && password != null && password.isNotEmpty) {
+        _log('tryAutoLoginOffline: Attempting auto-login with stored credentials');
+        
+        final authController = Get.find<AuthController>();
+        final success = await authController.login(username, password);
+        
+        if (success) {
+          _log('tryAutoLoginOffline: Auto-login successful');
+          
+          // Clean up stored credentials after successful login
+          await box.remove('pos_switch_username');
+          await box.remove('pos_switch_password');
+          
+          if (mounted) {
+            Get.off(() => const Homepage());
+          }
+          return;
+        } else {
+          _log('tryAutoLoginOffline: Auto-login failed - invalid credentials');
+        }
+      } else if (username != null) {
+        // No password stored - pre-fill username and show login screen
+        _log('tryAutoLoginOffline: No password stored, pre-filling username');
+        
+        // Store username for Login screen to use
+        await box.write('prefill_username', username);
+        
+        if (mounted) {
+          Get.off(() => const Login());
+        }
+        return;
+      }
+    } catch (e) {
+      _log('tryAutoLoginOffline: Auto-login failed - $e');
+    }
+    
+    // Fall back to login screen
+    if (mounted) {
+      Get.off(() => const Login());
     }
   }
 

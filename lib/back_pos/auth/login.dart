@@ -3,6 +3,7 @@ import 'package:bac_pos/back_pos/pages/homepage.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../bac_monitor/lib/controllers/profile_controller.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../../bac_monitor/lib/services/api_services.dart' as monitor;
@@ -32,6 +33,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
   bool _isLoading = false;
   bool _isLoading2 = false;
   String _companyName = '';
+  String? _prefilledUsername;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
@@ -48,6 +50,42 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     );
     _animationController.forward();
     _loadCompanyDetails();
+    _loadPrefillUsername();
+    
+    // Auto-select the prefilled username after userRoles are loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_prefilledUsername != null && _authController.userRoles.isNotEmpty) {
+        final roles = _authController.userRoles;
+        // Try to find a role that matches the prefilled username
+        String? matchedRole;
+        for (final role in roles) {
+          if (role.toLowerCase() == _prefilledUsername!.toLowerCase() ||
+              role.toLowerCase().contains(_prefilledUsername!.toLowerCase())) {
+            matchedRole = role;
+            break;
+          }
+        }
+        if (matchedRole != null) {
+          setState(() {
+            selectedItem = matchedRole;
+          });
+        }
+      }
+    });
+  }
+
+  Future<void> _loadPrefillUsername() async {
+    try {
+      final box = GetStorage();
+      final prefilled = box.read('prefill_username') as String?;
+      if (prefilled != null && prefilled.isNotEmpty) {
+        setState(() {
+          _prefilledUsername = prefilled;
+        });
+      }
+    } catch (e) {
+      // Ignore errors
+    }
   }
 
   @override
