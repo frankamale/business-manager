@@ -235,52 +235,43 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     const SizedBox(height: 12),
 
-                    // Switch Account Section
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                            child: Text(
-                              'Switch Account',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
+                    // Switch Account Section - only show if there are accounts to switch to
+                    Obx(() {
+                      final accounts = controller.getAvailableAccounts();
+                      if (accounts.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(left: 8.0, bottom: 12),
+                              child: Text(
+                                'Switch Account',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.getCardColor(context),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Obx(() {
-                              final accounts = controller.getAvailableAccounts();
-                              if (accounts.isEmpty) {
-                                return Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Text(
-                                    'No other admin accounts available',
-                                    style: TextStyle(
-                                      color: AppColors.getTextSecondaryColor(context),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                );
-                              }
-                              return Column(
+                            Container(
+                              decoration: BoxDecoration(
+                                color: AppColors.getCardColor(context),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
                                 children: accounts.map((account) => 
                                   _buildAccountItem(context, account, controller)
                                 ).toList(),
-                              );
-                            }),
-                          ),
-                        ],
-                      ),
-                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
 
                     const SizedBox(height: 12),
 
@@ -532,9 +523,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       ),
                       Text(
-                        account.system == 'monitor'
-                            ? 'BAC Monitor'
-                            : 'POS System',
+                        'BAC Monitor',
                         style: TextStyle(
                           color: AppColors.getTextSecondaryColor(context),
                           fontSize: 12,

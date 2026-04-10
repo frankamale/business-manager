@@ -313,6 +313,15 @@ class ProfileController extends GetxController {
       final currentAccount = _accountManager.currentAccount.value;
       final dbHelper = UnifiedDatabaseHelper.instance;
 
+      // Always switch to MONITOR for this account (ignore stored system)
+      account = UserAccount(
+        id: account.id,
+        username: account.username,
+        system: 'monitor',
+        userData: account.userData,
+        lastLogin: account.lastLogin,
+      );
+
       // Get companyId from the account we're switching to
       String? targetCompanyId = account.userData['companyId']?.toString();
 
