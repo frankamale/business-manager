@@ -125,6 +125,7 @@ class HorizontalSummaryCards extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MonSalesTrendsController>();
+    print('HorizontalSummaryCards: building, rawSalesForKpi3 length: ${controller.rawSalesForKpi3.value.length}');
 
     return Obx(() {
       final isLoading =
@@ -133,6 +134,8 @@ class HorizontalSummaryCards extends StatelessWidget {
       final cashierData = _processCashierData(controller.rawSalesForKpi4.value);
       final storeData = _processStoreData(controller.topStoresData.value);
       final compactFormatter = NumberFormat.compact(locale: 'en_US');
+
+      print('HorizontalSummaryCards: Obx rebuild, paymentData length: ${paymentData.length}, cashierData length: ${cashierData.length}, storeData length: ${storeData.length}');
 
       return Skeletonizer(
         enabled: isLoading,

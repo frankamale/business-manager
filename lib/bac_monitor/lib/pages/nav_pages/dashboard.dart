@@ -371,7 +371,7 @@ class _DashboardState extends State<Dashboard> {
                         );
                       }),
                       const SizedBox(height: 8),
-                      const HorizontalSummaryCards(),
+                      HorizontalSummaryCards(),
                       const SizedBox(height: 8),
                       // Obx(() {
                       //   final controller =

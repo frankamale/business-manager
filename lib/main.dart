@@ -48,7 +48,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
-  // Debug: Print flavor info
+
   print('FlavorConfig.flavorName: ${FlavorConfig.flavorName}');
   print('FlavorColors.current.primary: ${FlavorColors.current.primary}');
 
@@ -84,14 +84,7 @@ void main() async {
   Get.put(SettingsController());
   Get.put(ServicePointController());
 
-  // Removed lazy binding for MonDashboardController - created explicitly with permanent: true in splash pages
-  Get.lazyPut<MonKpiController>(() => MonKpiController());
-  Get.lazyPut<MonGrossProfitController>(() => MonGrossProfitController());
-  Get.lazyPut<MonKpiOverviewController>(() => MonKpiOverviewController());
-  Get.lazyPut<MonMainNavigationController>(() => MonMainNavigationController());
-  Get.lazyPut<MonOperatorController>(() => MonOperatorController());
-  Get.lazyPut<MonOutstandingPaymentsController>(() => MonOutstandingPaymentsController());
-  Get.lazyPut<MonSalesTrendsController>(() => MonSalesTrendsController());
+
   Get.lazyPut<MonStoresController>(() => MonStoresController());
   Get.lazyPut<MonStoreKpiTrendController>(() => MonStoreKpiTrendController());
   Get.lazyPut<MonSyncController>(() => MonSyncController());

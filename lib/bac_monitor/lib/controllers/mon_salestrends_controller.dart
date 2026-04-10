@@ -114,11 +114,13 @@ class MonSalesTrendsController extends GetxController {
 
     switch (range) {
       case DateRange.today:
-      case DateRange.yesterday:
-        // Use last 7 days range for both today and yesterday
-        startDate = now.subtract(const Duration(days: 6));
-        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        startDate = DateTime(now.year, now.month, now.day);
         endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case DateRange.yesterday:
+        final yesterday = now.subtract(const Duration(days: 1));
+        startDate = DateTime(yesterday.year, yesterday.month, yesterday.day);
+        endDate = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
         break;
       case DateRange.last7Days:
         startDate = now.subtract(const Duration(days: 6));
