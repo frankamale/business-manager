@@ -25,7 +25,7 @@ class _BottomNavState extends State<BottomNav> {
   final MonDashboardController controller =
       Get.isRegistered<MonDashboardController>()
       ? Get.find<MonDashboardController>()
-      : Get.put(MonDashboardController());
+      : Get.put(MonDashboardController(), permanent: true);
 
   // Track offline status
   final RxBool isOffline = false.obs;

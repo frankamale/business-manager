@@ -259,16 +259,16 @@ class ConnectivityController extends GetxController {
         Get.put(MonStoreKpiTrendController());
       }
       if (!Get.isRegistered<MonDashboardController>()) {
-        Get.put(MonDashboardController());
+        Get.put(MonDashboardController(), permanent: true);
       }
       if (!Get.isRegistered<MonKpiOverviewController>()) {
-        Get.put(MonKpiOverviewController());
+        Get.put(MonKpiOverviewController(), permanent: true);
       }
       if (!Get.isRegistered<MonSalesTrendsController>()) {
-        Get.put(MonSalesTrendsController());
+        Get.put(MonSalesTrendsController(), permanent: true);
       }
       if (!Get.isRegistered<MonGrossProfitController>()) {
-        Get.put(MonGrossProfitController());
+        Get.put(MonGrossProfitController(), permanent: true);
       }
       if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
         Get.put(MonOutstandingPaymentsController());

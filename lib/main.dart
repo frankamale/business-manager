@@ -84,7 +84,7 @@ void main() async {
   Get.put(SettingsController());
   Get.put(ServicePointController());
 
-  Get.lazyPut<MonDashboardController>(() => MonDashboardController());
+  // Removed lazy binding for MonDashboardController - created explicitly with permanent: true in splash pages
   Get.lazyPut<MonKpiController>(() => MonKpiController());
   Get.lazyPut<MonGrossProfitController>(() => MonGrossProfitController());
   Get.lazyPut<MonKpiOverviewController>(() => MonKpiOverviewController());
