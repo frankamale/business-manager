@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../additions/colors.dart';
 import '../../models/trend_direction.dart';
+import '../../controllers/mon_gross_profit_controller.dart';
 
 class KpiCard extends StatelessWidget {
   final String title;
@@ -9,8 +11,6 @@ class KpiCard extends StatelessWidget {
   final String? trendValue;
   final TrendDirection trendDirection;
   final String? trendReference;
-
-  // Sub-metrics shown on the right side
   final List<MiniKpiData> miniKpis;
 
   const KpiCard({
@@ -28,101 +28,64 @@ class KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textPrimary = AppColors.getTextPrimaryColor(context);
     final textSecondary = AppColors.getTextSecondaryColor(context);
+    final textTertiary = textSecondary.withValues(alpha: 0.5);
     final primaryLight = AppColors.getPrimaryLightColor(context);
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         color: AppColors.getCardColor(context),
-        border: Border.all(color: AppColors.getBorderColor(context)),
+        border: Border.all(
+          color: AppColors.getBorderColor(context),
+        ),
       ),
-      child: Stack(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Decorative glow blob top-right
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 16.0,
+          // ── Card title ──────────────────────────────────────────
+          Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              color: primaryLight,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.6,
             ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ── Main section: primary metric + divider + mini KPIs ──
+          IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Primary metric
                 Expanded(
                   flex: 5,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Category label pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 3,
-                        ),
-                        child: Text(
-                          title.toUpperCase(),
-                          style: TextStyle(
-                            color: primaryLight,
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.4,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Big value
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            if (unit != null)
-                              TextSpan(
-                                text: '$unit  ',
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            TextSpan(
-                              text: value,
-                              style: TextStyle(
-                                color: textPrimary,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Trend row
-                      if (trendDirection != TrendDirection.none &&
-                          trendValue != null) ...[
-                        const SizedBox(height: 6),
-                        _TrendBadge(
-                          value: trendValue!,
-                          direction: trendDirection,
-                          reference: trendReference,
-                        ),
-                      ],
-                    ],
+                  child: _PrimaryMetric(
+                    value: value,
+                    unit: unit,
+                    trendValue: trendValue,
+                    trendDirection: trendDirection,
+                    trendReference: trendReference,
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                    textTertiary: textTertiary,
                   ),
                 ),
 
-                // Vertical divider
+                // Divider
                 Container(
-                  width: 1,
-                  height: 64,
-                  margin: const EdgeInsets.symmetric(horizontal: 14),
+                  width: 0.5,
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        textPrimary.withOpacity(0),
-                        textPrimary.withOpacity(0.18),
-                        textPrimary.withOpacity(0),
+                        textPrimary.withValues(alpha: 0),
+                        textPrimary.withValues(alpha: 0.18),
+                        textPrimary.withValues(alpha: 0),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -130,7 +93,7 @@ class KpiCard extends StatelessWidget {
                   ),
                 ),
 
-                // ── RIGHT: mini KPIs ────────────────────────────────────
+                // Mini KPIs
                 Expanded(
                   flex: 4,
                   child: Column(
@@ -144,15 +107,144 @@ class KpiCard extends StatelessWidget {
               ],
             ),
           ),
+
+          Container(
+            height: 0.5,
+            color: AppColors.getBorderColor(context),
+            margin: const EdgeInsets.only(bottom: 14),
+          ),
+
+          Obx(() => _buildEfrisStatusRow(context)),
         ],
       ),
     );
   }
+
+  Widget _buildEfrisStatusRow(BuildContext context) {
+    final controller = Get.find<MonGrossProfitController>();
+    final textTertiary =
+    AppColors.getTextSecondaryColor(context).withValues(alpha: 0.5);
+
+    const pendingColor = Color(0xFFFFC107);
+    const uploadedColor = Color(0xFF4CAF50);
+    const failedColor = Color(0xFFF44336);
+
+    return Row(
+      children: [
+        Icon(Icons.receipt_long_rounded, color: textTertiary, size: 13),
+        const SizedBox(width: 5),
+        Text(
+          'EFRIS',
+          style: TextStyle(
+            color: textTertiary,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const Spacer(),
+        _EfrisChip(
+          label: 'Pending',
+          value: controller.efrisPending.value,
+          color: pendingColor,
+        ),
+        const SizedBox(width: 6),
+        _EfrisChip(
+          label: 'Uploaded',
+          value: controller.efrisUploaded.value,
+          color: uploadedColor,
+        ),
+        const SizedBox(width: 6),
+        _EfrisChip(
+          label: 'Failed',
+          value: controller.efrisFailed.value,
+          color: failedColor,
+        ),
+      ],
+    );
+  }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Mini KPI data model
-// ─────────────────────────────────────────────────────────────
+// ── Primary metric block ─────────────────────────────────────────────────────
+
+class _PrimaryMetric extends StatelessWidget {
+  final String value;
+  final String? unit;
+  final String? trendValue;
+  final TrendDirection trendDirection;
+  final String? trendReference;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textTertiary;
+
+  const _PrimaryMetric({
+    required this.value,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textTertiary,
+    this.unit,
+    this.trendValue,
+    this.trendDirection = TrendDirection.none,
+    this.trendReference,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (unit != null) ...[
+          Text(
+            unit!,
+            style: TextStyle(
+              color: textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 2),
+        ],
+        Text(
+          value,
+          style: TextStyle(
+            color: textPrimary,
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1,
+            height: 1,
+          ),
+        ),
+        if (trendDirection != TrendDirection.none && trendValue != null) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _TrendBadge(
+                value: trendValue!,
+                direction: trendDirection,
+              ),
+              if (trendReference != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  trendReference!,
+                  style: TextStyle(
+                    color: textTertiary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Mini KPI row ─────────────────────────────────────────────────────────────
+
 class MiniKpiData {
   final String label;
   final String value;
@@ -165,9 +257,6 @@ class MiniKpiData {
   });
 }
 
-// ─────────────────────────────────────────────────────────────
-// Mini KPI row
-// ─────────────────────────────────────────────────────────────
 class _MiniKpiRow extends StatelessWidget {
   final MiniKpiData data;
 
@@ -177,29 +266,31 @@ class _MiniKpiRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = data.accentColor ?? AppColors.getInfoColor(context);
     final textPrimary = AppColors.getTextPrimaryColor(context);
-    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final textTertiary =
+    AppColors.getTextSecondaryColor(context).withValues(alpha: 0.5);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Label row
           Row(
             children: [
               Container(
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: accent,
                 ),
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 5),
               Text(
                 data.label,
                 style: TextStyle(
-                  color: textSecondary.withOpacity(0.55),
-                  fontSize: 11,
+                  color: textTertiary,
+                  fontSize: 10,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 0.3,
                 ),
@@ -207,25 +298,30 @@ class _MiniKpiRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 2),
+          // Value row
           Padding(
-            padding: const EdgeInsets.only(left: 12),
+            padding: const EdgeInsets.only(left: 10),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
                 Text(
-                  "UGX",
+                  'UGX',
                   style: TextStyle(
-                    color: textSecondary.withOpacity(0.55),
-                    fontSize: 12,
+                    color: textTertiary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(width: 4),
+                const SizedBox(width: 4),
                 Text(
                   data.value,
                   style: TextStyle(
                     color: textPrimary,
-                    fontSize: 19,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
+                    letterSpacing: -0.4,
+                    height: 1,
                   ),
                 ),
               ],
@@ -237,66 +333,85 @@ class _MiniKpiRow extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Trend badge
-// ─────────────────────────────────────────────────────────────
+// ── Trend badge ───────────────────────────────────────────────────────────────
+
 class _TrendBadge extends StatelessWidget {
   final String value;
   final TrendDirection direction;
-  final String? reference;
 
-  const _TrendBadge({
-    required this.value,
-    required this.direction,
-    this.reference,
-  });
+  const _TrendBadge({required this.value, required this.direction});
 
   @override
   Widget build(BuildContext context) {
     final isUp = direction == TrendDirection.up;
-    final color = isUp ? AppColors.getSuccessColor(context) : AppColors.getErrorColor(context);
-    final textSecondary = AppColors.getTextSecondaryColor(context);
+    final color = isUp
+        ? AppColors.getSuccessColor(context)
+        : AppColors.getErrorColor(context);
 
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isUp
-                    ? Icons.arrow_upward_rounded
-                    : Icons.arrow_downward_rounded,
-                color: color,
-                size: 12,
-              ),
-              const SizedBox(width: 3),
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+        Icon(
+          isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          color: color,
+          size: 11,
+        ),
+        const SizedBox(width: 3),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        if (reference != null) ...[
-          const SizedBox(width: 6),
+      ],
+    );
+  }
+}
+
+// ── EFRIS chip ────────────────────────────────────────────────────────────────
+
+class _EfrisChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _EfrisChip({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textPrimary = AppColors.getTextPrimaryColor(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 5,
+            height: 5,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          ),
+          const SizedBox(width: 4),
           Text(
-            reference!,
+            '$label · $value',
             style: TextStyle(
-              color: textSecondary.withOpacity(0.4),
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
+              color: textPrimary,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 }

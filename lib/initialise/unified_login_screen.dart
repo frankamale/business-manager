@@ -1,7 +1,5 @@
-import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/account_manager.dart';
-import 'package:bac_pos/flavors/flavor_config.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +8,6 @@ import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
 import 'package:get_storage/get_storage.dart';
 
-import '../bac_monitor/lib/additions/colors.dart';
 import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
@@ -32,7 +29,6 @@ class UnifiedLoginScreen extends StatefulWidget {
 }
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
-  PosApiService _apiService = Get.find<PosApiService>();
   final MonitorApiService _monitorApiService = Get.find<MonitorApiService>();
   final AccountManager _accountManager = Get.find<AccountManager>();
   final _formKey = GlobalKey<FormState>();
@@ -391,13 +387,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     return CredentialHelper.getStoredCredentials();
   }
 
-  Future<void> _clearStoredCredentials() async {
-    await CredentialHelper.clearCredentials();
-  }
 
-  Future<bool> _hasStoredCredentials() async {
-    return CredentialHelper.hasStoredCredentials();
-  }
 
   @override
   Widget build(BuildContext context) {

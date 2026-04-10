@@ -829,7 +829,7 @@ class MonitorApiService extends GetxService {
   static const int kpiPaymentModes = 3;
   static const int kpiSalesperson = 4;
   static const int kpiProfit = 5;
-  // static const int kpiEfrisStatus = 6;
+  static const int kpiEfrisStatus = 6;
   // static const int kpiStockCategory = 7;
   static const int kpiByItem = 8;
 
@@ -1037,6 +1037,7 @@ class MonitorApiService extends GetxService {
       {'id': kpiPaymentModes, 'name': 'payment_modes'},
       {'id': kpiSalesperson, 'name': 'salesperson'},
       {'id': kpiProfit, 'name': 'profit'},
+      {'id': kpiEfrisStatus, 'name': 'efris_status'},
       // {'id': kpiStockCategory, 'name': 'stock_category'},
       {'id': kpiByItem, 'name': 'by_item'},
     ];
@@ -1105,7 +1106,7 @@ class MonitorApiService extends GetxService {
       {'id': kpiPaymentModes, 'name': 'payment_modes'},
       {'id': kpiSalesperson, 'name': 'salesperson'},
       {'id': kpiProfit, 'name': 'profit'},
-      // {'id': kpiEfrisStatus, 'name': 'efris_status'},
+      {'id': kpiEfrisStatus, 'name': 'efris_status'},
       // {'id': kpiStockCategory, 'name': 'stock_category'},
       {'id': kpiByItem, 'name': 'by_item'},
     ];
