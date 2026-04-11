@@ -57,7 +57,11 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
 
   void _showAddExpenseDialog(BuildContext context) {
     final storeController = Get.find<MonStoresController>();
-    final servicePointId = storeController.selectedStore.value?.id;
+    final selectedStore = storeController.selectedStore.value;
+    // Use actual store ID, not the "all stores" ID
+    final servicePointId = (selectedStore != null && selectedStore.id != '---all-stores-id---')
+        ? selectedStore.id
+        : null;
 
     ExpenseFormDialog.show(
       context: context,
@@ -110,7 +114,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          isStockExpense ? 'Stock Expenses' : 'Non-Stock Expenses',
+          isStockExpense ? 'Stock Expenses' : 'Non-Stock Payments',
           style: TextStyle(
             color: LightColors.textPrimary,
             fontWeight: FontWeight.bold,
@@ -129,18 +133,18 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               ),
             );
           }),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Center(
-              child: Text(
-                widget.periodLabel,
-                style: TextStyle(
-                  color: LightColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          //   child: Center(
+          //     child: Text(
+          //       widget.periodLabel,
+          //       style: TextStyle(
+          //         color: LightColors.textSecondary,
+          //         fontSize: 12,
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
       body: SingleChildScrollView(
@@ -390,23 +394,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       ),
       child: Row(
         children: [
-          // Upload status indicator - only show on pending expenses
-          if (isPending)
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.cloud_off,
-                size: 16,
-                color: Colors.orange.shade700,
-              ),
-            )
-          else
-            const SizedBox(width: 38),
-          const SizedBox(width: 12),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

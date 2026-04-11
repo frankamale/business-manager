@@ -103,7 +103,7 @@ class ExpensesController extends GetxController {
     DateTime? date,
     String? servicePointId,
     String? subject,
-    String? selectedStaffId,
+    String? staffId,
   }) async {
     final expenseId = _uuid.v4();
     final expenseDate = date ?? DateTime.now();
@@ -116,7 +116,7 @@ class ExpensesController extends GetxController {
     final paymentData = {
       "adhoc": "true",
       "currencyid": cashAccount['currencyid'],
-      "bpid": selectedStaffId ?? '',
+      "bpid": staffId ?? '',
       "servicepointid": currentSpId,
       "transactiontypeid": 1,
       "amount": amount.toStringAsFixed(0),
@@ -144,6 +144,7 @@ class ExpensesController extends GetxController {
         date: expenseDate,
         servicePointId: servicePointId ?? currentServicePointId.value,
         subject: subject,
+        staffId: staffId,
         uploadStatus: 'pending',
       );
 
@@ -172,6 +173,7 @@ class ExpensesController extends GetxController {
             date: expense.date,
             servicePointId: expense.servicePointId,
             subject: expense.subject,
+            staffId: expense.staffId,
             uploadStatus: 'uploaded',
           );
           expenses[index] = updatedExpense;
@@ -272,7 +274,7 @@ class ExpensesController extends GetxController {
         final paymentData = {
           "adhoc": "true",
           "currencyid": cashAccount['currencyid'],
-          "bpid": expense.subject ?? '',
+          "bpid": expense.staffId ?? expense.subject ?? '',
           "servicepointid": expense.servicePointId ?? '',
           "transactiontypeid": 1,
           "amount": expense.amount.toStringAsFixed(0),
@@ -286,6 +288,8 @@ class ExpensesController extends GetxController {
           "direction": "1",
           "gLProxySubCategoryId": "55555555-5555-5555-5555-555555555555"
         };
+
+        debugPrint('Syncing expense ${expense.id}: $paymentData');
 
         await _apiService.createAdhocPayment(paymentData);
         
@@ -301,6 +305,7 @@ class ExpensesController extends GetxController {
             date: expense.date,
             servicePointId: expense.servicePointId,
             subject: expense.subject,
+            staffId: expense.staffId,
             uploadStatus: 'uploaded',
           );
           expenses[index] = updated;

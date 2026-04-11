@@ -16,7 +16,7 @@ class ExpensesCard extends StatelessWidget {
     this.onNonStockExpensesTap,
   });
 
-@override
+  @override
   Widget build(BuildContext context) {
     final compactFormatter = NumberFormat.compact();
     final cardColor = AppColors.getCardColor(context);
@@ -34,9 +34,7 @@ class ExpensesCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: borderColor,
-          ),
+          border: Border.all(color: borderColor),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,12 +52,15 @@ class ExpensesCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-if (expensesController.pendingExpenses.isNotEmpty)
+                    if (expensesController.pendingExpenses.isNotEmpty)
                       GestureDetector(
                         onTap: () => expensesController.syncPendingExpenses(),
                         child: Container(
                           margin: const EdgeInsets.only(left: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.green.shade100,
                             borderRadius: BorderRadius.circular(8),
@@ -67,7 +68,11 @@ if (expensesController.pendingExpenses.isNotEmpty)
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.sync, size: 10, color: Colors.green.shade700),
+                              Icon(
+                                Icons.sync,
+                                size: 10,
+                                color: Colors.green.shade700,
+                              ),
                               const SizedBox(width: 2),
                               Text(
                                 '${expensesController.pendingExpenses.length}',
@@ -145,7 +150,7 @@ if (expensesController.pendingExpenses.isNotEmpty)
     VoidCallback? onTap,
   }) {
     final textPrimary = AppColors.getTextPrimaryColor(context);
-    
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -155,9 +160,7 @@ if (expensesController.pendingExpenses.isNotEmpty)
           color: color.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
 
-          border: Border.all(
-            color: AppColors.getBorderColor(context),
-          ),
+          border: Border.all(color: AppColors.getBorderColor(context)),
         ),
 
         child: Column(
@@ -166,7 +169,11 @@ if (expensesController.pendingExpenses.isNotEmpty)
             // ICON + LABEL
             Row(
               children: [
-                Icon(icon, size: 16, color: AppColors.getTextSecondaryColor(context)),
+                Icon(
+                  icon,
+                  size: 16,
+                  color: AppColors.getTextSecondaryColor(context),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(

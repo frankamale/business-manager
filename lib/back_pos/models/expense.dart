@@ -7,6 +7,7 @@ class Expense {
   final DateTime date;
   final String? servicePointId;
   final String? subject;
+  final String? staffId;
   final String uploadStatus;
   final int? createdAt;
 
@@ -19,6 +20,7 @@ class Expense {
     required this.date,
     this.servicePointId,
     this.subject,
+    this.staffId,
     this.uploadStatus = 'pending',
     this.createdAt,
   });
@@ -33,6 +35,7 @@ class Expense {
       'date': date.millisecondsSinceEpoch,
       'servicePointId': servicePointId,
       'subject': subject,
+      'staffId': staffId,
       'upload_status': uploadStatus,
       'created_at': createdAt ?? DateTime.now().millisecondsSinceEpoch,
     };
@@ -48,6 +51,7 @@ class Expense {
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] ?? 0),
       servicePointId: map['servicePointId'],
       subject: map['subject'],
+      staffId: map['staffId'],
       uploadStatus: map['upload_status'] ?? 'pending',
       createdAt: map['created_at'],
     );

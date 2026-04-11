@@ -66,7 +66,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 3,
+        version: 4,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -526,6 +526,7 @@ class UnifiedDatabaseHelper {
         date INTEGER NOT NULL,
         servicePointId TEXT,
         subject TEXT,
+        staffId TEXT,
         upload_status TEXT DEFAULT 'pending',
         created_at INTEGER
       )
@@ -604,6 +605,17 @@ class UnifiedDatabaseHelper {
       ''');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)');
       await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)');
+    }
+
+    // Migration to version 4 - Add sync columns and staffId to expenses table
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE expenses ADD COLUMN upload_status TEXT DEFAULT "pending"');
+        await db.execute('ALTER TABLE expenses ADD COLUMN created_at INTEGER');
+        await db.execute('ALTER TABLE expenses ADD COLUMN staffId TEXT');
+      } catch (e) {
+        // Columns may already exist, ignore error
+      }
     }
   }
 

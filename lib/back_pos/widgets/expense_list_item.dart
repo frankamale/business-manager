@@ -46,6 +46,7 @@ class ExpenseListItem extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         subtitle: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               getUserName(expense.subject),
@@ -53,26 +54,19 @@ class ExpenseListItem extends StatelessWidget {
                 color: Colors.grey.shade600,
                 fontSize: 12,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
             const Text(' • ', style: TextStyle(color: Colors.grey)),
-            Text(
-              expense.category,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
+            Flexible(
+              child: Text(
+                expense.category,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (isPending) ...[
-              const Text(' • ', style: TextStyle(color: Colors.grey)),
-              Text(
-                'Pending sync',
-                style: TextStyle(
-                  color: Colors.orange.shade700,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
           ],
         ),
         trailing: Row(

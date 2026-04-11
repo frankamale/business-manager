@@ -74,10 +74,14 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     super.dispose();
   }
 
+  String? _servicePointError;
+
   bool get _isValid =>
       _titleController.text.trim().isNotEmpty &&
       _descriptionController.text.trim().isNotEmpty &&
-      (double.tryParse(_amountController.text.trim()) ?? 0) > 0;
+      (double.tryParse(_amountController.text.trim()) ?? 0) > 0 &&
+      _selectedServicePointId != null &&
+      _selectedServicePointId != '---all-stores-id---';
 
   void _submitForm() {
     final title = _titleController.text.trim();
@@ -97,13 +101,17 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
       setState(() => _amountError = 'Please enter a valid amount');
       hasError = true;
     }
+    if (_selectedServicePointId == null || _selectedServicePointId == '---all-stores-id---') {
+      setState(() => _servicePointError = 'Please select a service point');
+      hasError = true;
+    }
     if (hasError) return;
 
     widget.expensesController.addExpense(
       title: title,
       description: description,
       subject: _selectedSubject,
-      selectedStaffId: _selectedSubject,
+      staffId: _selectedSubject,
       amount: amount!,
       category: _selectedCategory,
       servicePointId: _selectedServicePointId ?? widget.servicePointId,
@@ -290,22 +298,33 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                     const SizedBox(height: 12),
                     Obx(() {
                       final servicePoints = _servicePointController.servicePoints;
+                      final validServicePoints = servicePoints
+                          .where((sp) => sp.id != '---all-stores-id---')
+                          .toList();
+                      
+                      // Get unique service points
                       final uniqueServicePoints = <String, dynamic>{};
-                      for (final sp in servicePoints) {
+                      for (final sp in validServicePoints) {
                         uniqueServicePoints[sp.id] = sp;
                       }
                       final uniqueSpList = uniqueServicePoints.values.toList();
                       
-                      final validServicePointId = _selectedServicePointId != null && 
-                          uniqueSpList.any((sp) => sp.id == _selectedServicePointId)
-                          ? _selectedServicePointId
-                          : (uniqueSpList.isNotEmpty ? uniqueSpList.first.id : null);
+                      // Auto-select a valid service point if current selection is invalid
+                      String? validServicePointId;
+                      if (_selectedServicePointId != null && 
+                          _selectedServicePointId != '---all-stores-id---' &&
+                          uniqueSpList.any((sp) => sp.id == _selectedServicePointId)) {
+                        validServicePointId = _selectedServicePointId;
+                      } else if (uniqueSpList.isNotEmpty) {
+                        validServicePointId = uniqueSpList.first.id;
+                      }
                       
                       return _buildDropdown<String>(
                         icon: Icons.store_outlined,
                         label: 'Service Point',
                         value: validServicePointId,
                         color: color,
+                        errorText: _servicePointError,
                         items: uniqueSpList
                             .map<DropdownMenuItem<String>>(
                               (sp) => DropdownMenuItem<String>(
@@ -315,7 +334,10 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                             )
                             .toList(),
                         onChanged: (value) =>
-                            setState(() => _selectedServicePointId = value),
+                            setState(() {
+                              _selectedServicePointId = value;
+                              _servicePointError = null;
+                            }),
                       );
                     }),
                     const SizedBox(height: 12),
@@ -411,12 +433,14 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     required Color color,
     required List<DropdownMenuItem<T>> items,
     required void Function(T?) onChanged,
+    String? errorText,
   }) {
     return DropdownButtonFormField<T>(
       value: value,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 18, color: Colors.grey.shade500),
+        errorText: errorText,
         filled: true,
         fillColor: Colors.grey.shade50,
         border: OutlineInputBorder(
