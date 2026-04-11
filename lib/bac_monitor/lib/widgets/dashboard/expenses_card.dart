@@ -84,7 +84,7 @@ class ExpensesCard extends StatelessWidget {
               Expanded(
                 child: _miniCategoryCard(
                   context: context,
-                  label: 'Stock',
+                  label: 'Stock Purchases',
                   amount: stockExpenses,
                   color: AppColors.getBackgroundColor(context),
                   icon: Icons.inventory_2_outlined,
@@ -98,7 +98,7 @@ class ExpensesCard extends StatelessWidget {
               Expanded(
                 child: _miniCategoryCard(
                   context: context,
-                  label: 'Non-Stock',
+                  label: 'Non-Stock Payments',
                   amount: nonStockExpenses,
                   color: AppColors.getBackgroundColor(context),
                   icon: Icons.receipt_long_outlined,

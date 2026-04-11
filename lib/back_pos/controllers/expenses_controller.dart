@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:uuid/uuid.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
@@ -122,34 +123,37 @@ class ExpensesController extends GetxController {
     DateTime? date,
     String? servicePointId,
     String? subject,
+    String? selectedStaffId,
   }) async {
     final expenseId = _uuid.v4();
     final expenseDate = date ?? DateTime.now();
 
     // Get cash account details
     final cashAccount = _getDefaultCashAccount();
+    final currentSpId = servicePointId ?? currentServicePointId.value ?? '';
 
     // Prepare API payload
     final paymentData = {
-      "id": expenseId,
+      "adhoc": "false",
       "currencyid": cashAccount['currencyid'],
-      "servicepointid": servicePointId ?? currentServicePointId.value ?? '',
-      "bpid": subject ?? '', // business partner id from subject
+      "bpid": selectedStaffId ?? '',
+      "servicepointid": currentSpId,
       "transactiontypeid": 1,
-      "amount": amount,
-      "method": "Cash",
-      "methodId": 1,
-      "chequeno": "",
+      "amount": amount.toStringAsFixed(0),
+      "methodId": "1",
+      "chequeno": "XXX",
       "cashaccountid": cashAccount['id'],
-      "paydate": expenseDate.millisecondsSinceEpoch,
-      "receipt": true,
-      "currency": cashAccount['currency'],
-      "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
-      "direction": 1,
-      "categoryid": "44444444-1111-1111-1111-111111111111"
+      "paydate": "${expenseDate.year}-${expenseDate.month.toString().padLeft(2, '0')}-${expenseDate.day.toString().padLeft(2, '0')}",
+      "payref": title,
+      "receipt": "false",
+      "remarks": description,
+      "direction": "1",
+      "gLProxySubCategoryId": "55555555-5555-5555-5555-555555555555"
     };
 
     try {
+      debugPrint("Post expense With $paymentData");
+
       // Call API first
       await _apiService.createAdhocPayment(paymentData);
 
@@ -181,6 +185,7 @@ class ExpensesController extends GetxController {
         duration: const Duration(seconds: 2),
       );
     } catch (e) {
+      debugPrint(e.toString());
       Get.snackbar(
         'Error',
         'Failed to add expense: ${e.toString()}',
