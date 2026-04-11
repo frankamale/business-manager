@@ -525,7 +525,9 @@ class UnifiedDatabaseHelper {
         category TEXT NOT NULL,
         date INTEGER NOT NULL,
         servicePointId TEXT,
-        subject TEXT
+        subject TEXT,
+        upload_status TEXT DEFAULT 'pending',
+        created_at INTEGER
       )
     ''');
 

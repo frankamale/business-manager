@@ -6,7 +6,9 @@ class Expense {
   final String category;
   final DateTime date;
   final String? servicePointId;
-  final String? subject; // stores user ID
+  final String? subject;
+  final String uploadStatus;
+  final int? createdAt;
 
   Expense({
     required this.id,
@@ -17,6 +19,8 @@ class Expense {
     required this.date,
     this.servicePointId,
     this.subject,
+    this.uploadStatus = 'pending',
+    this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +33,8 @@ class Expense {
       'date': date.millisecondsSinceEpoch,
       'servicePointId': servicePointId,
       'subject': subject,
+      'upload_status': uploadStatus,
+      'created_at': createdAt ?? DateTime.now().millisecondsSinceEpoch,
     };
   }
 
@@ -42,6 +48,8 @@ class Expense {
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] ?? 0),
       servicePointId: map['servicePointId'],
       subject: map['subject'],
+      uploadStatus: map['upload_status'] ?? 'pending',
+      createdAt: map['created_at'],
     );
   }
 }
