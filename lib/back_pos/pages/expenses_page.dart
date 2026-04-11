@@ -27,6 +27,8 @@ class _ExpensesPageState extends State<ExpensesPage> {
   final _currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX ');
   final _dateFormatter = DateFormat('MMM dd, yyyy');
 
+  final List<String> _dateFilters = ['Today', 'Yesterday', 'This Week', 'This Month', 'This Year', 'Custom'];
+
   @override
   void initState() {
     super.initState();
@@ -119,6 +121,87 @@ class _ExpensesPageState extends State<ExpensesPage> {
     }
   }
 
+  Future<void> _showCustomDatePicker() async {
+    DateTime? startDate;
+    DateTime? endDate;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Select Custom Range'),
+            content: SizedBox(
+              height: 150,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ListTile(
+                    title: const Text('Start Date'),
+                    subtitle: Text(
+                      startDate != null 
+                          ? DateFormat.yMMMd().format(startDate!) 
+                          : 'Not Set',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    trailing: const Icon(Icons.calendar_month),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: startDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setState(() => startDate = picked);
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('End Date'),
+                    subtitle: Text(
+                      endDate != null 
+                          ? DateFormat.yMMMd().format(endDate!) 
+                          : 'Not Set',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    trailing: const Icon(Icons.calendar_month),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: endDate ?? startDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setState(() => endDate = picked);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CANCEL'),
+              ),
+              FilledButton(
+                onPressed: (startDate != null && endDate != null)
+                    ? () {
+                        if (startDate!.isAfter(endDate!)) {
+                          Get.snackbar('Error', 'Start date must be before end date');
+                          return;
+                        }
+                        _expensesController.setCustomDateRange(startDate!, endDate!);
+                        Navigator.pop(context);
+                      }
+                    : null,
+                child: const Text('APPLY'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _handleMenuOption(String option) {
     switch (option) {
       case 'sync_all':
@@ -185,20 +268,56 @@ class _ExpensesPageState extends State<ExpensesPage> {
       ),
 
       body: Obx(() {
-        final expenses = _expensesController.expenses;
-
-        if (expenses.isEmpty) {
-          return const ExpenseEmptyState();
-        }
+        final expenses = _expensesController.filteredExpenses;
+        final selectedFilter = _expensesController.selectedDateFilter.value;
 
         return Column(
           children: [
+            // Date Filter Chips
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _dateFilters.map((filter) {
+                    final isSelected = selectedFilter == filter;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(
+                          filter == 'Custom' && _expensesController.customStartDate.value != null
+                              ? 'Custom Range'
+                              : filter,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.grey.shade700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: color,
+                        backgroundColor: Colors.grey.shade100,
+                        onSelected: (selected) {
+                          if (selected) {
+                            if (filter == 'Custom') {
+                              _showCustomDatePicker();
+                            } else {
+                              _expensesController.setDateFilter(filter);
+                            }
+                          }
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+
             // TOP SECTION (Summary with padding)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: ExpenseSummaryCard(
-                totalExpenses: _expensesController.totalExpenses,
-                todayExpenses: _expensesController.totalTodayExpenses,
+                totalExpenses: _expensesController.totalFilteredExpenses,
+                todayExpenses: _expensesController.totalFilteredExpenses,
                 currencyFormatter: _currencyFormatter,
                 color: color,
               ),
@@ -206,25 +325,39 @@ class _ExpensesPageState extends State<ExpensesPage> {
 
             // LIST SECTION
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                itemCount: expenses.length,
-                itemBuilder: (context, index) {
-                  final expense = expenses[index];
+              child: expenses.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey.shade300),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No expenses for $selectedFilter',
+                            style: TextStyle(color: Colors.grey.shade500, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      itemCount: expenses.length,
+                      itemBuilder: (context, index) {
+                        final expense = expenses[index];
 
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: ExpenseListItem(
-                      expense: expense,
-                      currencyFormatter: _currencyFormatter,
-                      dateFormatter: _dateFormatter,
-                      color: color,
-                      getUserName: _getUserName,
-                      onDelete: () => _showDeleteConfirmation(expense),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: ExpenseListItem(
+                            expense: expense,
+                            currencyFormatter: _currencyFormatter,
+                            dateFormatter: _dateFormatter,
+                            color: color,
+                            getUserName: _getUserName,
+                            onDelete: () => _showDeleteConfirmation(expense),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         );

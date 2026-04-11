@@ -27,6 +27,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
   late ExpensesController _expensesController;
   late UserController _userController;
   bool _controllersInitialized = false;
+  final List<String> _dateFilters = ['Today', 'Yesterday', 'This Week', 'This Month', 'This Year', 'Custom'];
 
   @override
   void initState() {
@@ -98,6 +99,87 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     }
   }
 
+  Future<void> _showCustomDatePicker() async {
+    DateTime? startDate;
+    DateTime? endDate;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            title: const Text('Select Custom Range'),
+            content: SizedBox(
+              height: 150,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ListTile(
+                    title: const Text('Start Date'),
+                    subtitle: Text(
+                      startDate != null 
+                          ? DateFormat.yMMMd().format(startDate!) 
+                          : 'Not Set',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    trailing: const Icon(Icons.calendar_month),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: startDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setState(() => startDate = picked);
+                    },
+                  ),
+                  ListTile(
+                    title: const Text('End Date'),
+                    subtitle: Text(
+                      endDate != null 
+                          ? DateFormat.yMMMd().format(endDate!) 
+                          : 'Not Set',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    trailing: const Icon(Icons.calendar_month),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: endDate ?? startDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setState(() => endDate = picked);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('CANCEL'),
+              ),
+              FilledButton(
+                onPressed: (startDate != null && endDate != null)
+                    ? () {
+                        if (startDate!.isAfter(endDate!)) {
+                          Get.snackbar('Error', 'Start date must be before end date');
+                          return;
+                        }
+                        _expensesController.setCustomDateRange(startDate!, endDate!);
+                        Navigator.pop(context);
+                      }
+                    : null,
+                child: const Text('APPLY'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isStockExpense = widget.expenseType == 'stock';
@@ -152,6 +234,50 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Date Filter Chips
+            Obx(() {
+              final selectedFilter = _expensesController.selectedDateFilter.value;
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _dateFilters.map((filter) {
+                      final isSelected = selectedFilter == filter;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            filter == 'Custom' && _expensesController.customStartDate.value != null
+                                ? 'Custom Range'
+                                : filter,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : LightColors.textSecondary,
+                              fontSize: 13,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: LightColors.primary,
+                          backgroundColor: LightColors.surface,
+                          onSelected: (selected) {
+                            if (selected) {
+                              if (filter == 'Custom') {
+                                _showCustomDatePicker();
+                              } else {
+                                _expensesController.setDateFilter(filter);
+                              }
+                            }
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              );
+            }),
+
+            const SizedBox(height: 8),
+
             // Summary Card
             _buildSummaryCard(
               isStockExpense: isStockExpense,
@@ -205,7 +331,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     required NumberFormat compactFormatter,
   }) {
     return Obx(() {
-      final expenses = _expensesController.expenses;
+      final expenses = _expensesController.filteredExpenses;
       final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
       final itemCount = expenses.length;
 
@@ -310,7 +436,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     required NumberFormat currencyFormatter,
   }) {
     return Obx(() {
-      final expenses = _expensesController.expenses;
+      final expenses = _expensesController.filteredExpenses;
+      final selectedFilter = _expensesController.selectedDateFilter.value;
       
       if (expenses.isEmpty) {
         return Container(
@@ -332,7 +459,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               ),
               const SizedBox(height: 16),
               Text(
-                'No expenses yet',
+                'No expenses for $selectedFilter',
                 style: TextStyle(
                   color: LightColors.textSecondary,
                   fontSize: 16,
@@ -361,6 +488,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
           final expense = expenses[index];
           final dateStr = DateFormat('MMM dd, yyyy').format(expense.date);
           return _buildExpenseItem(
+            expenseId: expense.id,
             name: expense.title,
             amount: currencyFormatter.format(expense.amount),
             date: dateStr,
@@ -373,6 +501,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
   }
 
   Widget _buildExpenseItem({
+    required String expenseId,
     required String name,
     required String amount,
     required String date,
@@ -457,13 +586,54 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               ],
             ),
           ),
-          Text(
-            amount,
-            style: TextStyle(
-              color: LightColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                amount,
+                style: TextStyle(
+                  color: LightColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (isPending) ...[
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 20),
+                  onPressed: () => _showDeleteConfirmation(expenseId, name),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(String expenseId, String expenseName) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Delete Expense'),
+        content: Text('Are you sure you want to delete "$expenseName"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              _expensesController.deleteExpense(expenseId);
+              Get.back();
+              Get.snackbar(
+                'Deleted',
+                'Expense deleted',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            child: Text('Delete', style: TextStyle(color: Colors.red.shade600)),
           ),
         ],
       ),

@@ -17,6 +17,11 @@ class ExpensesController extends GetxController {
   // Current service point ID for filtering
   var currentServicePointId = Rxn<String>();
 
+  // Filter state
+  var selectedDateFilter = 'Today'.obs;
+  var customStartDate = Rxn<DateTime>();
+  var customEndDate = Rxn<DateTime>();
+
   // Loading state
   var isLoading = false.obs;
 
@@ -250,6 +255,91 @@ class ExpensesController extends GetxController {
     return todayExpenses.fold(0.0, (sum, expense) => sum + expense.amount);
   }
 
+  DateTime? get _filterStartDate {
+    final now = DateTime.now();
+    final filter = selectedDateFilter.value;
+    
+    switch (filter) {
+      case 'Today':
+        return DateTime(now.year, now.month, now.day);
+      case 'Yesterday':
+        final yesterday = now.subtract(const Duration(days: 1));
+        return DateTime(yesterday.year, yesterday.month, yesterday.day);
+      case 'This Week':
+        final weekStart = now.subtract(Duration(days: now.weekday - 1));
+        return DateTime(weekStart.year, weekStart.month, weekStart.day);
+      case 'This Month':
+        return DateTime(now.year, now.month, 1);
+      case 'This Year':
+        return DateTime(now.year, 1, 1);
+      case 'Custom':
+        return customStartDate.value;
+      default:
+        return DateTime(now.year, now.month, now.day);
+    }
+  }
+
+  DateTime? get _filterEndDate {
+    final now = DateTime.now();
+    final filter = selectedDateFilter.value;
+    
+    switch (filter) {
+      case 'Today':
+        return DateTime(now.year, now.month, now.day, 23, 59, 59);
+      case 'Yesterday':
+        final yesterday = now.subtract(const Duration(days: 1));
+        return DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+      case 'This Week':
+        final weekEnd = now.add(Duration(days: 7 - now.weekday));
+        return DateTime(weekEnd.year, weekEnd.month, weekEnd.day, 23, 59, 59);
+      case 'This Month':
+        final nextMonth = DateTime(now.year, now.month + 1, 1);
+        return nextMonth.subtract(const Duration(seconds: 1));
+      case 'This Year':
+        return DateTime(now.year + 1, 1, 1).subtract(const Duration(seconds: 1));
+      case 'Custom':
+        return customEndDate.value != null 
+            ? DateTime(customEndDate.value!.year, customEndDate.value!.month, customEndDate.value!.day, 23, 59, 59)
+            : null;
+      default:
+        return DateTime(now.year, now.month, now.day, 23, 59, 59);
+    }
+  }
+
+  List<Expense> get filteredExpenses {
+    final startDate = _filterStartDate;
+    final endDate = _filterEndDate;
+    
+    if (startDate == null) {
+      return expenses.toList();
+    }
+    
+    return expenses.where((expense) {
+      final expenseDate = expense.date;
+      final afterStart = startDate == null || !expenseDate.isBefore(startDate);
+      final beforeEnd = endDate == null || !expenseDate.isAfter(endDate);
+      return afterStart && beforeEnd;
+    }).toList();
+  }
+
+  double get totalFilteredExpenses {
+    return filteredExpenses.fold(0.0, (sum, expense) => sum + expense.amount);
+  }
+
+  int get filteredExpenseCount {
+    return filteredExpenses.length;
+  }
+
+  void setDateFilter(String filter) {
+    selectedDateFilter.value = filter;
+  }
+
+  void setCustomDateRange(DateTime start, DateTime end) {
+    customStartDate.value = start;
+    customEndDate.value = end;
+    selectedDateFilter.value = 'Custom';
+  }
+
   // Get pending expenses (not uploaded yet)
   List<Expense> get pendingExpenses {
     return expenses.where((e) => e.uploadStatus == 'pending').toList();
@@ -260,13 +350,16 @@ class ExpensesController extends GetxController {
     // Check connectivity first
     final isOnline = await NetworkHelper.hasConnection();
     if (!isOnline) {
-      throw Exception('No internet connection. Please connect to the internet and try again.');
+      throw Exception('No internet connection');
     }
 
     final pending = pendingExpenses;
     if (pending.isEmpty) return;
 
     debugPrint('Syncing ${pending.length} pending expenses...');
+    
+    int failedCount = 0;
+    String lastError = '';
     
     for (final expense in pending) {
       try {
@@ -313,9 +406,15 @@ class ExpensesController extends GetxController {
         }
       } catch (e) {
         debugPrint('Failed to sync expense ${expense.id}: $e');
+        failedCount++;
+        lastError = e.toString();
       }
     }
     
     debugPrint('Pending expenses sync complete');
+    
+    if (failedCount > 0) {
+      throw Exception('Failed to sync $failedCount expense(s). $lastError');
+    }
   }
 }
