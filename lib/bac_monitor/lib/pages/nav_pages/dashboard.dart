@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../back_pos/controllers/expenses_controller.dart';
 import '../../additions/colors.dart';
 import '../../components/dashboard/kpi_overview.dart';
 import '../../components/dashboard/sales_trends.dart';
@@ -84,6 +85,9 @@ class _DashboardState extends State<Dashboard> {
     }
     if (!Get.isRegistered<MonSalesTrendsController>()) {
       Get.put(MonSalesTrendsController(), permanent: true);
+    }
+    if (!Get.isRegistered<ExpensesController>()) {
+      Get.put(ExpensesController(), permanent: true);
     }
     if (!Get.isRegistered<MonKpiOverviewController>()) {
       Get.put(MonKpiOverviewController(), permanent: true);
@@ -404,8 +408,6 @@ class _DashboardState extends State<Dashboard> {
                         );
 
                         return ExpensesCard(
-                          stockExpenses: 0.0,
-                          nonStockExpenses: 0.0,
                           periodLabel: periodLabel,
                           onStockExpensesTap: () {
                             Get.to(

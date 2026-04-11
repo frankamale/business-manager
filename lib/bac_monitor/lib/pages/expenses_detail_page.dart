@@ -161,40 +161,41 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     required bool isStockExpense,
     required NumberFormat compactFormatter,
   }) {
-    // Placeholder values - will be replaced with real data
-    final totalExpense = 0.0;
-    final itemCount = 0;
+    return Obx(() {
+      final expenses = _expensesController.expenses;
+      final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
+      final itemCount = expenses.length;
 
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: LightColors.card,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: LightColors.shadowLight,
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: LightColors.surface,
-                  borderRadius: BorderRadius.circular(12),
+      return Container(
+        padding: const EdgeInsets.all(20.0),
+        decoration: BoxDecoration(
+          color: LightColors.card,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: LightColors.shadowLight,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: LightColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isStockExpense ? Icons.inventory_2_outlined : Icons.receipt_long_outlined,
+                    color: LightColors.textPrimary,
+                    size: 32,
+                  ),
                 ),
-                child: Icon(
-                  isStockExpense ? Icons.inventory_2_outlined : Icons.receipt_long_outlined,
-                  color: LightColors.textPrimary,
-                  size: 32,
-                ),
-              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -228,12 +229,13 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildStatItem('Total Items', itemCount.toString()),
-              _buildStatItem('Average', 'UGX0'),
+              _buildStatItem('Average', itemCount > 0 ? 'UGX${(totalExpense / itemCount).toStringAsFixed(0)}' : 'UGX0'),
             ],
           ),
         ],
       ),
     );
+    });
   }
 
   Widget _buildStatItem(String label, String value) {
@@ -264,63 +266,66 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     required bool isStockExpense,
     required NumberFormat currencyFormatter,
   }) {
-    // Placeholder - no data yet
-    return Container(
-      padding: const EdgeInsets.all(20.0),
-      decoration: BoxDecoration(
-        color: LightColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: LightColors.border,
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.data_usage_outlined,
-            color: LightColors.textHint,
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No expense data available',
-            style: TextStyle(
-              color: LightColors.textSecondary,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+    return Obx(() {
+      final expenses = _expensesController.expenses;
+      
+      if (expenses.isEmpty) {
+        return Container(
+          padding: const EdgeInsets.all(20.0),
+          decoration: BoxDecoration(
+            color: LightColors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: LightColors.border,
+              width: 1,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Expense tracking endpoint is not yet implemented.\nData will appear here once the API is ready.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: LightColors.textHint,
-              fontSize: 12,
-            ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.data_usage_outlined,
+                color: LightColors.textHint,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No expenses yet',
+                style: TextStyle(
+                  color: LightColors.textSecondary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tap + to add an expense',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: LightColors.textHint,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-
-    // When data is available, replace above with this:
-    /*
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: expenses.length,
-      itemBuilder: (context, index) {
-        final expense = expenses[index];
-        return _buildExpenseItem(
-          name: expense.name,
-          amount: currencyFormatter.format(expense.amount),
-          date: expense.date,
-          category: expense.category,
         );
-      },
-    );
-    */
+      }
+
+      return ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: expenses.length,
+        itemBuilder: (context, index) {
+          final expense = expenses[index];
+          final dateStr = DateFormat('MMM dd, yyyy').format(expense.date);
+          return _buildExpenseItem(
+            name: expense.title,
+            amount: currencyFormatter.format(expense.amount),
+            date: dateStr,
+            category: expense.category,
+          );
+        },
+      );
+    });
   }
 
   Widget _buildExpenseItem({

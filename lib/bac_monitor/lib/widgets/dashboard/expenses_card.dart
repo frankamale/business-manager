@@ -1,116 +1,107 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import '../../additions/colors.dart';
 
 class ExpensesCard extends StatelessWidget {
-  final double stockExpenses;
-  final double nonStockExpenses;
   final String periodLabel;
   final VoidCallback? onStockExpensesTap;
   final VoidCallback? onNonStockExpensesTap;
 
   const ExpensesCard({
     super.key,
-    required this.stockExpenses,
-    required this.nonStockExpenses,
     required this.periodLabel,
     this.onStockExpensesTap,
     this.onNonStockExpensesTap,
   });
 
-  @override
+@override
   Widget build(BuildContext context) {
     final compactFormatter = NumberFormat.compact();
-    final totalExpenses = stockExpenses + nonStockExpenses;
     final cardColor = AppColors.getCardColor(context);
     final borderColor = AppColors.getBorderColor(context);
     final textPrimary = AppColors.getTextPrimaryColor(context);
     final textSecondary = AppColors.getTextSecondaryColor(context);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(8),
+    return Obx(() {
+      final expensesController = Get.find<ExpensesController>();
+      final expenses = expensesController.expenses;
+      final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
 
-        // match your other cards
-        border: Border.all(
-          color: borderColor,
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: borderColor,
+          ),
         ),
-      ),
-
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // HEADER
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Expenses',
-                style: TextStyle(
-                  color: textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Expenses',
+                  style: TextStyle(
+                    color: textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              Text(
-                periodLabel,
-                style: TextStyle(
-                  color: textSecondary.withOpacity(0.6),
-                  fontSize: 11,
+                Text(
+                  periodLabel,
+                  style: TextStyle(
+                    color: textSecondary.withOpacity(0.6),
+                    fontSize: 11,
+                  ),
                 ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 6),
-
-          // TOTAL (hero)
-          Text(
-            'UGX ${compactFormatter.format(totalExpenses)}',
-            style: TextStyle(
-              color: textPrimary,
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
+              ],
             ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // CATEGORY ROW (side by side)
-          Row(
-            children: [
-              Expanded(
-                child: _miniCategoryCard(
-                  context: context,
-                  label: 'Stock Purchases',
-                  amount: stockExpenses,
-                  color: AppColors.getBackgroundColor(context),
-                  icon: Icons.inventory_2_outlined,
-                  formatter: compactFormatter,
-                  onTap: onStockExpensesTap,
-                ),
+            const SizedBox(height: 6),
+            Text(
+              'UGX ${compactFormatter.format(totalExpense)}',
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
               ),
-
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: _miniCategoryCard(
-                  context: context,
-                  label: 'Non-Stock Payments',
-                  amount: nonStockExpenses,
-                  color: AppColors.getBackgroundColor(context),
-                  icon: Icons.receipt_long_outlined,
-                  formatter: compactFormatter,
-                  onTap: onNonStockExpensesTap,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _miniCategoryCard(
+                    context: context,
+                    label: 'Stock Purchases',
+                    amount: 0.0,
+                    color: AppColors.getBackgroundColor(context),
+                    icon: Icons.inventory_2_outlined,
+                    formatter: compactFormatter,
+                    onTap: onStockExpensesTap,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _miniCategoryCard(
+                    context: context,
+                    label: 'Non-Stock Payments',
+                    amount: totalExpense,
+                    color: AppColors.getBackgroundColor(context),
+                    icon: Icons.receipt_long_outlined,
+                    formatter: compactFormatter,
+                    onTap: onNonStockExpensesTap,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _miniCategoryCard({

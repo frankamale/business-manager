@@ -35,17 +35,12 @@ class ExpensesController extends GetxController {
     isLoading.value = true;
     try {
       final dbExpenses = await _db.getExpenses();
-      if (dbExpenses.isNotEmpty) {
+
         expenses.value = dbExpenses;
-      } else {
-        // If no expenses in database, load sample data and save it
-        _loadSampleExpenses();
-        await _saveAllExpensesToDatabase();
-      }
-    } catch (e) {
-      // If database is not open, load sample data
-      _loadSampleExpenses();
-    } finally {
+
+      isLoading.value = false;
+    }
+    catch(e){
       isLoading.value = false;
     }
   }
@@ -66,35 +61,6 @@ class ExpensesController extends GetxController {
     }
   }
 
-  void _loadSampleExpenses() {
-    final now = DateTime.now();
-    expenses.value = [
-      Expense(
-        id: _uuid.v4(),
-        title: 'Office Supplies Purchase',
-        description: 'Office supplies',
-        amount: 50000,
-        category: ExpenseCategory.supplies,
-        date: now.subtract(const Duration(days: 1)),
-      ),
-      Expense(
-        id: _uuid.v4(),
-        title: 'Market Transport',
-        description: 'Transport to market',
-        amount: 30000,
-        category: ExpenseCategory.transport,
-        date: now.subtract(const Duration(days: 2)),
-      ),
-      Expense(
-        id: _uuid.v4(),
-        title: 'Electricity Bill Payment',
-        description: 'Electricity bill',
-        amount: 150000,
-        category: ExpenseCategory.utilities,
-        date: now.subtract(const Duration(days: 3)),
-      ),
-    ];
-  }
 
   Map<String, dynamic> _getDefaultCashAccount() {
     if (cashAccounts.isEmpty) {
