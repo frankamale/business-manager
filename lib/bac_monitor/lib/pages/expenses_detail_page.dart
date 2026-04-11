@@ -67,6 +67,33 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     );
   }
 
+  Future<void> _syncPendingExpenses() async {
+    final pending = _expensesController.pendingExpenses;
+    if (pending.isEmpty) {
+      Get.snackbar(
+        'Info',
+        'No pending expenses to sync',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    try {
+      await _expensesController.syncPendingExpenses();
+      Get.snackbar(
+        'Success',
+        'Expenses synced successfully',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to sync: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isStockExpense = widget.expenseType == 'stock';
@@ -90,6 +117,18 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
           ),
         ),
         actions: [
+          Obx(() {
+            final pending = _expensesController.pendingExpenses;
+            if (pending.isEmpty || isStockExpense) return const SizedBox.shrink();
+            return TextButton.icon(
+              onPressed: _syncPendingExpenses,
+              icon: const Icon(Icons.cloud_upload, size: 20, color: Colors.green),
+              label: Text(
+                'Sync (${pending.length})',
+                style: const TextStyle(color: Colors.green),
+              ),
+            );
+          }),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Center(
@@ -322,6 +361,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
             amount: currencyFormatter.format(expense.amount),
             date: dateStr,
             category: expense.category,
+            uploadStatus: expense.uploadStatus,
           );
         },
       );
@@ -333,7 +373,10 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     required String amount,
     required String date,
     String? category,
+    String uploadStatus = 'uploaded',
   }) {
+    final isPending = uploadStatus == 'pending';
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -347,17 +390,56 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       ),
       child: Row(
         children: [
+          // Upload status indicator - only show on pending expenses
+          if (isPending)
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.cloud_off,
+                size: 16,
+                color: Colors.orange.shade700,
+              ),
+            )
+          else
+            const SizedBox(width: 38),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    color: LightColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: TextStyle(
+                          color: LightColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (isPending)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Pending',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

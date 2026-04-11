@@ -74,6 +74,59 @@ class _ExpensesPageState extends State<ExpensesPage> {
     );
   }
 
+  Future<void> _syncPendingExpenses() async {
+    final pending = _expensesController.pendingExpenses;
+    if (pending.isEmpty) {
+      Get.snackbar(
+        'Info',
+        'No pending expenses to sync',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    Get.dialog(
+      const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Syncing expenses...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await _expensesController.syncPendingExpenses();
+      Get.back(); // Close dialog
+      Get.snackbar(
+        'Success',
+        'Expenses synced successfully',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade100,
+        colorText: Colors.green.shade800,
+      );
+    } catch (e) {
+      Get.back(); // Close dialog
+      Get.snackbar(
+        'Error',
+        'Failed to sync expenses: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade800,
+      );
+    }
+  }
+
+  void _handleMenuOption(String option) {
+    switch (option) {
+      case 'sync_all':
+        _syncPendingExpenses();
+        break;
+    }
+  }
+
   String _getUserName(String? userId) {
     if (userId == null || userId.isEmpty) {
       return 'No Subject';
@@ -99,6 +152,36 @@ class _ExpensesPageState extends State<ExpensesPage> {
           'Expenses',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
+        actions: [
+          Obx(() {
+            final pending = _expensesController.pendingExpenses;
+            if (pending.isEmpty) return const SizedBox.shrink();
+            return TextButton.icon(
+              onPressed: _syncPendingExpenses,
+              icon: const Icon(Icons.cloud_upload, size: 20),
+              label: Text('Sync (${pending.length})'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.green.shade700,
+              ),
+            );
+          }),
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, color: Colors.grey.shade700),
+            onSelected: _handleMenuOption,
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'sync_all',
+                child: Row(
+                  children: [
+                    Icon(Icons.sync, size: 20, color: Colors.green.shade700),
+                    SizedBox(width: 12),
+                    Text('Sync All'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
 
       body: Obx(() {

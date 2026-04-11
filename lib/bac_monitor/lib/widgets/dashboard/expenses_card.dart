@@ -54,20 +54,30 @@ class ExpensesCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (expensesController.pendingExpenses.isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(left: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${expensesController.pendingExpenses.length} pending',
-                          style: TextStyle(
-                            color: Colors.orange.shade800,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
+if (expensesController.pendingExpenses.isNotEmpty)
+                      GestureDetector(
+                        onTap: () => expensesController.syncPendingExpenses(),
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.sync, size: 10, color: Colors.green.shade700),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${expensesController.pendingExpenses.length}',
+                                style: TextStyle(
+                                  color: Colors.green.shade800,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

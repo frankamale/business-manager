@@ -22,19 +22,58 @@ class ExpenseListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPending = expense.uploadStatus == 'pending';
+    
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: ListTile(
+        leading: isPending
+            ? Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.cloud_off,
+                  size: 16,
+                  color: Colors.orange.shade700,
+                ),
+              )
+            : null,
         title: Text(
           expense.title.isNotEmpty ? expense.title : 'Untitled Expense',
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
-        subtitle: Text(
-          '${getUserName(expense.subject)} • ${expense.category}',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
+        subtitle: Row(
+          children: [
+            Text(
+              getUserName(expense.subject),
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+            const Text(' • ', style: TextStyle(color: Colors.grey)),
+            Text(
+              expense.category,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+            if (isPending) ...[
+              const Text(' • ', style: TextStyle(color: Colors.grey)),
+              Text(
+                'Pending sync',
+                style: TextStyle(
+                  color: Colors.orange.shade700,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

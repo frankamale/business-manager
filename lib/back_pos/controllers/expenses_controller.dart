@@ -255,6 +255,12 @@ class ExpensesController extends GetxController {
 
   // Sync all pending expenses
   Future<void> syncPendingExpenses() async {
+    // Check connectivity first
+    final isOnline = await NetworkHelper.hasConnection();
+    if (!isOnline) {
+      throw Exception('No internet connection. Please connect to the internet and try again.');
+    }
+
     final pending = pendingExpenses;
     if (pending.isEmpty) return;
 
