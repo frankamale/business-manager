@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
 import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
+import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
 
 class ExpenseFormDialog extends StatefulWidget {
   final ExpensesController expensesController;
@@ -40,11 +41,13 @@ class ExpenseFormDialog extends StatefulWidget {
 
 class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   late final UserController _userController;
+  late final ServicePointController _servicePointController;
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _amountController = TextEditingController();
   String _selectedCategory = ExpenseCategory.other;
   String? _selectedSubject;
+  String? _selectedServicePointId;
 
   String? _titleError;
   String? _descriptionError;
@@ -54,6 +57,13 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   void initState() {
     super.initState();
     _userController = Get.find<UserController>();
+    _servicePointController = Get.find<ServicePointController>();
+    _servicePointController.loadServicePointsFromCache();
+    
+    // Set default service point from widget or first available
+    if (widget.servicePointId != null) {
+      _selectedServicePointId = widget.servicePointId;
+    }
   }
 
   @override
@@ -93,9 +103,10 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
       title: title,
       description: description,
       subject: _selectedSubject,
+      selectedStaffId: _selectedSubject,
       amount: amount!,
       category: _selectedCategory,
-      servicePointId: widget.servicePointId,
+      servicePointId: _selectedServicePointId ?? widget.servicePointId,
     );
 
     Navigator.pop(context);
@@ -261,7 +272,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                     Obx(
                       () => _buildDropdown<String>(
                         icon: Icons.person_outline,
-                        label: 'Subject',
+                        label: 'Staff (Subject)',
                         value: _selectedSubject,
                         color: color,
                         items: _userController.users
@@ -277,9 +288,40 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    Obx(() {
+                      final servicePoints = _servicePointController.servicePoints;
+                      final uniqueServicePoints = <String, dynamic>{};
+                      for (final sp in servicePoints) {
+                        uniqueServicePoints[sp.id] = sp;
+                      }
+                      final uniqueSpList = uniqueServicePoints.values.toList();
+                      
+                      final validServicePointId = _selectedServicePointId != null && 
+                          uniqueSpList.any((sp) => sp.id == _selectedServicePointId)
+                          ? _selectedServicePointId
+                          : (uniqueSpList.isNotEmpty ? uniqueSpList.first.id : null);
+                      
+                      return _buildDropdown<String>(
+                        icon: Icons.store_outlined,
+                        label: 'Service Point',
+                        value: validServicePointId,
+                        color: color,
+                        items: uniqueSpList
+                            .map<DropdownMenuItem<String>>(
+                              (sp) => DropdownMenuItem<String>(
+                                value: sp.id,
+                                child: Text(sp.name),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _selectedServicePointId = value),
+                      );
+                    }),
+                    const SizedBox(height: 12),
                     _buildDropdown<String>(
                       icon: Icons.category_outlined,
-                      label: 'Category',
+                      label: 'Category (Payref)',
                       value: _selectedCategory,
                       color: color,
                       items: ExpenseCategory.all

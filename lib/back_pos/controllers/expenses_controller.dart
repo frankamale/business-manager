@@ -134,17 +134,17 @@ class ExpensesController extends GetxController {
 
     // Prepare API payload
     final paymentData = {
-      "adhoc": "false",
+      "adhoc": "true",
       "currencyid": cashAccount['currencyid'],
       "bpid": selectedStaffId ?? '',
       "servicepointid": currentSpId,
       "transactiontypeid": 1,
       "amount": amount.toStringAsFixed(0),
       "methodId": "1",
-      "chequeno": "XXX",
+      "chequeno": "",
       "cashaccountid": cashAccount['id'],
       "paydate": "${expenseDate.year}-${expenseDate.month.toString().padLeft(2, '0')}-${expenseDate.day.toString().padLeft(2, '0')}",
-      "payref": title,
+      "payref": category,
       "receipt": "false",
       "remarks": description,
       "direction": "1",

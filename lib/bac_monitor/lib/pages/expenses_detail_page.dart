@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
+import 'package:bac_pos/back_pos/controllers/user_controller.dart';
+import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/widgets/expense_form_dialog.dart';
+import 'package:bac_pos/back_pos/models/expense.dart';
 import '../additions/colors.dart';
+import '../controllers/mon_store_controller.dart';
 
-class ExpensesDetailPage extends StatelessWidget {
+class ExpensesDetailPage extends StatefulWidget {
   final String expenseType; // 'stock' or 'non-stock'
   final String periodLabel;
 
@@ -14,8 +20,56 @@ class ExpensesDetailPage extends StatelessWidget {
   });
 
   @override
+  State<ExpensesDetailPage> createState() => _ExpensesDetailPageState();
+}
+
+class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
+  late ExpensesController _expensesController;
+  late UserController _userController;
+  bool _controllersInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initControllers();
+  }
+
+  Future<void> _initControllers() async {
+    if (!Get.isRegistered<ExpensesController>()) {
+      Get.put(ExpensesController());
+    }
+    _expensesController = Get.find<ExpensesController>();
+
+    if (!Get.isRegistered<UserController>()) {
+      Get.put(UserController());
+    }
+    _userController = Get.find<UserController>();
+    await _userController.fetchUsers();
+
+    if (!Get.isRegistered<ServicePointController>()) {
+      Get.put(ServicePointController());
+    }
+    final spController = Get.find<ServicePointController>();
+    await spController.loadServicePointsFromCache();
+
+    setState(() => _controllersInitialized = true);
+  }
+
+  void _showAddExpenseDialog(BuildContext context) {
+    final storeController = Get.find<MonStoresController>();
+    final servicePointId = storeController.selectedStore.value?.id;
+
+    ExpenseFormDialog.show(
+      context: context,
+      expensesController: _expensesController,
+      servicePointId: servicePointId,
+      color: LightColors.primary,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isStockExpense = expenseType == 'stock';
+    final isStockExpense = widget.expenseType == 'stock';
     final compactFormatter = NumberFormat.compact(locale: 'en_US');
     final currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX', decimalDigits: 0);
 
@@ -40,7 +94,7 @@ class ExpensesDetailPage extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Center(
               child: Text(
-                periodLabel,
+                widget.periodLabel,
                 style: TextStyle(
                   color: LightColors.textSecondary,
                   fontSize: 12,
@@ -81,6 +135,25 @@ class ExpensesDetailPage extends StatelessWidget {
           ],
         ),
       ),
+      // FAB for adding non-stock expenses
+      floatingActionButton: !isStockExpense && _controllersInitialized
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: FloatingActionButton.extended(
+                onPressed: () => _showAddExpenseDialog(context),
+                backgroundColor: LightColors.primary,
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                icon:  Icon(Icons.add,  color: AppColors.getTextPrimary(context),),
+                label:  Text(
+                  'Add Expense',
+                  style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.getTextPrimary(context)),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
