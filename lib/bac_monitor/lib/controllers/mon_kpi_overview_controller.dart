@@ -71,8 +71,7 @@ class MonKpiOverviewController extends GetxController {
 
   Future<void> fetchKpiData() async {
     try {
-      // Always fetch data from local DB - date range specific data should be queried each time
-      // Do NOT skip based on SyncStateManager as date ranges change and need fresh data
+
       
       isLoading.value = true;
       hasError.value = false;

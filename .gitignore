@@ -42,6 +42,8 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
+DOCUMENTATION.md
+
 acli.exe
 architecture_analysis.md
 implementation_spec.md
