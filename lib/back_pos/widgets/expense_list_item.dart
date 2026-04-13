@@ -9,6 +9,7 @@ class ExpenseListItem extends StatelessWidget {
   final Color color;
   final String Function(String?) getUserName;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   const ExpenseListItem({
     super.key,
@@ -18,6 +19,7 @@ class ExpenseListItem extends StatelessWidget {
     required this.color,
     required this.getUserName,
     required this.onDelete,
+    this.onTap,
   });
 
   @override
@@ -27,6 +29,7 @@ class ExpenseListItem extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: ListTile(
+        onTap: onTap,
         leading: isPending
             ? Container(
                 padding: const EdgeInsets.all(6),

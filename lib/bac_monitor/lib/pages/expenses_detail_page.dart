@@ -5,6 +5,7 @@ import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
 import 'package:bac_pos/back_pos/widgets/expense_form_dialog.dart';
+import 'package:bac_pos/back_pos/widgets/expense_statistics_dialog.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
 import '../additions/colors.dart';
 import '../controllers/mon_store_controller.dart';
@@ -28,6 +29,9 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
   late UserController _userController;
   bool _controllersInitialized = false;
   final List<String> _dateFilters = ['Today', 'Yesterday', 'This Week', 'This Month', 'This Year', 'Custom'];
+  final _searchController = TextEditingController();
+  final _dateFormatter = DateFormat('MMM dd, yyyy');
+  final _currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX', decimalDigits: 0);
 
   @override
   void initState() {
@@ -180,6 +184,42 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     );
   }
 
+  void _onSearchChanged(String value) {
+    _expensesController.setSearchText(value);
+  }
+
+  void _showStatistics() {
+    ExpenseStatisticsDialog.show(
+      context: context,
+      categoryTotals: _expensesController.categoryTotals,
+      sortedTotals: _expensesController.sortedCategoryTotals,
+      totalAmount: _expensesController.totalFilteredExpenses,
+      expenseCount: _expensesController.filteredExpenseCount,
+      currencyFormatter: NumberFormat.currency(locale: 'en_US', symbol: 'UGX', decimalDigits: 0),
+      color: LightColors.primary,
+    );
+  }
+
+  void _handleMenuOption(String option) {
+    switch (option) {
+      case 'statistics':
+        _showStatistics();
+        break;
+      case 'clear_filters':
+        _expensesController.clearFilters();
+        _searchController.clear();
+        break;
+    }
+  }
+
+  String _getUserName(String? userId) {
+    if (userId == null || userId.isEmpty) {
+      return 'No Subject';
+    }
+    final user = _userController.users.firstWhereOrNull((u) => u.id == userId);
+    return user?.name ?? 'Unknown User';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isStockExpense = widget.expenseType == 'stock';
@@ -215,18 +255,33 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               ),
             );
           }),
-          // Padding(
-          //   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          //   child: Center(
-          //     child: Text(
-          //       widget.periodLabel,
-          //       style: TextStyle(
-          //         color: LightColors.textSecondary,
-          //         fontSize: 12,
-          //       ),
-          //     ),
-          //   ),
-          // ),
+          if (!isStockExpense)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: LightColors.textPrimary),
+              onSelected: _handleMenuOption,
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'statistics',
+                  child: Row(
+                    children: [
+                      Icon(Icons.bar_chart, size: 20, color: Colors.blue.shade700),
+                      const SizedBox(width: 12),
+                      Text('Statistics'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'clear_filters',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all, size: 20, color: Colors.grey.shade700),
+                      const SizedBox(width: 12),
+                      Text('Clear Filters'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
       body: SingleChildScrollView(
@@ -234,6 +289,88 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Search Bar (non-stock only)
+            if (!isStockExpense)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: _onSearchChanged,
+                  decoration: InputDecoration(
+                    hintText: 'Search expenses...',
+                    prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
+                    suffixIcon: Obx(() {
+                      if (_expensesController.searchText.value.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      return IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          _expensesController.setSearchText('');
+                        },
+                      );
+                    }),
+                    filled: true,
+                    fillColor: LightColors.surface,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Category Filter (non-stock only)
+            if (!isStockExpense)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Obx(() {
+                  final selectedCategory = _expensesController.selectedCategoryFilter.value;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: LightColors.surface,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String?>(
+                        isExpanded: true,
+                        value: selectedCategory,
+                        hint: Row(
+                          children: [
+                            Icon(Icons.category, size: 18, color: Colors.grey.shade600),
+                            const SizedBox(width: 8),
+                            Text(
+                              'All Categories',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                        items: [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('All Categories', style: TextStyle(color: Colors.grey.shade700)),
+                          ),
+                          ...ExpenseCategory.all.map((cat) => DropdownMenuItem(
+                            value: cat,
+                            child: Text(cat),
+                          )),
+                        ],
+                        onChanged: (value) {
+                          _expensesController.setCategoryFilter(value);
+                        },
+                      ),
+                    ),
+                  );
+                }),
+              ),
+
             // Date Filter Chips
             Obx(() {
               final selectedFilter = _expensesController.selectedDateFilter.value;
@@ -326,6 +463,17 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     );
   }
 
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: LightColors.textSecondary, fontSize: 12)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: LightColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
   Widget _buildSummaryCard({
     required bool isStockExpense,
     required NumberFormat compactFormatter,
@@ -365,70 +513,46 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                     size: 32,
                   ),
                 ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Total ${isStockExpense ? 'Stock' : 'Non-Stock'} Expenses',
-                      style: TextStyle(
-                        color: LightColors.textSecondary,
-                        fontSize: 14,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total ${isStockExpense ? 'Stock' : 'Non-Stock'} Expenses',
+                        style: TextStyle(
+                          color: LightColors.textSecondary,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'UGX${compactFormatter.format(totalExpense)}',
-                      style: TextStyle(
-                        color: LightColors.textPrimary,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
+                      const SizedBox(height: 4),
+                      Text(
+                        'UGX${compactFormatter.format(totalExpense)}',
+                        style: TextStyle(
+                          color: LightColors.textPrimary,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Divider(color: LightColors.border),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildStatItem('Total Items', itemCount.toString()),
-              _buildStatItem('Average', itemCount > 0 ? 'UGX${(totalExpense / itemCount).toStringAsFixed(0)}' : 'UGX0'),
-            ],
-          ),
-        ],
-      ),
-    );
+              ],
+            ),
+            const SizedBox(height: 20),
+            Divider(color: LightColors.border),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatItem('Total Items', itemCount.toString()),
+                _buildStatItem('Average', itemCount > 0 ? 'UGX${(totalExpense / itemCount).toStringAsFixed(0)}' : 'UGX0'),
+              ],
+            ),
+          ],
+        ),
+      );
     });
-  }
-
-  Widget _buildStatItem(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: LightColors.textSecondary,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            color: LightColors.textPrimary,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildExpenseItemsList({
@@ -445,36 +569,17 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
           decoration: BoxDecoration(
             color: LightColors.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: LightColors.border,
-              width: 1,
-            ),
+            border: Border.all(color: LightColors.border, width: 1),
           ),
           child: Column(
             children: [
-              Icon(
-                Icons.data_usage_outlined,
-                color: LightColors.textHint,
-                size: 48,
-              ),
+              Icon(Icons.data_usage_outlined, color: LightColors.textHint, size: 48),
               const SizedBox(height: 16),
-              Text(
-                'No expenses for $selectedFilter',
-                style: TextStyle(
-                  color: LightColors.textSecondary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tap + to add an expense',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: LightColors.textHint,
-                  fontSize: 12,
-                ),
-              ),
+              Text('No expenses for $selectedFilter'),
+              if (!isStockExpense) ...[
+                const SizedBox(height: 8),
+                Text('Tap + to add an expense'),
+              ],
             ],
           ),
         );
@@ -486,127 +591,298 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
         itemCount: expenses.length,
         itemBuilder: (context, index) {
           final expense = expenses[index];
-          final dateStr = DateFormat('MMM dd, yyyy').format(expense.date);
           return _buildExpenseItem(
-            expenseId: expense.id,
-            name: expense.title,
+            expense: expense,
             amount: currencyFormatter.format(expense.amount),
-            date: dateStr,
-            category: expense.category,
-            uploadStatus: expense.uploadStatus,
+            dateStr: _dateFormatter.format(expense.date),
           );
         },
       );
     });
   }
 
-  Widget _buildExpenseItem({
-    required String expenseId,
-    required String name,
-    required String amount,
-    required String date,
-    String? category,
-    String uploadStatus = 'uploaded',
-  }) {
-    final isPending = uploadStatus == 'pending';
+  Widget _buildExpenseItem({required Expense expense, required String amount, required String dateStr}) {
+    final isPending = expense.uploadStatus == 'pending';
+    final isStockExpense = widget.expenseType == 'stock';
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: LightColors.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: LightColors.border,
-          width: 1,
+    return GestureDetector(
+      onTap: isStockExpense ? null : () => _showExpenseDetail(expense),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: LightColors.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: LightColors.border, width: 1),
         ),
-      ),
-      child: Row(
-        children: [
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: TextStyle(
-                          color: LightColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(expense.title),
                       ),
-                    ),
-                    if (isPending)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'Pending',
-                          style: TextStyle(
-                            color: Colors.orange.shade800,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
+                      if (isPending)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(4),
                           ),
+                          child: Text('Pending'),
                         ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  date,
-                  style: TextStyle(
-                    color: LightColors.textSecondary,
-                    fontSize: 12,
+                    ],
                   ),
-                ),
-                if (category != null) ...[
                   const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: LightColors.surface,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      category,
-                      style: TextStyle(
-                        color: LightColors.textSecondary,
-                        fontSize: 10,
+                  Text(dateStr),
+                  if (expense.category.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: LightColors.surface,
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      child: Text(expense.category),
                     ),
+                  ],
+                ],
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(amount),
+                if (isPending && !isStockExpense) ...[
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                    onPressed: () => _showDeleteConfirmation(expense.id, expense.title),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                   ),
                 ],
               ],
             ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                amount,
-                style: TextStyle(
-                  color: LightColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showExpenseDetail(Expense expense) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildExpenseDetailSheet(expense),
+    );
+  }
+
+  Widget _buildExpenseDetailSheet(Expense expense) {
+    final isPending = expense.uploadStatus == 'pending';
+    
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
               ),
-              if (isPending) ...[
-                const SizedBox(width: 8),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: LightColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.receipt_long,
+                    color: LightColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        expense.title.isNotEmpty ? expense.title : 'Untitled Expense',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: LightColors.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              expense.category,
+                              style: TextStyle(
+                                color: LightColors.primary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          if (isPending) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Pending',
+                                style: TextStyle(
+                                  color: Colors.orange.shade700,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 IconButton(
-                  icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 20),
-                  onPressed: () => _showDeleteConfirmation(expenseId, name),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, color: Colors.grey.shade500),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.grey.shade100,
+                    padding: const EdgeInsets.all(6),
+                    minimumSize: const Size(32, 32),
+                  ),
                 ),
               ],
-            ],
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Amount',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _currencyFormatter.format(expense.amount),
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: LightColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                _buildDetailRow(Icons.calendar_today, 'Date', _dateFormatter.format(expense.date)),
+                _buildDetailRow(Icons.person_outline, 'Staff', _getUserName(expense.subject)),
+                if (expense.description.isNotEmpty)
+                  _buildDetailRow(Icons.notes_outlined, 'Description', expense.description),
+                _buildDetailRow(
+                  isPending ? Icons.cloud_off : Icons.cloud_done, 
+                  'Status', 
+                  isPending ? 'Pending Sync' : 'Synced',
+                  valueColor: isPending ? Colors.orange : Colors.green,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _showDeleteConfirmation(expense.id, expense.title);
+              },
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              label: const Text('Delete', style: TextStyle(color: Colors.red)),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                side: const BorderSide(color: Colors.red),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey.shade500),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: valueColor ?? Colors.grey.shade900,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

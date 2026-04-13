@@ -47,6 +47,12 @@ class _ExpensesPageState extends State<ExpensesPage> {
     _userController.fetchUsers();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Color _getColorForServicePoint() {
     if (widget.servicePoint == null) {
       return FlavorColors.current.primary;
@@ -256,8 +262,6 @@ class _ExpensesPageState extends State<ExpensesPage> {
   }
 
   @override
-  @override
-  @override
   Widget build(BuildContext context) {
     final color = _getColorForServicePoint();
 
@@ -290,12 +294,32 @@ class _ExpensesPageState extends State<ExpensesPage> {
             onSelected: _handleMenuOption,
             itemBuilder: (context) => [
               PopupMenuItem(
+                value: 'statistics',
+                child: Row(
+                  children: [
+                    Icon(Icons.bar_chart, size: 20, color: Colors.blue.shade700),
+                    SizedBox(width: 12),
+                    Text('Statistics'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
                 value: 'sync_all',
                 child: Row(
                   children: [
                     Icon(Icons.sync, size: 20, color: Colors.green.shade700),
                     SizedBox(width: 12),
                     Text('Sync All'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'clear_filters',
+                child: Row(
+                  children: [
+                    Icon(Icons.clear_all, size: 20, color: Colors.grey.shade700),
+                    SizedBox(width: 12),
+                    Text('Clear Filters'),
                   ],
                 ),
               ),
@@ -310,6 +334,86 @@ class _ExpensesPageState extends State<ExpensesPage> {
 
         return Column(
           children: [
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _onSearchChanged,
+                decoration: InputDecoration(
+                  hintText: 'Search expenses...',
+                  prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
+                  suffixIcon: Obx(() {
+                    if (_expensesController.searchText.value.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        _searchController.clear();
+                        _expensesController.setSearchText('');
+                      },
+                    );
+                  }),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ),
+
+            // Category Filter
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Obx(() {
+                final selectedCategory = _expensesController.selectedCategoryFilter.value;
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String?>(
+                      isExpanded: true,
+                      value: selectedCategory,
+                      hint: Row(
+                        children: [
+                          Icon(Icons.category, size: 18, color: Colors.grey.shade600),
+                          const SizedBox(width: 8),
+                          Text(
+                            'All Categories',
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                      icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                      items: [
+                        DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('All Categories', style: TextStyle(color: Colors.grey.shade700)),
+                        ),
+                        ...ExpenseCategory.all.map((cat) => DropdownMenuItem(
+                          value: cat,
+                          child: Text(cat),
+                        )),
+                      ],
+                      onChanged: (value) {
+                        _expensesController.setCategoryFilter(value);
+                      },
+                    ),
+                  ),
+                );
+              }),
+            ),
+
             // Date Filter Chips
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -391,6 +495,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
                             color: color,
                             getUserName: _getUserName,
                             onDelete: () => _showDeleteConfirmation(expense),
+                            onTap: () => _showExpenseDetail(expense),
                           ),
                         );
                       },
