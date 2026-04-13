@@ -11,6 +11,8 @@ import 'package:bac_pos/back_pos/widgets/expense_summary_card.dart';
 import 'package:bac_pos/back_pos/widgets/expense_list_item.dart';
 import 'package:bac_pos/back_pos/widgets/expense_empty_state.dart';
 import 'package:bac_pos/back_pos/widgets/expense_delete_dialog.dart';
+import 'package:bac_pos/back_pos/widgets/expense_detail_dialog.dart';
+import 'package:bac_pos/back_pos/widgets/expense_statistics_dialog.dart';
 
 class ExpensesPage extends StatefulWidget {
   final ServicePoint? servicePoint;
@@ -26,6 +28,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
   late final UserController _userController;
   final _currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX ');
   final _dateFormatter = DateFormat('MMM dd, yyyy');
+  final _searchController = TextEditingController();
 
   final List<String> _dateFilters = ['Today', 'Yesterday', 'This Week', 'This Month', 'This Year', 'Custom'];
 
@@ -74,6 +77,33 @@ class _ExpensesPageState extends State<ExpensesPage> {
       expense: expense,
       onDelete: () => _expensesController.deleteExpense(expense.id),
     );
+  }
+
+  void _showExpenseDetail(Expense expense) {
+    ExpenseDetailDialog.show(
+      context: context,
+      expense: expense,
+      getUserName: _getUserName,
+      onDelete: () => _expensesController.deleteExpense(expense.id),
+      currencyFormatter: _currencyFormatter,
+      color: _getColorForServicePoint(),
+    );
+  }
+
+  void _showStatistics() {
+    ExpenseStatisticsDialog.show(
+      context: context,
+      categoryTotals: _expensesController.categoryTotals,
+      sortedTotals: _expensesController.sortedCategoryTotals,
+      totalAmount: _expensesController.totalFilteredExpenses,
+      expenseCount: _expensesController.filteredExpenseCount,
+      currencyFormatter: _currencyFormatter,
+      color: _getColorForServicePoint(),
+    );
+  }
+
+  void _onSearchChanged(String value) {
+    _expensesController.setSearchText(value);
   }
 
   Future<void> _syncPendingExpenses() async {
@@ -206,6 +236,13 @@ class _ExpensesPageState extends State<ExpensesPage> {
     switch (option) {
       case 'sync_all':
         _syncPendingExpenses();
+        break;
+      case 'statistics':
+        _showStatistics();
+        break;
+      case 'clear_filters':
+        _expensesController.clearFilters();
+        _searchController.clear();
         break;
     }
   }
