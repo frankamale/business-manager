@@ -21,6 +21,8 @@ class ExpensesController extends GetxController {
   var selectedDateFilter = 'Today'.obs;
   var customStartDate = Rxn<DateTime>();
   var customEndDate = Rxn<DateTime>();
+  var searchText = ''.obs;
+  var selectedCategoryFilter = Rxn<String>();
 
   // Loading state
   var isLoading = false.obs;
@@ -309,21 +311,42 @@ class ExpensesController extends GetxController {
   List<Expense> get filteredExpenses {
     final startDate = _filterStartDate;
     final endDate = _filterEndDate;
-    
-    if (startDate == null) {
-      return expenses.toList();
-    }
+    final search = searchText.value.toLowerCase();
+    final categoryFilter = selectedCategoryFilter.value;
     
     return expenses.where((expense) {
       final expenseDate = expense.date;
       final afterStart = startDate == null || !expenseDate.isBefore(startDate);
       final beforeEnd = endDate == null || !expenseDate.isAfter(endDate);
-      return afterStart && beforeEnd;
+      
+      final matchesSearch = search.isEmpty || 
+          expense.title.toLowerCase().contains(search) ||
+          expense.description.toLowerCase().contains(search);
+      
+      final matchesCategory = categoryFilter == null || 
+          expense.category == categoryFilter;
+      
+      return afterStart && beforeEnd && matchesSearch && matchesCategory;
     }).toList();
   }
 
   double get totalFilteredExpenses {
     return filteredExpenses.fold(0.0, (sum, expense) => sum + expense.amount);
+  }
+
+  Map<String, double> get categoryTotals {
+    final totals = <String, double>{};
+    for (final expense in filteredExpenses) {
+      final category = expense.category;
+      totals[category] = (totals[category] ?? 0) + expense.amount;
+    }
+    return totals;
+  }
+
+  List<MapEntry<String, double>> get sortedCategoryTotals {
+    final entries = categoryTotals.entries.toList();
+    entries.sort((a, b) => b.value.compareTo(a.value));
+    return entries;
   }
 
   int get filteredExpenseCount {
@@ -338,6 +361,22 @@ class ExpensesController extends GetxController {
     customStartDate.value = start;
     customEndDate.value = end;
     selectedDateFilter.value = 'Custom';
+  }
+
+  void setSearchText(String text) {
+    searchText.value = text;
+  }
+
+  void setCategoryFilter(String? category) {
+    selectedCategoryFilter.value = category;
+  }
+
+  void clearFilters() {
+    searchText.value = '';
+    selectedCategoryFilter.value = null;
+    selectedDateFilter.value = 'Today';
+    customStartDate.value = null;
+    customEndDate.value = null;
   }
 
   // Get pending expenses (not uploaded yet)
