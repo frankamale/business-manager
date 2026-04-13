@@ -617,6 +617,15 @@ class UnifiedDatabaseHelper {
         // Columns may already exist, ignore error
       }
     }
+
+    // Migration to version 5 - Add expense_type column
+    if (oldVersion < 5) {
+      try {
+        await db.execute('ALTER TABLE expenses ADD COLUMN expense_type TEXT DEFAULT "non-stock"');
+      } catch (e) {
+        // Column may already exist, ignore error
+      }
+    }
   }
 
 

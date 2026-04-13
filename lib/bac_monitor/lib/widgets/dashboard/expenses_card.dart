@@ -80,8 +80,8 @@ class ExpensesCard extends StatelessWidget {
       }).toList();
       
       final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
-      final stockExpenses = expenses.where((e) => e.category == 'Stock').fold(0.0, (sum, e) => sum + e.amount);
-      final nonStockExpenses = expenses.where((e) => e.category != 'Stock').fold(0.0, (sum, e) => sum + e.amount);
+      final stockExpenses = expenses.where((e) => e.expenseType == 'stock').fold(0.0, (sum, e) => sum + e.amount);
+      final nonStockExpenses = expenses.where((e) => e.expenseType != 'stock').fold(0.0, (sum, e) => sum + e.amount);
 
       return Skeletonizer(
         enabled: isLoading,
@@ -108,7 +108,7 @@ class ExpensesCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (!isLoading && expensesController.pendingExpenses.isNotEmpty)
+                      if (!isLoading && expensesController.allPendingExpenses.isNotEmpty)
                         GestureDetector(
                           onTap: () => expensesController.syncPendingExpenses(),
                           child: Container(
@@ -131,7 +131,7 @@ class ExpensesCard extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 2),
                                 Text(
-                                  '${expensesController.pendingExpenses.length}',
+                                  '${expensesController.allPendingExpenses.length}',
                                   style: TextStyle(
                                     color: Colors.green.shade800,
                                     fontSize: 9,

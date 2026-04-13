@@ -11,12 +11,14 @@ class ExpenseFormDialog extends StatefulWidget {
   final ExpensesController expensesController;
   final String? servicePointId;
   final Color color;
+  final String expenseType;
 
   const ExpenseFormDialog({
     super.key,
     required this.expensesController,
     required this.color,
     this.servicePointId,
+    this.expenseType = 'non-stock',
   });
 
   static Future<void> show({
@@ -24,6 +26,7 @@ class ExpenseFormDialog extends StatefulWidget {
     required ExpensesController expensesController,
     required Color color,
     String? servicePointId,
+    String expenseType = 'non-stock',
   }) {
     return showModalBottomSheet(
       context: context,
@@ -33,6 +36,7 @@ class ExpenseFormDialog extends StatefulWidget {
         expensesController: expensesController,
         servicePointId: servicePointId,
         color: color,
+        expenseType: expenseType,
       ),
     );
   }
@@ -117,6 +121,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
       amount: amount!,
       category: _selectedCategory,
       servicePointId: _selectedServicePointId ?? widget.servicePointId,
+      expenseType: widget.expenseType,
     );
 
     Navigator.pop(context);

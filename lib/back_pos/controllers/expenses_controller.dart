@@ -11,6 +11,9 @@ class ExpensesController extends GetxController {
   final _db = UnifiedDatabaseHelper.instance;
   final _apiService = Get.find<PosApiService>();
 
+  // Current expense type being viewed: 'stock' or 'non-stock'
+  var currentExpenseType = 'non-stock'.obs;
+
   // Reactive list of expenses
   var expenses = <Expense>[].obs;
 
@@ -111,6 +114,7 @@ class ExpensesController extends GetxController {
     String? servicePointId,
     String? subject,
     String? staffId,
+    String expenseType = 'non-stock',
   }) async {
     final expenseId = _uuid.v4();
     final expenseDate = date ?? DateTime.now();
@@ -153,6 +157,7 @@ class ExpensesController extends GetxController {
         subject: subject,
         staffId: staffId,
         uploadStatus: 'pending',
+        expenseType: expenseType,
       );
 
       // Save to database immediately with 'pending' status
@@ -168,24 +173,25 @@ class ExpensesController extends GetxController {
       try {
         await _apiService.createAdhocPayment(paymentData);
         
-        // Update to 'uploaded' status on success
-        final index = expenses.indexWhere((e) => e.id == expenseId);
-        if (index != -1) {
-          final updatedExpense = Expense(
-            id: expense.id,
-            title: expense.title,
-            description: expense.description,
-            amount: expense.amount,
-            category: expense.category,
-            date: expense.date,
-            servicePointId: expense.servicePointId,
-            subject: expense.subject,
-            staffId: expense.staffId,
-            uploadStatus: 'uploaded',
-          );
-          expenses[index] = updatedExpense;
-          await _db.insertExpense(updatedExpense);
-        }
+          // Update to 'uploaded' status on success
+          final index = expenses.indexWhere((e) => e.id == expenseId);
+          if (index != -1) {
+            final updatedExpense = Expense(
+              id: expense.id,
+              title: expense.title,
+              description: expense.description,
+              amount: expense.amount,
+              category: expense.category,
+              date: expense.date,
+              servicePointId: expense.servicePointId,
+              subject: expense.subject,
+              staffId: expense.staffId,
+              uploadStatus: 'uploaded',
+              expenseType: expense.expenseType,
+            );
+            expenses[index] = updatedExpense;
+            await _db.insertExpense(updatedExpense);
+          }
         
         Get.snackbar(
           'Success',
@@ -313,8 +319,12 @@ class ExpensesController extends GetxController {
     final endDate = _filterEndDate;
     final search = searchText.value.toLowerCase();
     final categoryFilter = selectedCategoryFilter.value;
+    final expenseType = currentExpenseType.value;
     
     return expenses.where((expense) {
+      // Filter by expense type first
+      if (expense.expenseType != expenseType) return false;
+      
       final expenseDate = expense.date;
       final afterStart = startDate == null || !expenseDate.isBefore(startDate);
       final beforeEnd = endDate == null || !expenseDate.isAfter(endDate);
@@ -379,9 +389,20 @@ class ExpensesController extends GetxController {
     customEndDate.value = null;
   }
 
-  // Get pending expenses (not uploaded yet)
+  // Get pending expenses (not uploaded yet) - filtered by current expense type
   List<Expense> get pendingExpenses {
+    final expenseType = currentExpenseType.value;
+    return expenses.where((e) => e.uploadStatus == 'pending' && e.expenseType == expenseType).toList();
+  }
+
+  // Get all pending expenses regardless of type (for dashboard and back_pos display)
+  List<Expense> get allPendingExpenses {
     return expenses.where((e) => e.uploadStatus == 'pending').toList();
+  }
+
+  // Get pending expenses for a specific type (helper for back_pos)
+  List<Expense> getPendingByType(String type) {
+    return expenses.where((e) => e.uploadStatus == 'pending' && e.expenseType == type).toList();
   }
 
   // Sync all pending expenses
@@ -439,6 +460,7 @@ class ExpensesController extends GetxController {
             subject: expense.subject,
             staffId: expense.staffId,
             uploadStatus: 'uploaded',
+            expenseType: expense.expenseType,
           );
           expenses[index] = updated;
           await _db.insertExpense(updated);

@@ -39,6 +39,8 @@ class _ExpensesPageState extends State<ExpensesPage> {
       Get.put(ExpensesController());
     }
     _expensesController = Get.find<ExpensesController>();
+    // Set to non-stock for back_pos expenses page
+    _expensesController.currentExpenseType.value = 'non-stock';
 
     if (!Get.isRegistered<UserController>()) {
       Get.put(UserController());

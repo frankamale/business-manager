@@ -55,6 +55,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       Get.put(ExpensesController());
     }
     _expensesController = Get.find<ExpensesController>();
+    // Set the expense type filter
+    _expensesController.currentExpenseType.value = widget.expenseType;
 
     if (!Get.isRegistered<UserController>()) {
       Get.put(UserController());
@@ -85,6 +87,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       expensesController: _expensesController,
       servicePointId: servicePointId,
       color: AppColors.getTextPrimaryColor(context),
+      expenseType: widget.expenseType,
     );
   }
 
@@ -608,6 +611,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
+                        isStockExpense ? "0" :
                         'UGX${compactFormatter.format(totalExpense)}',
                         style: TextStyle(
                           color: AppColors.getTextPrimaryColor(context),
@@ -790,9 +794,9 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     final isPending = expense.uploadStatus == 'pending';
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: AppColors.getCardColor(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -804,9 +808,9 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppColors.getTextHintColor(context),
                 borderRadius: BorderRadius.circular(2),
-              ),
+              ), 
             ),
           ),
           Padding(
@@ -834,9 +838,10 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                         expense.title.isNotEmpty
                             ? expense.title
                             : 'Untitled Expense',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
+                          color: AppColors.getTextPrimaryColor(context),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -888,9 +893,9 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: Colors.grey.shade500),
+                  icon: Icon(Icons.close, color: AppColors.getTextHintColor(context)),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.grey.shade100,
+                    backgroundColor: AppColors.getSurfaceColor(context),
                     padding: const EdgeInsets.all(6),
                     minimumSize: const Size(32, 32),
                   ),
@@ -898,7 +903,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(color: AppColors.getBorderColor(context), height: 1),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -907,7 +912,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 Text(
                   'Amount',
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: AppColors.getTextSecondaryColor(context),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -947,7 +952,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 _buildDetailRow(
                   isPending ? Icons.cloud_off : Icons.cloud_done,
                   'Status',
-                  isPending ? 'Pending Sync' : 'Synced',
+                  isPending ? 'Pending Upload' : 'Uploaded',
                   valueColor: isPending ? Colors.orange : Colors.green,
                 ),
               ],
@@ -961,8 +966,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 Navigator.pop(context);
                 _showDeleteConfirmation(expense.id, expense.title);
               },
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              label: const Text('Delete', style: TextStyle(color: Colors.red)),
+              icon: Icon(Icons.delete_outline, color: Colors.red),
+              label: Text('Delete', style: TextStyle(color: Colors.red)),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(
@@ -987,7 +992,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey.shade500),
+          Icon(icon, size: 18, color: AppColors.getTextHintColor(context)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -995,13 +1000,13 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                  style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 11),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   value,
                   style: TextStyle(
-                    color: valueColor ?? Colors.grey.shade900,
+                    color: valueColor ?? AppColors.getTextPrimaryColor(context),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),

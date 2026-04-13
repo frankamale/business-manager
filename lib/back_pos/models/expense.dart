@@ -10,6 +10,7 @@ class Expense {
   final String? staffId;
   final String uploadStatus;
   final int? createdAt;
+  final String expenseType; // 'stock' or 'non-stock'
 
   Expense({
     required this.id,
@@ -23,6 +24,7 @@ class Expense {
     this.staffId,
     this.uploadStatus = 'pending',
     this.createdAt,
+    this.expenseType = 'non-stock',
   });
 
   Map<String, dynamic> toMap() {
@@ -38,6 +40,7 @@ class Expense {
       'staffId': staffId,
       'upload_status': uploadStatus,
       'created_at': createdAt ?? DateTime.now().millisecondsSinceEpoch,
+      'expense_type': expenseType,
     };
   }
 
@@ -54,6 +57,7 @@ class Expense {
       staffId: map['staffId'],
       uploadStatus: map['upload_status'] ?? 'pending',
       createdAt: map['created_at'],
+      expenseType: map['expense_type'] ?? 'non-stock',
     );
   }
 }
