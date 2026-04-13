@@ -26,7 +26,7 @@ class ExpensesCard extends StatelessWidget {
 
     return Obx(() {
       final expensesController = Get.find<ExpensesController>();
-      final expenses = expensesController.expenses;
+      final expenses = expensesController.filteredExpenses;
       final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
 
       return Container(

@@ -28,10 +28,21 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
   late ExpensesController _expensesController;
   late UserController _userController;
   bool _controllersInitialized = false;
-  final List<String> _dateFilters = ['Today', 'Yesterday', 'This Week', 'This Month', 'This Year', 'Custom'];
+  final List<String> _dateFilters = [
+    'Today',
+    'Yesterday',
+    'This Week',
+    'This Month',
+    'This Year',
+    'Custom',
+  ];
   final _searchController = TextEditingController();
   final _dateFormatter = DateFormat('MMM dd, yyyy');
-  final _currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX', decimalDigits: 0);
+  final _currencyFormatter = NumberFormat.currency(
+    locale: 'en_US',
+    symbol: 'UGX',
+    decimalDigits: 0,
+  );
 
   @override
   void initState() {
@@ -64,7 +75,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     final storeController = Get.find<MonStoresController>();
     final selectedStore = storeController.selectedStore.value;
     // Use actual store ID, not the "all stores" ID
-    final servicePointId = (selectedStore != null && selectedStore.id != '---all-stores-id---')
+    final servicePointId =
+        (selectedStore != null && selectedStore.id != '---all-stores-id---')
         ? selectedStore.id
         : null;
 
@@ -72,12 +84,12 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       context: context,
       expensesController: _expensesController,
       servicePointId: servicePointId,
-      color: LightColors.primary,
+      color: AppColors.getTextPrimaryColor(context),
     );
   }
 
   Future<void> _syncPendingExpenses() async {
-    final pending = _expensesController.pendingExpenses;
+    final pending = _expensesController.pendingExpenses; 
     if (pending.isEmpty) {
       Get.snackbar(
         'Info',
@@ -121,8 +133,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                   ListTile(
                     title: const Text('Start Date'),
                     subtitle: Text(
-                      startDate != null 
-                          ? DateFormat.yMMMd().format(startDate!) 
+                      startDate != null
+                          ? DateFormat.yMMMd().format(startDate!)
                           : 'Not Set',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
@@ -140,8 +152,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                   ListTile(
                     title: const Text('End Date'),
                     subtitle: Text(
-                      endDate != null 
-                          ? DateFormat.yMMMd().format(endDate!) 
+                      endDate != null
+                          ? DateFormat.yMMMd().format(endDate!)
                           : 'Not Set',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
@@ -168,10 +180,16 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 onPressed: (startDate != null && endDate != null)
                     ? () {
                         if (startDate!.isAfter(endDate!)) {
-                          Get.snackbar('Error', 'Start date must be before end date');
+                          Get.snackbar(
+                            'Error',
+                            'Start date must be before end date',
+                          );
                           return;
                         }
-                        _expensesController.setCustomDateRange(startDate!, endDate!);
+                        _expensesController.setCustomDateRange(
+                          startDate!,
+                          endDate!,
+                        );
                         Navigator.pop(context);
                       }
                     : null,
@@ -195,8 +213,12 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       sortedTotals: _expensesController.sortedCategoryTotals,
       totalAmount: _expensesController.totalFilteredExpenses,
       expenseCount: _expensesController.filteredExpenseCount,
-      currencyFormatter: NumberFormat.currency(locale: 'en_US', symbol: 'UGX', decimalDigits: 0),
-      color: LightColors.primary,
+      currencyFormatter: NumberFormat.currency(
+        locale: 'en_US',
+        symbol: 'UGX',
+        decimalDigits: 0,
+      ),
+      color: AppColors.getTextPrimaryColor(context),
     );
   }
 
@@ -224,31 +246,43 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
   Widget build(BuildContext context) {
     final isStockExpense = widget.expenseType == 'stock';
     final compactFormatter = NumberFormat.compact(locale: 'en_US');
-    final currencyFormatter = NumberFormat.currency(locale: 'en_US', symbol: 'UGX', decimalDigits: 0);
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'en_US',
+      symbol: 'UGX',
+      decimalDigits: 0,
+    );
 
     return Scaffold(
-      backgroundColor: LightColors.background,
+      backgroundColor: AppColors.getBackgroundColor(context),
       appBar: AppBar(
-        backgroundColor: LightColors.card,
+        backgroundColor: AppColors.getBackgroundColor(context),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: LightColors.textPrimary),
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.getTextPrimaryColor(context),
+          ),
           onPressed: () => Get.back(),
         ),
         title: Text(
           isStockExpense ? 'Stock Expenses' : 'Non-Stock Payments',
           style: TextStyle(
-            color: LightColors.textPrimary,
+            color: AppColors.getTextPrimaryColor(context),
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           Obx(() {
             final pending = _expensesController.pendingExpenses;
-            if (pending.isEmpty || isStockExpense) return const SizedBox.shrink();
+            if (pending.isEmpty || isStockExpense)
+              return const SizedBox.shrink();
             return TextButton.icon(
               onPressed: _syncPendingExpenses,
-              icon: const Icon(Icons.cloud_upload, size: 20, color: Colors.green),
+              icon: const Icon(
+                Icons.cloud_upload,
+                size: 20,
+                color: Colors.green,
+              ),
               label: Text(
                 'Sync (${pending.length})',
                 style: const TextStyle(color: Colors.green),
@@ -257,14 +291,21 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
           }),
           if (!isStockExpense)
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: LightColors.textPrimary),
+              icon: Icon(
+                Icons.more_vert,
+                color: AppColors.getTextPrimaryColor(context),
+              ),
               onSelected: _handleMenuOption,
               itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'statistics',
                   child: Row(
                     children: [
-                      Icon(Icons.bar_chart, size: 20, color: Colors.blue.shade700),
+                      Icon(
+                        Icons.bar_chart,
+                        size: 20,
+                        color: Colors.blue.shade700,
+                      ),
                       const SizedBox(width: 12),
                       Text('Statistics'),
                     ],
@@ -274,7 +315,11 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                   value: 'clear_filters',
                   child: Row(
                     children: [
-                      Icon(Icons.clear_all, size: 20, color: Colors.grey.shade700),
+                      Icon(
+                        Icons.clear_all,
+                        size: 20,
+                        color: Colors.grey.shade700,
+                      ),
                       const SizedBox(width: 12),
                       Text('Clear Filters'),
                     ],
@@ -312,7 +357,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                       );
                     }),
                     filled: true,
-                    fillColor: LightColors.surface,
+                    fillColor: AppColors.getSurfaceColor(context),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -330,11 +375,12 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Obx(() {
-                  final selectedCategory = _expensesController.selectedCategoryFilter.value;
+                  final selectedCategory =
+                      _expensesController.selectedCategoryFilter.value;
                   return Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: LightColors.surface,
+                      color: AppColors.getBackgroundColor(context),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: DropdownButtonHideUnderline(
@@ -343,24 +389,36 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                         value: selectedCategory,
                         hint: Row(
                           children: [
-                            Icon(Icons.category, size: 18, color: Colors.grey.shade600),
+                            Icon(
+                              Icons.category,
+                              size: 18,
+                              color: AppColors.getTextPrimaryColor(context),
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'All Categories',
-                              style: TextStyle(color: Colors.grey.shade600),
+                              style: TextStyle(
+                                color: AppColors.getTextPrimaryColor(context),
+                              ),
                             ),
                           ],
                         ),
-                        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                        icon: Icon(
+                          Icons.arrow_drop_down,
+                          color: Colors.grey.shade600,
+                        ),
                         items: [
                           DropdownMenuItem<String?>(
                             value: null,
-                            child: Text('All Categories', style: TextStyle(color: Colors.grey.shade700)),
+                            child: Text(
+                              'All Categories',
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
                           ),
-                          ...ExpenseCategory.all.map((cat) => DropdownMenuItem(
-                            value: cat,
-                            child: Text(cat),
-                          )),
+                          ...ExpenseCategory.all.map(
+                            (cat) =>
+                                DropdownMenuItem(value: cat, child: Text(cat)),
+                          ),
                         ],
                         onChanged: (value) {
                           _expensesController.setCategoryFilter(value);
@@ -373,7 +431,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
 
             // Date Filter Chips
             Obx(() {
-              final selectedFilter = _expensesController.selectedDateFilter.value;
+              final selectedFilter =
+                  _expensesController.selectedDateFilter.value;
               return Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: SingleChildScrollView(
@@ -385,17 +444,23 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
                           label: Text(
-                            filter == 'Custom' && _expensesController.customStartDate.value != null
+                            filter == 'Custom' &&
+                                    _expensesController.customStartDate.value !=
+                                        null
                                 ? 'Custom Range'
                                 : filter,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : LightColors.textSecondary,
+                              color: isSelected
+                                  ? AppColors.getPrimaryColor(context)
+                                  : AppColors.getTextPrimaryColor(context),
                               fontSize: 13,
                             ),
                           ),
                           selected: isSelected,
-                          selectedColor: LightColors.primary,
-                          backgroundColor: LightColors.surface,
+                          selectedColor: Colors.transparent,
+                          backgroundColor: AppColors.getBackgroundColor(
+                            context,
+                          ),
                           onSelected: (selected) {
                             if (selected) {
                               if (filter == 'Custom') {
@@ -426,7 +491,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
             Text(
               'Expense Breakdown',
               style: TextStyle(
-                color: LightColors.textPrimary,
+                color: AppColors.getTextSecondaryColor(context),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -447,15 +512,18 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               padding: const EdgeInsets.only(bottom: 12),
               child: FloatingActionButton.extended(
                 onPressed: () => _showAddExpenseDialog(context),
-                backgroundColor: LightColors.primary,
+                backgroundColor: AppColors.getCardColor(context),
                 elevation: 6,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                icon:  Icon(Icons.add,  color: AppColors.getTextPrimary(context),),
-                label:  Text(
+                icon: Icon(Icons.add, color: AppColors.getTextPrimaryColor(context)),
+                label: Text(
                   'Add Expense',
-                  style: TextStyle(fontWeight: FontWeight.w600, color: AppColors.getTextPrimary(context)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.getTextPrimaryColor(context),
+                  ),
                 ),
               ),
             )
@@ -467,9 +535,22 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(color: LightColors.textSecondary, fontSize: 12)),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.getTextSecondaryColor(context),
+            fontSize: 12,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: LightColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: TextStyle(
+            color: AppColors.getTextPrimaryColor(context),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ],
     );
   }
@@ -486,15 +567,12 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
       return Container(
         padding: const EdgeInsets.all(20.0),
         decoration: BoxDecoration(
-          color: LightColors.card,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: LightColors.shadowLight,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: AppColors.getCardColor(context),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.getBorderColor(context),
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,12 +582,14 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: LightColors.surface,
+                    color: AppColors.getBackgroundColor(context),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    isStockExpense ? Icons.inventory_2_outlined : Icons.receipt_long_outlined,
-                    color: LightColors.textPrimary,
+                    isStockExpense
+                        ? Icons.inventory_2_outlined
+                        : Icons.receipt_long_outlined,
+                    color: AppColors.getTextPrimaryColor(context),
                     size: 32,
                   ),
                 ),
@@ -521,7 +601,8 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                       Text(
                         'Total ${isStockExpense ? 'Stock' : 'Non-Stock'} Expenses',
                         style: TextStyle(
-                          color: LightColors.textSecondary,
+                          color: AppColors.getTextSecondaryColor(context),
+
                           fontSize: 14,
                         ),
                       ),
@@ -529,7 +610,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                       Text(
                         'UGX${compactFormatter.format(totalExpense)}',
                         style: TextStyle(
-                          color: LightColors.textPrimary,
+                          color: AppColors.getTextPrimaryColor(context),
                           fontSize: 32,
                           fontWeight: FontWeight.w900,
                         ),
@@ -540,13 +621,18 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               ],
             ),
             const SizedBox(height: 20),
-            Divider(color: LightColors.border),
+            Divider(color: AppColors.getTextPrimaryColor(context)),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildStatItem('Total Items', itemCount.toString()),
-                _buildStatItem('Average', itemCount > 0 ? 'UGX${(totalExpense / itemCount).toStringAsFixed(0)}' : 'UGX0'),
+                _buildStatItem(
+                  'Average',
+                  itemCount > 0
+                      ? 'UGX${(totalExpense / itemCount).toStringAsFixed(0)}'
+                      : 'UGX0',
+                ),
               ],
             ),
           ],
@@ -562,18 +648,22 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     return Obx(() {
       final expenses = _expensesController.filteredExpenses;
       final selectedFilter = _expensesController.selectedDateFilter.value;
-      
+
       if (expenses.isEmpty) {
         return Container(
           padding: const EdgeInsets.all(20.0),
           decoration: BoxDecoration(
-            color: LightColors.card,
+            color: AppColors.getCardColor(context),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: LightColors.border, width: 1),
+            border: Border.all(color: AppColors.getBorderColor(context), width: 1),
           ),
           child: Column(
             children: [
-              Icon(Icons.data_usage_outlined, color: LightColors.textHint, size: 48),
+              Icon(
+                Icons.data_usage_outlined,
+                color: AppColors.getTextHintColor(context),
+                size: 48,
+              ),
               const SizedBox(height: 16),
               Text('No expenses for $selectedFilter'),
               if (!isStockExpense) ...[
@@ -601,19 +691,23 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     });
   }
 
-  Widget _buildExpenseItem({required Expense expense, required String amount, required String dateStr}) {
+  Widget _buildExpenseItem({
+    required Expense expense,
+    required String amount,
+    required String dateStr,
+  }) {
     final isPending = expense.uploadStatus == 'pending';
     final isStockExpense = widget.expenseType == 'stock';
-    
+
     return GestureDetector(
       onTap: isStockExpense ? null : () => _showExpenseDetail(expense),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: LightColors.card,
+          color:AppColors.getCardColor(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: LightColors.border, width: 1),
+          border: Border.all(color:AppColors.getBorderColor(context), width: 1),
         ),
         child: Row(
           children: [
@@ -623,12 +717,13 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 children: [
                   Row(
                     children: [
-                      Expanded(
-                        child: Text(expense.title),
-                      ),
+                      Expanded(child: Text(expense.title)),
                       if (isPending)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.orange.shade100,
                             borderRadius: BorderRadius.circular(4),
@@ -642,9 +737,12 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                   if (expense.category.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: LightColors.surface,
+                        color: AppColors.getSurfaceColor(context),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(expense.category),
@@ -660,8 +758,13 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 if (isPending && !isStockExpense) ...[
                   const SizedBox(width: 8),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                    onPressed: () => _showDeleteConfirmation(expense.id, expense.title),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
+                      size: 20,
+                    ),
+                    onPressed: () =>
+                        _showDeleteConfirmation(expense.id, expense.title),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -685,7 +788,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
 
   Widget _buildExpenseDetailSheet(Expense expense) {
     final isPending = expense.uploadStatus == 'pending';
-    
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -713,12 +816,12 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: LightColors.primary.withOpacity(0.1),
+                    color: AppColors.getPrimaryColor(context).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.receipt_long,
-                    color: LightColors.primary,
+                    color: AppColors.getPrimaryColor(context),
                     size: 24,
                   ),
                 ),
@@ -728,7 +831,9 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        expense.title.isNotEmpty ? expense.title : 'Untitled Expense',
+                        expense.title.isNotEmpty
+                            ? expense.title
+                            : 'Untitled Expense',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
@@ -738,15 +843,18 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: LightColors.primary.withOpacity(0.1),
+                              color: AppColors.getPrimaryColor(context).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
                               expense.category,
                               style: TextStyle(
-                                color: LightColors.primary,
+                                color: AppColors.getPrimaryColor(context),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -755,7 +863,10 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                           if (isPending) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.orange.shade100,
                                 borderRadius: BorderRadius.circular(4),
@@ -807,7 +918,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
-                    color: LightColors.primary,
+                    color: AppColors.getPrimaryColor(context),
                   ),
                 ),
               ],
@@ -817,13 +928,25 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
               children: [
-                _buildDetailRow(Icons.calendar_today, 'Date', _dateFormatter.format(expense.date)),
-                _buildDetailRow(Icons.person_outline, 'Staff', _getUserName(expense.subject)),
-                if (expense.description.isNotEmpty)
-                  _buildDetailRow(Icons.notes_outlined, 'Description', expense.description),
                 _buildDetailRow(
-                  isPending ? Icons.cloud_off : Icons.cloud_done, 
-                  'Status', 
+                  Icons.calendar_today,
+                  'Date',
+                  _dateFormatter.format(expense.date),
+                ),
+                _buildDetailRow(
+                  Icons.person_outline,
+                  'Staff',
+                  _getUserName(expense.subject),
+                ),
+                if (expense.description.isNotEmpty)
+                  _buildDetailRow(
+                    Icons.notes_outlined,
+                    'Description',
+                    expense.description,
+                  ),
+                _buildDetailRow(
+                  isPending ? Icons.cloud_off : Icons.cloud_done,
+                  'Status',
                   isPending ? 'Pending Sync' : 'Synced',
                   valueColor: isPending ? Colors.orange : Colors.green,
                 ),
@@ -854,7 +977,12 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -867,10 +995,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -895,10 +1020,7 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
         title: const Text('Delete Expense'),
         content: Text('Are you sure you want to delete "$expenseName"?'),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               _expensesController.deleteExpense(expenseId);

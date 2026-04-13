@@ -5,6 +5,8 @@ import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
 
+import '../../bac_monitor/lib/additions/colors.dart';
+
 class ExpenseFormDialog extends StatefulWidget {
   final ExpensesController expensesController;
   final String? servicePointId;
@@ -81,7 +83,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
       _descriptionController.text.trim().isNotEmpty &&
       (double.tryParse(_amountController.text.trim()) ?? 0) > 0 &&
       _selectedServicePointId != null &&
-      _selectedServicePointId != '---all-stores-id---';
+          _selectedSubject != null;
 
   void _submitForm() {
     final title = _titleController.text.trim();
@@ -129,8 +131,8 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration:  BoxDecoration(
+          color: AppColors.getCardColor(context),
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: SingleChildScrollView(
@@ -145,7 +147,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: AppColors.getTextPrimaryColor(context),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -173,7 +175,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: Colors.grey.shade900,
+                        color: AppColors.getTextPrimaryColor(context),
                       ),
                     ),
                     const Spacer(),
@@ -247,11 +249,11 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                   padding: const EdgeInsets.only(left: 24, top: 4),
                   child: Text(
                     _amountError!,
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                    style:  TextStyle(color:AppColors.getWarningColor(context), fontSize: 12),
                   ),
                 ),
               const SizedBox(height: 16),
-              Divider(height: 1, color: Colors.grey.shade100),
+              Divider(height: 1, color: AppColors.getTextPrimaryColor(context)),
               const SizedBox(height: 16),
               // Fields
               Padding(
@@ -366,10 +368,10 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                    backgroundColor: _isValid ? color : Colors.grey.shade300,
+                    backgroundColor: _isValid ? AppColors.getSecondaryColor(context) : AppColors.getCardColor(context),
                     foregroundColor: _isValid
-                        ? Colors.white
-                        : Colors.grey.shade500,
+                        ? AppColors.getTextPrimaryColor(context)
+                        : AppColors.getSurfaceColor(context),
                     minimumSize: const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
@@ -402,17 +404,17 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
       onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 18, color: Colors.grey.shade500),
+        prefixIcon: Icon(icon, size: 18, color: AppColors.getTextPrimaryColor(context)),
         errorText: errorText,
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: AppColors.getSurfaceColor(context),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+          borderSide: BorderSide(color: AppColors.getTextPrimaryColor(context)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+          borderSide: BorderSide(color: AppColors.getBorderColor(context)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -439,17 +441,17 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
       value: value,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 18, color: Colors.grey.shade500),
+        prefixIcon: Icon(icon, size: 18, color: AppColors.getTextPrimaryColor(context)),
         errorText: errorText,
         filled: true,
-        fillColor: Colors.grey.shade50,
+        fillColor: AppColors.getSurfaceColor(context),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+          borderSide: BorderSide(color:AppColors.getBorderColor(context)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
+          borderSide: BorderSide(color: AppColors.getTextPrimaryColor(context)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
