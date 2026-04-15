@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
@@ -127,14 +128,55 @@ class InventoryController extends GetxController {
       // Fetch inventory from API
       final items = await _apiService.fetchInventory();
 
-      // Save inventory to database
-      await _dbHelper.insertInventoryItemModels(items);
+      if (items.isNotEmpty) {
+        debugPrint('InventoryController: Got ${items.length} items from API');
+        
+        // Delete existing inventory first 
+        await _dbHelper.deleteAllInventoryItems();
+        
+        // Insert in chunks with compute and delays 
+        const mapChunkSize = 1000;
+        const insertBatchSize = 500;
+        int totalItems = items.length;
+        
+        for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {
+          final chunkEnd = (chunkStart + mapChunkSize < totalItems) 
+              ? chunkStart + mapChunkSize 
+              : totalItems;
+          final chunk = items.sublist(chunkStart, chunkEnd);
+          
+          // Convert to maps using compute (off main isolate)
+          final mappedChunk = await compute(
+            (List<InventoryItem> items) => items.map((e) => e.toMap()).toList(),
+            chunk,
+          );
+          
+          // Insert in batches of 500
+          for (int i = 0; i < mappedChunk.length; i += insertBatchSize) {
+            final batch = mappedChunk.skip(i).take(insertBatchSize).toList();
+            await _dbHelper.insertInventoryItems(batch);
+            if (i + insertBatchSize < mappedChunk.length) {
+              await Future.delayed(const Duration(milliseconds: 50));
+            }
+          }
+          
+          await Future.delayed(const Duration(milliseconds: 50));
+        }
+        
+        debugPrint('InventoryController: Stored $totalItems items to DB');
+      }
 
       // Update sync metadata
       await _dbHelper.updateSyncMetadata('inventory', 'success', items.length);
 
-      // Reload inventory after sync
-      await loadInventoryFromCache();
+      // Reset pagination and reload first page
+      if (items.isNotEmpty) {
+        _currentPage = 0;
+        hasMoreItems.value = true;
+        inventoryItems.clear();
+        filteredItems.clear();
+        await loadInventoryFromCache();
+      }
 
       isSyncingInventory.value = false;
 

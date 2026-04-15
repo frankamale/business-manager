@@ -691,7 +691,7 @@ class _SplashScreenState extends State<SplashScreen>
       _log('loadDataWithSmartSync: No service points data available (offline, no cache)', level: 'WARN');
     }
 
-    // 3. Inventory (dynamic - sync if network available)
+    // 3. Inventory (load from cache first  )
     setState(() {
       _statusMessage = 'Loading inventory...';
     });
@@ -699,22 +699,21 @@ class _SplashScreenState extends State<SplashScreen>
     final hasInventory = await _checkCachedDataSafely('inventory');
     _log('loadDataWithSmartSync: Cached inventory exists = $hasInventory');
 
-    if (hasNetwork) {
+    // Always load from cache first 
+    // The sync will happen in background via periodic sync or manual refresh
+    if (hasInventory) {
+      _log('loadDataWithSmartSync: Loading inventory from cache');
+      await inventoryController.loadInventoryFromCache();
+      _log('loadDataWithSmartSync: Inventory loaded successfully from cache');
+    } else if (hasNetwork) {
+      // Only sync from API if no cache exists
       try {
-        _log('loadDataWithSmartSync: Syncing inventory from API (network available)');
+        _log('loadDataWithSmartSync: No cache, syncing inventory from API');
         await inventoryController.syncInventoryFromAPI();
         _log('loadDataWithSmartSync: Inventory synced successfully from API');
       } catch (e) {
-        _log('loadDataWithSmartSync: API sync failed ($e), falling back to cache', level: 'WARN');
-        if (hasInventory) {
-          await inventoryController.loadInventoryFromCache();
-          _log('loadDataWithSmartSync: Inventory loaded from cache after API failure');
-        }
+        _log('loadDataWithSmartSync: No inventory data available', level: 'WARN');
       }
-    } else if (hasInventory) {
-      _log('loadDataWithSmartSync: Loading inventory from cache (offline mode)');
-      await inventoryController.loadInventoryFromCache();
-      _log('loadDataWithSmartSync: Inventory loaded successfully from cache');
     } else {
       _log('loadDataWithSmartSync: No inventory data available (offline, no cache)', level: 'WARN');
     }
