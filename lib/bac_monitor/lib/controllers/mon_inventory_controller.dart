@@ -138,8 +138,8 @@ class MonInventoryController extends GetxController {
           final dbHelper = UnifiedDatabaseHelper.instance;
           await dbHelper.deleteAllMonInventoryItems();
           
-          const mapChunkSize = 1000;
-          const insertBatchSize = 500;
+          const mapChunkSize = 2000;
+          const insertBatchSize = 1000;
           int totalItems = result.inventory.length;
           
           for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {

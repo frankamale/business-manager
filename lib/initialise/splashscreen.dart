@@ -431,17 +431,17 @@ class _SplashScreenState extends State<SplashScreen> {
               const SizedBox(height: 20),
               if (controller.isLoading.value)
                 const CircularProgressIndicator()
-              else if (controller.hasError.value)
-                Column(
-                  children: [
-                    const Text('No internet connection'),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: controller.checkConnectivity,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              // else if (controller.hasError.value)
+              //   Column(
+              //     children: [
+              //       const Text('No internet connection'),
+              //       const SizedBox(height: 10),
+              //       ElevatedButton(
+              //         onPressed: controller.checkConnectivity,
+              //         child: const Text('Retry'),
+              //       ),
+              //     ],
+              //   ),
             ],
           );
         }),
