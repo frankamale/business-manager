@@ -134,12 +134,16 @@ class MonInventoryController extends GetxController {
         if (result.inventory.isNotEmpty) {
           debugPrint('MonInventoryController: Got ${result.inventory.length} items from server');
           
-          // Store to DB in chunks
+          // Store to DB in chunks - optimized
           final dbHelper = UnifiedDatabaseHelper.instance;
-          await dbHelper.deleteAllMonInventoryItems();
+          final isFirstSync = await dbHelper.rawQuery('SELECT COUNT(*) as count FROM mon_inventory')
+              .then((r) => r.first['count'] as int? ?? 0) == 0;
+          if (isFirstSync) {
+            await dbHelper.deleteAllMonInventoryItems();
+          }
           
           const mapChunkSize = 2000;
-          const insertBatchSize = 1000;
+          const insertBatchSize = 500;
           int totalItems = result.inventory.length;
           
           for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {
@@ -155,15 +159,11 @@ class MonInventoryController extends GetxController {
               chunk,
             );
             
+            // Insert in batches using transaction (faster)
             for (int i = 0; i < mappedChunk.length; i += insertBatchSize) {
               final batch = mappedChunk.skip(i).take(insertBatchSize).toList();
-              await dbHelper.insertMonInventoryItems(batch);
-              if (i + insertBatchSize < mappedChunk.length) {
-                await Future.delayed(const Duration(milliseconds: 50));
-              }
+              await dbHelper.insertMonInventoryItemsInTransaction(batch);
             }
-            
-            await Future.delayed(const Duration(milliseconds: 50));
           }
           
           debugPrint('MonInventoryController: Stored $totalItems items to DB');

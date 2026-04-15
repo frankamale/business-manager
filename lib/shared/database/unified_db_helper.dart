@@ -816,12 +816,25 @@ class UnifiedDatabaseHelper {
   }
 
   Future<void> insertInventoryItems(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
     final db = database;
     final batch = db.batch();
     for (var item in items) {
       batch.insert('inventory', item, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
+  }
+
+  Future<void> insertInventoryItemsInTransaction(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
+    final db = database;
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (var item in items) {
+        batch.insert('inventory', item, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+    });
   }
 
   Future<List<InventoryItem>> getInventoryItems({int limit = 100, int offset = 0}) async {
@@ -1678,6 +1691,7 @@ class UnifiedDatabaseHelper {
 
   /// Insert multiple inventory items at once
   Future<void> insertMonInventoryItems(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
     final db = database;
     final batch = db.batch();
     for (final item in items) {
@@ -1707,6 +1721,42 @@ class UnifiedDatabaseHelper {
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
+  }
+
+  /// Insert monitor inventory items in a transaction
+  Future<void> insertMonInventoryItemsInTransaction(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
+    final db = database;
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final item in items) {
+        batch.insert('mon_inventory', {
+          'id': item['id'],
+          'ipdid': item['ipdid'],
+          'code': item['code'],
+          'externalserial': item['externalserial'],
+          'name': item['name'],
+          'category': item['category'],
+          'price': item['price'],
+          'packsize': item['packsize'],
+          'packaging': item['packaging'],
+          'packagingid': item['packagingid'],
+          'soldfrom': item['soldfrom'],
+          'shortform': item['shortform'],
+          'packagingcode': item['packagingcode'],
+          'efris': item['efris'] == true ? 1 : 0,
+          'efrisid': item['efrisid'],
+          'measurmentunitidefris': item['measurmentunitidefris'],
+          'measurmentunit': item['measurmentunit'],
+          'measurmentunitid': item['measurmentunitid'],
+          'vatcategoryid': item['vatcategoryid'],
+          'branchid': item['branchid'],
+          'companyid': item['companyid'],
+          'downloadlink': item['downloadlink'],
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+    });
   }
 
   // ========================================================================

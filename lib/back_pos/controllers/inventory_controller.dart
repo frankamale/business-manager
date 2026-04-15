@@ -131,11 +131,14 @@ class InventoryController extends GetxController {
       if (items.isNotEmpty) {
         debugPrint('InventoryController: Got ${items.length} items from API');
         
-        // Delete existing inventory first 
-        await _dbHelper.deleteAllInventoryItems();
+        // Delete existing inventory only on first sync (full rewrite)
+        final isFirstSync = await _dbHelper.getInventoryTotalCount() == 0;
+        if (isFirstSync) {
+          await _dbHelper.deleteAllInventoryItems();
+        }
         
-        // Insert in chunks with compute and delays 
-        const mapChunkSize = 1000;
+        // Optimized: chunk 2000, batch 500, no delays
+        const mapChunkSize = 2000;
         const insertBatchSize = 500;
         int totalItems = items.length;
         
@@ -145,22 +148,17 @@ class InventoryController extends GetxController {
               : totalItems;
           final chunk = items.sublist(chunkStart, chunkEnd);
           
-          // Convert to maps using compute (off main isolate)
+          // Convert to maps in isolate
           final mappedChunk = await compute(
             (List<InventoryItem> items) => items.map((e) => e.toMap()).toList(),
             chunk,
           );
           
-          // Insert in batches of 500
+          // Insert in batches using transaction (faster)
           for (int i = 0; i < mappedChunk.length; i += insertBatchSize) {
             final batch = mappedChunk.skip(i).take(insertBatchSize).toList();
-            await _dbHelper.insertInventoryItems(batch);
-            if (i + insertBatchSize < mappedChunk.length) {
-              await Future.delayed(const Duration(milliseconds: 50));
-            }
+            await _dbHelper.insertInventoryItemsInTransaction(batch);
           }
-          
-          await Future.delayed(const Duration(milliseconds: 50));
         }
         
         debugPrint('InventoryController: Stored $totalItems items to DB');
