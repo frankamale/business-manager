@@ -766,21 +766,34 @@ class _PosScreenState extends State<PosScreen> {
         ),
         centerTitle: true,
         backgroundColor: FlavorColors.current.primary,
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Get.to(() => const BarcodeScannerPage());
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final result = await Get.to(() => const BarcodeScannerPage());
 
-          if (result is InventoryItem) {
-            _addItemToCart(result);
-            inventoryController.clearSearch();
-          }
-        },
-        icon: const Icon(Icons.qr_code_scanner),
-        label: const Text('Scan'),
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
+              if (result is InventoryItem) {
+                _addItemToCart(result);
+                inventoryController.clearSearch();
+              }
+            },
+            icon: const Icon(Icons.qr_code_scanner),
+          ),
+        ],
       ),
+      // floatingActionButton: FloatingActionButton.extended(
+      //   onPressed: () async {
+      //     final result = await Get.to(() => const BarcodeScannerPage());
+      //
+      //     if (result is InventoryItem) {
+      //       _addItemToCart(result);
+      //       inventoryController.clearSearch();
+      //     }
+      //   },
+      //   icon: const Icon(Icons.qr_code_scanner),
+      //   label: const Text('Scan'),
+      //   backgroundColor: Colors.red,
+      //   foregroundColor: Colors.white,
+      // ),
       body: SafeArea(
         child: Column(
           children: [
@@ -1072,7 +1085,8 @@ class _PosScreenState extends State<PosScreen> {
                               ],
                             ),
                           ),
-                          // Items List
+                          // Items Lis
+
                           Expanded(
                             child: selectedItems.isEmpty
                                 ? const Center(
