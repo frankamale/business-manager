@@ -65,7 +65,7 @@ class ExpensesCard extends StatelessWidget {
     return Obx(() {
       final expensesController = Get.find<ExpensesController>();
       final dateController = Get.find<MonDashboardController>();
-      final isLoading = expensesController.isLoading.value || expensesController.expenses.isEmpty;
+      final isLoading = expensesController.isLoading.value;
       
       final selectedRange = dateController.selectedRange.value;
       final customRange = dateController.customRange.value;

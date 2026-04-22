@@ -951,18 +951,18 @@ class MonitorApiService extends GetxService {
 
   /// Fetch EFRIS status KPI (kpiId=6)
   /// [efrisStatus] - 1 for pending, 2 for uploaded, 3 for failed
-  // Future<http.Response> getEfrisStatusData({
-  //   required String startDate,
-  //   required String endDate,
-  //   int efrisStatus = 1,
-  //   int timeframe = timeframeNormal,
-  // }) async {
-  //   // For EFRIS status, the status is passed as part of the query
-  //   final endpoint =
-  //       '/sales/reports/kpi?startDate=$startDate&endDate=$endDate&kpiId=$kpiEfrisStatus&efrisStatus=$efrisStatus&timeframe=$timeframe';
-  //   debugPrint("ApiService: Fetching EFRIS status data with status=$efrisStatus");
-  //   return await getWithAuth(endpoint);
-  // }
+  Future<http.Response> getEfrisStatusData({
+    required String startDate,
+    required String endDate,
+    int efrisStatus = 1,
+    int timeframe = timeframeNormal,
+  }) async {
+    // For EFRIS status, the status is passed as part of the query
+    final endpoint =
+        '/sales/reports/kpi?startDate=$startDate&endDate=$endDate&kpiId=$kpiEfrisStatus&efrisStatus=$efrisStatus&timeframe=$timeframe';
+    debugPrint("ApiService: Fetching EFRIS status data with status=$efrisStatus");
+    return await getWithAuth(endpoint);
+  }
 
   /// Fetch stock category KPI (kpiId=7)
   // Future<http.Response> getStockCategoryData({
@@ -1183,7 +1183,7 @@ class MonitorApiService extends GetxService {
         await Future.delayed(const Duration(milliseconds: 500));
       }
     }
-    
+     
     debugPrint("ApiService: Historical data fetch complete for $totalMonths months");
   }
 }
