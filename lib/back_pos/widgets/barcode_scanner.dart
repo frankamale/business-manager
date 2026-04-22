@@ -435,7 +435,7 @@ class _CornerBracketPainter extends CustomPainter {
         ? const Color(0xFFFF5252)
         : isSuccess
         ? const Color(0xFF69F0AE)
-        : const Color(0xFFE53935);
+        : const Color(0xFFFFFFFF);
 
     final paint = Paint()
       ..color = bracketColor.withOpacity(opacity)
