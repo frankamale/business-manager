@@ -3,6 +3,7 @@ import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../widgets/barcode_scanner.dart';
 import 'payment_screen.dart';
 import '../models/inventory_item.dart';
 import '../models/service_point.dart';
@@ -765,6 +766,20 @@ class _PosScreenState extends State<PosScreen> {
         ),
         centerTitle: true,
         backgroundColor: FlavorColors.current.primary,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Get.to(() => const BarcodeScannerPage());
+
+          if (result is InventoryItem) {
+            _addItemToCart(result);
+            inventoryController.clearSearch();
+          }
+        },
+        icon: const Icon(Icons.qr_code_scanner),
+        label: const Text('Scan'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: Column(

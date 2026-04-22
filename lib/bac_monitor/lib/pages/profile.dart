@@ -275,29 +275,29 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     const SizedBox(height: 12),
 
-                    // Appearance Section
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                            child: Text(
-                              'Appearance',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                          _buildAppearanceItem(context),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
+                    // // Appearance Section
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    //   child: Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.start,
+                    //     children: [
+                    //       Padding(
+                    //         padding: EdgeInsets.only(left: 8.0, bottom: 12),
+                    //         child: Text(
+                    //           'Appearance',
+                    //           style: TextStyle(
+                    //             fontSize: 12,
+                    //             fontWeight: FontWeight.w600,
+                    //             letterSpacing: 0.5,
+                    //           ),
+                    //         ),
+                    //       ),
+                    //       _buildAppearanceItem(context),
+                    //     ],
+                    //   ),
+                    // ),
+                    //
+                    // const SizedBox(height: 12),
 
                     // Data Management Section
                     Padding(
