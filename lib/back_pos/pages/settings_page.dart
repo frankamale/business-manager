@@ -205,7 +205,15 @@ class SettingsPage extends StatelessWidget {
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Reload POS Data'),
+          title: Text(
+            'Reload POS Data',
+            style: TextStyle(
+              color: FlavorColors.current.primary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          contentPadding: const EdgeInsets.all(24),
           content: ValueListenableBuilder<String>(
             valueListenable: progressMessage,
             builder: (context, message, child) {
@@ -218,15 +226,30 @@ class SettingsPage extends StatelessWidget {
                       if (loading) {
                         return Column(
                           children: [
-                            const CircularProgressIndicator(),
+                            CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(FlavorColors.current.primary),
+                            ),
                             const SizedBox(height: 16),
-                            Text(message, textAlign: TextAlign.center),
+                            Text(
+                              message,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ],
                         );
                       }
                       return Text(
                         'This will take a while. Continue?',
                         textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[700],
+                          fontWeight: FontWeight.w500,
+                        ),
                       );
                     },
                   ),
@@ -234,9 +257,14 @@ class SettingsPage extends StatelessWidget {
               );
             },
           ),
+          actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: FlavorColors.current.primary,
+                textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
               child: const Text('Cancel'),
             ),
             ValueListenableBuilder<bool>(
@@ -308,7 +336,12 @@ class SettingsPage extends StatelessWidget {
                             isLoading.value = false;
                           }
                         },
-                  child: loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Reload'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: loading ? Colors.grey : FlavorColors.current.primary,
+                    foregroundColor: Colors.white,
+                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  child: loading ? const Text('Loading...') : const Text('Reload'),
                 );
               },
             ),
