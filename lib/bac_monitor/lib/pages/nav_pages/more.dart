@@ -118,110 +118,106 @@ class _MoreState extends State<More> {
 
 
   void _showReloadDataDialog(BuildContext context) {
+    final isLoading = ValueNotifier<bool>(false);
+    final progressMessage = ValueNotifier<String>('Preparing to reload data...');
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.getCardColor(context),
-        title: Text(
-          'Reload All Data?',
-          style: TextStyle(color: AppColors.getTextPrimaryColor(context)),
-        ),
-        content: Text(
-          'This will sync everything with the server. This can take a moment. Are you sure?',
-          style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
-            ),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.getAccentColor(context),
-              foregroundColor: AppColors.getTextPrimaryColor(context),
-            ),
-            onPressed: () {
-              Navigator.of(context).pop();
-              _performFullReload(context);
-            },
-            child: const  Text('Reload')
-
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return ValueListenableBuilder<bool>(
+          valueListenable: isLoading,
+          builder: (context, loading, child) {
+            return AlertDialog(
+              backgroundColor: AppColors.getCardColor(context),
+              title: Text(
+                loading ? 'Reloading Data' : 'Reload All Data?',
+                style: TextStyle(
+                  color: AppColors.getTextPrimaryColor(context),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              contentPadding: const EdgeInsets.all(24),
+              content: loading
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.getAccentColor(context)),
+                        ),
+                        const SizedBox(height: 16),
+                        ValueListenableBuilder<String>(
+                          valueListenable: progressMessage,
+                          builder: (context, message, child) {
+                            return Text(
+                              message,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.getTextSecondaryColor(context),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    )
+                  : Text(
+                      'This will sync everything with the server. This can take a moment. Are you sure?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppColors.getTextSecondaryColor(context),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+              actionsPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              actions: loading
+                  ? []
+                  : [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.getTextSecondaryColor(context),
+                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.getAccentColor(context),
+                          foregroundColor: AppColors.getTextPrimaryColor(context),
+                          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                        onPressed: () async {
+                          isLoading.value = true;
+                          await _performFullReload(context, progressMessage);
+                          isLoading.value = false;
+                          Navigator.of(dialogContext).pop();
+                        },
+                        child: const Text('Reload'),
+                      ),
+                    ],
+            );
+          },
+        );
+      },
     );
   }
 
-  Future<void> _performFullReload(BuildContext context) async {
+  Future<void> _performFullReload(BuildContext context, ValueNotifier<String> progressMessage) async {
     // Check connectivity BEFORE starting any destructive operations
     final isOnline = await ConnectivityHelper.checkConnectivityAndNotify();
     if (!isOnline) {
       return;
     }
 
-    Get.dialog(
-      PopScope(
-        canPop: false,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-            margin: const EdgeInsets.symmetric(horizontal: 32),
-            decoration: BoxDecoration(
-              color: AppColors.getCardColor(context),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(
-                  strokeWidth: 3,
-                  color: AppColors.getAccentColor(context),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Fetching Data',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.getTextPrimaryColor(context),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Optional subtle progress hint (fake or real)
-                LinearProgressIndicator(
-                  minHeight: 4,
-                  borderRadius: BorderRadius.circular(10),
-                  backgroundColor: AppColors.getTextSecondaryColor(
-                    context,
-                  ).withOpacity(0.1),
-                  valueColor: AlwaysStoppedAnimation(
-                    AppColors.getAccentColor(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-      barrierDismissible: false,
-    );
-
     try {
       final apiService = Get.find<MonitorApiService>();
       final dbHelper = UnifiedDatabaseHelper.instance;
 
+      progressMessage.value = 'Loading...';
       // Close and delete the database
       await dbHelper.close();
 
@@ -236,15 +232,18 @@ class _MoreState extends State<More> {
         }
       }
 
+      progressMessage.value = 'Loading...';
       // Reopen the database
       if (companyId != null && companyId.isNotEmpty) {
         await dbHelper.openForCompany(companyId);
       }
 
+      progressMessage.value = 'Loading...';
       // Fetch baseline data (service points, inventory, company details)
       final kpiSyncService = Get.find<KpiSyncService>();
       final baselineResult = await kpiSyncService.fetchBaselineDatasets();
 
+      progressMessage.value = 'Storing data...';
       // Store baseline data
       if (baselineResult.servicePoints.isNotEmpty) {
         final servicePoints = baselineResult.servicePoints
@@ -276,15 +275,18 @@ class _MoreState extends State<More> {
         await dbHelper.insertMonInventoryItems(inventory);
       }
 
+      progressMessage.value = 'Loading...';
       // Clear ALL existing KPI data before full reload (user explicitly requested this)
       await dbHelper.deleteAllKpiSales();
       debugPrint("More: Cleared all existing KPI data for fresh sync");
 
+      progressMessage.value = 'Loading...';
       // Fetch 3 years of KPI data
       final now = DateTime.now();
       final threeYearsAgo = DateTime(now.year - 3, now.month, now.day);
       await apiService.syncAllKpiData(threeYearsAgo, now);
 
+      progressMessage.value = 'Refreshing controllers...';
       // Refresh all controllers with the new data from DB
       if (Get.isRegistered<MonKpiOverviewController>()) {
         await Get.find<MonKpiOverviewController>().fetchKpiData();
@@ -296,18 +298,14 @@ class _MoreState extends State<More> {
         await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
       }
 
-      if (Get.isDialogOpen ?? false) Get.back();
-
       Get.snackbar(
         "Success",
-        "All data has been reloaded from the server (3 years).",
+        "All data has been reloaded from the server .",
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.getSuccessColor(context),
         colorText: LightColors.card,
       );
     } catch (e) {
-      if (Get.isDialogOpen ?? false) Get.back();
-
       Get.snackbar(
         "Error",
         "Failed to reload data.\n${e.toString()}",
