@@ -29,7 +29,7 @@ class MonitorInventoryItem {
     this.expiryDate,
   });
 
-  /// Factory constructor to create from JSON (useful for API response)
+  /// Factory constructor to create from JSON
   factory MonitorInventoryItem.fromJson(Map<String, dynamic> json) {
     final quantityOnHand = (json['quantityOnHand'] ?? 0).toInt();
     return MonitorInventoryItem(
@@ -39,11 +39,11 @@ class MonitorInventoryItem {
       category: json['category'] ?? 'Uncategorized',
       packaging: json['packaging'] ?? 'Uncategorized',
       quantityOnHand: quantityOnHand,
-      reorderLevel: 0, // Not provided in API response
-      costPrice: 0.0, // Not provided in API response
+      reorderLevel: 0,
+      costPrice: (json["costprice"] ?? 00).toDouble(),
       sellingPrice: (json['price'] ?? 0).toDouble(),
       imageUrl: json['downloadlink'],
-      lastUpdated: DateTime.now(), // Not provided in API response
+      lastUpdated: DateTime.now(),
       servicePoint: json['soldfrom'] ?? "",
       expiryDate: null, // Not provided in API response
     );

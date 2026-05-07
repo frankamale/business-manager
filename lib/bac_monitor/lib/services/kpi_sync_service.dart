@@ -270,6 +270,7 @@ class KpiSyncService extends GetxService {
       final body = response.body;
       if (body.isNotEmpty) {
         inventory = await compute(_decodeJsonList, body);
+        // debugPrint(body);
         debugPrint('[KpiSyncService] Fetched ${inventory.length} inventory items');
       }
     } catch (e) {
