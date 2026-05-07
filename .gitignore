@@ -35,9 +35,10 @@ migrate_working_dir/
 /build/
 /.claude/
 /plans
-
+/windows
 # Symbolication related
 app.*.symbols
+kilo.json
 
 # Obfuscation related
 app.*.map.json
