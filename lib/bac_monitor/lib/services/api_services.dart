@@ -659,6 +659,7 @@ class MonitorApiService extends GetxService {
               'name': item['name'],
               'category': item['category'],
               'price': item['price'],
+              'costprice': item['costprice'],
               'packsize': item['packsize'],
               'packaging': item['packaging'],
               'packagingid': item['packagingid'],

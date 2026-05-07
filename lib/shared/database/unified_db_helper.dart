@@ -69,7 +69,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 4,
+        version: 6,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -508,6 +508,7 @@ class UnifiedDatabaseHelper {
         name TEXT,
         category TEXT,
         price REAL,
+        costprice REAL,
         packsize REAL,
         packaging TEXT,
         packagingid TEXT,
@@ -670,6 +671,16 @@ class UnifiedDatabaseHelper {
         );
       } catch (e) {
         // Column may already exist, ignore error
+      }
+    }
+
+    // Add costprice column to mon_inventory
+    if (oldVersion < 6) {
+      try {
+        await db.execute(
+          'ALTER TABLE mon_inventory ADD COLUMN costprice REAL DEFAULT 0.0',
+        );
+      } catch (e) {
       }
     }
   }
@@ -2014,6 +2025,7 @@ class UnifiedDatabaseHelper {
       'name': item['name'],
       'category': item['category'],
       'price': item['price'],
+      'costprice': item['costprice'],
       'packsize': item['packsize'],
       'packaging': item['packaging'],
       'packagingid': item['packagingid'],
@@ -2056,6 +2068,7 @@ class UnifiedDatabaseHelper {
         'name': item['name'],
         'category': item['category'],
         'price': item['price'],
+        'costprice': item['costprice'],
         'packsize': item['packsize'],
         'packaging': item['packaging'],
         'packagingid': item['packagingid'],
@@ -2093,6 +2106,7 @@ class UnifiedDatabaseHelper {
           'name': item['name'],
           'category': item['category'],
           'price': item['price'],
+          'costprice': item['costprice'],
           'packsize': item['packsize'],
           'packaging': item['packaging'],
           'packagingid': item['packagingid'],
