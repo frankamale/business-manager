@@ -29,345 +29,347 @@ class SettingsPage extends StatelessWidget {
 
         title: const Text('Settings', style: TextStyle(color: Colors.white)),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Profile section
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  radius: 30,
-                  child: Icon(Icons.person, size: 40),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Obx(
-                      () => Text(
-                        authController.currentUser.value?.name ?? 'Unknown',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Profile section
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 30,
+                    child: Icon(Icons.person, size: 40),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Obx(
+                        () => Text(
+                          authController.currentUser.value?.name ?? 'Unknown',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    Obx(
-                      () => Text(
-                        authController.currentUser.value?.username ?? 'Unknown',
-                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      Obx(
+                        () => Text(
+                          authController.currentUser.value?.username ?? 'Unknown',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-
-          // Settings list
-          Expanded(
-            child: ListView(
-              children: [
-                // Conditionally render Monitor App link for admin users only
-                Obx(() {
-                  final user = authController.currentUser.value;
-                  final isAdmin =
-                      user != null && user.role.toLowerCase().contains('admin');
-
-                  if (isAdmin) {
-                    return ListTile(
-                      leading: const Icon(Icons.monitor),
-                      title: const Text('Monitor App'),
-                      subtitle: const Text(
-                        'View analytics and monitoring dashboard',
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios),
-                      onTap: () {
-                        final primary = FlavorColors.current.primary;
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Dialog(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Header
-                                  Container(
-                                    color: primary,
-                                    padding: const EdgeInsets.fromLTRB(
-                                      20,
-                                      18,
-                                      20,
-                                      18,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.monitor_outlined,
-                                          color: Colors.white.withOpacity(0.85),
-                                          size: 20,
-                                        ),
-                                        const SizedBox(width: 10),
-                                        const Text(
-                                          'Switch to Monitor',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.2,
+        
+            // Settings list
+            Expanded(
+              child: ListView(
+                children: [
+                  // Conditionally render Monitor App link for admin users only
+                  Obx(() {
+                    final user = authController.currentUser.value;
+                    final isAdmin =
+                        user != null && user.role.toLowerCase().contains('admin');
+        
+                    if (isAdmin) {
+                      return ListTile(
+                        leading: const Icon(Icons.monitor),
+                        title: const Text('Monitor App'),
+                        subtitle: const Text(
+                          'View analytics and monitoring dashboard',
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: () {
+                          final primary = FlavorColors.current.primary;
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return Dialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // Header
+                                    Container(
+                                      color: primary,
+                                      padding: const EdgeInsets.fromLTRB(
+                                        20,
+                                        18,
+                                        20,
+                                        18,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.monitor_outlined,
+                                            color: Colors.white.withOpacity(0.85),
+                                            size: 20,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Body
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      20,
-                                      20,
-                                      20,
-                                      20,
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: primary.withOpacity(0.09),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
+                                          const SizedBox(width: 10),
+                                          const Text(
+                                            'Switch to Monitor',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.2,
                                             ),
                                           ),
-                                          child: Icon(
-                                            Icons.monitor,
-                                            color: primary,
-                                            size: 28,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 14),
-                                        const Text(
-                                          'Are you sure you want to switch to the Monitor App?',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Color(0xFF555555),
-                                            height: 1.5,
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-
-                                  Divider(
-                                    height: 1,
-                                    thickness: 1,
-                                    color: Colors.grey.shade200,
-                                  ),
-
-                                  // Actions
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
+        
+                                    // Body
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        20,
+                                        20,
+                                        20,
+                                        20,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: primary.withOpacity(0.09),
+                                              borderRadius: BorderRadius.circular(
+                                                12,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              Icons.monitor,
+                                              color: primary,
+                                              size: 28,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 14),
+                                          const Text(
+                                            'Are you sure you want to switch to the Monitor App?',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF555555),
+                                              height: 1.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(context).pop(),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: Colors.grey[700],
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 12,
+        
+                                    Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      color: Colors.grey.shade200,
+                                    ),
+        
+                                    // Actions
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: Colors.grey[700],
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  side: BorderSide(
+                                                    color: Colors.grey.shade300,
                                                   ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                side: BorderSide(
-                                                  color: Colors.grey.shade300,
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Cancel',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
                                                 ),
                                               ),
                                             ),
-                                            child: const Text(
-                                              'Cancel',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.of(context).pop();
+                                                SettingsService()
+                                                    .navigateToMonitorApp();
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: primary,
+                                                foregroundColor: Colors.white,
+                                                elevation: 0,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Switch',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w700,
+                                                  fontSize: 14,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: ElevatedButton(
-                                            onPressed: () {
-                                              Navigator.of(context).pop();
-                                              SettingsService()
-                                                  .navigateToMonitorApp();
-                                            },
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: primary,
-                                              foregroundColor: Colors.white,
-                                              elevation: 0,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 12,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'Switch',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                      },
-                    );
-                  } else {
-                    return Container();
-                  }
-                }),
-                ListTile(
-                  leading: const Icon(Icons.cloud_upload),
-                  title: const Text('Auto Upload Sales'),
-                  subtitle: const Text(
-                    'Automatically sync sales data to server',
-                  ),
-                  trailing: Obx(
-                    () => Switch(
-                      value: settingsController.autoUploadEnabled.value,
-                      onChanged: (value) =>
-                          settingsController.toggleAutoUpload(value),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    } else {
+                      return Container();
+                    }
+                  }),
+                  ListTile(
+                    leading: const Icon(Icons.cloud_upload),
+                    title: const Text('Auto Upload Sales'),
+                    subtitle: const Text(
+                      'Automatically sync sales data to server',
+                    ),
+                    trailing: Obx(
+                      () => Switch(
+                        value: settingsController.autoUploadEnabled.value,
+                        onChanged: (value) =>
+                            settingsController.toggleAutoUpload(value),
+                      ),
                     ),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.payment),
-                  title: const Text('Allow Access to Payment'),
-                  subtitle: const Text(
-                    'Enable payment access for all user roles (cashiers, waiters, etc.)',
-                  ),
-                  trailing: Obx(
-                    () => Switch(
-                      value: settingsController.paymentAccessForAllUsers.value,
-                      onChanged: (value) => settingsController
-                          .togglePaymentAccessForAllUsers(value),
+                  ListTile(
+                    leading: const Icon(Icons.payment),
+                    title: const Text('Allow Access to Payment'),
+                    subtitle: const Text(
+                      'Enable payment access for all user roles (cashiers, waiters, etc.)',
+                    ),
+                    trailing: Obx(
+                      () => Switch(
+                        value: settingsController.paymentAccessForAllUsers.value,
+                        onChanged: (value) => settingsController
+                            .togglePaymentAccessForAllUsers(value),
+                      ),
                     ),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.edit),
-                  title: const Text('Allow Price Editing'),
-                  subtitle: const Text(
-                    'Enable editing of item prices in POS screen',
-                  ),
-                  trailing: Obx(
-                    () => Switch(
-                      value: settingsController.priceEditingEnabled.value,
-                      onChanged: (value) =>
-                          settingsController.togglePriceEditing(value),
+                  ListTile(
+                    leading: const Icon(Icons.edit),
+                    title: const Text('Allow Price Editing'),
+                    subtitle: const Text(
+                      'Enable editing of item prices in POS screen',
+                    ),
+                    trailing: Obx(
+                      () => Switch(
+                        value: settingsController.priceEditingEnabled.value,
+                        onChanged: (value) =>
+                            settingsController.togglePriceEditing(value),
+                      ),
                     ),
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.refresh),
-                  title: const Text('Reload POS Data'),
-                  subtitle: const Text('Refresh all app data'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => _showReloadDataDialog(context),
-                ),
-                // ListTile(
-                //   leading: const Icon(Icons.lock_outline),
-                //   title: const Text('Change Password'),
-                //   subtitle: const Text('Update your login password'),
-                //   trailing: const Icon(Icons.arrow_forward_ios),
-                //   onTap: () => _showChangePasswordDialog(context, authController),
-                // ),
-                const ListTile(
-                  leading: Icon(Icons.notifications),
-                  title: Text('Notifications'),
-                  trailing: Icon(Icons.arrow_forward_ios),
-                ),
-                // const ListTile(
-                //   leading: Icon(Icons.palette),
-                //   title: Text('Theme'),
-                //   trailing: Icon(Icons.arrow_forward_ios),
-                // ),
-                // const ListTile(
-                //   leading: Icon(Icons.language),
-                //   title: Text('Language'),
-                //   trailing: Icon(Icons.arrow_forward_ios),
-                // ),
-                // const ListTile(
-                //   leading: Icon(Icons.help),
-                //   title: Text('Help & Support'),
-                //   trailing: Icon(Icons.arrow_forward_ios),
-                // ),
-                //
-              ],
-            ),
-          ),
-          // Logout button
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Confirm Logout'),
-                      content: const Text('Are you sure you want to logout?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.of(context).pop();
-                            await authController.logout();
-                            Get.offAll(() => const Login());
-                          },
-                          child: const Text('Logout'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
+                  ListTile(
+                    leading: const Icon(Icons.refresh),
+                    title: const Text('Reload POS Data'),
+                    subtitle: const Text('Refresh all app data'),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () => _showReloadDataDialog(context),
+                  ),
+                  // ListTile(
+                  //   leading: const Icon(Icons.lock_outline),
+                  //   title: const Text('Change Password'),
+                  //   subtitle: const Text('Update your login password'),
+                  //   trailing: const Icon(Icons.arrow_forward_ios),
+                  //   onTap: () => _showChangePasswordDialog(context, authController),
+                  // ),
+                  const ListTile(
+                    leading: Icon(Icons.notifications),
+                    title: Text('Notifications'),
+                    trailing: Icon(Icons.arrow_forward_ios),
+                  ),
+                  // const ListTile(
+                  //   leading: Icon(Icons.palette),
+                  //   title: Text('Theme'),
+                  //   trailing: Icon(Icons.arrow_forward_ios),
+                  // ),
+                  // const ListTile(
+                  //   leading: Icon(Icons.language),
+                  //   title: Text('Language'),
+                  //   trailing: Icon(Icons.arrow_forward_ios),
+                  // ),
+                  // const ListTile(
+                  //   leading: Icon(Icons.help),
+                  //   title: Text('Help & Support'),
+                  //   trailing: Icon(Icons.arrow_forward_ios),
+                  // ),
+                  //
+                ],
               ),
-              child: const Text('Logout'),
             ),
-          ),
-        ],
+            // Logout button
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text('Confirm Logout'),
+                        content: const Text('Are you sure you want to logout?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.of(context).pop();
+                              await authController.logout();
+                              Get.offAll(() => const Login());
+                            },
+                            child: const Text('Logout'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                child: const Text('Logout'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

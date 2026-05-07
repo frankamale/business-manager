@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
@@ -38,13 +39,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
-
   print('FlavorConfig.flavorName: ${FlavorConfig.flavorName}');
   print('FlavorColors.current.primary: ${FlavorColors.current.primary}');
 
   // Initialize bot credentials from dart-define to secure storage
   final customerAuthService = CustomerAuthService();
+
   await customerAuthService.initBotCredentials();
+
 
   // Fetch and store bot's company info for flavor validation
   try {
@@ -73,7 +75,6 @@ void main() async {
   Get.put(UserController());
   Get.put(SettingsController());
   Get.put(ServicePointController());
-
 
   Get.lazyPut<MonStoresController>(() => MonStoresController());
   Get.lazyPut<MonStoreKpiTrendController>(() => MonStoreKpiTrendController());
@@ -151,11 +152,11 @@ class MyApp extends StatelessWidget {
         // Follow device's system theme or manual setting
         themeMode: controller.themeMode.value,
 
-         fallbackLocale: const Locale('en', 'US_store'),
-         builder: (context, child) {
-           return OfflineBanner(child: child ?? const SplashScreen());
-         },
-         home: const SplashScreen(),
+        fallbackLocale: const Locale('en', 'US_store'),
+        builder: (context, child) {
+          return OfflineBanner(child: child ?? const SplashScreen());
+        },
+        home: const SplashScreen(),
       );
     });
   }

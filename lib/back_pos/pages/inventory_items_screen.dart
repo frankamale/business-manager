@@ -199,7 +199,7 @@ class _InventoryItemsScreenState extends State<InventoryItemsScreen> {
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(7),
       ),
       child: InkWell(
         onTap: () {

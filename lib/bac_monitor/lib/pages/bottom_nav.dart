@@ -98,26 +98,26 @@ class _BottomNavState extends State<BottomNav> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: WillPopScope(
-        onWillPop: _onWillPop,
-        child: Scaffold(
-          backgroundColor: AppColors.getSurfaceColor(context),
-          body: Obx(
-            () => Column(
-              children: [
-                // Main content
-                Expanded(
-                  child: IndexedStack(
-                    index: controller.tabIndex.value,
-                    children: screens,
-                  ),
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        backgroundColor: AppColors.getSurfaceColor(context),
+        body: Obx(
+          () => Column(
+            children: [
+              // Main content
+              Expanded(
+                child: IndexedStack(
+                  index: controller.tabIndex.value,
+                  children: screens,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          bottomNavigationBar: Obx(
-            () => CircleNavBar(
+        ),
+        bottomNavigationBar: Obx(
+          () => SafeArea(
+            child: CircleNavBar(
               onTap: controller.changeTabIndex,
               activeIndex: controller.tabIndex.value,
               inactiveIcons: [
