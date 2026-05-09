@@ -153,11 +153,26 @@ class _PosScreenState extends State<PosScreen> {
     final inventoryItem = item['item'] as InventoryItem;
     bool isComplimentary = item['complimentary'] == true;
 
+    // Use a temporary controller for quantity
+    final qtyController = TextEditingController(
+      text: item['quantity'].toString(),
+    );
+
+    // Use a temporary controller for price to allow "Cancel" to work correctly
+    final priceController = TextEditingController(
+      text: (item['price'] as num).toStringAsFixed(0),
+    );
+
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
+            final bool isPriceEditable =
+                !widget.isViewOnly &&
+                settingsController.priceEditingEnabled.value &&
+                !isComplimentary;
+
             return AlertDialog(
               title: Text(
                 item['name'],
@@ -166,40 +181,103 @@ class _PosScreenState extends State<PosScreen> {
                   fontSize: 16,
                 ),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Category: ${inventoryItem.category}',
-                    style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Price per unit: UGX ${formatMoney(inventoryItem.price)}',
-                    style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                  ),
-                  if (inventoryItem.packaging.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      'Packaging: ${inventoryItem.packaging}',
+                      'Category: ${inventoryItem.category}',
                       style: TextStyle(color: Colors.grey[700], fontSize: 14),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Original Price: UGX ${formatMoney(inventoryItem.price)}',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                    ),
+                    if (inventoryItem.packaging.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Packaging: ${inventoryItem.packaging}',
+                        style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                      ),
+                    ],
+                    const Divider(height: 24),
+
+                    // Quantity Field
+                    const Text(
+                      'Quantity',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: qtyController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Price Field
+                    const Text(
+                      'Price (UGX)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: priceController,
+                      keyboardType: TextInputType.number,
+                      readOnly: !isPriceEditable,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        fillColor:
+                            isPriceEditable ? Colors.white : Colors.grey[100],
+                        filled: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    CheckboxListTile(
+                      title: const Text('Complimentary'),
+                      subtitle: const Text('Set price to 0 for this item'),
+                      value: isComplimentary,
+                      activeColor: FlavorColors.current.primary,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          isComplimentary = value ?? false;
+                          if (isComplimentary) {
+                            priceController.text = '0';
+                          } else {
+                            priceController.text = inventoryItem.price
+                                .toStringAsFixed(0);
+                          }
+                        });
+                      },
+                    ),
                   ],
-                  const Divider(height: 24),
-                  CheckboxListTile(
-                    title: const Text('Complimentary'),
-                    subtitle: const Text('Set price to 0 for this item'),
-                    value: isComplimentary,
-                    activeColor: FlavorColors.current.primary,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (value) {
-                      setDialogState(() {
-                        isComplimentary = value ?? false;
-                      });
-                    },
-                  ),
-                ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -208,21 +286,21 @@ class _PosScreenState extends State<PosScreen> {
                 ),
                 TextButton(
                   onPressed: () {
+                    final newQty =
+                        int.tryParse(qtyController.text) ?? item['quantity'];
+                    final newPrice =
+                        double.tryParse(priceController.text) ??
+                        (item['price'] as num).toDouble();
+
                     setState(() {
                       selectedItems[index]['complimentary'] = isComplimentary;
-                      if (isComplimentary) {
-                        selectedItems[index]['price'] = 0.0;
-                        selectedItems[index]['amount'] = 0.0;
-                        _priceControllers[item['id']]?.text = '0';
-                      } else {
-                        selectedItems[index]['price'] = inventoryItem.price;
-                        selectedItems[index]['amount'] =
-                            selectedItems[index]['quantity'] *
-                            inventoryItem.price;
-                        _priceControllers[item['id']]?.text = inventoryItem
-                            .price
-                            .toStringAsFixed(0);
-                      }
+                      selectedItems[index]['quantity'] = newQty;
+                      selectedItems[index]['price'] = newPrice;
+                      selectedItems[index]['amount'] = newQty * newPrice;
+
+                      // Sync the main price controller for this item
+                      _priceControllers[item['id']]?.text = newPrice
+                          .toStringAsFixed(0);
                     });
                     Navigator.of(context).pop();
                   },
@@ -741,7 +819,7 @@ class _PosScreenState extends State<PosScreen> {
                       fontSize: 11,
                       color: FlavorColors.current.tertiary,
                     ),
-                  ),
+                  ), 
                 ],
               ),
             ],
