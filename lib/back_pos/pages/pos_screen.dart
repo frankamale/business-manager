@@ -153,160 +153,231 @@ class _PosScreenState extends State<PosScreen> {
     final inventoryItem = item['item'] as InventoryItem;
     bool isComplimentary = item['complimentary'] == true;
 
-    // Use a temporary controller for quantity
-    final qtyController = TextEditingController(
-      text: item['quantity'].toString(),
-    );
-
-    // Use a temporary controller for price to allow "Cancel" to work correctly
-    final priceController = TextEditingController(
-      text: (item['price'] as num).toStringAsFixed(0),
-    );
+    final qtyController = TextEditingController(text: item['quantity'].toString());
+    final priceController = TextEditingController(text: (item['price'] as num).toStringAsFixed(0));
 
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            final bool isPriceEditable =
-                !widget.isViewOnly &&
+            final bool isPriceEditable = !widget.isViewOnly &&
                 settingsController.priceEditingEnabled.value &&
                 !isComplimentary;
 
-            return AlertDialog(
-              title: Text(
-                item['name'],
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              content: SingleChildScrollView(
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Category: ${inventoryItem.category}',
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Original Price: UGX ${formatMoney(inventoryItem.price)}',
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                    ),
-                    if (inventoryItem.packaging.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'Packaging: ${inventoryItem.packaging}',
-                        style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                    // Header with Delete Icon
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
+                      decoration: BoxDecoration(
+                        color: FlavorColors.current.surface,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                       ),
-                    ],
-                    const Divider(height: 24),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item['name'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                          if (!widget.isViewOnly)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _removeItemFromCart(index);
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
 
-                    // Quantity Field
-                    const Text(
-                      'Quantity',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: qtyController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: FlavorColors.current.light.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    inventoryItem.category,
+                                    style: TextStyle(
+                                      color: FlavorColors.current.primaryDark,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'Base: UGX ${formatMoney(inventoryItem.price)}',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
 
-                    // Price Field
-                    const Text(
-                      'Price (UGX)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: priceController,
-                      keyboardType: TextInputType.number,
-                      readOnly: !isPriceEditable,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        fillColor:
-                            isPriceEditable ? Colors.white : Colors.grey[100],
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                            // Quantity Field
+                            const Text(
+                              'Quantity',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: qtyController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.shopping_basket_outlined, size: 20),
+                                hintText: 'Enter quantity',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
 
-                    CheckboxListTile(
-                      title: const Text('Complimentary'),
-                      subtitle: const Text('Set price to 0 for this item'),
-                      value: isComplimentary,
-                      activeColor: FlavorColors.current.primary,
-                      contentPadding: EdgeInsets.zero,
-                      onChanged: (value) {
-                        setDialogState(() {
-                          isComplimentary = value ?? false;
-                          if (isComplimentary) {
-                            priceController.text = '0';
-                          } else {
-                            priceController.text = inventoryItem.price
-                                .toStringAsFixed(0);
-                          }
-                        });
-                      },
+                            // Price Field
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Price (UGX)',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                if (isComplimentary)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'COMPLIMENTARY',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade900,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: priceController,
+                              keyboardType: TextInputType.number,
+                              readOnly: !isPriceEditable,
+                              style: TextStyle(
+                                color: isPriceEditable ? Colors.black : Colors.grey[600],
+                                fontWeight: isPriceEditable ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.payments_outlined, size: 20),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                fillColor: isPriceEditable ? Colors.white : Colors.grey[50],
+                                filled: true,
+                                helperText: isPriceEditable ? null : 'Price editing is disabled',
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            Container(
+                              decoration: BoxDecoration(
+                                color: FlavorColors.current.background,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: CheckboxListTile(
+                                title: const Text(
+                                  'Mark as Complimentary',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                ),
+                                value: isComplimentary,
+                                activeColor: FlavorColors.current.primary,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    isComplimentary = value ?? false;
+                                    if (isComplimentary) {
+                                      priceController.text = '0';
+                                    } else {
+                                      priceController.text = inventoryItem.price.toStringAsFixed(0);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final newQty = int.tryParse(qtyController.text) ?? item['quantity'];
+                                final newPrice = double.tryParse(priceController.text) ?? (item['price'] as num).toDouble();
+
+                                setState(() {
+                                  selectedItems[index]['complimentary'] = isComplimentary;
+                                  selectedItems[index]['quantity'] = newQty;
+                                  selectedItems[index]['price'] = newPrice;
+                                  selectedItems[index]['amount'] = newQty * newPrice;
+                                  _priceControllers[item['id']]?.text = newPrice.toStringAsFixed(0);
+                                });
+                                Navigator.of(context).pop();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: FlavorColors.current.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                              child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    final newQty =
-                        int.tryParse(qtyController.text) ?? item['quantity'];
-                    final newPrice =
-                        double.tryParse(priceController.text) ??
-                        (item['price'] as num).toDouble();
-
-                    setState(() {
-                      selectedItems[index]['complimentary'] = isComplimentary;
-                      selectedItems[index]['quantity'] = newQty;
-                      selectedItems[index]['price'] = newPrice;
-                      selectedItems[index]['amount'] = newQty * newPrice;
-
-                      // Sync the main price controller for this item
-                      _priceControllers[item['id']]?.text = newPrice
-                          .toStringAsFixed(0);
-                    });
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Apply'),
-                ),
-              ],
             );
           },
         );
