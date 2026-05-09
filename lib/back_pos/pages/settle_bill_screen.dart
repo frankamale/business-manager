@@ -155,7 +155,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
         String cashierName = 'Cashier';
         final currentUser = Get.find<AuthController>().currentUser.value;
         if (currentUser != null) {
-          cashierName = currentUser.staff ?? currentUser.name ?? 'Cashier';
+          cashierName = currentUser.staff;
         }
 
         try {
