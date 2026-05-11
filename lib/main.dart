@@ -75,8 +75,8 @@ void main() async {
   Get.put(UserController());
   Get.put(SettingsController());
   Get.put(ServicePointController());
+  Get.put(MonStoresController());
 
-  Get.lazyPut<MonStoresController>(() => MonStoresController());
   Get.lazyPut<MonStoreKpiTrendController>(() => MonStoreKpiTrendController());
   Get.lazyPut<MonSyncController>(() => MonSyncController());
   Get.lazyPut<MonDataSyncController>(() => MonDataSyncController());
