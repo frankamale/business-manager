@@ -8,6 +8,7 @@ import 'login.dart';
 import '../pages/homepage.dart';
 import '../services/api_services.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/user_controller.dart';
 import '../controllers/service_point_controller.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/sales_controller.dart';
@@ -505,6 +506,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     _log('initializeControllers: Registering AuthController');
     Get.put(AuthController());
+
+    _log('initializeControllers: Registering UserController');
+    if (!Get.isRegistered<UserController>()) {
+      Get.put(UserController());
+    }
 
     _log('initializeControllers: Registering ServicePointController');
     Get.put(ServicePointController());

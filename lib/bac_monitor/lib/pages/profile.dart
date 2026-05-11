@@ -596,56 +596,56 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'system') {
-                    themeController.setToSystem();
-                  } else if (value == 'light') {
-                    themeController.setLightMode();
-                  } else if (value == 'dark') {
-                    themeController.setDarkMode();
-                  }
-                },
-                itemBuilder: (context) => [
-                  // PopupMenuItem(
-                  //   value: 'system',
-                  //   child: Text(
-                  //     'Follow System',
-                  //     style: TextStyle(
-                  //       color: isSystem
-                  //           ? AppColors.getAccentColor(context)
-                  //           : AppColors.getTextPrimaryColor(context),
-                  //     ),
-                  //   ),
-                  // ),
-                  PopupMenuItem(
-                    value: 'light',
-                    child: Text(
-                      'Light Mode',
-                      style: TextStyle(
-                        color: !isSystem && !isDark
-                            ? AppColors.getAccentColor(context)
-                            : AppColors.getTextPrimaryColor(context),
-                      ),
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'dark',
-                    child: Text(
-                      'Dark Mode',
-                      style: TextStyle(
-                        color: !isSystem && isDark
-                            ? AppColors.getAccentColor(context)
-                            : AppColors.getTextPrimaryColor(context),
-                      ),
-                    ),
-                  ),
-                ],
-                child: Icon(
-                  Icons.more_vert,
-                  color: AppColors.getTextHintColor(context),
-                ),
-              ),
+              // PopupMenuButton<String>(
+              //   onSelected: (value) {
+              //     if (value == 'system') {
+              //       themeController.setToSystem();
+              //     } else if (value == 'light') {
+              //       themeController.setLightMode();
+              //     } else if (value == 'dark') {
+              //       themeController.setDarkMode();
+              //     }
+              //   },
+              //   itemBuilder: (context) => [
+              //     // PopupMenuItem(
+              //     //   value: 'system',
+              //     //   child: Text(
+              //     //     'Follow System',
+              //     //     style: TextStyle(
+              //     //       color: isSystem
+              //     //           ? AppColors.getAccentColor(context)
+              //     //           : AppColors.getTextPrimaryColor(context),
+              //     //     ),
+              //     //   ),
+              //     // ),
+              //     PopupMenuItem(
+              //       value: 'light',
+              //       child: Text(
+              //         'Light Mode',
+              //         style: TextStyle(
+              //           color: !isSystem && !isDark
+              //               ? AppColors.getAccentColor(context)
+              //               : AppColors.getTextPrimaryColor(context),
+              //         ),
+              //       ),
+              //     ),
+              //     PopupMenuItem(
+              //       value: 'dark',
+              //       child: Text(
+              //         'Dark Mode',
+              //         style: TextStyle(
+              //           color: !isSystem && isDark
+              //               ? AppColors.getAccentColor(context)
+              //               : AppColors.getTextPrimaryColor(context),
+              //         ),
+              //       ),
+              //     ),
+              //   ],
+              //   child: Icon(
+              //     Icons.more_vert,
+              //     color: AppColors.getTextHintColor(context),
+              //   ),
+              // ),
             ],
           );
         }),

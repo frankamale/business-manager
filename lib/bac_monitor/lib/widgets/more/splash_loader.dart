@@ -39,8 +39,8 @@ class _MonSplashLoaderState extends State<MonSplashLoader>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final secondaryColor = isDark ? DarkColors.secondary : LightColors.secondary;
-    final warningColor = isDark ? DarkColors.warning : LightColors.warning;
+    final secondaryColor = isDark ? LightColors.secondary : LightColors.secondary;
+    final warningColor = isDark ? LightColors.warning : LightColors.warning;
 
     return Column(
       mainAxisSize: MainAxisSize.min,

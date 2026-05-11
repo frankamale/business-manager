@@ -741,13 +741,13 @@ class _SplashPageState extends State<SplashPage> {
     final bool isSmallScreen = size.width < 600;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark
-        ? DarkColors.background
+        ? LightColors.background
         : LightColors.background;
-    final textColor = isDark ? DarkColors.textPrimary : LightColors.textPrimary;
+    final textColor = isDark ? LightColors.textPrimary : LightColors.textPrimary;
     final textSecondaryColor = isDark
-        ? DarkColors.textSecondary
+        ? LightColors.textSecondary
         : LightColors.textSecondary;
-    final offlineColor = isDark ? DarkColors.warning : LightColors.warning;
+    final offlineColor = isDark ? LightColors.warning : LightColors.warning;
 
     return Scaffold(
       appBar: AppBar(

@@ -130,21 +130,21 @@ class MyApp extends StatelessWidget {
             seedColor: FlavorColors.current.primary,
             brightness: Brightness.dark,
           ),
-          scaffoldBackgroundColor: DarkColors.background,
+          scaffoldBackgroundColor: LightColors.background,
           appBarTheme: const AppBarTheme(
-            backgroundColor: DarkColors.background,
-            foregroundColor: DarkColors.textPrimary,
+            backgroundColor: LightColors.background,
+            foregroundColor: LightColors.textPrimary,
           ),
           cardTheme: CardThemeData(
-            color: DarkColors.card,
+            color: LightColors.card,
             elevation: 0,
             shape: RoundedRectangleBorder(
-              side: BorderSide(color: DarkColors.border),
+              side: BorderSide(color: LightColors.border),
             ),
           ),
           textTheme: TextTheme(
-            bodyLarge: TextStyle(color: DarkColors.textPrimary),
-            bodyMedium: TextStyle(color: DarkColors.textSecondary),
+            bodyLarge: TextStyle(color: LightColors.textPrimary),
+            bodyMedium: TextStyle(color: LightColors.textSecondary),
           ),
           useMaterial3: true,
         ),
