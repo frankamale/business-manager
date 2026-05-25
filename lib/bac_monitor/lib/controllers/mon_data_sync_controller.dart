@@ -8,6 +8,9 @@ import '../services/api_services.dart';
 import '../services/sync_state_manager.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../../../initialise/splashscreen.dart';
+import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
+import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 
 /// MonDataSyncController
 /// 
@@ -222,11 +225,29 @@ class MonDataSyncController extends GetxController {
         }
         debugPrint('[MonDataSyncController] Stored $totalItems inventory items in chunks');
       }
-      
+      try {
+        if (Get.isRegistered<AuthController>()) {
+          final authController = Get.find<AuthController>();
+          await authController.syncUsersFromAPI(showMessage: false);
+        }
+      } catch (_) {}
+      try {
+        if (Get.isRegistered<ServicePointController>()) {
+          final spController = Get.find<ServicePointController>();
+          await spController.syncServicePointsFromAPI(showMessage: false);
+        }
+      } catch (_) {}
+      try {
+        final userController = Get.find<UserController>();
+        await userController.fetchUsers();
+      } catch (_) {}
+      try {
+        final spController = Get.find<ServicePointController>();
+        await spController.loadServicePointsFromCache();
+      } catch (_) {}
       debugPrint('[MonDataSyncController] Baseline data fetch and store completed');
     } catch (e) {
       debugPrint('[MonDataSyncController] Baseline data fetch and store failed: $e');
-      // Continue with cached data - not fatal
     }
   }
 

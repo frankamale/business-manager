@@ -202,12 +202,12 @@ class ExpensesController extends GetxController {
       } catch (e) {
         // API call failed, expense saved locally with 'pending' status
         debugPrint('API sync failed, expense saved locally: $e');
-        Get.snackbar(
-          'Saved Offline',
-          'Expense saved locally, will sync when online',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 2),
-        );
+        // Get.snackbar(
+        //   'Saved Offline',
+        //   'Expense saved locally, will sync when online',
+        //   snackPosition: SnackPosition.BOTTOM,
+        //   duration: const Duration(seconds: 2),
+        // );
       }
     } catch (e) {
       debugPrint(e.toString());

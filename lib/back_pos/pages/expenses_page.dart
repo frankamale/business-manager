@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
 import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
+import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/models/service_point.dart';
 import 'package:bac_pos/flavors/flavor_colors.dart';
 import 'package:bac_pos/back_pos/widgets/expense_form_dialog.dart';
@@ -47,6 +49,19 @@ class _ExpensesPageState extends State<ExpensesPage> {
     }
     _userController = Get.find<UserController>();
     _userController.fetchUsers();
+    if (_userController.users.isEmpty) {
+      if (Get.isRegistered<AuthController>()) {
+        Get.find<AuthController>().syncUsersFromAPI(showMessage: false).then((_) => _userController.fetchUsers());
+      }
+    }
+    if (!Get.isRegistered<ServicePointController>()) {
+      Get.put(ServicePointController());
+    }
+    final spc = Get.find<ServicePointController>();
+    spc.loadServicePointsFromCache();
+    if (spc.servicePoints.isEmpty) {
+      spc.syncServicePointsFromAPI(showMessage: false).then((_) => spc.loadServicePointsFromCache());
+    }
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/widgets/expense_form_dialog.dart';
 import 'package:bac_pos/back_pos/widgets/expense_statistics_dialog.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
@@ -63,12 +64,22 @@ class _ExpensesDetailPageState extends State<ExpensesDetailPage> {
     }
     _userController = Get.find<UserController>();
     await _userController.fetchUsers();
+    if (_userController.users.isEmpty) {
+      if (Get.isRegistered<AuthController>()) {
+        await Get.find<AuthController>().syncUsersFromAPI(showMessage: false);
+        await _userController.fetchUsers();
+      }
+    }
 
     if (!Get.isRegistered<ServicePointController>()) {
       Get.put(ServicePointController());
     }
     final spController = Get.find<ServicePointController>();
     await spController.loadServicePointsFromCache();
+    if (spController.servicePoints.isEmpty) {
+      await spController.syncServicePointsFromAPI(showMessage: false);
+      await spController.loadServicePointsFromCache();
+    }
 
     setState(() => _controllersInitialized = true);
   }

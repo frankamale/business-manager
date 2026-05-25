@@ -4,6 +4,7 @@ import 'package:bac_pos/back_pos/models/expense.dart';
 import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 
 import '../../bac_monitor/lib/additions/colors.dart';
 
@@ -65,8 +66,14 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
     _userController = Get.find<UserController>();
     _servicePointController = Get.find<ServicePointController>();
     _servicePointController.loadServicePointsFromCache();
-    
-    // Set default service point from widget or first available
+    if (_userController.users.isEmpty) {
+      if (Get.isRegistered<AuthController>()) {
+        Get.find<AuthController>().syncUsersFromAPI(showMessage: false).then((_) => _userController.fetchUsers());
+      }
+    }
+    if (_servicePointController.servicePoints.isEmpty) {
+      _servicePointController.syncServicePointsFromAPI(showMessage: false).then((_) => _servicePointController.loadServicePointsFromCache());
+    }
     if (widget.servicePointId != null) {
       _selectedServicePointId = widget.servicePointId;
     }
