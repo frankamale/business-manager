@@ -78,6 +78,8 @@ class UnifiedDatabaseHelper {
           await db.rawQuery('PRAGMA synchronous = NORMAL');
           await db.rawQuery('PRAGMA cache_size = 10000');
           await db.rawQuery('PRAGMA temp_store = MEMORY');
+
+          await ensureExpenseTableColumns();
         },
       );
 
@@ -691,6 +693,30 @@ class UnifiedDatabaseHelper {
       await _database!.execute(
         'CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)',
       );
+    }
+  }
+
+  Future<void> ensureExpenseTableColumns() async {
+    try {
+      final db = database; // safe after open
+      final columns = await db.rawQuery('PRAGMA table_info(expenses)');
+      final names = columns.map((c) => (c['name'] as String).toLowerCase()).toSet();
+
+      if (!names.contains('expense_type')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN expense_type TEXT DEFAULT "non-stock"');
+        debugPrint('UnifiedDatabaseHelper: Added missing expense_type column to expenses table');
+      }
+      if (!names.contains('upload_status')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN upload_status TEXT DEFAULT "pending"');
+      }
+      if (!names.contains('created_at')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN created_at INTEGER');
+      }
+      if (!names.contains('staffid')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN staffId TEXT');
+      }
+    } catch (e) {
+      debugPrint('UnifiedDatabaseHelper: ensureExpenseTableColumns error: $e');
     }
   }
 

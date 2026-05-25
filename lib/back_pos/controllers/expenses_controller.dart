@@ -33,10 +33,25 @@ class ExpensesController extends GetxController {
   // Cash accounts for currency and account selection
   var cashAccounts = <Map<String, dynamic>>[].obs;
 
+  Future<void> _ensureDatabaseOpen() async {
+    try {
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId'];
+      if (companyId != null && companyId.isNotEmpty) {
+        await _db.openForCompany(companyId);
+        await _db.ensureExpenseTableColumns(); // make sure old DBs have all columns
+      } else {
+        debugPrint('ExpensesController: No companyId available');
+      }
+    } catch (e) {
+      debugPrint('ExpensesController: Failed to ensure DB open: $e');
+    }
+  }
+
   @override
   void onInit() {
     super.onInit();
-    // Load expenses from database
+    // Load expenses from database (ensure DB is open first)
     loadExpensesFromDatabase();
     // Load cash accounts for API calls
     loadCashAccounts();
@@ -58,13 +73,12 @@ class ExpensesController extends GetxController {
   Future<void> loadExpensesFromDatabase() async {
     isLoading.value = true;
     try {
+      await _ensureDatabaseOpen();
       final dbExpenses = await _db.getExpenses();
-
-        expenses.value = dbExpenses;
-
-      isLoading.value = false;
-    }
-    catch(e){
+      expenses.value = dbExpenses;
+    } catch (e) {
+      debugPrint('ExpensesController: Failed to load expenses: $e');
+    } finally {
       isLoading.value = false;
     }
   }
@@ -116,6 +130,8 @@ class ExpensesController extends GetxController {
     String? staffId,
     String expenseType = 'non-stock',
   }) async {
+    await _ensureDatabaseOpen();
+
     final expenseId = _uuid.v4();
     final expenseDate = date ?? DateTime.now();
 
@@ -161,13 +177,18 @@ class ExpensesController extends GetxController {
       );
 
       // Save to database immediately with 'pending' status
+      bool savedLocally = false;
       try {
         await _db.insertExpense(expense);
+        savedLocally = true;
       } catch (e) {
         debugPrint('Failed to save expense locally: $e');
+        Get.snackbar('Error', 'Failed to save expense locally');
       }
 
-      expenses.insert(0, expense); // Add to beginning of list
+      if (savedLocally) {
+        expenses.insert(0, expense); // Add to beginning of list
+      }
 
       // Try to sync with API
       try {
@@ -222,13 +243,15 @@ class ExpensesController extends GetxController {
 
   // Delete an expense
   Future<void> deleteExpense(String id) async {
+    await _ensureDatabaseOpen();
+
     expenses.removeWhere((expense) => expense.id == id);
 
     // Delete from database
     try {
       await _db.deleteExpense(id);
     } catch (e) {
-      // Database might not be open, continue without deleting
+      debugPrint('Failed to delete expense from DB: $e');
     }
 
     Get.snackbar(
@@ -407,6 +430,8 @@ class ExpensesController extends GetxController {
 
   // Sync all pending expenses
   Future<void> syncPendingExpenses() async {
+    await _ensureDatabaseOpen();
+
     // Check connectivity first
     final isOnline = await NetworkHelper.hasConnection();
     if (!isOnline) {
