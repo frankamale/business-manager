@@ -22,7 +22,6 @@ class InventoryController extends GetxController {
   int _currentPage = 0;
   int _totalItemCount = 0;
 
-  String _currentSearchQuery = '';
   Timer? _searchDebounceTimer;
 
   @override
@@ -89,7 +88,6 @@ class InventoryController extends GetxController {
 
   // Search inventory items - queries directly from DB
   void searchInventory(String query) {
-    _currentSearchQuery = query;
     _searchDebounceTimer?.cancel();
 
     if (query.isEmpty) {
@@ -116,7 +114,6 @@ class InventoryController extends GetxController {
 
   void clearSearch() {
     _searchDebounceTimer?.cancel();
-    _currentSearchQuery = '';
     filteredItems.value = inventoryItems.toList();
   }
 

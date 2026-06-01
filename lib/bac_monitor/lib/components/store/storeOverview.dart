@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../additions/colors.dart';
-import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_store_controller.dart';
 import '../../controllers/mon_store_kpi_controller.dart';
-import '../../models/kpi_sales_data.dart';
 import '../../models/trend_direction.dart';
 import '../../widgets/dashboard/line_graph.dart';
-import '../../widgets/store/hourly_traffic.dart';
 import '../../widgets/store/product_list.dart';
 
 class StoreOverview extends StatelessWidget {
@@ -19,7 +15,6 @@ class StoreOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final MonStoresController controller = Get.find();
     final kpiTrendController = Get.find<MonStoreKpiTrendController>();
-    final monKpiController = Get.find<MonKpiController>();
 
     return Obx(() {
       // Load user role and check if user role contains 'fg' (gym)

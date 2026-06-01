@@ -3,10 +3,7 @@ import 'package:get/get.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_dashboard_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
-import '../../widgets/dashboard/expiries_card.dart';
 import '../../widgets/dashboard/line_graph.dart';
-import '../../widgets/dashboard/stock_Alerts.dart';
-import '../../widgets/dashboard/top_stores.dart';
 
 class SalesTrendsSection extends StatelessWidget {
   const SalesTrendsSection({super.key});

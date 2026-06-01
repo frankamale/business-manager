@@ -3,8 +3,6 @@ import 'package:uuid/uuid.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/sale_transaction.dart';
-import 'package:bac_pos/back_pos/models/inventory_item.dart';
-import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import 'payment_controller.dart';
 
 class SalesController extends GetxController {
@@ -142,7 +140,7 @@ class SalesController extends GetxController {
       bool saleExistsOnServer = false;
       try {
         final existingSale = await _apiService.fetchSingleTransaction(salesId);
-        saleExistsOnServer = existingSale != null && existingSale.isNotEmpty;
+        saleExistsOnServer = existingSale.isNotEmpty;
         print('Sale $salesId already exists on server: $saleExistsOnServer');
       } catch (e) {
         print('Error checking if sale exists on server: $e');

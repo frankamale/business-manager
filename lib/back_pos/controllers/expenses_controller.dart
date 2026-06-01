@@ -93,13 +93,6 @@ class ExpensesController extends GetxController {
     }
   }
 
-  Future<void> _saveAllExpensesToDatabase() async {
-    for (final expense in expenses) {
-      await _db.insertExpense(expense);
-    }
-  }
-
-
   Map<String, dynamic> _getDefaultCashAccount() {
     if (cashAccounts.isEmpty) {
       // Return hardcoded defaults if no accounts loaded

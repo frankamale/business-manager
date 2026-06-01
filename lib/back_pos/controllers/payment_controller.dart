@@ -50,7 +50,7 @@ class PaymentController extends GetxController {
     final db = await _dbHelper.database;
     debugPrint('Database instance: ${db != null ? "available" : "NULL"}');
 
-    final result = await db!.query(
+    final result = await db.query(
       'cash_accounts',
       where: 'pos = 1 AND main_currency = 1',
       limit: 1,
@@ -71,9 +71,6 @@ class PaymentController extends GetxController {
   Future<String?> _getLatestReceiptNumber() async {
     try {
       final db = await _dbHelper.database;
-      if (db == null) {
-        return null;
-      }
 
       final result = await db.rawQuery(
         'SELECT receiptnumber FROM sales_transactions ORDER BY transactiondate DESC LIMIT 1',
@@ -99,26 +96,6 @@ class PaymentController extends GetxController {
     final receiptNumber = shortNumber.toString().padLeft(6, '0');
 
     return 'REC-$receiptNumber';
-  }
-
-  // Check if receipt number already exists in database
-  Future<bool> _receiptNumberExists(String receiptNumber) async {
-    try {
-      final db = await _dbHelper.database;
-      if (db == null) {
-        return false;
-      }
-
-      final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM sales_transactions WHERE receiptnumber = ?',
-        [receiptNumber],
-      );
-
-      final count = result.first['count'] as int;
-      return count > 0;
-    } catch (e) {
-      return false; // Assume doesn't exist on error
-    }
   }
 
   // Create sale payload
@@ -325,7 +302,7 @@ class PaymentController extends GetxController {
 
     // Save all transactions to database
     final db = await _dbHelper.database;
-    final batch = db!.batch();
+    final batch = db.batch();
 
     for (var transaction in saleTransactions) {
       batch.insert(
@@ -499,7 +476,7 @@ class PaymentController extends GetxController {
 
       // Delete existing transactions for this sale
       final db = await _dbHelper.database;
-      await db!.delete(
+      await db.delete(
         'sales_transactions',
         where: 'salesId = ?',
         whereArgs: [existingSalesId],
@@ -645,7 +622,7 @@ class PaymentController extends GetxController {
       );
       if (saleTransactions.isNotEmpty) {
         final db = await _dbHelper.database;
-        final batch = db!.batch();
+        final batch = db.batch();
 
         for (var transaction in saleTransactions) {
           // Calculate the share of this payment for this item

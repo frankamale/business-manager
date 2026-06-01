@@ -1,15 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../additions/colors.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../../controllers/mon_inventory_controller.dart';
 import '../../models/inventory_data.dart';
 import '../../models/service_points.dart';
-import '../../services/api_services.dart';
 import '../../widgets/inventory/data_table.dart';
 import '../../widgets/inventory/floating_search_bar.dart';
 

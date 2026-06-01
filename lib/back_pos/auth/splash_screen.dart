@@ -564,40 +564,6 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  Future<void> _ensureDatabaseIsOpen() async {
-    _log('ensureDatabaseIsOpen: Checking if database needs to be opened');
-
-    try {
-      // Check if we have company info stored
-      final companyInfo = await _apiService.getCompanyInfo();
-      final companyId = companyInfo['companyId'];
-
-      if (companyId != null && companyId.isNotEmpty) {
-        _log('ensureDatabaseIsOpen: Company ID found: $companyId');
-
-        // Check if database is already open
-        try {
-          // Try to access the database - if it's not open, this will throw an exception
-          final db = _dbHelper.database;
-          _log('ensureDatabaseIsOpen: Database is already open');
-        } catch (e) {
-          _log('ensureDatabaseIsOpen: Database is not open, opening it now');
-          // Database is not open, so open it
-          await _dbHelper.openForCompany(companyId);
-          _log('ensureDatabaseIsOpen: Database opened successfully');
-          _log("---------------------------------------");
-          _log("Failed to open");
-          _log("---------------------------------------");
-        }
-      } else {
-        _log('ensureDatabaseIsOpen: No company ID found, skipping database open');
-      }
-    } catch (e) {
-      _log('ensureDatabaseIsOpen: Error checking company info - $e', level: 'ERROR');
-      // If we can't get company info, we can't open the database
-    }
-  }
-
   /// Ensure database is open specifically for smart sync process
   /// This is a more robust version that guarantees database is open
   Future<void> _ensureDatabaseIsOpenForSmartSync() async {

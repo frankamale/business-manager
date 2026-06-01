@@ -19,10 +19,6 @@ List<dynamic> _decodeJsonList(String jsonString) {
   return json.decode(jsonString) as List<dynamic>;
 }
 
-Map<String, dynamic> _decodeJsonMap(String jsonString) {
-  return json.decode(jsonString) as Map<String, dynamic>;
-}
-
 /// Parse double from various formats (int, double, String)
 double _parseDouble(dynamic value) {
   if (value == null) return 0.0;
@@ -806,12 +802,6 @@ class MonitorApiService extends GetxService {
       debugPrint("ApiService: syncRecentSales failed -> $e");
       rethrow;
     }
-  }
-
-  /// Legacy method - redirects to syncAllKpiData
-  Future<void> _syncRecentSalesLegacy() async {
-    // This method is kept for backward compatibility but now uses syncAllKpiData
-    await syncRecentSales();
   }
 
   /// KPI ID definitions for aggregated sales reports

@@ -10,7 +10,6 @@ import '../models/auth_response.dart';
 import '../models/service_point.dart';
 import '../models/inventory_item.dart';
 import '../models/customer.dart';
-import '../models/sale_transaction.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../config.dart';
 

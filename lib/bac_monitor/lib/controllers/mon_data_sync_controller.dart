@@ -1,13 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import '../models/sync_tracker.dart';
 import '../services/kpi_sync_service.dart';
-import '../services/api_services.dart';
 import '../services/sync_state_manager.dart';
 import '../../../shared/database/unified_db_helper.dart';
-import '../../../initialise/splashscreen.dart';
 import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
@@ -18,7 +15,6 @@ import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 /// Manages sync state and provides progress updates to the UI.
 class MonDataSyncController extends GetxController {
   final KpiSyncService _kpiSyncService = Get.find<KpiSyncService>();
-  final MonitorApiService _apiService = Get.find<MonitorApiService>();
   final UnifiedDatabaseHelper _dbHelper = UnifiedDatabaseHelper.instance;
   final SyncStateManager _syncStateManager = Get.find<SyncStateManager>();
 

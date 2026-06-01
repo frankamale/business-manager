@@ -14,14 +14,10 @@ import '../../controllers/mon_gross_profit_controller.dart';
 import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
-import '../../controllers/profile_controller.dart';
 import '../../controllers/mon_outstanding_payments_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
-import '../../services/account_manager.dart';
-import '../../models/kpi_sales_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
-import '../../widgets/dashboard/outstanding_payments.dart';
 import '../../widgets/dashboard/expenses_card.dart';
 import '../../widgets/dashboard/horizontal_summary_cards.dart';
 import '../../widgets/finance/date_range.dart';
@@ -255,7 +251,7 @@ class _DashboardState extends State<Dashboard> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            operatorController!.companyName.value,
+                            operatorController.companyName.value,
                             style: TextStyle(
                               color: AppColors.getTextPrimary(context),
                               fontWeight: FontWeight.bold,
@@ -264,7 +260,7 @@ class _DashboardState extends State<Dashboard> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            operatorController!.companyAddress.value,
+                            operatorController.companyAddress.value,
                             style: TextStyle(
                               color: AppColors.getTextPrimary(context),
                               fontWeight: FontWeight.w400,
@@ -281,7 +277,7 @@ class _DashboardState extends State<Dashboard> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                operatorController!.companyName.value,
+                                operatorController.companyName.value,
                                 style: TextStyle(
                                   color: AppColors.getTextPrimary(context),
                                   fontWeight: FontWeight.bold,
@@ -290,7 +286,7 @@ class _DashboardState extends State<Dashboard> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Text(
-                                operatorController!.companyAddress.value,
+                                operatorController.companyAddress.value,
                                 style: TextStyle(
                                   color: AppColors.getTextPrimary(context),
                                   fontWeight: FontWeight.w400,

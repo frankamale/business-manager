@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:skeletonizer/skeletonizer.dart';
-import '../../additions/colors.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../widgets/dashboard/kpi_card.dart';
 
