@@ -31,7 +31,7 @@ import '../bottom_nav.dart';
 class SplashPage extends StatefulWidget {
   /// Whether the app is running in offline mode
   final bool isOffline;
-  
+
   const SplashPage({super.key, this.isOffline = false});
 
   @override
@@ -77,8 +77,10 @@ class _SplashPageState extends State<SplashPage> {
       final token = await apiService.getStoredToken();
       final companyId = await apiService.getStoredCompanyId();
 
-      return token != null && token.isNotEmpty &&
-          companyId != null && companyId.isNotEmpty;
+      return token != null &&
+          token.isNotEmpty &&
+          companyId != null &&
+          companyId.isNotEmpty;
     } catch (e) {
       debugPrint('SplashPage: Error checking valid credentials - $e');
       return false;
@@ -121,7 +123,9 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _initializeApp() async {
-    debugPrint('SplashPage: Starting app initialization (offline: ${widget.isOffline})');
+    debugPrint(
+      'SplashPage: Starting app initialization (offline: ${widget.isOffline})',
+    );
     await _initializeServicesAndDatabase();
   }
 
@@ -144,7 +148,9 @@ class _SplashPageState extends State<SplashPage> {
         );
         if (!isOnline) {
           // Network check failed after starting online - redirect to offline handling
-          debugPrint('SplashPage: Lost connection during startup, handling offline mode');
+          debugPrint(
+            'SplashPage: Lost connection during startup, handling offline mode',
+          );
           _isOfflineMode = true;
           await _handleOfflineInitialization();
           return;
@@ -205,18 +211,18 @@ class _SplashPageState extends State<SplashPage> {
         _updateStatus('Checking sync status...');
         final syncManager = Get.put(SyncStateManager(), permanent: true);
         final scenario = await syncManager.determineSyncScenario();
-        
+
         switch (scenario) {
           case SyncScenario.firstLogin:
-            _updateStatus('First login - fetching today\'s data...');
+            _updateStatus('Fetching recent data...');
             await _performFirstLoginSync(syncManager);
             break;
-            
+
           case SyncScenario.subsequentLogin:
             _updateStatus('Refreshing today\'s data...');
             await _performSubsequentLoginSync(syncManager);
             break;
-            
+
           case SyncScenario.offline:
           case SyncScenario.cacheValid:
             debugPrint('SplashPage: Using cached data - no fetch needed');
@@ -251,12 +257,7 @@ class _SplashPageState extends State<SplashPage> {
       );
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Get.offAll(() => const BottomNav());
-        
-        // Show offline mode snackbar if in offline mode
-        if (widget.isOffline) {
-          UIHelper.showOfflineSnackbar();
-        }
-        
+
         // STEP 10: Post-mount historical sync (background task)
         // Trigger historical data fetch after UI is mounted (only if online)
         if (!widget.isOffline) {
@@ -323,7 +324,9 @@ class _SplashPageState extends State<SplashPage> {
 
       // If we're offline, we can't proceed without a stored company ID
       if (_isOfflineMode) {
-        debugPrint('SplashPage: Offline mode - cannot proceed without stored company ID');
+        debugPrint(
+          'SplashPage: Offline mode - cannot proceed without stored company ID',
+        );
         throw Exception('Cannot use app offline without prior login');
       }
 
@@ -375,10 +378,10 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  /// First login sync: fetch today's KPI + baseline data only
+  /// First login sync: fetch recent KPI (last 7 days) + baseline data only
   Future<void> _performFirstLoginSync(SyncStateManager syncManager) async {
     final stopwatch = Stopwatch()..start();
-    
+
     try {
       MonDataSyncController? dataSyncController;
       if (!Get.isRegistered<MonDataSyncController>()) {
@@ -393,11 +396,13 @@ class _SplashPageState extends State<SplashPage> {
         }
       });
 
-      // Only fetch today + baseline (NO historical)
+      // Only fetch recent + baseline (NO further historical)
       await dataSyncController?.performInitialSyncWithBaseline();
       syncManager.markBaselineLoaded();
-      
-      debugPrint('SplashPage: First login sync took ${stopwatch.elapsedMilliseconds}ms');
+
+      debugPrint(
+        'SplashPage: First login sync took ${stopwatch.elapsedMilliseconds}ms',
+      );
     } catch (e) {
       debugPrint('SplashPage: First login sync failed - $e');
       final hasCachedData = await _hasCachedData();
@@ -410,7 +415,7 @@ class _SplashPageState extends State<SplashPage> {
   /// Subsequent login sync: fetch today's data only if missing/expired
   Future<void> _performSubsequentLoginSync(SyncStateManager syncManager) async {
     final stopwatch = Stopwatch()..start();
-    
+
     try {
       MonDataSyncController? dataSyncController;
       if (!Get.isRegistered<MonDataSyncController>()) {
@@ -427,8 +432,10 @@ class _SplashPageState extends State<SplashPage> {
 
       // Incremental sync only fetches today's delta
       await dataSyncController?.performIncrementalSync();
-      
-      debugPrint('SplashPage: Subsequent login sync took ${stopwatch.elapsedMilliseconds}ms');
+
+      debugPrint(
+        'SplashPage: Subsequent login sync took ${stopwatch.elapsedMilliseconds}ms',
+      );
     } catch (e) {
       debugPrint('SplashPage: Subsequent login sync failed - $e');
       // Continue with cache - not fatal
@@ -448,12 +455,14 @@ class _SplashPageState extends State<SplashPage> {
     if (!Get.isRegistered<MonSyncController>()) {
       Get.put(MonSyncController(), permanent: true);
     }
-    
+
     // Start periodic background sync for sales data ONLY if online
     if (!widget.isOffline) {
       Get.find<MonSyncController>().startPeriodicSync();
     } else {
-      debugPrint('SplashPage: Offline mode - skipping periodic sync initialization');
+      debugPrint(
+        'SplashPage: Offline mode - skipping periodic sync initialization',
+      );
     }
   }
 
@@ -500,15 +509,21 @@ class _SplashPageState extends State<SplashPage> {
         final customerController = Get.find<CustomerController>();
         debugPrint('SplashPage: Loading customers from cache...');
         await customerController.loadCustomersFromCache();
-        debugPrint('SplashPage: Loaded ${customerController.customers.length} customers from cache');
-        
+        debugPrint(
+          'SplashPage: Loaded ${customerController.customers.length} customers from cache',
+        );
+
         // Only sync if online
         if (!widget.isOffline) {
           debugPrint('SplashPage: Syncing customers from API...');
           await customerController.syncCustomersFromAPI();
-          debugPrint('SplashPage: Synced ${customerController.customers.length} customers from API');
+          debugPrint(
+            'SplashPage: Synced ${customerController.customers.length} customers from API',
+          );
         }
-        debugPrint('SplashPage: Customers loaded successfully - Total: ${customerController.customers.length}');
+        debugPrint(
+          'SplashPage: Customers loaded successfully - Total: ${customerController.customers.length}',
+        );
       }
 
       // Ensure MonKpiOverviewController is registered so it can fetch data
@@ -582,10 +597,10 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _runHistoricalLoop() async {
     try {
-      final syncManager = Get.isRegistered<SyncStateManager>() 
-          ? Get.find<SyncStateManager>() 
+      final syncManager = Get.isRegistered<SyncStateManager>()
+          ? Get.find<SyncStateManager>()
           : null;
-          
+
       while (true) {
         String? nextMonth;
         if (syncManager != null) {
@@ -609,22 +624,30 @@ class _SplashPageState extends State<SplashPage> {
           }
           if (!found) break;
         }
-        
+
         if (nextMonth == null) {
           debugPrint('[SplashPage] All historical data loaded');
           break;
         }
-        
+
         debugPrint('[SplashPage] Fetching historical month: $nextMonth');
         final parts = nextMonth.split('-');
-        final monthStart = DateTime(int.parse(parts[0]), int.parse(parts[1]), 1);
-        final monthEnd = DateTime(int.parse(parts[0]), int.parse(parts[1]) + 1, 0);
-        
+        final monthStart = DateTime(
+          int.parse(parts[0]),
+          int.parse(parts[1]),
+          1,
+        );
+        final monthEnd = DateTime(
+          int.parse(parts[0]),
+          int.parse(parts[1]) + 1,
+          0,
+        );
+
         final apiService = Get.find<MonitorApiService>();
         await apiService.syncAllKpiData(monthStart, monthEnd);
-        
+
         syncManager?.markHistoricalMonthLoaded(nextMonth);
-        
+
         // Longer delay between months to prevent database locking
         // and give UI time to access the database
         await Future.delayed(const Duration(seconds: 2));
@@ -638,31 +661,28 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _handleOfflineInitialization() async {
     try {
       debugPrint('SplashPage: Handling offline initialization');
-      
+
       // Try to get company ID from GetStorage
       final box = GetStorage();
       final lastCompanyId = box.read('last_company_id') as String?;
       final lastUserRole = box.read('last_user_role') as String?;
-      
+
       if (lastCompanyId != null && lastCompanyId.isNotEmpty) {
         // Open database for the company
         await _dbHelper.openForCompany(lastCompanyId);
-        
+
         // Load company details
         await _loadCompanyDetailsOffline();
-        
+
         // Initialize controllers
         _initializeControllers();
-        
+
         // Load data into controllers
         await _loadDataIntoControllers();
-        
+
         // Navigate to main screen
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Get.offAll(() => const BottomNav());
-          
-          // Show offline snackbar
-          UIHelper.showOfflineSnackbar();
         });
       } else {
         debugPrint('SplashPage: No offline credentials found');
@@ -720,14 +740,20 @@ class _SplashPageState extends State<SplashPage> {
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? DarkColors.background : LightColors.background;
-    final textColor = isDark ? DarkColors.textPrimary : LightColors.textPrimary;
-    final textSecondaryColor = isDark ? DarkColors.textSecondary : LightColors.textSecondary;
-    final offlineColor = isDark ? DarkColors.warning : LightColors.warning;
+    final backgroundColor = isDark
+        ? LightColors.background
+        : LightColors.background;
+    final textColor = isDark ? LightColors.textPrimary : LightColors.textPrimary;
+    final textSecondaryColor = isDark
+        ? LightColors.textSecondary
+        : LightColors.textSecondary;
+    final offlineColor = isDark ? LightColors.warning : LightColors.warning;
 
     return Scaffold(
       appBar: AppBar(
-        systemOverlayStyle: isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         toolbarHeight: 0,
         backgroundColor: backgroundColor,
       ),
@@ -741,31 +767,39 @@ class _SplashPageState extends State<SplashPage> {
               child: AppLogoCircle(size: isSmallScreen ? 100 : 120),
             ),
             const SizedBox(height: 24),
-            Obx(() {
-              if (!Get.isRegistered<MonOperatorController>()) {
-                return Text(
-                  'Welcome ',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              }
+            Builder(
+              builder: (context) {
+                if (!Get.isRegistered<MonOperatorController>()) {
+                  return Text(
+                    'Welcome',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                }
 
-              final operatorController = Get.find<MonOperatorController>();
-              final companyName = operatorController.companyName.value;
-              return Text(
-                companyName.isNotEmpty && companyName != 'Loading...'
-                    ? companyName
-                    : 'Welcome',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              );
-            }),
+                return GetBuilder<MonOperatorController>(
+                  builder: (operatorController) {
+                    final companyName = operatorController.companyName.value;
+                    return Center(
+                      child: Text(
+                        companyName.isNotEmpty && companyName != 'Loading...'
+                            ? companyName
+                            : 'Welcome',
+                        textAlign: TextAlign.center,
+                         style: TextStyle(
+                          color: textColor,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 40),
             MonSplashLoader(
               statusMessage: _statusMessage,

@@ -179,6 +179,7 @@ class ItemDetailsDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Wrap(
+        direction: Axis.horizontal,
         children: [
           _buildInfoRow(
             context,

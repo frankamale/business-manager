@@ -659,6 +659,7 @@ class MonitorApiService extends GetxService {
               'name': item['name'],
               'category': item['category'],
               'price': item['price'],
+              'costprice': item['costprice'],
               'packsize': item['packsize'],
               'packaging': item['packaging'],
               'packagingid': item['packagingid'],
@@ -830,7 +831,7 @@ class MonitorApiService extends GetxService {
   static const int kpiSalesperson = 4;
   static const int kpiProfit = 5;
   static const int kpiEfrisStatus = 6;
-  static const int kpiStockCategory = 7;
+  // static const int kpiStockCategory = 7;
   static const int kpiByItem = 8;
 
   /// Timeframe definitions
@@ -965,18 +966,18 @@ class MonitorApiService extends GetxService {
   }
 
   /// Fetch stock category KPI (kpiId=7)
-  Future<http.Response> getStockCategoryData({
-    required String startDate,
-    required String endDate,
-    int timeframe = timeframeNormal,
-  }) async {
-    return await getKpiSalesData(
-      startDate: startDate,
-      endDate: endDate,
-      kpiId: kpiStockCategory,
-      timeframe: timeframe,
-    );
-  }
+  // Future<http.Response> getStockCategoryData({
+  //   required String startDate,
+  //   required String endDate,
+  //   int timeframe = timeframeNormal,
+  // }) async {
+  //   return await getKpiSalesData(
+  //     startDate: startDate,
+  //     endDate: endDate,
+  //     kpiId: kpiStockCategory,
+  //     timeframe: timeframe,
+  //   );
+  // }
 
   /// Fetch by item KPI (kpiId=8)
   Future<http.Response> getByItemData({
@@ -1037,7 +1038,8 @@ class MonitorApiService extends GetxService {
       {'id': kpiPaymentModes, 'name': 'payment_modes'},
       {'id': kpiSalesperson, 'name': 'salesperson'},
       {'id': kpiProfit, 'name': 'profit'},
-      {'id': kpiStockCategory, 'name': 'stock_category'},
+      {'id': kpiEfrisStatus, 'name': 'efris_status'},
+      // {'id': kpiStockCategory, 'name': 'stock_category'},
       {'id': kpiByItem, 'name': 'by_item'},
     ];
 
@@ -1106,7 +1108,7 @@ class MonitorApiService extends GetxService {
       {'id': kpiSalesperson, 'name': 'salesperson'},
       {'id': kpiProfit, 'name': 'profit'},
       {'id': kpiEfrisStatus, 'name': 'efris_status'},
-      {'id': kpiStockCategory, 'name': 'stock_category'},
+      // {'id': kpiStockCategory, 'name': 'stock_category'},
       {'id': kpiByItem, 'name': 'by_item'},
     ];
     
@@ -1182,7 +1184,7 @@ class MonitorApiService extends GetxService {
         await Future.delayed(const Duration(milliseconds: 500));
       }
     }
-    
+     
     debugPrint("ApiService: Historical data fetch complete for $totalMonths months");
   }
 }

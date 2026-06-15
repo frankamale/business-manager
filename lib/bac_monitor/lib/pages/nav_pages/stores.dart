@@ -79,7 +79,8 @@ class _StoresState extends State<Stores> {
         return CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: AppColors.getCardColor(context),
+
+              backgroundColor: AppColors.getHeaderColor(context),
               elevation: 0,
               pinned: true,
               title: _buildStoreSelector(context, controller),
@@ -91,7 +92,7 @@ class _StoresState extends State<Stores> {
                     icon: Icon(
                       Icons.quick_contacts_dialer_outlined,
                       size: 28,
-                      color: AppColors.getTextPrimaryColor(context),
+                      color: AppColors.getTextPrimary(context),
                     ),
                     onPressed:
                         controller.selectedStore.value?.id == Store.all.id
@@ -125,17 +126,20 @@ class _StoresState extends State<Stores> {
   Widget _buildStoreSelector(BuildContext context, MonStoresController ctrl) {
     return Obx(
       () => DropdownButtonHideUnderline(
+        
         child: Padding(
+          
           padding: const EdgeInsets.only(left: 8.0),
           child: DropdownButton<Store>(
+            borderRadius: BorderRadius.circular(10),
             value: ctrl.selectedStore.value,
             style: TextStyle(
-              color: AppColors.getTextPrimaryColor(context),
+              color: AppColors.getTextPrimary(context),
               fontWeight: FontWeight.w500,
               fontSize: 20.0,
             ),
-            dropdownColor: AppColors.getCardColor(context),
-            icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
+            dropdownColor: AppColors.getHeaderColor(context),
+            icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimary(context).withOpacity(0.9)),
             items: ctrl.storeList.map<DropdownMenuItem<Store>>((Store store) {
               return DropdownMenuItem<Store>(
                 value: store,

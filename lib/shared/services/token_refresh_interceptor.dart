@@ -108,6 +108,9 @@ class TokenRefreshInterceptor extends http.BaseClient {
     // Get stored credentials
     final credentials = await _getServerCredentials();
 
+    // Log credentials for debugging (mask password)
+    print('TokenRefreshInterceptor: Refreshing token for user: ${credentials['username'] ?? 'null'}');
+
     if (credentials['username'] == null || credentials['password'] == null) {
       throw Exception(
         'Token refresh failed: No stored credentials found. Please log in again.',

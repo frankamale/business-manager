@@ -196,12 +196,12 @@ class _InventoryPageState extends State<InventoryPage>
             SliverOverlapAbsorber(
               handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
               sliver: SliverAppBar(
-                backgroundColor: AppColors.getCardColor(context),
+                backgroundColor: AppColors.getHeaderColor(context),
                 pinned: true,
                 floating: true,
                 snap: true,
                 forceElevated: innerBoxIsScrolled,
-                iconTheme: IconThemeData(color: AppColors.getTextPrimaryColor(context)),
+                iconTheme: IconThemeData(color: AppColors.getTextPrimary(context)),
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -212,6 +212,7 @@ class _InventoryPageState extends State<InventoryPage>
                 ),
                 expandedHeight: _selectedView == "Services" ? 120.0 : 180,
                 flexibleSpace: FlexibleSpaceBar(
+
                   background: Padding(
                     padding: EdgeInsets.only(
                       bottom: _selectedView == "Services" ? 0.0 : 50.0,
@@ -229,16 +230,17 @@ class _InventoryPageState extends State<InventoryPage>
                     ? TabBar(
                         controller: _tabController,
                         indicatorColor: AppColors.getAccentColor(context),
-                        labelColor: AppColors.getTextPrimaryColor(context),
-                        unselectedLabelColor: AppColors.getTextSecondaryColor(context),
+                        labelColor: AppColors.getTextPrimary(context),
+                        unselectedLabelColor: AppColors.getTextPrimary(context).withOpacity(0.6),
                         labelStyle: const TextStyle(
                           fontWeight: FontWeight.bold,
                         ),
                         indicatorWeight: 3.0,
                         tabs: const [
                           Tab(text: 'All Items'),
-                          Tab(text: 'Low Stock'),
                           Tab(text: 'Overstocked'),
+                          Tab(text: 'Low Stock'),
+
 
                         ],
                       )
@@ -269,10 +271,12 @@ class _InventoryPageState extends State<InventoryPage>
   Widget _buildViewDropdown(BuildContext context) {
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
-        dropdownColor: AppColors.getCardColor(context),
-        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
+        borderRadius: BorderRadius.circular(10),
+
+        dropdownColor: AppColors.getHeaderColor(context).withOpacity(0.9),
+        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimary(context)),
         style: TextStyle(
-          color: AppColors.getTextPrimaryColor(context),
+          color: AppColors.getTextPrimary(context),
           fontWeight: FontWeight.bold,
           fontSize: 20,
         ),
@@ -294,11 +298,13 @@ class _InventoryPageState extends State<InventoryPage>
 
   Widget _buildServicePointDropdown(BuildContext context) {
     return DropdownButtonHideUnderline(
+
       child: DropdownButton<String>(
-        dropdownColor: AppColors.getCardColor(context),
-        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimaryColor(context)),
+        borderRadius: BorderRadius.circular(10),
+        dropdownColor: AppColors.getHeaderColor(context).withOpacity(0.9),
+        icon: Icon(Icons.arrow_drop_down, color: AppColors.getTextPrimary(context)),
         style: TextStyle(
-          color: AppColors.getTextPrimaryColor(context),
+          color: AppColors.getTextPrimary(context),
           fontWeight: FontWeight.w600,
           fontSize: 15,
         ),

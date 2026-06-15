@@ -12,7 +12,8 @@ import '../../bac_monitor/lib/models/sync_tracker.dart';
 /// Unified Database Helper that combines POS and Monitor databases
 
 class UnifiedDatabaseHelper {
-  static final UnifiedDatabaseHelper _instance = UnifiedDatabaseHelper._internal();
+  static final UnifiedDatabaseHelper _instance =
+      UnifiedDatabaseHelper._internal();
 
   static UnifiedDatabaseHelper get instance => _instance;
 
@@ -35,7 +36,9 @@ class UnifiedDatabaseHelper {
         await Future.delayed(const Duration(milliseconds: 50));
         waitCount++;
         if (waitCount >= maxWaitCount) {
-          debugPrint('UnifiedDatabaseHelper: Timeout waiting for database to open, resetting mutex');
+          debugPrint(
+            'UnifiedDatabaseHelper: Timeout waiting for database to open, resetting mutex',
+          );
           _isOpening = false;
           break;
         }
@@ -66,7 +69,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 3,
+        version: 6,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -75,6 +78,8 @@ class UnifiedDatabaseHelper {
           await db.rawQuery('PRAGMA synchronous = NORMAL');
           await db.rawQuery('PRAGMA cache_size = 10000');
           await db.rawQuery('PRAGMA temp_store = MEMORY');
+
+          await ensureExpenseTableColumns();
         },
       );
 
@@ -88,7 +93,9 @@ class UnifiedDatabaseHelper {
   /// Throws an exception if no database is open
   Database get database {
     if (_database == null) {
-      throw Exception('Database not opened. Call openForCompany first. Current companyId: $_currentCompanyId');
+      throw Exception(
+        'Database not opened. Call openForCompany first. Current companyId: $_currentCompanyId',
+      );
     }
     return _database!;
   }
@@ -483,9 +490,15 @@ class UnifiedDatabaseHelper {
     ''');
 
     // Create indexes for KPI sales table
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi_id ON mon_kpi_sales(kpi_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_processing_date ON mon_kpi_sales(processing_date)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi ON mon_kpi_sales(kpi)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi_id ON mon_kpi_sales(kpi_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_processing_date ON mon_kpi_sales(processing_date)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mon_kpi_sales_kpi ON mon_kpi_sales(kpi)',
+    );
 
     // Monitor inventory table
     await db.execute('''
@@ -497,6 +510,7 @@ class UnifiedDatabaseHelper {
         name TEXT,
         category TEXT,
         price REAL,
+        costprice REAL,
         packsize REAL,
         packaging TEXT,
         packagingid TEXT,
@@ -525,25 +539,49 @@ class UnifiedDatabaseHelper {
         category TEXT NOT NULL,
         date INTEGER NOT NULL,
         servicePointId TEXT,
-        subject TEXT
+        subject TEXT,
+        staffId TEXT,
+        upload_status TEXT DEFAULT 'pending',
+        created_at INTEGER
       )
     ''');
 
-
     // POS indexes
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_receiptnumber ON sales_transactions(receiptnumber)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_transactiondate ON sales_transactions(transactiondate)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_cash_accounts_currency ON cash_accounts(currency_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_customer_fullnames ON customers(fullnames)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_customer_phone ON customers(phone1)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_server_sales_salesId ON server_sales(salesId)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_server_sales_transactiondate ON server_sales(transactiondate)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_receiptnumber ON sales_transactions(receiptnumber)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_transactiondate ON sales_transactions(transactiondate)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_cash_accounts_currency ON cash_accounts(currency_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_fullnames ON customers(fullnames)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_customer_phone ON customers(phone1)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_server_sales_salesId ON server_sales(salesId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_server_sales_transactiondate ON server_sales(transactiondate)',
+    );
 
     // Monitor indexes
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_transactiondate ON mon_sales(transactiondate)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_service_point ON mon_sales(service_point_id)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mon_sales_transactiondate ON mon_sales(transactiondate)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mon_sales_service_point ON mon_sales(service_point_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)',
+    );
 
     // Sync tracker table (for incremental sync support)
     await db.execute('''
@@ -560,8 +598,12 @@ class UnifiedDatabaseHelper {
         created_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
     ''');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)',
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -581,7 +623,9 @@ class UnifiedDatabaseHelper {
         )
       ''');
       // Also add the missing index for existing databases
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)',
+      );
     }
 
     // Migration to version 3 - Add sync_tracker table
@@ -600,16 +644,79 @@ class UnifiedDatabaseHelper {
           created_at INTEGER DEFAULT (strftime('%s', 'now'))
         )
       ''');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)');
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sync_tracker_status ON sync_tracker(sync_status)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)',
+      );
+    }
+
+    // Migration to version 4 - Add sync columns and staffId to expenses table
+    if (oldVersion < 4) {
+      try {
+        await db.execute(
+          'ALTER TABLE expenses ADD COLUMN upload_status TEXT DEFAULT "pending"',
+        );
+        await db.execute('ALTER TABLE expenses ADD COLUMN created_at INTEGER');
+        await db.execute('ALTER TABLE expenses ADD COLUMN staffId TEXT');
+      } catch (e) {
+        // Columns may already exist, ignore error
+      }
+    }
+
+    // Migration to version 5 - Add expense_type column
+    if (oldVersion < 5) {
+      try {
+        await db.execute(
+          'ALTER TABLE expenses ADD COLUMN expense_type TEXT DEFAULT "non-stock"',
+        );
+      } catch (e) {
+        // Column may already exist, ignore error
+      }
+    }
+
+    // Add costprice column to mon_inventory
+    if (oldVersion < 6) {
+      try {
+        await db.execute(
+          'ALTER TABLE mon_inventory ADD COLUMN costprice REAL DEFAULT 0.0',
+        );
+      } catch (e) {
+      }
     }
   }
-
 
   /// Ensure index exists on salesId for existing databases (call during migration)
   Future<void> ensureSalesIdIndex() async {
     if (_database != null) {
-      await _database!.execute('CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)');
+      await _database!.execute(
+        'CREATE INDEX IF NOT EXISTS idx_mon_sales_salesId ON mon_sales(salesId)',
+      );
+    }
+  }
+
+  Future<void> ensureExpenseTableColumns() async {
+    try {
+      final db = database; // safe after open
+      final columns = await db.rawQuery('PRAGMA table_info(expenses)');
+      final names = columns.map((c) => (c['name'] as String).toLowerCase()).toSet();
+
+      if (!names.contains('expense_type')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN expense_type TEXT DEFAULT "non-stock"');
+        debugPrint('UnifiedDatabaseHelper: Added missing expense_type column to expenses table');
+      }
+      if (!names.contains('upload_status')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN upload_status TEXT DEFAULT "pending"');
+      }
+      if (!names.contains('created_at')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN created_at INTEGER');
+      }
+      if (!names.contains('staffid')) {
+        await db.execute('ALTER TABLE expenses ADD COLUMN staffId TEXT');
+      }
+    } catch (e) {
+      debugPrint('UnifiedDatabaseHelper: ensureExpenseTableColumns error: $e');
     }
   }
 
@@ -619,12 +726,20 @@ class UnifiedDatabaseHelper {
 
   Future<int> insertUserModel(User user) async {
     final db = database;
-    return await db.insert('user', user.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'user',
+      user.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<int> insertUser(Map<String, dynamic> user) async {
     final db = database;
-    return await db.insert('user', user, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'user',
+      user,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<List<User>> get users async {
@@ -642,14 +757,23 @@ class UnifiedDatabaseHelper {
     final db = database;
     final batch = db.batch();
     for (var user in users) {
-      batch.insert('user', user.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'user',
+        user.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
 
   Future<List<String>> getUniqueRoles() async {
     final db = database;
-    final result = await db.query('user', columns: ['role'], distinct: true, orderBy: 'role ASC');
+    final result = await db.query(
+      'user',
+      columns: ['role'],
+      distinct: true,
+      orderBy: 'role ASC',
+    );
     return result.map((map) => map['role'] as String).toList();
   }
 
@@ -704,7 +828,10 @@ class UnifiedDatabaseHelper {
     return maps.isNotEmpty ? User.fromMap(maps.first) : null;
   }
 
-  Future<User?> authenticateUserByUsername(String username, int password) async {
+  Future<User?> authenticateUserByUsername(
+    String username,
+    int password,
+  ) async {
     final db = database;
     final maps = await db.query(
       'user',
@@ -726,28 +853,48 @@ class UnifiedDatabaseHelper {
 
   Future<int> insertServicePointModel(ServicePoint servicePoint) async {
     final db = database;
-    return await db.insert('service_point', servicePoint.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'service_point',
+      servicePoint.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<int> insertServicePoint(Map<String, dynamic> servicePoint) async {
     final db = database;
-    return await db.insert('service_point', servicePoint, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'service_point',
+      servicePoint,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  Future<void> insertServicePointModels(List<ServicePoint> servicePoints) async {
+  Future<void> insertServicePointModels(
+    List<ServicePoint> servicePoints,
+  ) async {
     final db = database;
     final batch = db.batch();
     for (var sp in servicePoints) {
-      batch.insert('service_point', sp.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'service_point',
+        sp.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
 
-  Future<void> insertServicePoints(List<Map<String, dynamic>> servicePoints) async {
+  Future<void> insertServicePoints(
+    List<Map<String, dynamic>> servicePoints,
+  ) async {
     final db = database;
     final batch = db.batch();
     for (var sp in servicePoints) {
-      batch.insert('mon_service_points', sp, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'mon_service_points',
+        sp,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
@@ -760,7 +907,11 @@ class UnifiedDatabaseHelper {
 
   Future<List<ServicePoint>> getSalesServicePoints() async {
     final db = database;
-    final maps = await db.query('service_point', where: 'sales = ?', whereArgs: [1]);
+    final maps = await db.query(
+      'service_point',
+      where: 'sales = ?',
+      whereArgs: [1],
+    );
     return maps.map((map) => ServicePoint.fromMap(map)).toList();
   }
 
@@ -775,64 +926,154 @@ class UnifiedDatabaseHelper {
 
   Future<int> insertInventoryItemModel(InventoryItem item) async {
     final db = database;
-    return await db.insert('inventory', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'inventory',
+      item.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<int> insertInventoryItem(Map<String, dynamic> item) async {
     final db = database;
-    return await db.insert('inventory', item, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'inventory',
+      item,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<void> insertInventoryItemModels(List<InventoryItem> items) async {
     final db = database;
     final batch = db.batch();
     for (var item in items) {
-      batch.insert('inventory', item.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'inventory',
+        item.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
 
   Future<void> insertInventoryItems(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
     final db = database;
     final batch = db.batch();
     for (var item in items) {
-      batch.insert('inventory', item, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'inventory',
+        item,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
 
-  Future<List<InventoryItem>> getInventoryItems() async {
+  Future<void> insertInventoryItemsInTransaction(
+    List<Map<String, dynamic>> items,
+  ) async {
+    if (items.isEmpty) return;
     final db = database;
-    final maps = await db.query('inventory');
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (var item in items) {
+        batch.insert(
+          'inventory',
+          item,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    });
+  }
+
+  Future<List<InventoryItem>> getInventoryItems({
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final db = database;
+    final maps = await db.query(
+      'inventory',
+      orderBy: 'name ASC',
+      limit: limit,
+      offset: offset,
+    );
     return maps.map((map) => InventoryItem.fromMap(map)).toList();
   }
 
-  Future<List<InventoryItem>> searchInventoryItems(String query) async {
+  Future<int> getInventoryTotalCount() async {
+    final db = database;
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM inventory'),
+    );
+    return count ?? 0;
+  }
+
+  Future<List<InventoryItem>> searchInventoryItems(
+    String query, {
+    int limit = 200,
+  }) async {
     final db = database;
     final maps = await db.query(
       'inventory',
       where: 'name LIKE ? OR code LIKE ? OR category LIKE ?',
       whereArgs: ['%$query%', '%$query%', '%$query%'],
       orderBy: 'name ASC',
+      limit: limit,
     );
     return maps.map((map) => InventoryItem.fromMap(map)).toList();
   }
 
-  Future<List<InventoryItem>> getInventoryItemsByCategory(String category) async {
+  /// Search inventory by barcode (exact match on code OR externalserial)
+  Future<InventoryItem?> getInventoryByBarcode(String barcode) async {
     final db = database;
-    final maps = await db.query('inventory', where: 'category = ?', whereArgs: [category], orderBy: 'name ASC');
+    final maps = await db.query(
+      'inventory',
+      where: 'code = ? OR externalserial = ?',
+      whereArgs: [barcode, barcode],
+      limit: 1,
+    );
+
+    if (maps.isNotEmpty) {
+      return InventoryItem.fromMap(maps.first);
+    }
+    return null;
+  }
+
+  Future<List<InventoryItem>> getInventoryItemsByCategory(
+    String category,
+  ) async {
+    final db = database;
+    final maps = await db.query(
+      'inventory',
+      where: 'category = ?',
+      whereArgs: [category],
+      orderBy: 'name ASC',
+    );
     return maps.map((map) => InventoryItem.fromMap(map)).toList();
   }
 
   Future<List<String>> getInventoryCategories() async {
     final db = database;
-    final result = await db.query('inventory', columns: ['category'], distinct: true, orderBy: 'category ASC');
+    final result = await db.query(
+      'inventory',
+      columns: ['category'],
+      distinct: true,
+      orderBy: 'category ASC',
+    );
     return result.map((map) => map['category'] as String).toList();
   }
 
-  Future<List<InventoryItem>> getInventoryItemsBySoldFrom(String soldFrom) async {
+  Future<List<InventoryItem>> getInventoryItemsBySoldFrom(
+    String soldFrom,
+  ) async {
     final db = database;
-    final maps = await db.query('inventory', where: 'soldfrom = ?', whereArgs: [soldFrom], orderBy: 'name ASC');
+    final maps = await db.query(
+      'inventory',
+      where: 'soldfrom = ?',
+      whereArgs: [soldFrom],
+      orderBy: 'name ASC',
+    );
     return maps.map((map) => InventoryItem.fromMap(map)).toList();
   }
 
@@ -843,7 +1084,9 @@ class UnifiedDatabaseHelper {
 
   Future<int> getInventoryCount() async {
     final db = database;
-    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM inventory'));
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM inventory'),
+    );
     return count ?? 0;
   }
 
@@ -853,7 +1096,11 @@ class UnifiedDatabaseHelper {
 
   Future<int> insertExpense(Expense expense) async {
     final db = database;
-    return await db.insert('expenses', expense.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'expenses',
+      expense.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<List<Expense>> getExpenses() async {
@@ -885,11 +1132,7 @@ class UnifiedDatabaseHelper {
 
   Future<int> deleteExpense(String id) async {
     final db = database;
-    return await db.delete(
-      'expenses',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> deleteAllExpenses() async {
@@ -903,19 +1146,31 @@ class UnifiedDatabaseHelper {
 
   Future<int> insertSaleTransaction(Map<String, dynamic> transaction) async {
     final db = database;
-    return await db.insert('sales_transactions', transaction, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'sales_transactions',
+      transaction,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  Future<void> insertSaleTransactions(List<Map<String, dynamic>> transactions) async {
+  Future<void> insertSaleTransactions(
+    List<Map<String, dynamic>> transactions,
+  ) async {
     final db = database;
     final batch = db.batch();
     for (var tx in transactions) {
-      batch.insert('sales_transactions', tx, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'sales_transactions',
+        tx,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
 
-  Future<List<SaleTransaction>> getSaleTransactions({String? servicePointId}) async {
+  Future<List<SaleTransaction>> getSaleTransactions({
+    String? servicePointId,
+  }) async {
     final db = database;
     final maps = await db.query(
       'sales_transactions',
@@ -926,15 +1181,25 @@ class UnifiedDatabaseHelper {
     return maps.map((map) => SaleTransaction.fromMap(map)).toList();
   }
 
-  Future<List<SaleTransaction>> getSaleTransactionsBySalesId(String salesId) async {
+  Future<List<SaleTransaction>> getSaleTransactionsBySalesId(
+    String salesId,
+  ) async {
     final db = database;
-    final maps = await db.query('sales_transactions', where: 'salesId = ?', whereArgs: [salesId]);
+    final maps = await db.query(
+      'sales_transactions',
+      where: 'salesId = ?',
+      whereArgs: [salesId],
+    );
     return maps.map((map) => SaleTransaction.fromMap(map)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getGroupedSales({String? servicePointId}) async {
+  Future<List<Map<String, dynamic>>> getGroupedSales({
+    String? servicePointId,
+  }) async {
     final db = database;
-    final whereClause = servicePointId != null ? 'WHERE servicepointid = ?' : '';
+    final whereClause = servicePointId != null
+        ? 'WHERE servicepointid = ?'
+        : '';
     final whereArgs = servicePointId != null ? [servicePointId] : <dynamic>[];
     return await db.rawQuery('''
       SELECT
@@ -962,7 +1227,10 @@ class UnifiedDatabaseHelper {
     ''', whereArgs);
   }
 
-  Future<List<SaleTransaction>> getSaleTransactionsByDateRange(int startDate, int endDate) async {
+  Future<List<SaleTransaction>> getSaleTransactionsByDateRange(
+    int startDate,
+    int endDate,
+  ) async {
     final db = database;
     final maps = await db.query(
       'sales_transactions',
@@ -980,17 +1248,27 @@ class UnifiedDatabaseHelper {
 
   Future<int> getSalesCount() async {
     final db = database;
-    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(DISTINCT salesId) FROM sales_transactions'));
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery(
+        'SELECT COUNT(DISTINCT salesId) FROM sales_transactions',
+      ),
+    );
     return count ?? 0;
   }
 
-  Future<void> updateSaleUploadStatus(String salesId, String status, {String? errorMessage}) async {
+  Future<void> updateSaleUploadStatus(
+    String salesId,
+    String status, {
+    String? errorMessage,
+  }) async {
     final db = database;
     await db.update(
       'sales_transactions',
       {
         'upload_status': status,
-        'uploaded_at': status == 'uploaded' ? DateTime.now().millisecondsSinceEpoch : null,
+        'uploaded_at': status == 'uploaded'
+            ? DateTime.now().millisecondsSinceEpoch
+            : null,
         'upload_error': errorMessage,
       },
       where: 'salesId = ?',
@@ -998,9 +1276,12 @@ class UnifiedDatabaseHelper {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getSalesByUploadStatus(String status) async {
+  Future<List<Map<String, dynamic>>> getSalesByUploadStatus(
+    String status,
+  ) async {
     final db = database;
-    return await db.rawQuery('''
+    return await db.rawQuery(
+      '''
       SELECT
         salesId,
         receiptnumber,
@@ -1023,36 +1304,59 @@ class UnifiedDatabaseHelper {
       WHERE upload_status = ?
       GROUP BY salesId
       ORDER BY transactiondate DESC
-    ''', [status]);
+    ''',
+      [status],
+    );
   }
 
   Future<Map<String, dynamic>> getDailySummary(int date) async {
     final db = database;
     final startOfDay = DateTime.fromMillisecondsSinceEpoch(date);
-    final startMillis = DateTime(startOfDay.year, startOfDay.month, startOfDay.day).millisecondsSinceEpoch;
-    final endMillis = DateTime(startOfDay.year, startOfDay.month, startOfDay.day, 23, 59, 59).millisecondsSinceEpoch;
+    final startMillis = DateTime(
+      startOfDay.year,
+      startOfDay.month,
+      startOfDay.day,
+    ).millisecondsSinceEpoch;
+    final endMillis = DateTime(
+      startOfDay.year,
+      startOfDay.month,
+      startOfDay.day,
+      23,
+      59,
+      59,
+    ).millisecondsSinceEpoch;
 
-    final paymentSummary = await db.rawQuery('''
+    final paymentSummary = await db.rawQuery(
+      '''
       SELECT paymenttype, SUM(amountpaid) as totalPaid
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
       GROUP BY paymenttype
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
-    final categorySummary = await db.rawQuery('''
+    final categorySummary = await db.rawQuery(
+      '''
       SELECT category, SUM(amount) as totalAmount
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
       GROUP BY category
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
-    final complementaryTotal = await db.rawQuery('''
+    final complementaryTotal = await db.rawQuery(
+      '''
       SELECT SUM(amount) as total
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ? AND complimentaryid > 0
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
-    final overallTotal = await db.rawQuery('''
+    final overallTotal = await db.rawQuery(
+      '''
       SELECT
         SUM(amount) as totalSales,
         SUM(amountpaid) as totalPaid,
@@ -1060,12 +1364,16 @@ class UnifiedDatabaseHelper {
         COUNT(DISTINCT salesId) as totalTransactions
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
-    ''', [startMillis, endMillis]);
+    ''',
+      [startMillis, endMillis],
+    );
 
     return {
       'paymentSummary': paymentSummary,
       'categorySummary': categorySummary,
-      'complementaryTotal': complementaryTotal.isNotEmpty ? complementaryTotal[0]['total'] ?? 0.0 : 0.0,
+      'complementaryTotal': complementaryTotal.isNotEmpty
+          ? complementaryTotal[0]['total'] ?? 0.0
+          : 0.0,
       'overallTotal': overallTotal.isNotEmpty ? overallTotal[0] : {},
     };
   }
@@ -1115,19 +1423,31 @@ class UnifiedDatabaseHelper {
 
   Future<int> insertCustomerModel(Customer customer) async {
     final db = database;
-    return await db.insert('customers', customer.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'customers',
+      customer.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<int> insertCustomer(Map<String, dynamic> customer) async {
     final db = database;
-    return await db.insert('customers', customer, conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'customers',
+      customer,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<void> insertCustomers(List<Customer> customers) async {
     final db = database;
     final batch = db.batch();
     for (var c in customers) {
-      batch.insert('customers', c.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'customers',
+        c.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
@@ -1151,7 +1471,12 @@ class UnifiedDatabaseHelper {
 
   Future<Customer?> getCustomerById(String id) async {
     final db = database;
-    final maps = await db.query('customers', where: 'id = ?', whereArgs: [id], limit: 1);
+    final maps = await db.query(
+      'customers',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
     return maps.isNotEmpty ? Customer.fromMap(maps.first) : null;
   }
 
@@ -1162,7 +1487,9 @@ class UnifiedDatabaseHelper {
 
   Future<int> getCustomerCount() async {
     final db = database;
-    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM customers'));
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM customers'),
+    );
     return count ?? 0;
   }
 
@@ -1170,7 +1497,12 @@ class UnifiedDatabaseHelper {
   // POS SYNC METADATA METHODS
   // ========================================================================
 
-  Future<void> updateSyncMetadata(String dataType, String status, int recordCount, [String? errorMessage]) async {
+  Future<void> updateSyncMetadata(
+    String dataType,
+    String status,
+    int recordCount, [
+    String? errorMessage,
+  ]) async {
     final db = database;
     await db.insert('sync_metadata', {
       'data_type': dataType,
@@ -1183,7 +1515,12 @@ class UnifiedDatabaseHelper {
 
   Future<Map<String, dynamic>?> getSyncMetadata(String dataType) async {
     final db = database;
-    final result = await db.query('sync_metadata', where: 'data_type = ?', whereArgs: [dataType], limit: 1);
+    final result = await db.query(
+      'sync_metadata',
+      where: 'data_type = ?',
+      whereArgs: [dataType],
+      limit: 1,
+    );
     return result.isNotEmpty ? result.first : null;
   }
 
@@ -1194,10 +1531,18 @@ class UnifiedDatabaseHelper {
     try {
       switch (dataType) {
         case 'users':
-          count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM user')) ?? 0;
+          count =
+              Sqflite.firstIntValue(
+                await db.rawQuery('SELECT COUNT(*) FROM user'),
+              ) ??
+              0;
           break;
         case 'service_points':
-          count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM service_point')) ?? 0;
+          count =
+              Sqflite.firstIntValue(
+                await db.rawQuery('SELECT COUNT(*) FROM service_point'),
+              ) ??
+              0;
           break;
         case 'inventory':
           count = await getInventoryCount();
@@ -1206,7 +1551,11 @@ class UnifiedDatabaseHelper {
           count = await getSalesCount();
           break;
         case 'customers':
-          count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM customers')) ?? 0;
+          count =
+              Sqflite.firstIntValue(
+                await db.rawQuery('SELECT COUNT(*) FROM customers'),
+              ) ??
+              0;
           break;
       }
     } catch (e) {
@@ -1262,42 +1611,61 @@ class UnifiedDatabaseHelper {
         // Convert booleans to integers
         'service': (sale['service'] == true || sale['service'] == 1) ? 1 : 0,
         'payments': (sale['payments'] == true || sale['payments'] == 1) ? 1 : 0,
-        'committed': (sale['committed'] == true || sale['committed'] == 1) ? 1 : 0,
+        'committed': (sale['committed'] == true || sale['committed'] == 1)
+            ? 1
+            : 0,
         'ready': (sale['ready'] == true || sale['ready'] == 1) ? 1 : 0,
         'transactionstatus': sale['transactionstatus'] ?? '', // NOT NULL
         'products': (sale['products'] as num?)?.toDouble() ?? 0.0,
         'services': (sale['services'] as num?)?.toDouble() ?? 0.0,
-        'reportingcurrencyrate': (sale['reportingcurrencyrate'] as num?)?.toDouble() ?? 0.0,
+        'reportingcurrencyrate':
+            (sale['reportingcurrencyrate'] as num?)?.toDouble() ?? 0.0,
         'efris': (sale['efris'] == true || sale['efris'] == 1) ? 1 : 0,
-        'efrisstatus': (sale['efrisstatus'] == true || sale['efrisstatus'] == 1) ? 1 : 0,
+        'efrisstatus': (sale['efrisstatus'] == true || sale['efrisstatus'] == 1)
+            ? 1
+            : 0,
         'efrismessage': sale['efrismessage'],
         'salesId': sale['salesId'] ?? '', // NOT NULL
         'stageid': sale['stageid'],
         'returnid': sale['returnid'],
       };
-      batch.insert('server_sales', sanitizedSale, conflictAlgorithm: ConflictAlgorithm.replace);
+      batch.insert(
+        'server_sales',
+        sanitizedSale,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
     await batch.commit(noResult: true);
   }
 
   Future<Map<String, dynamic>?> getServerSaleBySalesId(String salesId) async {
     final db = database;
-    final maps = await db.query('server_sales', where: 'salesId = ?', whereArgs: [salesId], limit: 1);
+    final maps = await db.query(
+      'server_sales',
+      where: 'salesId = ?',
+      whereArgs: [salesId],
+      limit: 1,
+    );
     return maps.isNotEmpty ? maps.first : null;
   }
 
   Future<void> syncLocalSalesWithServerData() async {
     final db = database;
-    final localSalesIds = await db.rawQuery('SELECT DISTINCT salesId FROM sales_transactions');
+    final localSalesIds = await db.rawQuery(
+      'SELECT DISTINCT salesId FROM sales_transactions',
+    );
 
     for (var row in localSalesIds) {
       final salesId = row['salesId'] as String;
       final serverSale = await getServerSaleBySalesId(salesId);
 
       if (serverSale != null) {
-        final serverAmountPaid = (serverSale['amountpaid'] as num?)?.toDouble() ?? 0.0;
-        final serverBalance = (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
-        final serverPaymentMode = serverSale['paymentmode'] as String? ?? 'Cash';
+        final serverAmountPaid =
+            (serverSale['amountpaid'] as num?)?.toDouble() ?? 0.0;
+        final serverBalance =
+            (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
+        final serverPaymentMode =
+            serverSale['paymentmode'] as String? ?? 'Cash';
 
         await db.update(
           'sales_transactions',
@@ -1316,7 +1684,9 @@ class UnifiedDatabaseHelper {
 
   Future<int> getServerSalesCount() async {
     final db = database;
-    final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM server_sales'));
+    final count = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM server_sales'),
+    );
     return count ?? 0;
   }
 
@@ -1329,7 +1699,10 @@ class UnifiedDatabaseHelper {
   // MONITOR SERVICE POINTS METHODS (mon_service_points)
   // ========================================================================
 
-  Future<void> insertMonServicePoint(Map<String, dynamic> servicePoint, {DatabaseExecutor? db}) async {
+  Future<void> insertMonServicePoint(
+    Map<String, dynamic> servicePoint, {
+    DatabaseExecutor? db,
+  }) async {
     final executor = db ?? database;
     await executor.insert('mon_service_points', {
       'id': servicePoint['id'],
@@ -1356,9 +1729,16 @@ class UnifiedDatabaseHelper {
     return await db.query('mon_service_points');
   }
 
-  Future<String?> getMonServicePointIdByName(String name, {DatabaseExecutor? db}) async {
+  Future<String?> getMonServicePointIdByName(
+    String name, {
+    DatabaseExecutor? db,
+  }) async {
     final executor = db ?? database;
-    final result = await executor.query('mon_service_points', where: 'name = ?', whereArgs: [name]);
+    final result = await executor.query(
+      'mon_service_points',
+      where: 'name = ?',
+      whereArgs: [name],
+    );
     return result.isNotEmpty ? result.first['id'] as String? : null;
   }
 
@@ -1371,7 +1751,10 @@ class UnifiedDatabaseHelper {
   // MONITOR COMPANY DETAILS METHODS
   // ========================================================================
 
-  Future<void> insertCompanyDetails(Map<String, dynamic> companyDetails, {DatabaseExecutor? db}) async {
+  Future<void> insertCompanyDetails(
+    Map<String, dynamic> companyDetails, {
+    DatabaseExecutor? db,
+  }) async {
     final executor = db ?? database;
     await executor.insert('company_details', {
       'branch': companyDetails['branch'],
@@ -1381,7 +1764,8 @@ class UnifiedDatabaseHelper {
       'currentBranchCode': companyDetails['currentBranchCode'],
       'activeBranchName': companyDetails['activeBranch']?['name'],
       'activeBranchAddress': companyDetails['activeBranch']?['address'],
-      'activeBranchPrimaryEmail': companyDetails['activeBranch']?['primaryEmail'],
+      'activeBranchPrimaryEmail':
+          companyDetails['activeBranch']?['primaryEmail'],
       'activeBranchCode': companyDetails['activeBranch']?['code'],
       'efrisEnabled': companyDetails['efrisEnabled'] == true ? 1 : 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -1402,51 +1786,90 @@ class UnifiedDatabaseHelper {
   // MONITOR SALES METHODS (mon_sales)
   // ========================================================================
 
-  Future<void> insertMonSale(Map<String, dynamic> sale, {DatabaseExecutor? db}) async {
+  Future<void> insertMonSale(
+    Map<String, dynamic> sale, {
+    DatabaseExecutor? db,
+  }) async {
     final executor = db ?? database;
     Map<String, dynamic> toInsert = {};
 
     if (sale.containsKey('id')) toInsert['id'] = sale['id'];
-    if (sale.containsKey('purchaseordernumber')) toInsert['purchaseordernumber'] = sale['purchaseordernumber'];
-    if (sale.containsKey('internalrefno')) toInsert['internalrefno'] = sale['internalrefno'];
+    if (sale.containsKey('purchaseordernumber'))
+      toInsert['purchaseordernumber'] = sale['purchaseordernumber'];
+    if (sale.containsKey('internalrefno'))
+      toInsert['internalrefno'] = sale['internalrefno'];
     if (sale.containsKey('issuedby')) toInsert['issuedby'] = sale['issuedby'];
-    if (sale.containsKey('receiptnumber')) toInsert['receiptnumber'] = sale['receiptnumber'];
-    if (sale.containsKey('receivedby')) toInsert['receivedby'] = sale['receivedby'];
+    if (sale.containsKey('receiptnumber'))
+      toInsert['receiptnumber'] = sale['receiptnumber'];
+    if (sale.containsKey('receivedby'))
+      toInsert['receivedby'] = sale['receivedby'];
     if (sale.containsKey('remarks')) toInsert['remarks'] = sale['remarks'];
-    if (sale.containsKey('transactiondate')) toInsert['transactiondate'] = sale['transactiondate'];
-    if (sale.containsKey('costcentre')) toInsert['costcentre'] = sale['costcentre'];
-    if (sale.containsKey('destinationbp')) toInsert['destinationbp'] = sale['destinationbp'];
-    if (sale.containsKey('paymentmode')) toInsert['paymentmode'] = sale['paymentmode'];
-    if (sale.containsKey('sourcefacility')) toInsert['sourcefacility'] = sale['sourcefacility'];
+    if (sale.containsKey('transactiondate'))
+      toInsert['transactiondate'] = sale['transactiondate'];
+    if (sale.containsKey('costcentre'))
+      toInsert['costcentre'] = sale['costcentre'];
+    if (sale.containsKey('destinationbp'))
+      toInsert['destinationbp'] = sale['destinationbp'];
+    if (sale.containsKey('paymentmode'))
+      toInsert['paymentmode'] = sale['paymentmode'];
+    if (sale.containsKey('sourcefacility'))
+      toInsert['sourcefacility'] = sale['sourcefacility'];
     if (sale.containsKey('genno')) toInsert['genno'] = sale['genno'];
-    if (sale.containsKey('paymenttype')) toInsert['paymenttype'] = sale['paymenttype'];
-    if (sale.containsKey('validtill')) toInsert['validtill'] = sale['validtill'];
+    if (sale.containsKey('paymenttype'))
+      toInsert['paymenttype'] = sale['paymenttype'];
+    if (sale.containsKey('validtill'))
+      toInsert['validtill'] = sale['validtill'];
     if (sale.containsKey('currency')) toInsert['currency'] = sale['currency'];
     if (sale.containsKey('quantity')) toInsert['quantity'] = sale['quantity'];
-    if (sale.containsKey('unitquantity')) toInsert['unitquantity'] = sale['unitquantity'];
+    if (sale.containsKey('unitquantity'))
+      toInsert['unitquantity'] = sale['unitquantity'];
     if (sale.containsKey('amount')) toInsert['amount'] = sale['amount'];
-    if (sale.containsKey('amountpaid')) toInsert['amountpaid'] = sale['amountpaid'];
+    if (sale.containsKey('amountpaid'))
+      toInsert['amountpaid'] = sale['amountpaid'];
     if (sale.containsKey('balance')) toInsert['balance'] = sale['balance'];
-    if (sale.containsKey('sellingprice')) toInsert['sellingprice'] = sale['sellingprice'];
-    if (sale.containsKey('costprice')) toInsert['costprice'] = sale['costprice'];
-    if (sale.containsKey('sellingprice_original')) toInsert['sellingprice_original'] = sale['sellingprice_original'];
-    if (sale.containsKey('inventoryname')) toInsert['inventoryname'] = sale['inventoryname'];
+    if (sale.containsKey('sellingprice'))
+      toInsert['sellingprice'] = sale['sellingprice'];
+    if (sale.containsKey('costprice'))
+      toInsert['costprice'] = sale['costprice'];
+    if (sale.containsKey('sellingprice_original'))
+      toInsert['sellingprice_original'] = sale['sellingprice_original'];
+    if (sale.containsKey('inventoryname'))
+      toInsert['inventoryname'] = sale['inventoryname'];
     if (sale.containsKey('category')) toInsert['category'] = sale['category'];
-    if (sale.containsKey('subcategory')) toInsert['subcategory'] = sale['subcategory'];
-    if (sale.containsKey('gnrtd')) toInsert['gnrtd'] = (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0;
-    if (sale.containsKey('printed')) toInsert['printed'] = (sale['printed'] == 1 || sale['printed'] == true) ? 1 : 0;
-    if (sale.containsKey('redeemed')) toInsert['redeemed'] = (sale['redeemed'] == 1 || sale['redeemed'] == true) ? 1 : 0;
-    if (sale.containsKey('cancelled')) toInsert['cancelled'] = (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0;
+    if (sale.containsKey('subcategory'))
+      toInsert['subcategory'] = sale['subcategory'];
+    if (sale.containsKey('gnrtd'))
+      toInsert['gnrtd'] = (sale['gnrtd'] == 1 || sale['gnrtd'] == true) ? 1 : 0;
+    if (sale.containsKey('printed'))
+      toInsert['printed'] = (sale['printed'] == 1 || sale['printed'] == true)
+          ? 1
+          : 0;
+    if (sale.containsKey('redeemed'))
+      toInsert['redeemed'] = (sale['redeemed'] == 1 || sale['redeemed'] == true)
+          ? 1
+          : 0;
+    if (sale.containsKey('cancelled'))
+      toInsert['cancelled'] =
+          (sale['cancelled'] == 1 || sale['cancelled'] == true) ? 1 : 0;
     if (sale.containsKey('patron')) toInsert['patron'] = sale['patron'];
-    if (sale.containsKey('department')) toInsert['department'] = sale['department'];
+    if (sale.containsKey('department'))
+      toInsert['department'] = sale['department'];
     if (sale.containsKey('packsize')) toInsert['packsize'] = sale['packsize'];
-    if (sale.containsKey('packaging')) toInsert['packaging'] = sale['packaging'];
-    if (sale.containsKey('complimentaryid')) toInsert['complimentaryid'] = sale['complimentaryid'];
+    if (sale.containsKey('packaging'))
+      toInsert['packaging'] = sale['packaging'];
+    if (sale.containsKey('complimentaryid'))
+      toInsert['complimentaryid'] = sale['complimentaryid'];
     if (sale.containsKey('salesId')) toInsert['salesId'] = sale['salesId'];
-    if (sale.containsKey('service_point_id')) toInsert['service_point_id'] = sale['service_point_id'];
-    if (sale.containsKey('salesperson')) toInsert['salesperson'] = sale['salesperson'];
+    if (sale.containsKey('service_point_id'))
+      toInsert['service_point_id'] = sale['service_point_id'];
+    if (sale.containsKey('salesperson'))
+      toInsert['salesperson'] = sale['salesperson'];
 
-    await executor.insert('mon_sales', toInsert, conflictAlgorithm: ConflictAlgorithm.replace);
+    await executor.insert(
+      'mon_sales',
+      toInsert,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getMonSales() async {
@@ -1454,7 +1877,10 @@ class UnifiedDatabaseHelper {
     return await db.query('mon_sales', orderBy: 'transactiondate DESC');
   }
 
-  Future<List<Map<String, dynamic>>> getMonSalesByDateRange(int startDate, int endDate) async {
+  Future<List<Map<String, dynamic>>> getMonSalesByDateRange(
+    int startDate,
+    int endDate,
+  ) async {
     final db = database;
     return await db.query(
       'mon_sales',
@@ -1495,7 +1921,10 @@ class UnifiedDatabaseHelper {
   // ========================================================================
 
   /// Insert a KPI sales record
-  Future<void> insertKpiSale(Map<String, dynamic> kpiData, {DatabaseExecutor? db}) async {
+  Future<void> insertKpiSale(
+    Map<String, dynamic> kpiData, {
+    DatabaseExecutor? db,
+  }) async {
     final executor = db ?? database;
     await executor.insert('mon_kpi_sales', {
       'kpi_id': kpiData['kpi_id'] ?? 0,
@@ -1510,7 +1939,10 @@ class UnifiedDatabaseHelper {
   }
 
   /// Insert multiple KPI sales records in a batch
-  Future<void> insertKpiSalesBatch(List<Map<String, dynamic>> kpiDataList, {DatabaseExecutor? db}) async {
+  Future<void> insertKpiSalesBatch(
+    List<Map<String, dynamic>> kpiDataList, {
+    DatabaseExecutor? db,
+  }) async {
     final executor = db ?? database;
     final batch = executor.batch();
     for (final kpiData in kpiDataList) {
@@ -1551,12 +1983,12 @@ class UnifiedDatabaseHelper {
     final db = database;
     String where = 'processing_date BETWEEN ? AND ?';
     List<dynamic> whereArgs = [startDate, endDate];
-    
+
     if (kpiId != null) {
       where += ' AND kpi_id = ?';
       whereArgs.add(kpiId);
     }
-    
+
     return await db.query(
       'mon_kpi_sales',
       where: where,
@@ -1576,7 +2008,10 @@ class UnifiedDatabaseHelper {
   }
 
   /// Get KPI sales summary (totals by kpi)
-  Future<List<Map<String, dynamic>>> getKpiSalesSummary({String? startDate, String? endDate}) async {
+  Future<List<Map<String, dynamic>>> getKpiSalesSummary({
+    String? startDate,
+    String? endDate,
+  }) async {
     final db = database;
     String sql = '''
       SELECT 
@@ -1587,15 +2022,15 @@ class UnifiedDatabaseHelper {
         SUM(amount2) as total_amount2
       FROM mon_kpi_sales
     ''';
-    
+
     List<dynamic> args = [];
     if (startDate != null && endDate != null) {
       sql += ' WHERE processing_date BETWEEN ? AND ?';
       args = [startDate, endDate];
     }
-    
+
     sql += ' GROUP BY kpi_id, kpi ORDER BY total_amount2 DESC';
-    
+
     return await db.rawQuery(sql, args);
   }
 
@@ -1603,7 +2038,10 @@ class UnifiedDatabaseHelper {
   // MONITOR INVENTORY METHODS (mon_inventory)
   // ========================================================================
 
-  Future<void> insertMonInventoryItem(Map<String, dynamic> item, {DatabaseExecutor? db}) async {
+  Future<void> insertMonInventoryItem(
+    Map<String, dynamic> item, {
+    DatabaseExecutor? db,
+  }) async {
     final executor = db ?? database;
     await executor.insert('mon_inventory', {
       'id': item['id'],
@@ -1613,6 +2051,7 @@ class UnifiedDatabaseHelper {
       'name': item['name'],
       'category': item['category'],
       'price': item['price'],
+      'costprice': item['costprice'],
       'packsize': item['packsize'],
       'packaging': item['packaging'],
       'packagingid': item['packagingid'],
@@ -1643,6 +2082,7 @@ class UnifiedDatabaseHelper {
 
   /// Insert multiple inventory items at once
   Future<void> insertMonInventoryItems(List<Map<String, dynamic>> items) async {
+    if (items.isEmpty) return;
     final db = database;
     final batch = db.batch();
     for (final item in items) {
@@ -1654,6 +2094,7 @@ class UnifiedDatabaseHelper {
         'name': item['name'],
         'category': item['category'],
         'price': item['price'],
+        'costprice': item['costprice'],
         'packsize': item['packsize'],
         'packaging': item['packaging'],
         'packagingid': item['packagingid'],
@@ -1674,6 +2115,45 @@ class UnifiedDatabaseHelper {
     await batch.commit(noResult: true);
   }
 
+  /// Insert monitor inventory items in a transaction
+  Future<void> insertMonInventoryItemsInTransaction(
+    List<Map<String, dynamic>> items,
+  ) async {
+    if (items.isEmpty) return;
+    final db = database;
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final item in items) {
+        batch.insert('mon_inventory', {
+          'id': item['id'],
+          'ipdid': item['ipdid'],
+          'code': item['code'],
+          'externalserial': item['externalserial'],
+          'name': item['name'],
+          'category': item['category'],
+          'price': item['price'],
+          'costprice': item['costprice'],
+          'packsize': item['packsize'],
+          'packaging': item['packaging'],
+          'packagingid': item['packagingid'],
+          'soldfrom': item['soldfrom'],
+          'shortform': item['shortform'],
+          'packagingcode': item['packagingcode'],
+          'efris': item['efris'] == true ? 1 : 0,
+          'efrisid': item['efrisid'],
+          'measurmentunitidefris': item['measurmentunitidefris'],
+          'measurmentunit': item['measurmentunit'],
+          'measurmentunitid': item['measurmentunitid'],
+          'vatcategoryid': item['vatcategoryid'],
+          'branchid': item['branchid'],
+          'companyid': item['companyid'],
+          'downloadlink': item['downloadlink'],
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+    });
+  }
+
   // ========================================================================
   // SYNC TRACKER METHODS
   // ========================================================================
@@ -1681,8 +2161,11 @@ class UnifiedDatabaseHelper {
   /// Records a completed sync operation
   Future<int> insertSyncRecord(SyncRecord record) async {
     final db = database;
-    return await db.insert('sync_tracker', record.toMap(), 
-      conflictAlgorithm: ConflictAlgorithm.replace);
+    return await db.insert(
+      'sync_tracker',
+      record.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   /// Gets the timestamp of the most recent successful sync
@@ -1696,7 +2179,7 @@ class UnifiedDatabaseHelper {
       orderBy: 'end_timestamp DESC',
       limit: 1,
     );
-    
+
     if (result.isEmpty) return null;
     return DateTime.fromMillisecondsSinceEpoch(
       (result.first['end_timestamp'] as int) * 1000,
@@ -1721,7 +2204,7 @@ class UnifiedDatabaseHelper {
     final db = database;
     final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
     final cutoffTimestamp = cutoffDate.millisecondsSinceEpoch ~/ 1000;
-    
+
     await db.delete(
       'sync_tracker',
       where: 'end_timestamp < ?',
@@ -1765,7 +2248,10 @@ class UnifiedDatabaseHelper {
   }
 
   /// Execute raw query (for complex operations)
-  Future<List<Map<String, dynamic>>> rawQuery(String sql, [List<Object?>? arguments]) async {
+  Future<List<Map<String, dynamic>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) async {
     final db = database;
     return await db.rawQuery(sql, arguments);
   }
@@ -1790,7 +2276,9 @@ class UnifiedDatabaseHelper {
   Future<bool> hasCompanyDetails() async {
     try {
       final db = database;
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM company_details');
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM company_details',
+      );
       return (result.first['count'] as int? ?? 0) > 0;
     } catch (e) {
       debugPrint('[UnifiedDatabaseHelper] Error checking company details: $e');
@@ -1802,7 +2290,9 @@ class UnifiedDatabaseHelper {
   Future<bool> hasServicePoints() async {
     try {
       final db = database;
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_service_points');
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM mon_service_points',
+      );
       return (result.first['count'] as int? ?? 0) > 0;
     } catch (e) {
       debugPrint('[UnifiedDatabaseHelper] Error checking service points: $e');
@@ -1814,7 +2304,9 @@ class UnifiedDatabaseHelper {
   Future<bool> hasInventory() async {
     try {
       final db = database;
-      final result = await db.rawQuery('SELECT COUNT(*) as count FROM mon_inventory');
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM mon_inventory',
+      );
       return (result.first['count'] as int? ?? 0) > 0;
     } catch (e) {
       debugPrint('[UnifiedDatabaseHelper] Error checking inventory: $e');

@@ -312,8 +312,8 @@ class SalesTrendLineGraph extends StatelessWidget {
     switch (dateRange) {
       case DateRange.today:
       case DateRange.yesterday:
-        // Show hours in 3-hour intervals: 00, 03, 06, 09, 12, 15, 18, 21
-        text = DateFormat('HH').format(date);
+        // Show day name (e.g., Mon, Tue) instead of hourly intervals
+        text = DateFormat('EEE').format(date);
         break;
 
       case DateRange.last7Days:

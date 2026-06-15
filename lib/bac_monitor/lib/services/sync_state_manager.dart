@@ -54,24 +54,9 @@ class SyncStateManager extends GetxService {
       return SyncScenario.firstLogin;
     }
     
-    // Check if today's data exists
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final hasTodayData = await _dbHelper.hasKpiDataForDateRange(today, today);
-    
-    if (!hasTodayData) {
-      debugPrint('[SyncStateManager] Subsequent login - today data missing');
-      return SyncScenario.subsequentLogin;
-    }
-    
-    // Check cache validity (30 min window)
-    final needsSync = await isSyncNeeded(cacheMinutes: 30);
-    if (needsSync) {
-      debugPrint('[SyncStateManager] Cache expired - refreshing today');
-      return SyncScenario.subsequentLogin;
-    }
-    
-    debugPrint('[SyncStateManager] Cache valid - skipping fetch');
-    return SyncScenario.cacheValid;
+    // For subsequent logins, always refresh today's data
+    debugPrint('[SyncStateManager] Subsequent login - always refreshing today\'s data');
+    return SyncScenario.subsequentLogin;
   }
   
   /// Check if controllers should fetch data or use cache

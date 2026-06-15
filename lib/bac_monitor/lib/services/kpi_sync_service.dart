@@ -42,24 +42,25 @@ class KpiSyncService extends GetxService {
   Future<Map<int, List<Map<String, dynamic>>>> fetchTodayKpiMetrics() async {
     final now = DateTime.now();
     final today = DateFormat('yyyy-MM-dd').format(now);
-    
+    final sevenDaysAgo = DateFormat('yyyy-MM-dd').format(now.subtract(const Duration(days: 7)));
+
     final results = <int, List<Map<String, dynamic>>>{};
     int totalRecords = 0;
 
     for (final kpiType in kpiTypes) {
       try {
-        debugPrint('[KpiSyncService] Fetching KPI ${kpiType['name']} (id=${kpiType['id']}) for $today');
-        
+        debugPrint('[KpiSyncService] Fetching KPI ${kpiType['name']} (id=${kpiType['id']}) from $sevenDaysAgo to $today');
+
         final response = await _apiService.getWithAuth(
-          '/sales/reports/kpi?startDate=$today&endDate=$today&kpiId=${kpiType['id']}&timeframe=1',
+          '/sales/reports/kpi?startDate=$sevenDaysAgo&endDate=$today&kpiId=${kpiType['id']}&timeframe=1',
         );
-        
+
         final data = await compute(_decodeJsonList, response.body);
         final records = data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        
+
         results[kpiType['id'] as int] = records;
         totalRecords += records.length;
-        
+
         debugPrint('[KpiSyncService] Fetched ${records.length} records for ${kpiType['name']}');
       } catch (e) {
         debugPrint('[KpiSyncService] Error fetching KPI ${kpiType['name']}: $e');
@@ -70,7 +71,8 @@ class KpiSyncService extends GetxService {
     // Store to database using the existing syncAllKpiData pattern
     if (totalRecords > 0) {
       try {
-        await _apiService.syncAllKpiData(now, now);
+        final startDate = DateFormat('yyyy-MM-dd').parse(sevenDaysAgo);
+        await _apiService.syncAllKpiData(startDate, now);
         debugPrint('[KpiSyncService] Stored $totalRecords KPI records to database');
       } catch (e) {
         debugPrint('[KpiSyncService] Error storing KPI records: $e');
@@ -268,6 +270,7 @@ class KpiSyncService extends GetxService {
       final body = response.body;
       if (body.isNotEmpty) {
         inventory = await compute(_decodeJsonList, body);
+        // debugPrint(body);
         debugPrint('[KpiSyncService] Fetched ${inventory.length} inventory items');
       }
     } catch (e) {

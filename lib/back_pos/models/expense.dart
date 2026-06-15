@@ -6,7 +6,11 @@ class Expense {
   final String category;
   final DateTime date;
   final String? servicePointId;
-  final String? subject; // stores user ID
+  final String? subject;
+  final String? staffId;
+  final String uploadStatus;
+  final int? createdAt;
+  final String expenseType; // 'stock' or 'non-stock'
 
   Expense({
     required this.id,
@@ -17,6 +21,10 @@ class Expense {
     required this.date,
     this.servicePointId,
     this.subject,
+    this.staffId,
+    this.uploadStatus = 'pending',
+    this.createdAt,
+    this.expenseType = 'non-stock',
   });
 
   Map<String, dynamic> toMap() {
@@ -29,6 +37,10 @@ class Expense {
       'date': date.millisecondsSinceEpoch,
       'servicePointId': servicePointId,
       'subject': subject,
+      'staffId': staffId,
+      'upload_status': uploadStatus,
+      'created_at': createdAt ?? DateTime.now().millisecondsSinceEpoch,
+      'expense_type': expenseType,
     };
   }
 
@@ -42,6 +54,10 @@ class Expense {
       date: DateTime.fromMillisecondsSinceEpoch(map['date'] ?? 0),
       servicePointId: map['servicePointId'],
       subject: map['subject'],
+      staffId: map['staffId'],
+      uploadStatus: map['upload_status'] ?? 'pending',
+      createdAt: map['created_at'],
+      expenseType: map['expense_type'] ?? 'non-stock',
     );
   }
 }

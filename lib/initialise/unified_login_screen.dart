@@ -1,7 +1,5 @@
-import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/account_manager.dart';
-import 'package:bac_pos/flavors/flavor_config.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +8,6 @@ import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
 import 'package:bac_pos/back_pos/config.dart';
 import 'package:get_storage/get_storage.dart';
 
-import '../bac_monitor/lib/additions/colors.dart';
 import '../bac_monitor/lib/controllers/mon_dashboard_controller.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_store_controller.dart';
@@ -32,7 +29,6 @@ class UnifiedLoginScreen extends StatefulWidget {
 }
 
 class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
-  PosApiService _apiService = Get.find<PosApiService>();
   final MonitorApiService _monitorApiService = Get.find<MonitorApiService>();
   final AccountManager _accountManager = Get.find<AccountManager>();
   final _formKey = GlobalKey<FormState>();
@@ -168,10 +164,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   }
 
   Future<void> _completeCustomerLogin(
-    dynamic customer,
-    String identifier,
-    String pin,
-  ) async {
+      dynamic customer,
+      String identifier,
+      String pin,
+      ) async {
     final box = GetStorage();
     await box.remove('pending_registration');
     await box.write('logged_in_customer', customer.toMap());
@@ -204,10 +200,10 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   }
 
   Future<void> _handleCachedStaffLogin(
-    Map<String, dynamic> cachedAccount,
-    String username,
-    String password,
-  ) async {
+      Map<String, dynamic> cachedAccount,
+      String username,
+      String password,
+      ) async {
     final companyId = cachedAccount['companyId'] as String;
     final roles = cachedAccount['roles'] as List<dynamic>?;
     final userData = cachedAccount['userData'] as Map<String, dynamic>? ?? {};
@@ -351,7 +347,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   void _navigateToHome(bool isAdmin) {
     if (isAdmin) {
       if (!Get.isRegistered<MonDashboardController>()) {
-        Get.put(MonDashboardController());
+        Get.put(MonDashboardController(), permanent: true);
       }
       if (!Get.isRegistered<MonOperatorController>()) {
         Get.put(MonOperatorController());
@@ -369,12 +365,12 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
   }
 
   Future<void> _syncToMonitorServiceAsync(
-    String token,
-    String companyId,
-    Map<String, dynamic> userData,
-    String username,
-    String password,
-  ) async {
+      String token,
+      String companyId,
+      Map<String, dynamic> userData,
+      String username,
+      String password,
+      ) async {
     await Future.wait([
       _monitorApiService.storeToken(token),
       _monitorApiService.storeCompanyId(companyId),
@@ -391,13 +387,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     return CredentialHelper.getStoredCredentials();
   }
 
-  Future<void> _clearStoredCredentials() async {
-    await CredentialHelper.clearCredentials();
-  }
 
-  Future<bool> _hasStoredCredentials() async {
-    return CredentialHelper.hasStoredCredentials();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -430,7 +420,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
     final Color errorTextColor = isDark ? Colors.red.shade300 : Colors.red;
 
     return Scaffold(
-      backgroundColor: Colors.blue.shade700,
+      backgroundColor: FlavorColors.current.primaryDark,
+
       body: Container(
         child: SafeArea(
           child: Center(
@@ -617,7 +608,8 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.shade800,
+                                backgroundColor: FlavorColors.current.primaryDark,
+
                                 foregroundColor: FlavorColors.current.onPrimary,
                                 elevation: 4,
                                 shadowColor: FlavorColors.current.primaryDark
@@ -629,24 +621,24 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                               ),
                               child: _isLoading
                                   ? const SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                      ),
-                                    )
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor:
+                                  AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
                                   : const Text(
-                                      'Sign In',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
+                                'Sign In',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ),
                           ),
 
@@ -662,9 +654,9 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
                                     : () => Get.to(Register()),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
-                                      FlavorColors.current.primaryDark,
+                                  FlavorColors.current.primaryDark,
                                   foregroundColor:
-                                      FlavorColors.current.onPrimary,
+                                  FlavorColors.current.onPrimary,
                                   elevation: 4,
                                   shadowColor: FlavorColors.current.primaryDark
                                       .withOpacity(0.5),

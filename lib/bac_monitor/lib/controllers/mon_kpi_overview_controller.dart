@@ -1,5 +1,6 @@
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -70,80 +71,54 @@ class MonKpiOverviewController extends GetxController {
 
   Future<void> fetchKpiData() async {
     try {
-      // Always fetch data from local DB - date range specific data should be queried each time
-      // Do NOT skip based on SyncStateManager as date ranges change and need fresh data
+
       
       isLoading.value = true;
       hasError.value = false;
 
       final db = dbHelper.database;
-      final now = DateTime.now();
-      DateTime startDate;
-      DateTime endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      // ✅ USE EXACT SAME METHOD THAT WORKS IN SALES TRENDS CONTROLLER!
+      DateTimeRange dateRange = _getDateRange();
+      DateTime startDate = dateRange.start;
+      DateTime endDate = dateRange.end;
       DateTime prevStartDate;
       DateTime prevEndDate;
 
+      // Calculate previous period for trends
       final range = dateController.selectedRange.value;
       final customRange = dateController.customRange.value;
-
+      final now = DateTime.now();
+      
       switch (range) {
         case DateRange.today:
-          startDate = DateTime(now.year, now.month, now.day);
-          endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
           prevStartDate = startDate.subtract(const Duration(days: 1));
           prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           break;
         case DateRange.yesterday:
-          startDate = DateTime(
-            now.year,
-            now.month,
-            now.day,
-          ).subtract(const Duration(days: 1));
-          endDate = DateTime(
-            now.year,
-            now.month,
-            now.day,
-          ).subtract(const Duration(milliseconds: 1));
           prevStartDate = startDate.subtract(const Duration(days: 1));
           prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           break;
         case DateRange.last7Days:
-          startDate = now.subtract(const Duration(days: 6));
-          startDate = DateTime(startDate.year, startDate.month, startDate.day);
-          endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
           prevStartDate = startDate.subtract(const Duration(days: 7));
           prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           break;
         case DateRange.monthToDate:
-          startDate = DateTime(now.year, now.month, 1);
-          endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
           final prevMonth = DateTime(now.year, now.month - 1, 1);
           prevStartDate = prevMonth;
-          prevEndDate = DateTime(
-            now.year,
-            now.month,
-            1,
-          ).subtract(const Duration(milliseconds: 1));
+          prevEndDate = DateTime(now.year, now.month, 1).subtract(const Duration(milliseconds: 1));
           break;
         case DateRange.custom:
           if (customRange != null) {
-            startDate = customRange.start;
-            endDate = customRange.end;
             final duration = endDate.difference(startDate);
             prevStartDate = startDate.subtract(duration);
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           } else {
-            startDate = now.subtract(const Duration(days: 6));
-            startDate = DateTime(
-              startDate.year,
-              startDate.month,
-              startDate.day,
-            );
             prevStartDate = startDate.subtract(const Duration(days: 7));
             prevEndDate = startDate.subtract(const Duration(milliseconds: 1));
           }
           break;
       }
+
 
       // Format dates for KPI queries (yyyy-MM-dd)
       // NOTE: processing_date stores date-only strings (no time component)
@@ -478,8 +453,52 @@ class MonKpiOverviewController extends GetxController {
       debugPrint("Error fetching KPI data: $e");
       // Print stack trace for better debugging
       debugPrintStack(stackTrace: StackTrace.current);
-    } finally {
-      isLoading.value = false;
+     } finally {
+       isLoading.value = false;
+     }
+   }
+
+  /// ✅ EXACT SAME METHOD FROM SALES TRENDS CONTROLLER THAT WORKS 100%
+  DateTimeRange _getDateRange() {
+    final now = DateTime.now();
+    DateTime startDate;
+    DateTime endDate;
+    final range = dateController.selectedRange.value;
+    final customRange = dateController.customRange.value;
+
+    switch (range) {
+      case DateRange.today:
+        startDate = DateTime(now.year, now.month, now.day);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case DateRange.yesterday:
+        startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
+        endDate = DateTime(now.year, now.month, now.day).subtract(const Duration(milliseconds: 1));
+        break;
+      case DateRange.last7Days:
+        startDate = now.subtract(const Duration(days: 6));
+        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case DateRange.monthToDate:
+        startDate = DateTime(now.year, now.month, 1);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        break;
+      case DateRange.custom:
+        if (customRange != null) {
+          startDate = customRange.start;
+          endDate = customRange.end;
+        } else {
+          startDate = now.subtract(const Duration(days: 6));
+          startDate = DateTime(startDate.year, startDate.month, startDate.day);
+          endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        }
+        break;
+      default:
+        startDate = now.subtract(const Duration(days: 6));
+        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     }
+    return DateTimeRange(start: startDate, end: endDate);
   }
-}
+ }

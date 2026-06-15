@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
 // Package imports for external dependencies
 import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
 import 'package:bac_pos/bac_monitor/lib/services/kpi_sync_service.dart';
-import 'bac_monitor/lib/controllers/mon_kpi_controller.dart';
 import 'bac_monitor/lib/repositories/kpi_repository.dart';
 import 'bac_monitor/lib/additions/colors.dart';
 import 'bac_monitor/lib/controllers/mon_data_sync_controller.dart';
@@ -26,33 +26,27 @@ import 'back_pos/controllers/user_controller.dart';
 import 'back_pos/services/api_services.dart';
 import 'back_pos/services/sales_sync_service.dart';
 import 'back_pos/config.dart';
-import 'initialise/unified_login_screen.dart';
 import 'initialise/splashscreen.dart';
 import 'shared/services/customer_auth_service.dart';
+import 'shared/widgets/offline_banner.dart';
 
-// Monitor Module imports
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_dashboard_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_gross_profit_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_kpi_overview_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_main_navigation_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_operator_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_outstanding_payments_controller.dart';
-import 'package:bac_pos/bac_monitor/lib/controllers/mon_salestrends_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_store_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_store_kpi_controller.dart';
 import 'package:bac_pos/bac_monitor/lib/controllers/mon_sync_controller.dart';
+import 'package:bac_pos/bac_monitor/lib/controllers/theme_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
 
-  // Debug: Print flavor info
   print('FlavorConfig.flavorName: ${FlavorConfig.flavorName}');
   print('FlavorColors.current.primary: ${FlavorColors.current.primary}');
 
   // Initialize bot credentials from dart-define to secure storage
   final customerAuthService = CustomerAuthService();
+
   await customerAuthService.initBotCredentials();
+
 
   // Fetch and store bot's company info for flavor validation
   try {
@@ -81,20 +75,13 @@ void main() async {
   Get.put(UserController());
   Get.put(SettingsController());
   Get.put(ServicePointController());
+  Get.put(MonStoresController());
 
-  Get.lazyPut<MonDashboardController>(() => MonDashboardController());
-  Get.lazyPut<MonKpiController>(() => MonKpiController());
-  Get.lazyPut<MonGrossProfitController>(() => MonGrossProfitController());
-  Get.lazyPut<MonKpiOverviewController>(() => MonKpiOverviewController());
-  Get.lazyPut<MonMainNavigationController>(() => MonMainNavigationController());
-  Get.lazyPut<MonOperatorController>(() => MonOperatorController());
-  Get.lazyPut<MonOutstandingPaymentsController>(() => MonOutstandingPaymentsController());
-  Get.lazyPut<MonSalesTrendsController>(() => MonSalesTrendsController());
-  Get.lazyPut<MonStoresController>(() => MonStoresController());
   Get.lazyPut<MonStoreKpiTrendController>(() => MonStoreKpiTrendController());
   Get.lazyPut<MonSyncController>(() => MonSyncController());
   Get.lazyPut<MonDataSyncController>(() => MonDataSyncController());
   Get.put(ProfileController());
+  Get.put(ThemeController());
   runApp(const MyApp());
 }
 
@@ -103,65 +90,74 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: AppConfig.appName,
-      debugShowCheckedModeBanner: true,
-      
-      // Light theme configuration
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: FlavorColors.current.primary,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: LightColors.background,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: LightColors.background, 
-          foregroundColor: LightColors.textPrimary,
-        ),
-        cardTheme: CardThemeData(
-          color: LightColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(color: LightColors.border),
+    return Obx(() {
+      final controller = Get.find<ThemeController>();
+      return GetMaterialApp(
+        title: AppConfig.appName,
+        debugShowCheckedModeBanner: true,
+
+        // Light theme configuration
+        theme: ThemeData(
+          fontFamily: 'JosefinSans',
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: FlavorColors.current.primary,
+            brightness: Brightness.light,
           ),
-        ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(color: LightColors.textPrimary),
-          bodyMedium: TextStyle(color: LightColors.textSecondary),
-        ),
-        useMaterial3: true,
-      ),
-      
-      // Dark theme configuration
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: FlavorColors.current.primary,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: DarkColors.background,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: DarkColors.background,
-          foregroundColor: DarkColors.textPrimary,
-        ),
-        cardTheme: CardThemeData(
-          color: DarkColors.card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(color: DarkColors.border),
+          scaffoldBackgroundColor: LightColors.background,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: LightColors.background,
+            foregroundColor: LightColors.textPrimary,
           ),
+          cardTheme: CardThemeData(
+            color: LightColors.card,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: LightColors.border),
+            ),
+          ),
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(color: LightColors.textPrimary),
+            bodyMedium: TextStyle(color: LightColors.textSecondary),
+          ),
+          useMaterial3: true,
         ),
-        textTheme: TextTheme(
-          bodyLarge: TextStyle(color: DarkColors.textPrimary),
-          bodyMedium: TextStyle(color: DarkColors.textSecondary),
+
+        // Dark theme configuration
+        darkTheme: ThemeData(
+          fontFamily: 'JosefinSans',
+
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: FlavorColors.current.primary,
+            brightness: Brightness.dark,
+          ),
+          scaffoldBackgroundColor: LightColors.background,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: LightColors.background,
+            foregroundColor: LightColors.textPrimary,
+          ),
+          cardTheme: CardThemeData(
+            color: LightColors.card,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              side: BorderSide(color: LightColors.border),
+            ),
+          ),
+          textTheme: TextTheme(
+            bodyLarge: TextStyle(color: LightColors.textPrimary),
+            bodyMedium: TextStyle(color: LightColors.textSecondary),
+          ),
+          useMaterial3: true,
         ),
-        useMaterial3: true,
-      ),
-      
-      // Follow device's system theme
-      themeMode: ThemeMode.system,
-      
-      fallbackLocale: const Locale('en', 'US_store'),
-      home: const SplashScreen(),
-    );
+
+        // Follow device's system theme or manual setting
+        themeMode: controller.themeMode.value,
+
+        fallbackLocale: const Locale('en', 'US_store'),
+        builder: (context, child) {
+          return OfflineBanner(child: child ?? const SplashScreen());
+        },
+        home: const SplashScreen(),
+      );
+    });
   }
 }

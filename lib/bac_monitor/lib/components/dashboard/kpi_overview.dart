@@ -36,7 +36,7 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
         children: [
           Skeletonizer(
             enabled: isLoading,
-            child: Obx(() => KpiCard(
+            child: KpiCard(
               title: isGym ? "Total Revenue" : "Total Sales",
               value: controller.totalSales.value,
               unit: controller.unit.value,
@@ -55,7 +55,7 @@ class _KpiOverviewSectionState extends State<KpiOverviewSection> {
                   accentColor: const Color(0xFFFFC107),
                 ),
               ],
-            )),
+            ),
           ),
         ],
       );

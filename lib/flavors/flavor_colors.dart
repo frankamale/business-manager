@@ -251,7 +251,7 @@ class FlavorColors {
     'sassy': Palettes.purple,
     'top_grade': Palettes.orange,
     'mega': Palettes.green,
-    'bac': Palettes.black,
+    'bac': Palettes.blue,
   };
 
   /// Get the color palette for the current flavor/company

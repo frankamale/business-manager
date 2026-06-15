@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import '../widgets/barcode_scanner.dart';
 import 'payment_screen.dart';
 import '../models/inventory_item.dart';
 import '../models/service_point.dart';
@@ -151,82 +153,231 @@ class _PosScreenState extends State<PosScreen> {
     final inventoryItem = item['item'] as InventoryItem;
     bool isComplimentary = item['complimentary'] == true;
 
+    final qtyController = TextEditingController(text: item['quantity'].toString());
+    final priceController = TextEditingController(text: (item['price'] as num).toStringAsFixed(0));
+
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                item['name'],
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Category: ${inventoryItem.category}',
-                    style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Price per unit: UGX ${formatMoney(inventoryItem.price)}',
-                    style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                  ),
-                  if (inventoryItem.packaging.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'Packaging: ${inventoryItem.packaging}',
-                      style: TextStyle(color: Colors.grey[700], fontSize: 14),
+            final bool isPriceEditable = !widget.isViewOnly &&
+                settingsController.priceEditingEnabled.value &&
+                !isComplimentary;
+
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header with Delete Icon
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 8, 8),
+                      decoration: BoxDecoration(
+                        color: FlavorColors.current.surface,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item['name'],
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
+                          if (!widget.isViewOnly)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, color: Colors.red),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                _removeItemFromCart(index);
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: FlavorColors.current.light.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    inventoryItem.category,
+                                    style: TextStyle(
+                                      color: FlavorColors.current.primaryDark,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'Base: UGX ${formatMoney(inventoryItem.price)}',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Quantity Field
+                            const Text(
+                              'Quantity',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: qtyController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.shopping_basket_outlined, size: 20),
+                                hintText: 'Enter quantity',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Price Field
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Price (UGX)',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                if (isComplimentary)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade100,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      'COMPLIMENTARY',
+                                      style: TextStyle(
+                                        color: Colors.orange.shade900,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: priceController,
+                              keyboardType: TextInputType.number,
+                              readOnly: !isPriceEditable,
+                              style: TextStyle(
+                                color: isPriceEditable ? Colors.black : Colors.grey[600],
+                                fontWeight: isPriceEditable ? FontWeight.bold : FontWeight.normal,
+                              ),
+                              decoration: InputDecoration(
+                                prefixIcon: const Icon(Icons.payments_outlined, size: 20),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                fillColor: isPriceEditable ? Colors.white : Colors.grey[50],
+                                filled: true,
+                                helperText: isPriceEditable ? null : 'Price editing is disabled',
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            Container(
+                              decoration: BoxDecoration(
+                                color: FlavorColors.current.background,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: CheckboxListTile(
+                                title: const Text(
+                                  'Mark as Complimentary',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                ),
+                                value: isComplimentary,
+                                activeColor: FlavorColors.current.primary,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                                controlAffinity: ListTileControlAffinity.leading,
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    isComplimentary = value ?? false;
+                                    if (isComplimentary) {
+                                      priceController.text = '0';
+                                    } else {
+                                      priceController.text = inventoryItem.price.toStringAsFixed(0);
+                                    }
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const Divider(height: 1),
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final newQty = int.tryParse(qtyController.text) ?? item['quantity'];
+                                final newPrice = double.tryParse(priceController.text) ?? (item['price'] as num).toDouble();
+
+                                setState(() {
+                                  selectedItems[index]['complimentary'] = isComplimentary;
+                                  selectedItems[index]['quantity'] = newQty;
+                                  selectedItems[index]['price'] = newPrice;
+                                  selectedItems[index]['amount'] = newQty * newPrice;
+                                  _priceControllers[item['id']]?.text = newPrice.toStringAsFixed(0);
+                                });
+                                Navigator.of(context).pop();
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: FlavorColors.current.primary,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 0,
+                              ),
+                              child: const Text('Apply Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                  const Divider(height: 24),
-                  CheckboxListTile(
-                    title: const Text('Complimentary'),
-                    subtitle: const Text('Set price to 0 for this item'),
-                    value: isComplimentary,
-                    activeColor: FlavorColors.current.primary,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (value) {
-                      setDialogState(() {
-                        isComplimentary = value ?? false;
-                      });
-                    },
-                  ),
-                ],
+                ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      selectedItems[index]['complimentary'] = isComplimentary;
-                      if (isComplimentary) {
-                        selectedItems[index]['price'] = 0.0;
-                        selectedItems[index]['amount'] = 0.0;
-                        _priceControllers[item['id']]?.text = '0';
-                      } else {
-                        selectedItems[index]['price'] = inventoryItem.price;
-                        selectedItems[index]['amount'] =
-                            selectedItems[index]['quantity'] *
-                            inventoryItem.price;
-                        _priceControllers[item['id']]?.text = inventoryItem
-                            .price
-                            .toStringAsFixed(0);
-                      }
-                    });
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Apply'),
-                ),
-              ],
             );
           },
         );
@@ -629,6 +780,7 @@ class _PosScreenState extends State<PosScreen> {
       child: InkWell(
         onTap: () {
           _addItemToCart(item);
+          inventoryController.clearSearch();
           Navigator.of(context).pop();
         },
         borderRadius: BorderRadius.circular(10),
@@ -717,7 +869,7 @@ class _PosScreenState extends State<PosScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: FlavorColors.current.primary,
+                      color: Colors.grey.shade900,
                     ),
                   ),
                   if (item.costprice != null && item.costprice! > 0) ...[
@@ -738,7 +890,7 @@ class _PosScreenState extends State<PosScreen> {
                       fontSize: 11,
                       color: FlavorColors.current.tertiary,
                     ),
-                  ),
+                  ), 
                 ],
               ),
             ],
@@ -763,7 +915,34 @@ class _PosScreenState extends State<PosScreen> {
         ),
         centerTitle: true,
         backgroundColor: FlavorColors.current.primary,
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final result = await Get.to(() => const BarcodeScannerPage());
+
+              if (result is InventoryItem) {
+                _addItemToCart(result);
+                inventoryController.clearSearch();
+              }
+            },
+            icon: const Icon(Icons.qr_code_scanner),
+          ),
+        ],
       ),
+      // floatingActionButton: FloatingActionButton.extended(
+      //   onPressed: () async {
+      //     final result = await Get.to(() => const BarcodeScannerPage());
+      //
+      //     if (result is InventoryItem) {
+      //       _addItemToCart(result);
+      //       inventoryController.clearSearch();
+      //     }
+      //   },
+      //   icon: const Icon(Icons.qr_code_scanner),
+      //   label: const Text('Scan'),
+      //   backgroundColor: Colors.red,
+      //   foregroundColor: Colors.white,
+      // ),
       body: SafeArea(
         child: Column(
           children: [
@@ -1055,7 +1234,8 @@ class _PosScreenState extends State<PosScreen> {
                               ],
                             ),
                           ),
-                          // Items List
+                          // Items Lis
+
                           Expanded(
                             child: selectedItems.isEmpty
                                 ? const Center(
@@ -1348,13 +1528,17 @@ class _PosScreenState extends State<PosScreen> {
                                                               4,
                                                             ),
                                                         border: Border.all(
-                                                          color: Colors.green.shade900
+                                                          color: Colors
+                                                              .green
+                                                              .shade900,
                                                         ),
                                                       ),
                                                       child: Icon(
                                                         Icons.add,
                                                         size: 16,
-                                                        color: Colors.green.shade900
+                                                        color: Colors
+                                                            .green
+                                                            .shade900,
                                                       ),
                                                     ),
                                                   ),
@@ -1399,7 +1583,10 @@ class _PosScreenState extends State<PosScreen> {
                       children: [
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => Navigator.of(context).pop(),
+                            onPressed: () {
+                              inventoryController.clearSearch();
+                              Navigator.of(context).pop();
+                            },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               backgroundColor: FlavorColors.current.primaryDark,
@@ -1682,21 +1869,71 @@ class _PosScreenState extends State<PosScreen> {
                                                     );
                                                   }
 
-                                                  return ListView.builder(
-                                                    padding:
-                                                        const EdgeInsets.all(8),
-                                                    itemCount:
-                                                        inventoryController
-                                                            .filteredItems
-                                                            .length,
-                                                    itemBuilder: (context, index) {
-                                                      final item =
+                                                  return NotificationListener<
+                                                    ScrollNotification
+                                                  >(
+                                                    onNotification:
+                                                        (
+                                                          ScrollNotification
+                                                          scrollInfo,
+                                                        ) {
+                                                          if (scrollInfo
+                                                                  .metrics
+                                                                  .pixels >=
+                                                              scrollInfo
+                                                                      .metrics
+                                                                      .maxScrollExtent *
+                                                                  0.8) {
+                                                            if (inventoryController
+                                                                    .hasMoreItems
+                                                                    .value &&
+                                                                !inventoryController
+                                                                    .isLoadingInventory
+                                                                    .value) {
+                                                              inventoryController
+                                                                  .loadMoreInventory();
+                                                            }
+                                                          }
+                                                          return false;
+                                                        },
+                                                    child: ListView.builder(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            8,
+                                                          ),
+                                                      itemCount:
                                                           inventoryController
-                                                              .filteredItems[index];
-                                                      return _buildItemCard(
-                                                        item,
-                                                      );
-                                                    },
+                                                              .filteredItems
+                                                              .length +
+                                                          (inventoryController
+                                                                  .isLoadingInventory
+                                                                  .value
+                                                              ? 1
+                                                              : 0),
+                                                      itemBuilder: (context, index) {
+                                                        if (index >=
+                                                            inventoryController
+                                                                .filteredItems
+                                                                .length) {
+                                                          return const Center(
+                                                            child: Padding(
+                                                              padding:
+                                                                  EdgeInsets.all(
+                                                                    8.0,
+                                                                  ),
+                                                              child:
+                                                                  CircularProgressIndicator(),
+                                                            ),
+                                                          );
+                                                        }
+                                                        final item =
+                                                            inventoryController
+                                                                .filteredItems[index];
+                                                        return _buildItemCard(
+                                                          item,
+                                                        );
+                                                      },
+                                                    ),
                                                   );
                                                 }),
                                               ),

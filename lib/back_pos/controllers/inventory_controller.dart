@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
@@ -8,14 +10,20 @@ class InventoryController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
   final _apiService = Get.find<PosApiService>();
 
-  // Reactive list of inventory items
   var inventoryItems = <InventoryItem>[].obs;
   var filteredItems = <InventoryItem>[].obs;
   var categories = <String>[].obs;
 
-  // Loading state
   var isLoadingInventory = false.obs;
   var isSyncingInventory = false.obs;
+  var hasMoreItems = true.obs;
+
+  static const int pageSize = 100;
+  int _currentPage = 0;
+  int _totalItemCount = 0;
+
+  String _currentSearchQuery = '';
+  Timer? _searchDebounceTimer;
 
   @override
   void onInit() {
@@ -23,22 +31,93 @@ class InventoryController extends GetxController {
     // Don't load on init - will be handled by splash screen
   }
 
-  // Load inventory from database (cache)
+  // Load first page of inventory from database (cache) - paginated
   Future<void> loadInventoryFromCache() async {
     try {
       isLoadingInventory.value = true;
+      _currentPage = 0;
+      inventoryItems.clear();
+      hasMoreItems.value = true;
 
-      final items = await _dbHelper.getInventoryItems();
-      inventoryItems.value = items;
-      filteredItems.value = items;
+      _totalItemCount = await _dbHelper.getInventoryTotalCount();
+      final items = await _dbHelper.getInventoryItems(limit: pageSize, offset: 0);
+      inventoryItems.addAll(items);
+      filteredItems.value = inventoryItems.toList();
 
       final cats = await _dbHelper.getInventoryCategories();
       categories.value = cats;
+
+      if (inventoryItems.length >= _totalItemCount) {
+        hasMoreItems.value = false;
+      }
 
       isLoadingInventory.value = false;
     } catch (e) {
       isLoadingInventory.value = false;
     }
+  }
+
+  // Load more inventory (pagination)
+  Future<void> loadMoreInventory() async {
+    if (!hasMoreItems.value || isLoadingInventory.value) {
+      return;
+    }
+    try {
+      isLoadingInventory.value = true;
+      _currentPage++;
+      final offset = _currentPage * pageSize;
+      final items = await _dbHelper.getInventoryItems(limit: pageSize, offset: offset);
+      inventoryItems.addAll(items);
+      filteredItems.value = inventoryItems.toList();
+
+      if (inventoryItems.length >= _totalItemCount) {
+        hasMoreItems.value = false;
+      }
+      isLoadingInventory.value = false;
+    } catch (e) {
+      isLoadingInventory.value = false;
+    }
+  }
+
+  // Reset and reload first page
+  Future<void> reloadInventory() async {
+    _currentPage = 0;
+    hasMoreItems.value = true;
+    inventoryItems.clear();
+    await loadInventoryFromCache();
+  }
+
+  // Search inventory items - queries directly from DB
+  void searchInventory(String query) {
+    _currentSearchQuery = query;
+    _searchDebounceTimer?.cancel();
+
+    if (query.isEmpty) {
+      filteredItems.value = inventoryItems.toList();
+      return;
+    }
+
+    isLoadingInventory.value = true;
+    _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
+      await _executeSearch(query);
+    });
+  }
+
+  Future<void> _executeSearch(String query) async {
+    try {
+      final results = await _dbHelper.searchInventoryItems(query, limit: 200);
+      filteredItems.value = results;
+    } catch (e) {
+      filteredItems.clear();
+    } finally {
+      isLoadingInventory.value = false;
+    }
+  }
+
+  void clearSearch() {
+    _searchDebounceTimer?.cancel();
+    _currentSearchQuery = '';
+    filteredItems.value = inventoryItems.toList();
   }
 
   // Sync inventory from API to local database
@@ -49,14 +128,53 @@ class InventoryController extends GetxController {
       // Fetch inventory from API
       final items = await _apiService.fetchInventory();
 
-      // Save inventory to database
-      await _dbHelper.insertInventoryItemModels(items);
+      if (items.isNotEmpty) {
+        debugPrint('InventoryController: Got ${items.length} items from API');
+        
+        // Delete existing inventory only on first sync (full rewrite)
+        final isFirstSync = await _dbHelper.getInventoryTotalCount() == 0;
+        if (isFirstSync) {
+          await _dbHelper.deleteAllInventoryItems();
+        }
+        
+        // Optimized: chunk 2000, batch 500, no delays
+        const mapChunkSize = 2000;
+        const insertBatchSize = 500;
+        int totalItems = items.length;
+        
+        for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {
+          final chunkEnd = (chunkStart + mapChunkSize < totalItems) 
+              ? chunkStart + mapChunkSize 
+              : totalItems;
+          final chunk = items.sublist(chunkStart, chunkEnd);
+          
+          // Convert to maps in isolate
+          final mappedChunk = await compute(
+            (List<InventoryItem> items) => items.map((e) => e.toMap()).toList(),
+            chunk,
+          );
+          
+          // Insert in batches using transaction (faster)
+          for (int i = 0; i < mappedChunk.length; i += insertBatchSize) {
+            final batch = mappedChunk.skip(i).take(insertBatchSize).toList();
+            await _dbHelper.insertInventoryItemsInTransaction(batch);
+          }
+        }
+        
+        debugPrint('InventoryController: Stored $totalItems items to DB');
+      }
 
       // Update sync metadata
       await _dbHelper.updateSyncMetadata('inventory', 'success', items.length);
 
-      // Reload inventory after sync
-      await loadInventoryFromCache();
+      // Reset pagination and reload first page
+      if (items.isNotEmpty) {
+        _currentPage = 0;
+        hasMoreItems.value = true;
+        inventoryItems.clear();
+        filteredItems.clear();
+        await loadInventoryFromCache();
+      }
 
       isSyncingInventory.value = false;
 
@@ -93,23 +211,6 @@ class InventoryController extends GetxController {
       return;
     }
     await syncInventoryFromAPI(showMessage: true);
-  }
-
-  // Search inventory items
-  Future<void> searchInventory(String query) async {
-    try {
-      if (query.isEmpty) {
-        filteredItems.value = inventoryItems;
-        return;
-      }
-
-      isLoadingInventory.value = true;
-      final results = await _dbHelper.searchInventoryItems(query);
-      filteredItems.value = results;
-      isLoadingInventory.value = false;
-    } catch (e) {
-      isLoadingInventory.value = false;
-    }
   }
 
   // Filter by category

@@ -3,6 +3,7 @@ import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/service_point.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
+import 'package:bac_pos/shared/utils/connectivity_helper.dart';
 
 class ServicePointController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
@@ -42,6 +43,12 @@ class ServicePointController extends GetxController {
   // Sync service points from API to local database
   Future<void> syncServicePointsFromAPI({bool showMessage = false}) async {
     try {
+      // Check connectivity before attempting sync
+      final isOnline = await ConnectivityHelper.checkConnectivityAndNotify();
+      if (!isOnline) {
+        return;
+      }
+
       isSyncingServicePoints.value = true;
 
       // Fetch service points from API

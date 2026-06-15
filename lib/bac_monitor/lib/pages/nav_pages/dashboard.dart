@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../../../shared/database/unified_db_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
+import '../../../../back_pos/controllers/expenses_controller.dart';
 import '../../additions/colors.dart';
 import '../../components/dashboard/kpi_overview.dart';
 import '../../components/dashboard/sales_trends.dart';
@@ -13,8 +14,10 @@ import '../../controllers/mon_gross_profit_controller.dart';
 import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_kpi_overview_controller.dart';
 import '../../controllers/mon_operator_controller.dart';
+import '../../controllers/profile_controller.dart';
 import '../../controllers/mon_outstanding_payments_controller.dart';
 import '../../controllers/mon_salestrends_controller.dart';
+import '../../services/account_manager.dart';
 import '../../models/kpi_sales_data.dart';
 import '../../services/api_services.dart';
 import '../../widgets/dashboard/gross_profit.dart';
@@ -83,6 +86,9 @@ class _DashboardState extends State<Dashboard> {
     if (!Get.isRegistered<MonSalesTrendsController>()) {
       Get.put(MonSalesTrendsController(), permanent: true);
     }
+    if (!Get.isRegistered<ExpensesController>()) {
+      Get.put(ExpensesController(), permanent: true);
+    }
     if (!Get.isRegistered<MonKpiOverviewController>()) {
       Get.put(MonKpiOverviewController(), permanent: true);
     }
@@ -107,7 +113,7 @@ class _DashboardState extends State<Dashboard> {
     }
     // Initialize gross profit data
     if (Get.isRegistered<MonGrossProfitController>()) {
-      await Get.find<MonGrossProfitController>().fetchGrossProfitData();
+      await Get.find<MonGrossProfitController>().initializeData();
     }
     // Initialize sales trends data
     if (Get.isRegistered<MonSalesTrendsController>()) {
@@ -224,7 +230,10 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final operatorController = Get.find<MonOperatorController>();
+    final operatorController = Get.isRegistered<MonOperatorController>()
+        ? Get.find<MonOperatorController>()
+        : null;
+    debugPrint('Dashboard build: operatorController is ${operatorController == null ? 'null' : 'registered'}');
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
@@ -236,35 +245,83 @@ class _DashboardState extends State<Dashboard> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
-              backgroundColor: AppColors.getCardColor(context),
+              backgroundColor: AppColors.getHeaderColor(context),
               elevation: 0,
               pinned: true,
               centerTitle: true,
-              title: Obx(
-                () => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      operatorController.companyName.value,
-                      style: TextStyle(
-                        color: AppColors.getTextPrimaryColor(context),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18.0,
+              title: operatorController != null
+                  ? Obx(
+                      () => Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            operatorController!.companyName.value,
+                            style: TextStyle(
+                              color: AppColors.getTextPrimary(context),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18.0,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            operatorController!.companyAddress.value,
+                            style: TextStyle(
+                              color: AppColors.getTextPrimary(context),
+                              fontWeight: FontWeight.w400,
+                              fontSize: 12.0,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      operatorController.companyAddress.value,
-                      style: TextStyle(
-                        color: AppColors.getTextSecondaryColor(context),
-                        fontWeight: FontWeight.w400,
-                        fontSize: 12.0,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
+                    )
+                  : operatorController != null
+                      ? Obx(
+                          () => Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                operatorController!.companyName.value,
+                                style: TextStyle(
+                                  color: AppColors.getTextPrimary(context),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18.0,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                operatorController!.companyAddress.value,
+                                style: TextStyle(
+                                  color: AppColors.getTextPrimary(context),
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 12.0,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        )
+                      : const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Loading...',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18.0,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              '',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w400,
+                                fontSize: 12.0,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
               leading: Padding(
                 padding: const EdgeInsets.only(left: 20.0),
                 child: AppLogo(width: 100, height: 100),
@@ -276,7 +333,7 @@ class _DashboardState extends State<Dashboard> {
                     icon: Icon(
                       Icons.account_circle_outlined,
                       size: 28,
-                      color: AppColors.getTextPrimaryColor(context),
+                      color: AppColors.getTextPrimary(context),
                     ),
                     onPressed: () {
                       Get.to(() => ProfilePage());
@@ -318,7 +375,7 @@ class _DashboardState extends State<Dashboard> {
                         );
                       }),
                       const SizedBox(height: 8),
-                      const HorizontalSummaryCards(),
+                      HorizontalSummaryCards(),
                       const SizedBox(height: 8),
                       // Obx(() {
                       //   final controller =
@@ -351,8 +408,6 @@ class _DashboardState extends State<Dashboard> {
                         );
 
                         return ExpensesCard(
-                          stockExpenses: 0.0,
-                          nonStockExpenses: 0.0,
                           periodLabel: periodLabel,
                           onStockExpensesTap: () {
                             Get.to(
@@ -388,11 +443,28 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  void _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) {
+  Future<void> _onDateRangeChanged(DateRange newRange, DateTimeRange? customRange) async {
+    debugPrint('Dashboard: _onDateRangeChanged called with range: $newRange, customRange: $customRange');
     if (!Get.isRegistered<MonDashboardController>()) {
       Get.put(MonDashboardController(), permanent: true);
     }
     final controller = Get.find<MonDashboardController>();
     controller.updateDateRange(newRange, customRange);
+    debugPrint('Dashboard: Updated date range in controller');
+
+    // Fetch updated data for the new date range
+    if (Get.isRegistered<MonKpiOverviewController>()) {
+      await Get.find<MonKpiOverviewController>().fetchKpiData();
+    }
+    // Note: MonGrossProfitController has listeners that will automatically fetch data when date range changes
+    if (Get.isRegistered<MonSalesTrendsController>()) {
+      await Get.find<MonSalesTrendsController>().fetchAllData();
+    }
+    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
+      await Get.find<MonOutstandingPaymentsController>().fetchOutstandingPaymentsData();
+    }
+    if (Get.isRegistered<MonKpiController>()) {
+      await Get.find<MonKpiController>().fetchKpiData();
+    }
   }
 }

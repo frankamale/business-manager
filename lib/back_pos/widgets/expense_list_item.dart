@@ -9,6 +9,7 @@ class ExpenseListItem extends StatelessWidget {
   final Color color;
   final String Function(String?) getUserName;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   const ExpenseListItem({
     super.key,
@@ -18,23 +19,58 @@ class ExpenseListItem extends StatelessWidget {
     required this.color,
     required this.getUserName,
     required this.onDelete,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isPending = expense.uploadStatus == 'pending';
+    
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       child: ListTile(
+        onTap: onTap,
+        leading: isPending
+            ? Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.cloud_off,
+                  size: 16,
+                  color: Colors.orange.shade700,
+                ),
+              )
+            : null,
         title: Text(
           expense.title.isNotEmpty ? expense.title : 'Untitled Expense',
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
-        subtitle: Text(
-          '${getUserName(expense.subject)} • ${expense.category}',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
+        subtitle: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              getUserName(expense.subject),
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Text(' • ', style: TextStyle(color: Colors.grey)),
+            Flexible(
+              child: Text(
+                expense.category,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

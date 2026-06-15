@@ -259,16 +259,16 @@ class ConnectivityController extends GetxController {
         Get.put(MonStoreKpiTrendController());
       }
       if (!Get.isRegistered<MonDashboardController>()) {
-        Get.put(MonDashboardController());
+        Get.put(MonDashboardController(), permanent: true);
       }
       if (!Get.isRegistered<MonKpiOverviewController>()) {
-        Get.put(MonKpiOverviewController());
+        Get.put(MonKpiOverviewController(), permanent: true);
       }
       if (!Get.isRegistered<MonSalesTrendsController>()) {
-        Get.put(MonSalesTrendsController());
+        Get.put(MonSalesTrendsController(), permanent: true);
       }
       if (!Get.isRegistered<MonGrossProfitController>()) {
-        Get.put(MonGrossProfitController());
+        Get.put(MonGrossProfitController(), permanent: true);
       }
       if (!Get.isRegistered<MonOutstandingPaymentsController>()) {
         Get.put(MonOutstandingPaymentsController());
@@ -371,9 +371,6 @@ class ConnectivityController extends GetxController {
           } else {
             Get.offAll(() => const PosAppRoot());
           }
-          
-          // Show offline mode notification
-          UIHelper.showOfflineSnackbar();
         } catch (e) {
           debugPrint('SplashScreen: Error opening offline database - $e');
           _setError();
@@ -434,17 +431,17 @@ class _SplashScreenState extends State<SplashScreen> {
               const SizedBox(height: 20),
               if (controller.isLoading.value)
                 const CircularProgressIndicator()
-              else if (controller.hasError.value)
-                Column(
-                  children: [
-                    const Text('No internet connection'),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: controller.checkConnectivity,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              // else if (controller.hasError.value)
+              //   Column(
+              //     children: [
+              //       const Text('No internet connection'),
+              //       const SizedBox(height: 10),
+              //       ElevatedButton(
+              //         onPressed: controller.checkConnectivity,
+              //         child: const Text('Retry'),
+              //       ),
+              //     ],
+              //   ),
             ],
           );
         }),

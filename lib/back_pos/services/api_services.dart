@@ -465,7 +465,7 @@ class PosApiService extends GetxService {
 
   Future<Map<String, dynamic>> postSale(Map<String, dynamic> saleData) async {
     try {
-      final request = http.Request('POST', Uri.parse("$baseurl/payment/"));
+      final request = http.Request('POST', Uri.parse("$baseurl/payment/sale"));
       request.headers['Content-Type'] = 'application/json';
       request.body = json.encode(saleData);
 
@@ -515,6 +515,30 @@ class PosApiService extends GetxService {
         return data.map((item) => item as Map<String, dynamic>).toList();
       } else {
         throw Exception("Failed to fetch sales: ${response.statusCode}");
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Create adhoc payment (expense)
+  Future<Map<String, dynamic>> createAdhocPayment(
+    Map<String, dynamic> paymentData,
+  ) async {
+    try {
+      final request = http.Request('POST', Uri.parse("$baseurl/payment/adhoc"));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = json.encode(paymentData);
+
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        throw Exception(
+          "Failed to create adhoc payment: ${response.statusCode} - ${response.body}",
+        );
       }
     } catch (e) {
       rethrow;

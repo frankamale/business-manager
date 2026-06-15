@@ -2,7 +2,7 @@ class SalesDataPoint {
   final DateTime date;
   final double amount;
 
-  SalesDataPoint(this.date, this.amount);
+  SalesDataPoint({required this.date, required this.amount});
 }
 
 class StockAlert {
@@ -41,4 +41,11 @@ class CashierData {
   final double totalAmount;
 
   CashierData({required this.cashierName, required this.totalAmount});
+}
+
+class StoreData {
+  final String storeName;
+  final double totalAmount;
+
+  StoreData({required this.storeName, required this.totalAmount});
 }

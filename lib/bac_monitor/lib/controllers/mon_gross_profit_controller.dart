@@ -7,7 +7,7 @@ import 'mon_dashboard_controller.dart';
 
 class MonGrossProfitController extends GetxController {
   // Controllers and database instance
-  final MonDashboardController dateController = Get.find();
+  late final MonDashboardController dateController;
   final dbHelper = UnifiedDatabaseHelper.instance;
 
   // Reactive state variables
@@ -21,19 +21,27 @@ class MonGrossProfitController extends GetxController {
   var grossProfitTrend = "0%".obs;
   var unit = "UGX".obs;
 
+  // EFRIS status data
+  var efrisPending = "0".obs;
+  var efrisUploaded = "0".obs;
+  var efrisFailed = "0".obs;
+  var efrisTotal = "0".obs;
+
   @override
   void onInit() {
     super.onInit();
-    // Don't fetch data here - let the UI trigger it when ready
+    dateController = Get.find<MonDashboardController>();
     debugPrint('MonGrossProfitController: onInit - NOT fetching data yet');
     
     // Set up listeners for date changes
     ever(dateController.selectedRange, (_) {
+      debugPrint('MonGrossProfitController: selectedRange changed to ${dateController.selectedRange.value}, isInitialized: ${isInitialized.value}');
       if (isInitialized.value) {
         fetchGrossProfitData();
       }
     });
     ever(dateController.customRange, (_) {
+      debugPrint('MonGrossProfitController: customRange changed to ${dateController.customRange.value}, isInitialized: ${isInitialized.value}');
       if (isInitialized.value) {
         fetchGrossProfitData();
       }
@@ -53,6 +61,7 @@ class MonGrossProfitController extends GetxController {
   }
 
   Future<void> fetchGrossProfitData() async {
+    debugPrint('MonGrossProfitController: fetchGrossProfitData called. isInitialized: ${isInitialized.value}');
     try {
       isLoading.value = true;
       hasError.value = false;
@@ -66,6 +75,8 @@ class MonGrossProfitController extends GetxController {
 
       final range = dateController.selectedRange.value;
       final customRange = dateController.customRange.value;
+
+      debugPrint('MonGrossProfitController: Fetching data for range: $range, customRange: $customRange');
 
       // Determine date ranges based on selection
       switch (range) {
@@ -127,6 +138,8 @@ class MonGrossProfitController extends GetxController {
       final prevStartDateStr = dateFormatter.format(prevStartDate);
       final prevEndDateStr = dateFormatter.format(prevEndDate);
 
+      debugPrint('MonGrossProfitController: Date range - start: $startDateStr, end: $endDateStr, prevStart: $prevStartDateStr, prevEnd: $prevEndDateStr');
+
       // SQL Query using the KPI table
       // kpiId=5 is Profit (amount1=profit, amount2=transaction value during that day)
 
@@ -135,6 +148,24 @@ class MonGrossProfitController extends GetxController {
         SELECT SUM(amount1) as profit, SUM(amount2) as sales 
         FROM mon_kpi_sales 
         WHERE kpi_id = 5 AND processing_date BETWEEN ? AND ?
+      ''';
+
+      // Query for EFRIS status (kpi_id=6)
+      // kpi field contains status: '1' = pending, '2' = uploaded, '3' = failed
+      const efrisPendingQuery = '''
+        SELECT SUM(quantity) as count 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 6 AND kpi = '1' AND processing_date BETWEEN ? AND ?
+      ''';
+      const efrisUploadedQuery = '''
+        SELECT SUM(quantity) as count 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 6 AND kpi = '2' AND processing_date BETWEEN ? AND ?
+      ''';
+      const efrisFailedQuery = '''
+        SELECT SUM(quantity) as count 
+        FROM mon_kpi_sales 
+        WHERE kpi_id = 6 AND kpi = '3' AND processing_date BETWEEN ? AND ?
       ''';
 
       // Query for currency
@@ -147,6 +178,14 @@ class MonGrossProfitController extends GetxController {
           profitQuery, [prevStartDateStr, prevEndDateStr]);
       final currencyResult = await db.rawQuery(currencyQuery);
 
+      // Execute EFRIS queries
+      final efrisPendingResult = await db.rawQuery(
+          efrisPendingQuery, [startDateStr, endDateStr]);
+      final efrisUploadedResult = await db.rawQuery(
+          efrisUploadedQuery, [startDateStr, endDateStr]);
+      final efrisFailedResult = await db.rawQuery(
+          efrisFailedQuery, [startDateStr, endDateStr]);
+
       // Extract results - amount1 is profit, amount2 is transaction value (for that day/range)
       final currentProfit = (currentProfitResult.first['profit'] as num? ?? 0.0)
           .toDouble();
@@ -157,10 +196,18 @@ class MonGrossProfitController extends GetxController {
       final prevTransactionValue = (prevProfitResult.first['sales'] as num? ??
           0.0).toDouble();
 
-      print("Current Profit: $currentProfit");
-      print("Current Transaction Value: $currentTransactionValue");
-      print("Previous Profit: $prevProfit");
-      print("Previous Transaction Value: $prevTransactionValue");
+      debugPrint("MonGrossProfitController: Current Profit: $currentProfit");
+      debugPrint("MonGrossProfitController: Current Transaction Value: $currentTransactionValue");
+      debugPrint("MonGrossProfitController: Previous Profit: $prevProfit");
+      debugPrint("MonGrossProfitController: Previous Transaction Value: $prevTransactionValue");
+
+      // Extract EFRIS status counts
+      final pendingCount = (efrisPendingResult.first['count'] as num? ?? 0).toInt();
+      final uploadedCount = (efrisUploadedResult.first['count'] as num? ?? 0).toInt();
+      final failedCount = (efrisFailedResult.first['count'] as num? ?? 0).toInt();
+      final totalEfris = pendingCount + uploadedCount + failedCount;
+
+      debugPrint("MonGrossProfitController: EFRIS - Pending: $pendingCount, Uploaded: $uploadedCount, Failed: $failedCount, Total: $totalEfris");
 
       // Determine currency
       String currency = 'UGX';
@@ -186,6 +233,15 @@ class MonGrossProfitController extends GetxController {
       totalSales.value = compactFormatter.format(currentTransactionValue);
       cogs.value = '0'; // Not provided by KPI, set to 0
       grossProfitTrend.value = percentFormatter.format(grossProfitTrendValue);
+
+      // Update EFRIS status values
+      final fullNumberFormatter = NumberFormat('#,##0');
+      efrisPending.value = fullNumberFormatter.format(pendingCount);
+      efrisUploaded.value = fullNumberFormatter.format(uploadedCount);
+      efrisFailed.value = fullNumberFormatter.format(failedCount);
+      efrisTotal.value = fullNumberFormatter.format(totalEfris);
+
+      debugPrint('MonGrossProfitController: Updated values - grossProfit: ${grossProfit.value}, trend: ${grossProfitTrend.value}');
     } catch (e) {
       hasError.value = true;
       print("Error fetching gross profit data: $e");

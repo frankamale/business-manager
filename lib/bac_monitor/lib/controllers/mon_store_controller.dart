@@ -211,7 +211,7 @@ class MonStoresController extends GetxController {
         DateTime date = (aggregationType.value == 'hourly')
             ? hourlyFormatter.parse(entry.key)
             : dateFormatter.parse(entry.key);
-        return SalesDataPoint(date, entry.value);
+        return SalesDataPoint(date: date, amount: entry.value);
       }).toList()..sort((a, b) => a.date.compareTo(b.date));
       salesDataPoints.assignAll(formattedData);
     } catch (e) {
@@ -330,13 +330,11 @@ class MonStoresController extends GetxController {
     final customRangeVal = customDateRange.value;
     switch (range) {
       case DateRange.today:
-        startDate = DateTime(now.year, now.month, now.day);
-        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
-        break;
       case DateRange.yesterday:
-        final yesterday = now.subtract(const Duration(days: 1));
-        startDate = DateTime(yesterday.year, yesterday.month, yesterday.day);
-        endDate = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59);
+        // Use last 7 days range for both today and yesterday
+        startDate = now.subtract(const Duration(days: 6));
+        startDate = DateTime(startDate.year, startDate.month, startDate.day);
+        endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
         break;
       case DateRange.last7Days:
         startDate = now.subtract(const Duration(days: 6));

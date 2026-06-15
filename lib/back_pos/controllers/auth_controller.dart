@@ -4,6 +4,7 @@ import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
 import 'package:bac_pos/back_pos/models/auth_response.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
+import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 import '../../bac_monitor/lib/services/account_manager.dart';
 
 class AuthController extends GetxController {
@@ -25,6 +26,8 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    // Load user roles from database for login screen
+    loadUserRoles();
   }
 
   // Load all user roles from database (including duplicates)
@@ -61,6 +64,9 @@ class AuthController extends GetxController {
   Future<void> loadUsersFromCache() async {
     try {
       final cachedUsers = await _dbHelper.users;
+      // Also load users into the UserController's observable list
+      final userController = Get.find<UserController>();
+      await userController.fetchUsers();
       await loadUserRoles();
     } catch (e) {
       // Handle error silently

@@ -6,8 +6,11 @@ import '../../additions/colors.dart';
 enum DateRange { today, yesterday, last7Days, monthToDate, custom }
 
 extension DateRangeExtension on DateRange {
-  bool get isSingleDay => this == DateRange.today || this == DateRange.yesterday;
+  bool get isSingleDay =>
+      this == DateRange.today || this == DateRange.yesterday;
+
   bool get isWeekly => this == DateRange.last7Days;
+
   bool get isMonthly => this == DateRange.monthToDate;
 }
 
@@ -134,7 +137,9 @@ class _DateRangePickerState extends State<DateRangePicker> {
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
                     'CANCEL',
-                    style: TextStyle(color: AppColors.getTextSecondaryColor(context)),
+                    style: TextStyle(
+                      color: AppColors.getTextSecondaryColor(context),
+                    ),
                   ),
                 ),
                 FilledButton(
@@ -146,7 +151,9 @@ class _DateRangePickerState extends State<DateRangePicker> {
                                 content: Text(
                                   'Start date must be before end date.',
                                 ),
-                                backgroundColor: AppColors.getErrorColor(context),
+                                backgroundColor: AppColors.getErrorColor(
+                                  context,
+                                ),
                               ),
                             );
                             return;
@@ -175,7 +182,9 @@ class _DateRangePickerState extends State<DateRangePicker> {
                       : null,
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.getAccentColor(context),
-                    disabledBackgroundColor: AppColors.getTextDisabledColor(context),
+                    disabledBackgroundColor: AppColors.getTextDisabledColor(
+                      context,
+                    ),
                     foregroundColor: AppColors.getTextPrimaryColor(context),
                   ),
                   child: Text(
@@ -204,7 +213,10 @@ class _DateRangePickerState extends State<DateRangePicker> {
     return ListTile(
       title: Text(
         title,
-        style: TextStyle(color: AppColors.getTextSecondaryColor(context), fontSize: 14),
+        style: TextStyle(
+          color: AppColors.getTextSecondaryColor(context),
+          fontSize: 14,
+        ),
       ),
       subtitle: Text(
         date != null ? displayFormat.format(date) : 'Not Set',
@@ -284,7 +296,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
           label: Text(
             _getDisplayLabel(),
             style: TextStyle(
-              color: AppColors.getTextPrimaryColor(context),
+              color: AppColors.getTextPrimary(context),
               fontWeight: FontWeight.bold,
               fontSize: 13,
             ),
@@ -311,30 +323,32 @@ class _DateRangePickerState extends State<DateRangePicker> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(bottom: 12.0),
-                  child: Text(
-                    'Select a Period',
-                    style: TextStyle(
-                      color: AppColors.getTextPrimaryColor(context),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+        return SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 12.0),
+                    child: Text(
+                      'Select a Period',
+                      style: TextStyle(
+                        color: AppColors.getTextPrimaryColor(context),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                   ),
-                ),
-                Divider(color: AppColors.getBorderColor(context), height: 1),
-                _buildOptionTile('Today', DateRange.today),
-                _buildOptionTile('Yesterday', DateRange.yesterday),
-                _buildOptionTile('Last 7 Days', DateRange.last7Days),
-                _buildOptionTile('Month to Date', DateRange.monthToDate),
-                _buildOptionTile('Custom Range...', DateRange.custom),
-              ],
+                  Divider(color: AppColors.getBorderColor(context), height: 1),
+                  _buildOptionTile('Today', DateRange.today),
+                  _buildOptionTile('Yesterday', DateRange.yesterday),
+                  _buildOptionTile('Last 7 Days', DateRange.last7Days),
+                  _buildOptionTile('Month to Date', DateRange.monthToDate),
+                  _buildOptionTile('Custom Range...', DateRange.custom),
+                ],
+              ),
             ),
           ),
         );
@@ -348,7 +362,9 @@ class _DateRangePickerState extends State<DateRangePicker> {
       title: Text(
         title,
         style: TextStyle(
-          color: isSelected ? AppColors.getAccentColor(context) : AppColors.getTextPrimaryColor(context),
+          color: isSelected
+              ? AppColors.getAccentColor(context)
+              : AppColors.getTextPrimaryColor(context),
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),

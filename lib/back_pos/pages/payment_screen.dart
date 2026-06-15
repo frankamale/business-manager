@@ -189,7 +189,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         } else {
           Get.snackbar(
             'Success',
-            "Operation successful",
+            "Sale successful",
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green[100],
             colorText: Colors.green[900],
@@ -197,7 +197,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           );
         }
       }
-      Get.to(SalesListing());
+      Get.off(SalesListing());
 
     } catch (e) {
       // Handle errors

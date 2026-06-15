@@ -1,10 +1,14 @@
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:sqflite/sqflite.dart';
 import 'dart:developer' as developer;
 import 'login.dart';
+import '../pages/homepage.dart';
 import '../services/api_services.dart';
 import '../controllers/auth_controller.dart';
+import '../controllers/user_controller.dart';
 import '../controllers/service_point_controller.dart';
 import '../controllers/inventory_controller.dart';
 import '../controllers/sales_controller.dart';
@@ -85,6 +89,16 @@ class _SplashScreenState extends State<SplashScreen>
     _log('authenticateApp: Starting authentication process');
 
     try {
+      // Check if switching from Monitor
+      final box = GetStorage();
+      final isSwitching = box.read('switching_to_pos') ?? false;
+      if (isSwitching) {
+        _log('authenticateApp: Switching from Monitor, skipping authentication');
+        await box.remove('switching_to_pos');
+        await _handleSwitchingMode();
+        return;
+      }
+
       setState(() {
         _statusMessage = 'Checking server credentials...';
       });
@@ -234,11 +248,269 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
+  Future<void> _loadCompleteDataForSwitching() async {
+    _log('loadCompleteDataForSwitching: Loading comprehensive data for POS switching');
+
+    // Get controllers
+    final authController = Get.find<AuthController>();
+    final servicePointController = Get.find<ServicePointController>();
+    final inventoryController = Get.find<InventoryController>();
+    final salesController = Get.find<SalesController>();
+    final customerController = Get.find<CustomerController>();
+
+    try {
+      // 1. Users (always sync for switching)
+      setState(() {
+        _statusMessage = 'Loading users...';
+      });
+      await authController.syncUsersFromAPI();
+      _log('loadCompleteDataForSwitching: Users synced');
+
+      // 2. Service Points (always sync for switching)
+      setState(() {
+        _statusMessage = 'Loading service points...';
+      });
+      await servicePointController.syncServicePointsFromAPI();
+      _log('loadCompleteDataForSwitching: Service points synced');
+
+      // 3. Full Inventory (sync all inventory for switching)
+      setState(() {
+        _statusMessage = 'Loading complete inventory...';
+      });
+      await inventoryController.syncInventoryFromAPI();
+      _log('loadCompleteDataForSwitching: Full inventory synced');
+
+      // 4. Sales (local data)
+      setState(() {
+        _statusMessage = 'Loading sales data...';
+      });
+      await salesController.loadSalesFromCache();
+      _log('loadCompleteDataForSwitching: Sales data loaded');
+
+      // 5. All Customers (sync all customers for switching)
+      setState(() {
+        _statusMessage = 'Loading all customers...';
+      });
+      await customerController.syncCustomersFromAPI();
+      _log('loadCompleteDataForSwitching: All customers synced');
+
+      // 6. Additional data that might be needed for POS
+      setState(() {
+        _statusMessage = 'Finalizing data setup...';
+      });
+
+      // Ensure cash accounts are loaded
+      try {
+        final cashAccounts = await _apiService.fetchCashAccounts();
+        await _dbHelper.insertCashAccounts(cashAccounts);
+        _log('loadCompleteDataForSwitching: Cash accounts loaded');
+      } catch (e) {
+        _log('loadCompleteDataForSwitching: Cash accounts sync failed (non-critical): $e');
+      }
+
+      _log('loadCompleteDataForSwitching: Complete data loading finished');
+
+    } catch (e, stackTrace) {
+      _log('loadCompleteDataForSwitching: Error loading complete data - $e', level: 'ERROR');
+      _log('loadCompleteDataForSwitching: Stack trace - $stackTrace', level: 'ERROR');
+      // Continue anyway - some data might have been loaded
+      throw e; // Re-throw to let caller handle
+    }
+  }
+
+  Future<void> _handleSwitchingMode() async {
+    _log('handleSwitchingMode: Handling switch from Monitor to POS');
+
+    try {
+      setState(() {
+        _statusMessage = 'Switching to POS...';
+      });
+
+      // FIX: Get company from GetStorage (set by Monitor) first, not from POS cache
+      final box = GetStorage();
+      String? companyId = box.read('switching_company_id');
+      
+      // Fallback to POS cache if not in storage
+      if (companyId == null || companyId.isEmpty) {
+        final companyInfo = await _apiService.getCompanyInfo();
+        companyId = companyInfo['companyId'];
+      }
+      
+      // Clean up storage
+      await box.remove('switching_company_id');
+
+      if (companyId == null || companyId.isEmpty) {
+        _log('handleSwitchingMode: No stored company ID, falling back to login');
+        if (mounted) {
+          Get.off(() => const UnifiedLoginScreen());
+        }
+        return;
+      }
+
+      // Initialize controllers
+      _initializeControllers();
+
+      // Open database for the company
+      await _dbHelper.openForCompany(companyId);
+      
+      // Save company info to POS service for consistency
+      await _apiService.saveCompanyInfo({
+        'company': companyId, 
+        'branch': '', 
+        'sellingPointId': ''
+      });
+
+      // Check network for data sync
+      final hasNetwork = await NetworkHelper.hasConnection();
+      _log('handleSwitchingMode: Network available = $hasNetwork');
+
+      if (hasNetwork) {
+        setState(() {
+          _statusMessage = 'Fetching complete data for POS...';
+        });
+
+        // Load ALL data for first-time switching to ensure persistence
+        await _loadCompleteDataForSwitching();
+
+        // Verify all essential data is cached
+        final hasUsers = await _checkCachedDataSafely('users');
+        final hasServicePoints = await _checkCachedDataSafely('service_points');
+        final hasInventory = await _checkCachedDataSafely('inventory');
+        final hasCustomers = await _checkCachedDataSafely('customers');
+
+        _log('handleSwitchingMode: Data check - Users: $hasUsers, ServicePoints: $hasServicePoints, Inventory: $hasInventory, Customers: $hasCustomers');
+
+        // Debug: Check actual counts
+        if (!hasUsers || !hasServicePoints) {
+          try {
+            final db = _dbHelper.database;
+            final userCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM user')) ?? 0;
+            final spCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM service_point')) ?? 0;
+            _log('handleSwitchingMode: Debug counts - Users: $userCount, ServicePoints: $spCount');
+          } catch (e) {
+            _log('handleSwitchingMode: Debug count error: $e');
+          }
+        }
+
+        if (hasUsers && hasServicePoints) {
+          _log('handleSwitchingMode: Essential data available, trying auto-login');
+          await _tryAutoLoginOffline();
+        } else {
+          _log('handleSwitchingMode: Insufficient data even after sync, showing login');
+          if (mounted) {
+            Get.off(() => const Login());
+          }
+        }
+      } else {
+        // Offline mode - check if we have cached data from previous sessions
+        _log('handleSwitchingMode: Offline mode, checking cached data');
+        setState(() {
+          _statusMessage = 'Loading cached data...';
+        });
+
+        final hasUsers = await _checkCachedDataSafely('users');
+        final hasServicePoints = await _checkCachedDataSafely('service_points');
+
+        if (hasUsers && hasServicePoints) {
+          _log('handleSwitchingMode: Cached data available, trying auto-login offline');
+          await _tryAutoLoginOffline();
+        } else {
+          _log('handleSwitchingMode: No cached data available offline');
+          setState(() {
+            _hasError = true;
+            _isOfflineMode = true;
+            _statusMessage = 'No cached data available - connect to internet first';
+          });
+        }
+      }
+
+    } catch (e, stackTrace) {
+      _log('handleSwitchingMode: Error - $e', level: 'ERROR');
+      _log('handleSwitchingMode: Stack trace - $stackTrace', level: 'ERROR');
+
+      setState(() {
+        _hasError = true;
+        _statusMessage = 'Error switching to POS';
+      });
+
+      Get.snackbar(
+        'Switch Error',
+        'Failed to switch to POS. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade100,
+        colorText: Colors.red.shade900,
+        duration: const Duration(seconds: 4),
+      );
+    }
+  }
+
+  // Auto-login helper for offline switching
+  Future<void> _tryAutoLoginOffline() async {
+    try {
+      // Priority 1: Try credentials from GetStorage (set during switch from Monitor)
+      final box = GetStorage();
+      String? username = box.read('pos_switch_username');
+      String? password = box.read('pos_switch_password');
+      
+      // Priority 2: Fall back to PosApiService stored credentials
+      if (username == null) {
+        final creds = await _apiService.getServerCredentials();
+        username = creds['username'];
+        password = creds['password'];
+      }
+      
+      if (username != null && password != null && password.isNotEmpty) {
+        _log('tryAutoLoginOffline: Attempting auto-login with stored credentials');
+        
+        final authController = Get.find<AuthController>();
+        final success = await authController.login(username, password);
+        
+        if (success) {
+          _log('tryAutoLoginOffline: Auto-login successful');
+          
+          // Clean up stored credentials after successful login
+          await box.remove('pos_switch_username');
+          await box.remove('pos_switch_password');
+          
+          if (mounted) {
+            Get.off(() => const Homepage());
+          }
+          return;
+        } else {
+          _log('tryAutoLoginOffline: Auto-login failed - invalid credentials');
+        }
+      } else if (username != null) {
+        // No password stored - pre-fill username and show login screen
+        _log('tryAutoLoginOffline: No password stored, pre-filling username');
+        
+        // Store username for Login screen to use
+        await box.write('prefill_username', username);
+        
+        if (mounted) {
+          Get.off(() => const Login());
+        }
+        return;
+      }
+    } catch (e) {
+      _log('tryAutoLoginOffline: Auto-login failed - $e');
+    }
+    
+    // Fall back to login screen
+    if (mounted) {
+      Get.off(() => const Login());
+    }
+  }
+
   void _initializeControllers() {
     _log('initializeControllers: Starting controller initialization');
 
     _log('initializeControllers: Registering AuthController');
     Get.put(AuthController());
+
+    _log('initializeControllers: Registering UserController');
+    if (!Get.isRegistered<UserController>()) {
+      Get.put(UserController());
+    }
 
     _log('initializeControllers: Registering ServicePointController');
     Get.put(ServicePointController());
@@ -425,7 +697,7 @@ class _SplashScreenState extends State<SplashScreen>
       _log('loadDataWithSmartSync: No service points data available (offline, no cache)', level: 'WARN');
     }
 
-    // 3. Inventory (dynamic - sync if network available)
+    // 3. Inventory (load from cache first  )
     setState(() {
       _statusMessage = 'Loading inventory...';
     });
@@ -433,22 +705,21 @@ class _SplashScreenState extends State<SplashScreen>
     final hasInventory = await _checkCachedDataSafely('inventory');
     _log('loadDataWithSmartSync: Cached inventory exists = $hasInventory');
 
-    if (hasNetwork) {
+    // Always load from cache first 
+    // The sync will happen in background via periodic sync or manual refresh
+    if (hasInventory) {
+      _log('loadDataWithSmartSync: Loading inventory from cache');
+      await inventoryController.loadInventoryFromCache();
+      _log('loadDataWithSmartSync: Inventory loaded successfully from cache');
+    } else if (hasNetwork) {
+      // Only sync from API if no cache exists
       try {
-        _log('loadDataWithSmartSync: Syncing inventory from API (network available)');
+        _log('loadDataWithSmartSync: No cache, syncing inventory from API');
         await inventoryController.syncInventoryFromAPI();
         _log('loadDataWithSmartSync: Inventory synced successfully from API');
       } catch (e) {
-        _log('loadDataWithSmartSync: API sync failed ($e), falling back to cache', level: 'WARN');
-        if (hasInventory) {
-          await inventoryController.loadInventoryFromCache();
-          _log('loadDataWithSmartSync: Inventory loaded from cache after API failure');
-        }
+        _log('loadDataWithSmartSync: No inventory data available', level: 'WARN');
       }
-    } else if (hasInventory) {
-      _log('loadDataWithSmartSync: Loading inventory from cache (offline mode)');
-      await inventoryController.loadInventoryFromCache();
-      _log('loadDataWithSmartSync: Inventory loaded successfully from cache');
     } else {
       _log('loadDataWithSmartSync: No inventory data available (offline, no cache)', level: 'WARN');
     }
@@ -501,6 +772,7 @@ class _SplashScreenState extends State<SplashScreen>
     final size = MediaQuery.of(context).size;
     final bool isSmallScreen = size.width < 600;
     return Scaffold(
+      backgroundColor: Colors.blue.shade700,
       body: Center(
         child: Container(
           padding: EdgeInsets.symmetric(vertical: 10),

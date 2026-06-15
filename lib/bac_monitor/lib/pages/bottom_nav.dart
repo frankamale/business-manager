@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:circle_nav_bar/circle_nav_bar.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -25,11 +25,11 @@ class _BottomNavState extends State<BottomNav> {
   final MonDashboardController controller =
       Get.isRegistered<MonDashboardController>()
       ? Get.find<MonDashboardController>()
-      : Get.put(MonDashboardController());
+      : Get.put(MonDashboardController(), permanent: true);
 
   // Track offline status
   final RxBool isOffline = false.obs;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<InternetConnectionStatus>? _connectivitySubscription;
 
   final List<Widget> screens = [
     Dashboard(),
@@ -62,12 +62,12 @@ class _BottomNavState extends State<BottomNav> {
 
   /// Listen to connectivity changes
   void _startConnectivityListener() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
-      results,
-    ) {
-      final result = results.first;
-      isOffline.value = result == ConnectivityResult.none;
-    });
+    _connectivitySubscription = InternetConnectionChecker
+        .instance
+        .onStatusChange
+        .listen((status) {
+          isOffline.value = status == InternetConnectionStatus.disconnected;
+        });
   }
 
   Future<bool> _onWillPop() async {
@@ -101,39 +101,10 @@ class _BottomNavState extends State<BottomNav> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        backgroundColor: AppColors.getBackgroundColor(context),
+        backgroundColor: AppColors.getSurfaceColor(context),
         body: Obx(
           () => Column(
             children: [
-              // Offline indicator banner
-              if (isOffline.value)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  color: Colors.orange,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.cloud_off,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'OFFLINE MODE - Showing cached data',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               // Main content
               Expanded(
                 child: IndexedStack(
@@ -145,89 +116,94 @@ class _BottomNavState extends State<BottomNav> {
           ),
         ),
         bottomNavigationBar: Obx(
-          () => CircleNavBar(
-            onTap: controller.changeTabIndex,
-            activeIndex: controller.tabIndex.value,
-            inactiveIcons: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.dashboard,
-                    color: AppColors.getSurfaceColor(context),
-                  ),
-                  Text(
-                    'Dashboard',
-                    style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
-                      fontSize: 10,
+          () => SafeArea(
+            child: CircleNavBar(
+              onTap: controller.changeTabIndex,
+              activeIndex: controller.tabIndex.value,
+              inactiveIcons: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.dashboard,
+                      color: AppColors.getTextPrimary(context),
                     ),
-                  ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.inventory_2,
-                    color: AppColors.getSurfaceColor(context),
-                  ),
-                  Text(
-                    'Inventory',
-                    style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
-                      fontSize: 10,
+                    Text(
+                      'Dashboard',
+                      style: TextStyle(
+                        color: AppColors.getTextPrimary(context),
+                        fontSize: 10,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.store, color: AppColors.getSurfaceColor(context)),
-                  Text(
-                    'Stores',
-                    style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
-                      fontSize: 10,
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.inventory_2,
+                      color: AppColors.getTextPrimary(context),
                     ),
-                  ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.more_horiz,
-                    color: AppColors.getSurfaceColor(context),
-                  ),
-                  Text(
-                    'More',
-                    style: TextStyle(
-                      color: AppColors.getSurfaceColor(context),
-                      fontSize: 10,
+                    Text(
+                      'Inventory',
+                      style: TextStyle(
+                        color: AppColors.getTextPrimary(context),
+                        fontSize: 10,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
-            activeIcons: [
-              Icon(
-                Icons.dashboard_outlined,
-                color: AppColors.getSurfaceColor(context),
-              ),
-              Icon(
-                Icons.inventory_2_outlined,
-                color: AppColors.getSurfaceColor(context),
-              ),
-              Icon(
-                Icons.store_outlined,
-                color: AppColors.getSurfaceColor(context),
-              ),
-              Icon(Icons.more_horiz, color: AppColors.getSurfaceColor(context)),
-            ],
-            color: PrimaryColors.darkBlue,
-            circleWidth: 50,
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.store, color: AppColors.getTextPrimary(context)),
+                    Text(
+                      'Stores',
+                      style: TextStyle(
+                        color: AppColors.getTextPrimary(context),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.more_horiz,
+                      color: AppColors.getTextPrimary(context),
+                    ),
+                    Text(
+                      'More',
+                      style: TextStyle(
+                        color: AppColors.getTextPrimary(context),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              activeIcons: [
+                Icon(
+                  Icons.dashboard_outlined,
+                  color: AppColors.getTextPrimary(context),
+                ),
+                Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppColors.getTextPrimary(context),
+                ),
+                Icon(
+                  Icons.store_outlined,
+                  color: AppColors.getTextPrimary(context),
+                ),
+                Icon(
+                  Icons.more_horiz,
+                  color: AppColors.getTextPrimary(context),
+                ),
+              ],
+              color: AppColors.getHeaderColor(context),
+              circleWidth: 50,
+            ),
           ),
         ),
       ),

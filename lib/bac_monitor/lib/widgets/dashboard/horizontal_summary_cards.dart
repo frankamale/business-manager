@@ -25,6 +25,14 @@ class HorizontalSummaryCards extends StatelessWidget {
     Color(0xffA846A0),
   ];
 
+  static const List<Color> _storeColors = [
+    Color(0xff4392F1),
+    Color(0xff58FADD),
+    Color(0xffF7B32B),
+    Color(0xffD95D39),
+    Color(0xffA846A0),
+  ];
+
   List<PaymentData> _processPaymentData(List<dynamic> salesData) {
     // If no data for kpi_id=3 (payment modes), use kpi_id=0 (all transactions) as fallback
     if (salesData.isEmpty) {
@@ -95,15 +103,39 @@ class HorizontalSummaryCards extends StatelessWidget {
     return processedList;
   }
 
+  List<StoreData> _processStoreData(List<StorePerformance> storeData) {
+    if (storeData.isEmpty) {
+      return [];
+    }
+
+    final processedList = storeData
+        .where((store) => store.performanceValue > 0)
+        .map(
+          (store) => StoreData(
+            storeName: store.storeName,
+            totalAmount: store.performanceValue,
+          ),
+        )
+        .toList();
+
+    processedList.sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+    return processedList;
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MonSalesTrendsController>();
+    print('HorizontalSummaryCards: building, rawSalesForKpi3 length: ${controller.rawSalesForKpi3.value.length}');
 
     return Obx(() {
-      final isLoading = controller.isLoadingSales.value;
+      final isLoading =
+          controller.isLoadingSales.value || controller.isLoadingStores.value;
       final paymentData = _processPaymentData(controller.rawSalesForKpi3.value);
       final cashierData = _processCashierData(controller.rawSalesForKpi4.value);
+      final storeData = _processStoreData(controller.topStoresData.value);
       final compactFormatter = NumberFormat.compact(locale: 'en_US');
+
+      print('HorizontalSummaryCards: Obx rebuild, paymentData length: ${paymentData.length}, cashierData length: ${cashierData.length}, storeData length: ${storeData.length}');
 
       return Skeletonizer(
         enabled: isLoading,
@@ -112,16 +144,16 @@ class HorizontalSummaryCards extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Cashier Summary Card
+              // Top Stores Summary Card
               _buildSummaryCard(
                 context: context,
-                title: 'Summary by Cashier',
-                totalSales: cashierData.fold(
+                title: 'Top Stores by Sales',
+                totalSales: storeData.fold(
                   0.0,
                   (sum, item) => sum + item.totalAmount,
                 ),
-                items: cashierData,
-                colors: _cashierColors,
+                items: storeData,
+                colors: _storeColors,
                 compactFormatter: compactFormatter,
               ),
 
@@ -137,6 +169,21 @@ class HorizontalSummaryCards extends StatelessWidget {
                 ),
                 items: paymentData,
                 colors: _paymentColors,
+                compactFormatter: compactFormatter,
+              ),
+
+              const SizedBox(width: 16),
+
+              // Cashier Summary Card
+              _buildSummaryCard(
+                context: context,
+                title: 'Summary by Cashier',
+                totalSales: cashierData.fold(
+                  0.0,
+                  (sum, item) => sum + item.totalAmount,
+                ),
+                items: cashierData,
+                colors: _cashierColors,
                 compactFormatter: compactFormatter,
               ),
             ],
@@ -166,7 +213,9 @@ class HorizontalSummaryCards extends StatelessWidget {
         : items.fold(0.0, (max, item) {
             final value = item is PaymentData
                 ? item.totalAmount
-                : (item as CashierData).totalAmount;
+                : item is CashierData
+                ? item.totalAmount
+                : (item as StoreData).totalAmount;
             return value > max ? value : max;
           });
 
@@ -216,10 +265,7 @@ class HorizontalSummaryCards extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text(
                   'No data',
-                  style: TextStyle(
-                    color: textDisabled,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: textDisabled, fontSize: 12),
                 ),
               ),
             )
@@ -232,11 +278,15 @@ class HorizontalSummaryCards extends StatelessWidget {
 
                 final double value = data is PaymentData
                     ? data.totalAmount
-                    : (data as CashierData).totalAmount;
+                    : data is CashierData
+                    ? data.totalAmount
+                    : (data as StoreData).totalAmount;
 
                 final String name = data is PaymentData
                     ? data.paymentMode
-                    : (data as CashierData).cashierName;
+                    : data is CashierData
+                    ? data.cashierName
+                    : (data as StoreData).storeName;
 
                 final percentage = totalSales > 0
                     ? (value / totalSales) * 100

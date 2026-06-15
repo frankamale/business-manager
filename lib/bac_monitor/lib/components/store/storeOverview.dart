@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_kpi_controller.dart';
 import '../../controllers/mon_store_controller.dart';
@@ -23,108 +24,104 @@ class StoreOverview extends StatelessWidget {
     return Obx(() {
       // Load user role and check if user role contains 'fg' (gym)
       kpiTrendController.loadUserRole();
-      final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
-      
-      if (controller.isFetchingKpisAndCharts.value) {
-        return Padding(
-          padding: EdgeInsets.only(top: 100.0),
-          child: Center(
-            child: CircularProgressIndicator(color: AppColors.getAccentColor(context)),
-          ),
-        );
-      }
+      //final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
+      final isGym = false;
+
       return Container(
         color: AppColors.getBackgroundColor(context),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              // KPI Cards Section
-              GridView.count(
-                padding: EdgeInsets.zero,
-                crossAxisCount: 2,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1.6,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildKpiCard(
-                    context,
-                    title: isGym ? 'Total Revenue' : 'Total Sales',
-                    value: kpiTrendController.totalSales.value,
-                    unit: kpiTrendController.unit.value,
-                    trend: kpiTrendController.salesTrend.value,
-                    trendDirection: kpiTrendController.salesTrendDirection.value,
-                    icon: Icons.attach_money,
-                    iconColor: AppColors.getSuccessColor(context),
-                  ),
-                  _buildKpiCard(
-                    context,
-                    title: isGym ? 'Total Walk Ins' : 'Cash Sales',
-                    value: isGym
-                        ? kpiTrendController.totalWalkIns.value.toString()
-                        : kpiTrendController.cashSales.value,
-                    unit: isGym ? '' : kpiTrendController.unit.value,
-                    trend: isGym ? null : kpiTrendController.cashSalesTrend.value,
-                    trendDirection: isGym ? null : kpiTrendController.cashSalesTrendDirection.value,
-                    icon: isGym ? Icons.people : Icons.payments,
-                    iconColor: isGym ? AppColors.getInfoColor(context) : AppColors.getSuccessColor(context),
-                  ),
-                  _buildKpiCard(
-                    context,
-                    title: isGym ? 'Daily Subs' : 'Avg. Basket Size',
-                    value: isGym
-                        ? kpiTrendController.dailySubs.value.toString()
-                        : kpiTrendController.avgBasketSize.value,
-                    unit: isGym ? '' : kpiTrendController.unit.value,
-                    trend: kpiTrendController.basketTrend.value,
-                    trendDirection: kpiTrendController.basketTrendDirection.value,
-                    icon: Icons.shopping_basket,
-                    iconColor: AppColors.getWarningColor(context),
-                  ),
-                  _buildKpiCard(
-                    context,
-                    title: isGym ? 'Monthly Subs' : 'Pending Payments',
-                    value: isGym
-                        ? kpiTrendController.monthlySubs.value.toString()
-                        : kpiTrendController.pendingPayments.value,
-                    unit: isGym ? '' : kpiTrendController.unit.value,
-                    trend: isGym ? null : kpiTrendController.pendingPaymentsTrend.value,
-                    trendDirection: isGym ? null : kpiTrendController.pendingPaymentsTrendDirection.value,
-                    icon: isGym ? Icons.calendar_month : Icons.pending_actions,
-                    iconColor: isGym ? AppColors.getPrimaryColor(context) : AppColors.getWarningColor(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Sales Trends Section
-              _buildSectionCard(
-                context,
-                title: "Sales Trends",
-                icon: Icons.trending_up,
-                child: SizedBox(
-                  height: 250,
-                  child: SalesTrendLineGraph(
-                    salesData: controller.salesDataPoints,
-                    dateRange: controller.selectedDateRange.value,
-                    customRange: controller.customDateRange.value,
-                    aggregationType: controller.aggregationType.value,
+          child: Skeletonizer(
+            enabled: controller.isFetchingKpisAndCharts.value,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                // KPI Cards Section
+                GridView.count(
+                  padding: EdgeInsets.zero,
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1.6,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _buildKpiCard(
+                      context,
+                      title: isGym ? 'Total Revenue' : 'Total Sales',
+                      value: kpiTrendController.totalSales.value,
+                      unit: kpiTrendController.unit.value,
+                      trend: kpiTrendController.salesTrend.value,
+                      trendDirection: kpiTrendController.salesTrendDirection.value,
+                      icon: Icons.attach_money,
+                      iconColor: AppColors.getSuccessColor(context),
+                    ),
+                    _buildKpiCard(
+                      context,
+                      title: isGym ? 'Total Walk Ins' : 'Cash Sales',
+                      value: isGym
+                          ? kpiTrendController.totalWalkIns.value.toString()
+                          : kpiTrendController.cashSales.value,
+                      unit: isGym ? '' : kpiTrendController.unit.value,
+                      trend: isGym ? null : kpiTrendController.cashSalesTrend.value,
+                      trendDirection: isGym ? null : kpiTrendController.cashSalesTrendDirection.value,
+                      icon: isGym ? Icons.people : Icons.payments,
+                      iconColor: isGym ? AppColors.getInfoColor(context) : AppColors.getSuccessColor(context),
+                    ),
+                    _buildKpiCard(
+                      context,
+                      title: isGym ? 'Daily Subs' : 'Avg. Basket Size',
+                      value: isGym
+                          ? kpiTrendController.dailySubs.value.toString()
+                          : kpiTrendController.avgBasketSize.value,
+                      unit: isGym ? '' : kpiTrendController.unit.value,
+                      trend: kpiTrendController.basketTrend.value,
+                      trendDirection: kpiTrendController.basketTrendDirection.value,
+                      icon: Icons.shopping_basket,
+                      iconColor: AppColors.getWarningColor(context),
+                    ),
+                    _buildKpiCard(
+                      context,
+                      title: isGym ? 'Monthly Subs' : 'Pending Payments',
+                      value: isGym
+                          ? kpiTrendController.monthlySubs.value.toString()
+                          : kpiTrendController.pendingPayments.value,
+                      unit: isGym ? '' : kpiTrendController.unit.value,
+                      trend: isGym ? null : kpiTrendController.pendingPaymentsTrend.value,
+                      trendDirection: isGym ? null : kpiTrendController.pendingPaymentsTrendDirection.value,
+                      icon: isGym ? Icons.calendar_month : Icons.pending_actions,
+                      iconColor: isGym ? AppColors.getPrimaryColor(context) : AppColors.getWarningColor(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Sales Trends Section
+                _buildSectionCard(
+                  context,
+                  title: "Sales Trends",
+                  icon: Icons.trending_up,
+                  child: SizedBox(
+                    height: 250,
+                    child: SalesTrendLineGraph(
+                      salesData: controller.salesDataPoints,
+                      dateRange: controller.selectedDateRange.value,
+                      customRange: controller.customDateRange.value,
+                      aggregationType: controller.aggregationType.value,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              // Top Selling Products Section
-              _buildSectionCard(
-                context,
-                title: "Top Selling Products",
-                icon: Icons.leaderboard,
-                child: TopProductsList(products: controller.topSellingProducts),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 8),
+                // Top Selling Products Section
+                _buildSectionCard(
+                  context,
+                  title: "Top Selling Products",
+                  icon: Icons.leaderboard,
+                  child: TopProductsList(products: controller.topSellingProducts),
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         ),
       );
@@ -132,11 +129,11 @@ class StoreOverview extends StatelessWidget {
   }
 
   Widget _buildSectionCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
+      BuildContext context, {
+        required String title,
+        required IconData icon,
+        required Widget child,
+      }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -175,15 +172,15 @@ class StoreOverview extends StatelessWidget {
   }
 
   Widget _buildKpiCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    String? unit,
-    String? trend,
-    TrendDirection? trendDirection,
-    required IconData icon,
-    required Color iconColor,
-  }) {
+      BuildContext context, {
+        required String title,
+        required String value,
+        String? unit,
+        String? trend,
+        TrendDirection? trendDirection,
+        required IconData icon,
+        required Color iconColor,
+      }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -243,8 +240,8 @@ class StoreOverview extends StatelessWidget {
                             color: trendDirection == TrendDirection.up
                                 ? AppColors.getSuccessColor(context).withOpacity(0.2)
                                 : trendDirection == TrendDirection.down
-                                    ? AppColors.getErrorColor(context).withOpacity(0.2)
-                                    : AppColors.getTextDisabledColor(context).withOpacity(0.1),
+                                ? AppColors.getErrorColor(context).withOpacity(0.2)
+                                : AppColors.getTextDisabledColor(context).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -254,13 +251,13 @@ class StoreOverview extends StatelessWidget {
                                 trendDirection == TrendDirection.up
                                     ? Icons.arrow_upward
                                     : trendDirection == TrendDirection.down
-                                        ? Icons.arrow_downward
-                                        : Icons.remove,
+                                    ? Icons.arrow_downward
+                                    : Icons.remove,
                                 color: trendDirection == TrendDirection.up
                                     ? AppColors.getSuccessColor(context)
                                     : trendDirection == TrendDirection.down
-                                        ? AppColors.getErrorColor(context)
-                                        : AppColors.getTextSecondaryColor(context),
+                                    ? AppColors.getErrorColor(context)
+                                    : AppColors.getTextSecondaryColor(context),
                                 size: 10,
                               ),
                               const SizedBox(width: 2),
@@ -271,8 +268,8 @@ class StoreOverview extends StatelessWidget {
                                     color: trendDirection == TrendDirection.up
                                         ? AppColors.getSuccessColor(context)
                                         : trendDirection == TrendDirection.down
-                                            ? AppColors.getErrorColor(context)
-                                            : AppColors.getTextSecondaryColor(context),
+                                        ? AppColors.getErrorColor(context)
+                                        : AppColors.getTextSecondaryColor(context),
                                     fontSize: 9,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -329,5 +326,5 @@ class StoreOverview extends StatelessWidget {
     );
   }
 
- 
+
 }

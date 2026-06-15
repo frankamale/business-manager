@@ -39,10 +39,9 @@ class MonSalesTrendsController extends GetxController {
 
     switch (range) {
       case DateRange.today:
-        return 'For ${formatter.format(DateTime.now())}';
       case DateRange.yesterday:
-        final yesterday = DateTime.now().subtract(const Duration(days: 1));
-        return 'For ${formatter.format(yesterday)}';
+        // Show "Last 7 Days" label for both since data is for the week
+        return 'Last 7 Days';
       case DateRange.last7Days:
         final now = DateTime.now();
         final start = now.subtract(const Duration(days: 6));
@@ -261,7 +260,7 @@ class MonSalesTrendsController extends GetxController {
 
       print("Date range: $startDate to $endDate ($days days, range type: $range)");
 
-      if (range == DateRange.today || range == DateRange.yesterday || days <= 1) {
+      if (days <= 1) {
         aggregationType.value = 'hourly';
       } else if (range == DateRange.last7Days || (days > 1 && days <= 7)) {
         aggregationType.value = 'daily';
@@ -409,7 +408,7 @@ class MonSalesTrendsController extends GetxController {
           // Fallback to current time if parsing fails
           date = DateTime.now();
         }
-        return SalesDataPoint(date, entry.value);
+        return SalesDataPoint(date: date, amount: entry.value);
       }).toList()..sort((a, b) => a.date.compareTo(b.date));
 
       print("Formatted data has ${formattedData.length} points");

@@ -5,8 +5,12 @@ import 'package:intl/intl.dart';
 import '../models/sync_tracker.dart';
 import '../services/kpi_sync_service.dart';
 import '../services/api_services.dart';
+import '../services/sync_state_manager.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../../../initialise/splashscreen.dart';
+import 'package:bac_pos/back_pos/controllers/auth_controller.dart';
+import 'package:bac_pos/back_pos/controllers/service_point_controller.dart';
+import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 
 /// MonDataSyncController
 /// 
@@ -16,6 +20,7 @@ class MonDataSyncController extends GetxController {
   final KpiSyncService _kpiSyncService = Get.find<KpiSyncService>();
   final MonitorApiService _apiService = Get.find<MonitorApiService>();
   final UnifiedDatabaseHelper _dbHelper = UnifiedDatabaseHelper.instance;
+  final SyncStateManager _syncStateManager = Get.find<SyncStateManager>();
 
   // Sync state observables
   final isSyncing = false.obs;
@@ -95,7 +100,7 @@ class MonDataSyncController extends GetxController {
     }
   }
 
-  /// Executes initial sync with ONLY today's KPI + baseline data.
+  /// Executes initial sync with recent KPI (last 7 days) + baseline data.
   /// This is used on first app launch to get minimal data for the UI.
   /// Historical data is fetched later via pull-to-refresh on respective pages.
   Future<void> performInitialSyncWithBaseline() async {
@@ -184,8 +189,8 @@ class MonDataSyncController extends GetxController {
         await _dbHelper.deleteAllMonInventoryItems();
         
         // Process in chunks of 1000 for mapping, then insert in batches of 500
-        const mapChunkSize = 1000;
-        const insertBatchSize = 500;
+        const mapChunkSize = 2000;
+        const insertBatchSize = 1000;
         int stored = 0;
         
         for (int chunkStart = 0; chunkStart < totalItems; chunkStart += mapChunkSize) {
@@ -220,11 +225,29 @@ class MonDataSyncController extends GetxController {
         }
         debugPrint('[MonDataSyncController] Stored $totalItems inventory items in chunks');
       }
-      
+      try {
+        if (Get.isRegistered<AuthController>()) {
+          final authController = Get.find<AuthController>();
+          await authController.syncUsersFromAPI(showMessage: false);
+        }
+      } catch (_) {}
+      try {
+        if (Get.isRegistered<ServicePointController>()) {
+          final spController = Get.find<ServicePointController>();
+          await spController.syncServicePointsFromAPI(showMessage: false);
+        }
+      } catch (_) {}
+      try {
+        final userController = Get.find<UserController>();
+        await userController.fetchUsers();
+      } catch (_) {}
+      try {
+        final spController = Get.find<ServicePointController>();
+        await spController.loadServicePointsFromCache();
+      } catch (_) {}
       debugPrint('[MonDataSyncController] Baseline data fetch and store completed');
     } catch (e) {
       debugPrint('[MonDataSyncController] Baseline data fetch and store failed: $e');
-      // Continue with cached data - not fatal
     }
   }
 
@@ -288,19 +311,25 @@ class MonDataSyncController extends GetxController {
       debugPrint('[MonDataSyncController] Incremental KPI sync failed: $e');
     }
 
-    // Also sync service points in incremental mode (they're small)
-    syncPhase.value = SyncPhase.baselineFetch;
-    syncStatusMessage.value = 'Syncing service points...';
-    try {
-      await _fetchAndStoreBaselineData();
-    } catch (e) {
-      debugPrint('[MonDataSyncController] Service points sync failed: $e');
+    // Check if baseline data needs fetching
+    final needsBaseline = await _syncStateManager.needsBaselineFetch();
+    if (needsBaseline) {
+      syncPhase.value = SyncPhase.baselineFetch;
+      syncStatusMessage.value = 'Syncing baseline data...';
+      try {
+        await _fetchAndStoreBaselineData();
+        _syncStateManager.markBaselineLoaded();
+      } catch (e) {
+        debugPrint('[MonDataSyncController] Baseline data sync failed: $e');
+      }
+    } else {
+      debugPrint('[MonDataSyncController] Baseline data already exists - skipping fetch');
     }
   }
 
   Future<void> _fetchTodayKpiMetrics() async {
     syncPhase.value = SyncPhase.kpiFetch;
-    syncStatusMessage.value = 'Fetching today\'s metrics...';
+    syncStatusMessage.value = 'Fetching recent metrics...';
 
     try {
       final results = await _kpiSyncService.fetchTodayKpiMetrics();

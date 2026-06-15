@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../../additions/colors.dart';
 class GrossProfitCard extends StatelessWidget {
   final double grossProfit;
-  final String trend; // Expected format: "+12.5%" or "-8.3%"
+  final String trend;
   const GrossProfitCard({
     super.key,
     required this.grossProfit,
@@ -13,7 +13,7 @@ class GrossProfitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final compactFormatter = NumberFormat.compactCurrency(
       decimalDigits: 0,
-      symbol: '', // Remove currency symbol if you just want number
+      symbol: '',
     );
     
     final cardColor = AppColors.getCardColor(context);
@@ -25,7 +25,6 @@ class GrossProfitCard extends StatelessWidget {
     final errorColor = AppColors.getErrorColor(context);
     final shadowColor = AppColors.getShadowColor(context);
     
-    // Parse trend safely
     final trendStr = trend.replaceAll('%', '').trim();
     final trendValue = double.tryParse(trendStr) ?? 0.0;
     final isPositive = trend.startsWith('+') || trendValue > 0;
@@ -50,11 +49,10 @@ class GrossProfitCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Icon Container
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: secondaryColor.withOpacity(0.12),
+              color: secondaryColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -64,7 +62,6 @@ class GrossProfitCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Main Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +87,6 @@ class GrossProfitCard extends StatelessWidget {
               ],
             ),
           ),
-          // Trend Section
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -119,7 +115,7 @@ class GrossProfitCard extends StatelessWidget {
               Text(
                 'vs last period',
                 style: TextStyle(
-                  color: textSecondary.withOpacity(0.6),
+                  color: textSecondary.withValues(alpha: 0.6),
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),

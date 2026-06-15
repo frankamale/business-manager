@@ -31,7 +31,7 @@ class InventoryItem {
     required this.name,
     required this.category,
     required this.price,
-    this.costprice,
+    required this.costprice,
     required this.packsize,
     required this.packaging,
     required this.packagingid,
@@ -58,7 +58,7 @@ class InventoryItem {
       name: map['name']?.toString() ?? '',
       category: map['category']?.toString() ?? '',
       price: _toDouble(map['price']),
-      costprice: map['costprice'] != null ? _toDouble(map['costprice']) : null,
+      costprice: _toDouble(map['costprice']),
       packsize: _toDouble(map['packsize']),
       packaging: map['packaging']?.toString() ?? '',
       packagingid: map['packagingid']?.toString() ?? '',  // UUID string from API
