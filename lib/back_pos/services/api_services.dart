@@ -51,6 +51,7 @@ class PosApiService extends GetxService {
   static const String _isAdminKey = 'is_admin';
   static const String _branchIdKey = 'branch_id';
   static const String _companyIdKey = 'company_id';
+  static const String _companyNameKey = 'company_name';
   static const String _servicePointIdKey = 'service_point_id';
   static const String _serverUsernameKey = 'server_username';
   static const String _serverPasswordKey = 'server_password';
@@ -250,6 +251,16 @@ class PosApiService extends GetxService {
     await _secureStorage.write(key: _branchIdKey, value: branchId);
     await _secureStorage.write(key: _companyIdKey, value: companyId);
     await _secureStorage.write(key: _servicePointIdKey, value: servicePointId);
+
+    // Persist the real business name (activeBranch.company.name) so receipts
+    // can display it instead of the hard-coded flavor/app name.
+    final activeBranch = companyInfo['activeBranch'];
+    final company = activeBranch is Map ? activeBranch['company'] : null;
+    final companyName = company is Map ? company['name'] as String? : null;
+    print('[PosApiService] saveCompanyInfo - resolved companyName: $companyName');
+    if (companyName != null && companyName.trim().isNotEmpty) {
+      await _secureStorage.write(key: _companyNameKey, value: companyName);
+    }
   }
 
   // Get company info

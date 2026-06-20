@@ -59,16 +59,21 @@ class MonOperatorController extends GetxController {
 
       if (result.isNotEmpty) {
         final details = result.first;
-        companyName.value =
-            details['activeBranchName'] as String? ?? 'Main branch';
+        print('MonOperatorController: Loaded row: $details');
+        print('MonOperatorController: activeBranchName=${details['activeBranchName']}, activeBranchAddress=${details['activeBranchAddress']}');
 
+        final name = details['activeBranchName'] as String?;
+        companyName.value =
+            (name != null && name.trim().isNotEmpty) ? name : 'Komusoft Solutions LTD';
+
+        final address = details['activeBranchAddress'] as String?;
         companyAddress.value =
-            details['activeBranchAddress'] as String? ?? 'No Address Provided';
-        print('MonOperatorController: Company name set to ${companyName.value}');
+            (address != null && address.trim().isNotEmpty) ? address : 'No Address Provided';
+        print('MonOperatorController: Company name set to ${companyName.value}, address set to ${companyAddress.value}');
       } else {
-        companyName.value = 'Welcome';
+        companyName.value = 'Komusoft Solutions LTD';
         companyAddress.value = '';
-        print('MonOperatorController: No company details found, set to Welcome');
+        print('MonOperatorController: No company details found, using fallback name');
       }
     } catch (e) {
       print("Error loading company details from DB: $e");

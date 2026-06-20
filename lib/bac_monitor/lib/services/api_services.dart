@@ -546,6 +546,7 @@ class MonitorApiService extends GetxService {
       try {
         companyDetailsRes = await getWithAuth('/company/details');
         debugPrint("ApiService: Successfully fetched company details");
+        debugPrint("ApiService: /company/details status=${companyDetailsRes.statusCode}, body=${companyDetailsRes.body}");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /company/details -> $e");
         companyDetailsRes = null;
@@ -586,10 +587,13 @@ class MonitorApiService extends GetxService {
         }
       }
 
-      Map<String, dynamic> companyDetailsData = {}; 
+      Map<String, dynamic> companyDetailsData = {};
       if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
+          debugPrint("ApiService: company details keys=${companyDetailsData.keys.toList()}");
+          debugPrint("ApiService: activeBranch=${companyDetailsData['activeBranch']}");
+          debugPrint("ApiService: activeBranch.address=${companyDetailsData['activeBranch']?['address']}");
         } catch (e) {
           debugPrint("ApiService: Failed to parse company details JSON -> $e");
         }

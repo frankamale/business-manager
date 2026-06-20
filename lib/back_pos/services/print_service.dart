@@ -3,12 +3,40 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/sale_transaction.dart';
 import '../config.dart';
 
 class PrintService {
   static final NumberFormat _currencyFormat = NumberFormat('#,###', 'en_US');
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+
+  // Must match the options/key used by PosApiService.saveCompanyInfo so the
+  // stored business name is readable here.
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  static const String _companyNameKey = 'company_name';
+  static const String _fallbackCompanyName = 'Komusoft Solutions LTD';
+
+  /// Resolves the business name printed on receipts.
+  /// Prefers the real company name fetched from the API
+  /// (activeBranch.company.name, persisted on login), then the flavor's
+  /// configured company name, then a hard-coded fallback.
+  static Future<String> resolveCompanyName() async {
+    try {
+      final stored = await _secureStorage.read(key: _companyNameKey);
+      if (stored != null && stored.trim().isNotEmpty) {
+        return stored.trim();
+      }
+    } catch (e) {
+      // ignore secure-storage read failures and fall back below
+    }
+    if (AppConfig.companyName.trim().isNotEmpty) {
+      return AppConfig.companyName.trim();
+    }
+    return _fallbackCompanyName;
+  }
 
   // Generate receipt PDF
   static Future<Uint8List> generateReceiptPdf({
@@ -24,6 +52,7 @@ class PrintService {
     String? notes,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -38,7 +67,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
@@ -270,6 +299,7 @@ class PrintService {
     String? notes,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -284,7 +314,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
@@ -513,6 +543,7 @@ class PrintService {
     String? tableNumber,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -527,7 +558,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
 
                         fontSize: 16,
@@ -694,6 +725,7 @@ class PrintService {
     String? tableNumber,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -708,7 +740,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,
@@ -969,6 +1001,7 @@ class PrintService {
     double? complementaryTotal,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -983,7 +1016,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
                         fontSize: 14,
                         fontWeight: pw.FontWeight.bold,
