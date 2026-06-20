@@ -682,18 +682,28 @@ class MonitorApiService extends GetxService {
 
         // Insert company details (single record, no batch needed)
         if (companyDetailsData.isNotEmpty) {
+          final activeBranch = companyDetailsData['activeBranch'];
+          final company = activeBranch is Map ? activeBranch['company'] : null;
           await txn.insert('company_details', {
             'branch': companyDetailsData['branch'],
             'company': companyDetailsData['company'],
             'userCode': companyDetailsData['userCode'],
             'currentBranchName': companyDetailsData['currentBranchName'],
             'currentBranchCode': companyDetailsData['currentBranchCode'],
-            'activeBranchName': companyDetailsData['activeBranch']?['name'],
-            'activeBranchAddress':
-                companyDetailsData['activeBranch']?['address'],
-            'activeBranchPrimaryEmail':
-                companyDetailsData['activeBranch']?['primaryEmail'],
-            'activeBranchCode': companyDetailsData['activeBranch']?['code'],
+            'activeBranchName': activeBranch?['name'],
+            'activeBranchAddress': activeBranch?['address'] ??
+                (company is Map ? company['address'] : null),
+            'activeBranchPrimaryEmail': activeBranch?['primaryEmail'],
+            'activeBranchCode': activeBranch?['code'],
+            'companyName': company is Map ? company['name'] : null,
+            'activeBranchPhone': activeBranch?['primaryPhone'] ??
+                activeBranch?['phone'] ??
+                activeBranch?['telephone'] ??
+                (company is Map
+                    ? (company['primaryPhone'] ??
+                        company['phone'] ??
+                        company['telephone'])
+                    : null),
             'efrisEnabled': companyDetailsData['efrisEnabled'] == true ? 1 : 0,
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:bac_pos/back_pos/models/expense.dart';
 import 'package:bac_pos/back_pos/controllers/expenses_controller.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
@@ -55,6 +56,8 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
   String _selectedCategory = ExpenseCategory.other;
   String? _selectedSubject;
   String? _selectedServicePointId;
+  // Defaults to the day of entry; the user can pick a different date.
+  DateTime _selectedDate = DateTime.now();
 
   String? _titleError;
   String? _descriptionError;
@@ -129,6 +132,7 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
       category: _selectedCategory,
       servicePointId: _selectedServicePointId ?? widget.servicePointId,
       expenseType: widget.expenseType,
+      date: _selectedDate,
     );
 
     Navigator.pop(context);
@@ -372,6 +376,8 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
                           }
                         },
                       ),
+                      const SizedBox(height: 12),
+                      _buildDateField(color: color),
                     ],
                   ),
                 ),
@@ -437,6 +443,73 @@ class _ExpenseFormDialogState extends State<ExpenseFormDialog> {
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDate(Color color) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(now.year - 5),
+      lastDate: now,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(primary: color),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  Widget _buildDateField({required Color color}) {
+    final isToday = DateUtils.isSameDay(_selectedDate, DateTime.now());
+    final label = DateFormat('EEE, dd MMM yyyy').format(_selectedDate);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _pickDate(color),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Date',
+          prefixIcon: Icon(Icons.calendar_today_outlined,
+              size: 18, color: AppColors.getTextPrimaryColor(context)),
+          filled: true,
+          fillColor: AppColors.getSurfaceColor(context),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.getBorderColor(context)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: AppColors.getTextPrimaryColor(context)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: color, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                isToday ? '$label  (Today)' : label,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppColors.getTextPrimaryColor(context),
+                ),
+              ),
+            ),
+            Icon(Icons.edit_calendar_outlined,
+                size: 18, color: color.withOpacity(0.8)),
+          ],
         ),
       ),
     );

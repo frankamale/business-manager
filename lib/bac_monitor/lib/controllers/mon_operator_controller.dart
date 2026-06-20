@@ -62,9 +62,17 @@ class MonOperatorController extends GetxController {
         print('MonOperatorController: Loaded row: $details');
         print('MonOperatorController: activeBranchName=${details['activeBranchName']}, activeBranchAddress=${details['activeBranchAddress']}');
 
-        final name = details['activeBranchName'] as String?;
-        companyName.value =
-            (name != null && name.trim().isNotEmpty) ? name : 'Komusoft Solutions LTD';
+        // Prefer the real company name (activeBranch.company.name), then the
+        // branch name, then a hard-coded fallback.
+        final realCompanyName = details['companyName'] as String?;
+        final branchName = details['activeBranchName'] as String?;
+        if (realCompanyName != null && realCompanyName.trim().isNotEmpty) {
+          companyName.value = realCompanyName;
+        } else if (branchName != null && branchName.trim().isNotEmpty) {
+          companyName.value = branchName;
+        } else {
+          companyName.value = 'Komusoft Solutions LTD';
+        }
 
         final address = details['activeBranchAddress'] as String?;
         companyAddress.value =
