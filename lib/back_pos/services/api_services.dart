@@ -52,6 +52,8 @@ class PosApiService extends GetxService {
   static const String _branchIdKey = 'branch_id';
   static const String _companyIdKey = 'company_id';
   static const String _companyNameKey = 'company_name';
+  static const String _companyLocationKey = 'company_location';
+  static const String _companyPhoneKey = 'company_phone';
   static const String _servicePointIdKey = 'service_point_id';
   static const String _serverUsernameKey = 'server_username';
   static const String _serverPasswordKey = 'server_password';
@@ -252,14 +254,33 @@ class PosApiService extends GetxService {
     await _secureStorage.write(key: _companyIdKey, value: companyId);
     await _secureStorage.write(key: _servicePointIdKey, value: servicePointId);
 
-    // Persist the real business name (activeBranch.company.name) so receipts
-    // can display it instead of the hard-coded flavor/app name.
+    // Persist the real business name/location/phone (from activeBranch +
+    // activeBranch.company) so receipts can display them instead of the
+    // hard-coded flavor/app name.
     final activeBranch = companyInfo['activeBranch'];
-    final company = activeBranch is Map ? activeBranch['company'] : null;
-    final companyName = company is Map ? company['name'] as String? : null;
-    print('[PosApiService] saveCompanyInfo - resolved companyName: $companyName');
+    final branchMap = activeBranch is Map ? activeBranch : const {};
+    final company = branchMap['company'];
+    final companyMap = company is Map ? company : const {};
+
+    final companyName = (companyMap['name'] ?? branchMap['name']) as String?;
+    final location = (branchMap['address'] ?? companyMap['address']) as String?;
+    final phone = (branchMap['primaryPhone'] ??
+        branchMap['phone'] ??
+        branchMap['telephone'] ??
+        companyMap['primaryPhone'] ??
+        companyMap['phone'] ??
+        companyMap['telephone']) as String?;
+
+    print('[PosApiService] saveCompanyInfo - name=$companyName, location=$location, phone=$phone');
+
     if (companyName != null && companyName.trim().isNotEmpty) {
       await _secureStorage.write(key: _companyNameKey, value: companyName);
+    }
+    if (location != null && location.trim().isNotEmpty) {
+      await _secureStorage.write(key: _companyLocationKey, value: location);
+    }
+    if (phone != null && phone.trim().isNotEmpty) {
+      await _secureStorage.write(key: _companyPhoneKey, value: phone);
     }
   }
 
