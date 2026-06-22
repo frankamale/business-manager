@@ -975,12 +975,71 @@ class _SalesListingState extends State<SalesListing> {
         break;
 
       case 'fiscalise':
-        Get.snackbar(
-          'Not available for the moment ...', "Coming soon ",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange.shade700,
-          colorText: Colors.white,
+        if (salesId == null) {
+          Get.snackbar(
+            'Error',
+            'Cannot fiscalise: Invalid sale ID',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        // Show loading dialog
+        Get.dialog(
+          Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Fiscalising...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          barrierDismissible: false,
         );
+
+        try {
+          await salesController.fiscaliseSale(salesId);
+
+          // Close loading dialog
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+
+          Get.snackbar(
+            'Success',
+            'Sale $receiptNumber fiscalised successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade700,
+            colorText: Colors.white,
+            duration: Duration(seconds: 3),
+          );
+
+          // Refresh the sales list to reflect any updated status
+          await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
+        } catch (e) {
+          // Close loading dialog
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+
+          Get.snackbar(
+            'Fiscalise Failed',
+            'Failed to fiscalise sale $receiptNumber: ${e.toString()}',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+            duration: Duration(seconds: 5),
+          );
+        }
         break;
 
       case 'settleBill':

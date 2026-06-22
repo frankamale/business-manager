@@ -116,6 +116,74 @@ class SalesController extends GetxController {
     }
   }
 
+  // Fiscalise a sale (EFRIS). Builds a DtoSale payload from the local
+  // transactions and posts it to the `rest/fiscalise/` endpoint.
+  Future<Map<String, dynamic>> fiscaliseSale(String salesId) async {
+    final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(salesId);
+
+    if (saleTransactions.isEmpty) {
+      throw Exception('No sale transactions found for salesId: $salesId');
+    }
+
+    final firstTransaction = saleTransactions.first;
+
+    final companyId = firstTransaction.companyid ?? '';
+    final branchId = firstTransaction.branchid ?? '';
+    final servicePointId = firstTransaction.servicepointid ?? '';
+    final customerId = firstTransaction.clientid;
+    final salespersonId = firstTransaction.salespersonid ?? "00000000-0000-0000-0000-000000000000";
+
+    // Reconstruct line items from transactions
+    const uuid = Uuid();
+    final lineItems = saleTransactions.asMap().entries.map((entry) {
+      final index = entry.key;
+      final transaction = entry.value;
+
+      return {
+        "id": uuid.v4(),
+        "salesid": salesId,
+        "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
+        "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
+        "quantity": transaction.quantity.toInt(),
+        "sellingprice": transaction.sellingprice.toInt(),
+        "ordernumber": index,
+        "remarks": "",
+        "transactionstatusid": 1,
+        "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
+        "complimentaryid": transaction.complimentaryid,
+      };
+    }).toList();
+
+    // Build the DtoSale payload
+    final dtoSale = {
+      "id": salesId,
+      "transactionDate": firstTransaction.transactiondate,
+      "transactionstatusid": 1,
+      "receiptnumber": firstTransaction.receiptnumber,
+      "clientid": customerId,
+      "remarks": firstTransaction.remarks,
+      "otherRemarks": "",
+      "companyId": companyId,
+      "branchId": branchId,
+      "servicepointid": servicePointId,
+      "salespersonid": salespersonId,
+      "modeid": 2,
+      "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
+      "lineItems": lineItems,
+      "saleActionId": 1,
+      "efris": 0,
+      "efriscode": "",
+      "efrisinvoiceid": "",
+      "efrisstatus": "",
+      "qrcode": "",
+      "efrismessage": "",
+      "taxamount": "",
+      "taxrate": "",
+    };
+
+    return await _apiService.fiscaliseSale(dtoSale);
+  }
+
   // Upload sale to server
   Future<void> uploadSaleToServer(String salesId) async {
     try {
