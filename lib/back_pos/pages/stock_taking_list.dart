@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/stock_take_controller.dart';
+import '../models/inventory_item.dart';
 import '../models/service_point.dart';
 import '../models/stock_take.dart';
 import 'stock_take_form.dart';
+import 'stock_take_item_picker.dart';
 import '../../flavors/flavor_colors.dart';
 
 /// Lists previously recorded stock takes and offers a FAB to add a new one.
@@ -27,8 +29,19 @@ class _StockTakingListState extends State<StockTakingList> {
     _controller.loadStockTakes(servicePointId: widget.servicePoint?.id);
   }
 
+  /// Add flow: pick/scan an item first, then fill the form. "Save & New"
+  /// loops back to the picker for the next product.
   Future<void> _openForm() async {
-    await Get.to(() => StockTakeForm(servicePoint: widget.servicePoint));
+    bool again = true;
+    while (again && mounted) {
+      final item = await Get.to<dynamic>(() => const StockTakeItemPicker());
+      if (item is! InventoryItem) break; // cancelled
+
+      final saveAndNew = await Get.to<dynamic>(
+        () => StockTakeForm(servicePoint: widget.servicePoint, item: item),
+      );
+      again = saveAndNew == true;
+    }
     // Refresh in case items were added while the form was open.
     await _controller.loadStockTakes(servicePointId: widget.servicePoint?.id);
   }
