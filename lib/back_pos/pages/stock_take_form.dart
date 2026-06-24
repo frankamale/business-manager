@@ -174,14 +174,25 @@ class _StockTakeFormState extends State<StockTakeForm> {
     );
   }
 
+  bool _isSaving = false;
+
   Future<void> _save({required bool newAfter}) async {
+    // Guard against rapid double taps creating duplicate records.
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
     _recalculateAmount();
+
+    setState(() => _isSaving = true);
     try {
       await _stockTakeController.addStockTake(
         _buildStockTake(),
         servicePointId: widget.servicePoint?.id,
       );
+      if (!mounted) return;
+      // Pop the form route explicitly (Navigator, not Get.back, which can
+      // close the snackbar overlay instead of the page). newAfter is returned
+      // to the caller so it can re-open the item picker for the next item.
+      Navigator.of(context).pop(newAfter);
       Get.snackbar(
         'Saved',
         '$_name recorded',
@@ -190,9 +201,8 @@ class _StockTakeFormState extends State<StockTakeForm> {
         colorText: Colors.green.shade900,
         duration: const Duration(seconds: 1),
       );
-      // newAfter => signal caller to re-open the item picker for the next item.
-      Get.back(result: newAfter);
     } catch (e) {
+      if (mounted) setState(() => _isSaving = false);
       Get.snackbar(
         'Error',
         'Failed to save stock take',
@@ -440,7 +450,9 @@ class _StockTakeFormState extends State<StockTakeForm> {
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: () => Get.back(result: false),
+                onPressed: _isSaving
+                    ? null
+                    : () => Navigator.of(context).pop(false),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -453,7 +465,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
             const SizedBox(width: 10),
             Expanded(
               child: ElevatedButton(
-                onPressed: () => _save(newAfter: false),
+                onPressed: _isSaving ? null : () => _save(newAfter: false),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: FlavorColors.current.primary,
                   foregroundColor: Colors.white,
@@ -470,7 +482,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _save(newAfter: true),
+                  onPressed: _isSaving ? null : () => _save(newAfter: true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green.shade700,
                     foregroundColor: Colors.white,
