@@ -8,20 +8,25 @@ import '../models/service_point.dart';
 import '../models/stock_take.dart';
 import '../../flavors/flavor_colors.dart';
 
-/// Form to record the stock count for a single, already-selected product.
-/// The item is chosen on the previous screen and shown as the page title.
+/// Form to record the stock count for a single product.
+///
+/// Use [item] when adding a new stock take (item chosen on the previous
+/// screen), or [existing] to edit a previously saved record (prefilled).
 ///
 /// Pops with `true` when the user chose "Save & New" (so the caller can
 /// re-open the item picker for the next product), otherwise `false`.
 class StockTakeForm extends StatefulWidget {
   final ServicePoint? servicePoint;
-  final InventoryItem item;
+  final InventoryItem? item;
+  final StockTake? existing;
 
   const StockTakeForm({
     super.key,
-    required this.item,
+    this.item,
+    this.existing,
     this.servicePoint,
-  });
+  }) : assert(item != null || existing != null,
+            'Provide either an item (new) or an existing stock take (edit)');
 
   @override
   State<StockTakeForm> createState() => _StockTakeFormState();
@@ -47,13 +52,38 @@ class _StockTakeFormState extends State<StockTakeForm> {
 
   final NumberFormat _money = NumberFormat('#,##0.##', 'en_US');
 
+  bool get _isEdit => widget.existing != null;
+  String get _name => widget.existing?.itemName ?? widget.item!.name;
+  String get _code => widget.existing?.code ?? widget.item!.code;
+  String get _inventoryId => widget.existing?.inventoryId ?? widget.item!.id;
+
   @override
   void initState() {
     super.initState();
     _quantityFocus.addListener(() {
       if (!_quantityFocus.hasFocus) _recalculateAmount();
     });
-    _applyItem(widget.item);
+    if (widget.existing != null) {
+      _applyExisting(widget.existing!);
+    } else {
+      _applyItem(widget.item!);
+    }
+  }
+
+  String _formatNum(double v) =>
+      v % 1 == 0 ? v.toStringAsFixed(0) : v.toString();
+
+  void _applyExisting(StockTake t) {
+    _packagingController.text = t.packaging;
+    _quantityController.text = t.quantity != 0 ? _formatNum(t.quantity) : '';
+    _costPriceController.text =
+        t.costPrice != 0 ? t.costPrice.toStringAsFixed(0) : '';
+    _markupController.text = t.markup != 0 ? t.markup.toStringAsFixed(1) : '';
+    _sellingPriceController.text =
+        t.sellingPrice != 0 ? t.sellingPrice.toStringAsFixed(0) : '';
+    _batchController.text = t.batchNumber;
+    _expiryDate = t.expiryDate ?? _defaultExpiry;
+    _recalculateAmount();
   }
 
   @override
@@ -125,10 +155,10 @@ class _StockTakeFormState extends State<StockTakeForm> {
 
   StockTake _buildStockTake() {
     return StockTake(
-      id: 'st_${DateTime.now().microsecondsSinceEpoch}',
-      inventoryId: widget.item.id,
-      itemName: widget.item.name,
-      code: widget.item.code,
+      id: widget.existing?.id ?? 'st_${DateTime.now().microsecondsSinceEpoch}',
+      inventoryId: _inventoryId,
+      itemName: _name,
+      code: _code,
       packaging: _packagingController.text.trim(),
       quantity: _quantity,
       costPrice: _costPrice,
@@ -137,8 +167,10 @@ class _StockTakeFormState extends State<StockTakeForm> {
       sellingPrice: _sellingPrice,
       batchNumber: _batchController.text.trim(),
       expiryDate: _expiryDate,
-      servicePointId: widget.servicePoint?.id,
-      createdAt: DateTime.now(),
+      servicePointId:
+          widget.servicePoint?.id ?? widget.existing?.servicePointId,
+      createdAt: widget.existing?.createdAt ?? DateTime.now(),
+      uploadStatus: widget.existing?.uploadStatus ?? 'pending',
     );
   }
 
@@ -152,7 +184,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
       );
       Get.snackbar(
         'Saved',
-        '${widget.item.name} recorded',
+        '$_name recorded',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.shade100,
         colorText: Colors.green.shade900,
@@ -176,7 +208,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.item.name,
+          _isEdit ? 'Edit • $_name' : _name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -362,7 +394,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.item.name,
+                  _name,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
@@ -370,10 +402,10 @@ class _StockTakeFormState extends State<StockTakeForm> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (widget.item.code.isNotEmpty) ...[
+                if (_code.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
-                    'Code: ${widget.item.code}',
+                    'Code: $_code',
                     style: TextStyle(
                       color: Colors.grey.shade700,
                       fontSize: 12,
@@ -434,25 +466,27 @@ class _StockTakeFormState extends State<StockTakeForm> {
                 child: const Text('Save'),
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () => _save(newAfter: true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+            if (!_isEdit) ...[
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _save(newAfter: true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Save & New',
-                  textAlign: TextAlign.center,
+                  child: const Text(
+                    'Save & New',
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

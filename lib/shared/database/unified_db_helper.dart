@@ -1356,6 +1356,16 @@ class UnifiedDatabaseHelper {
     );
   }
 
+  /// Delete all transactions belonging to a single (local) sale.
+  Future<void> deleteSaleBySalesId(String salesId) async {
+    final db = database;
+    await db.delete(
+      'sales_transactions',
+      where: 'salesId = ?',
+      whereArgs: [salesId],
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getSalesByUploadStatus(
     String status,
   ) async {
@@ -1600,6 +1610,16 @@ class UnifiedDatabaseHelper {
   Future<void> deleteStockTake(String id) async {
     final db = database;
     await db.delete('stock_takes', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> updateStockTakeStatus(String id, String status) async {
+    final db = database;
+    await db.update(
+      'stock_takes',
+      {'upload_status': status},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // ========================================================================
