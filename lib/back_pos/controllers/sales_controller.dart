@@ -116,9 +116,10 @@ class SalesController extends GetxController {
     }
   }
 
-  // Fiscalise a sale (EFRIS). Builds a DtoSale payload from the local
-  // transactions and posts it to the `rest/fiscalise/` endpoint.
-  Future<Map<String, dynamic>> fiscaliseSale(String salesId) async {
+  // Builds the DtoSale payload from the local sale transactions. Both the sale
+  // upload and the fiscalisation use this single builder so the two requests
+  // always send an identical body.
+  Future<Map<String, dynamic>> _buildSalePayload(String salesId) async {
     final saleTransactions = await _dbHelper.getSaleTransactionsBySalesId(salesId);
 
     if (saleTransactions.isEmpty) {
@@ -154,8 +155,7 @@ class SalesController extends GetxController {
       };
     }).toList();
 
-    // Build the DtoSale payload
-    final dtoSale = {
+    return {
       "id": salesId,
       "transactionDate": firstTransaction.transactiondate,
       "transactionstatusid": 1,
@@ -180,8 +180,23 @@ class SalesController extends GetxController {
       "taxamount": "",
       "taxrate": "",
     };
+  }
 
-    return await _apiService.fiscaliseSale(dtoSale);
+  // Fiscalise a sale (EFRIS). Uses the sale as it is stored on the server (not
+  // the locally reconstructed body) and posts it to `rest/sales/fiscalise/`.
+  Future<Map<String, dynamic>> fiscaliseSale(String salesId) async {
+    final serverSale = await _apiService.fetchSingleTransaction(salesId);
+
+    if (serverSale.isEmpty) {
+      // A fiscalise call for a sale the server can't find returns 404, so make
+      // the cause explicit: the sale must be uploaded before it is fiscalised.
+      throw Exception(
+        'Cannot fiscalise: sale $salesId was not found on the server. '
+        'Upload the sale before fiscalising.',
+      );
+    }
+
+    return await _apiService.fiscaliseSale(serverSale);
   }
 
   // Upload sale to server
@@ -197,12 +212,10 @@ class SalesController extends GetxController {
       // Get the first transaction for common fields
       final firstTransaction = saleTransactions.first;
 
-      // Use stored IDs from the local transaction
+      // Stored IDs from the local transaction, reused by the payment payload below
       final companyId = firstTransaction.companyid ?? '';
-      final branchId = firstTransaction.branchid ?? '';
       final servicePointId = firstTransaction.servicepointid ?? '';
       final customerId = firstTransaction.clientid;
-      final salespersonId = firstTransaction.salespersonid ?? "00000000-0000-0000-0000-000000000000";
 
       // Check if sale already exists on server
       bool saleExistsOnServer = false;
@@ -215,53 +228,9 @@ class SalesController extends GetxController {
         saleExistsOnServer = false;
       }
 
-      // Reconstruct line items from transactions
-      const uuid = Uuid();
-      final lineItems = saleTransactions.asMap().entries.map((entry) {
-        final index = entry.key;
-        final transaction = entry.value;
-
-        return {
-          "id": uuid.v4(),
-          "salesid": salesId,
-          "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
-          "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
-          "quantity": transaction.quantity.toInt(),
-          "sellingprice": transaction.sellingprice.toInt(),
-          "ordernumber": index,
-          "remarks": "",
-          "transactionstatusid": 1,
-          "sellingprice_original": transaction.sellingpriceOriginal.toInt(),
-          "complimentaryid": transaction.complimentaryid,
-        };
-      }).toList();
-
-      // Create sale payload
-      final salePayload = {
-        "id": salesId,
-        "transactionDate": firstTransaction.transactiondate,
-        "transactionstatusid": 1,
-        "receiptnumber": firstTransaction.receiptnumber,
-        "clientid": customerId,
-        "remarks": firstTransaction.remarks,
-        "otherRemarks": "",
-        "companyId": companyId,
-        "branchId": branchId,
-        "servicepointid": servicePointId,
-        "salespersonid": salespersonId,
-        "modeid": 2,
-        "gLProxySubCategoryId": "44444444-1111-1111-1111-111111111111",
-        "lineItems": lineItems,
-        "saleActionId": 1,
-        "efris": 0,
-        "efriscode": "",
-        "efrisinvoiceid": "",
-        "efrisstatus": "",
-        "qrcode": "",
-        "efrismessage": "",
-        "taxamount": "",
-        "taxrate": "",
-      };
+      // Build the sale payload using the shared builder so the upload and the
+      // fiscalise request always send an identical body.
+      final salePayload = await _buildSalePayload(salesId);
 
       // Create or update sale on server
       if (!saleExistsOnServer) {

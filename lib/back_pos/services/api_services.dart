@@ -454,13 +454,21 @@ class PosApiService extends GetxService {
     }
   }
 
-  /// Fiscalise a sale (EFRIS). Sends a DtoSale payload to `rest/fiscalise/`.
+  /// Fiscalise a sale (EFRIS). Sends a DtoSale payload to `rest/sales/fiscalise/`.
   Future<Map<String, dynamic>> fiscaliseSale(Map<String, dynamic> saleData) async {
     try {
-      final endpoint = "$baseurl/fiscalise/";
+      final endpoint = "$baseurl/sales/fiscalise/";
       final body = json.encode(saleData);
       print('[PosApiService] fiscaliseSale - POST $endpoint');
-      print('[PosApiService] fiscaliseSale - payload: $body');
+      // logcat truncates a single line at ~4KB, which makes a long body look
+      // cut off. Print the length and emit the body in chunks so the full
+      // payload is visible in the console.
+      print('[PosApiService] fiscaliseSale - payload length: ${body.length}');
+      const chunkSize = 800;
+      for (var i = 0; i < body.length; i += chunkSize) {
+        final end = (i + chunkSize < body.length) ? i + chunkSize : body.length;
+        print('[PosApiService] fiscaliseSale - payload[$i-$end]: ${body.substring(i, end)}');
+      }
 
       final request = http.Request('POST', Uri.parse(endpoint));
       request.headers['Content-Type'] = 'application/json';
