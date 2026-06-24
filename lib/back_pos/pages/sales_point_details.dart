@@ -1,4 +1,5 @@
 import 'package:bac_pos/back_pos/pages/daily_summary.dart';
+import 'package:bac_pos/back_pos/pages/inventory_options.dart';
 import 'package:bac_pos/back_pos/pages/pos_screen.dart';
 import 'package:bac_pos/back_pos/pages/sales_listing.dart';
 import 'package:bac_pos/back_pos/pages/settings_page.dart';
@@ -71,6 +72,11 @@ class SalesPointDetails extends StatelessWidget {
                 //   Icons.dashboard_outlined,
                 //   ExpensesPage(servicePoint: servicePoint),
                 // ),
+                _actionButton(
+                  "INVENTORY",
+                  Icons.inventory_2_outlined,
+                  InventoryOptions(servicePoint: servicePoint),
+                ),
                 _actionButton(
                   "DAILY SUMMARY",
                   Icons.dashboard_outlined,

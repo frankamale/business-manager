@@ -7,6 +7,7 @@ import '../../back_pos/models/inventory_item.dart';
 import '../../back_pos/models/sale_transaction.dart';
 import '../../back_pos/models/customer.dart';
 import '../../back_pos/models/expense.dart';
+import '../../back_pos/models/stock_take.dart';
 import '../../bac_monitor/lib/models/sync_tracker.dart';
 
 /// Unified Database Helper that combines POS and Monitor databases
@@ -69,7 +70,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 7,
+        version: 8,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -548,9 +549,33 @@ class UnifiedDatabaseHelper {
       )
     ''');
 
+    // Stock takes table (POS) - records of physical stock counts
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS stock_takes (
+        id TEXT PRIMARY KEY,
+        inventoryid TEXT,
+        itemname TEXT NOT NULL,
+        code TEXT,
+        packaging TEXT,
+        quantity REAL NOT NULL,
+        costprice REAL NOT NULL DEFAULT 0,
+        amount REAL NOT NULL DEFAULT 0,
+        markup REAL NOT NULL DEFAULT 0,
+        sellingprice REAL NOT NULL DEFAULT 0,
+        batchnumber TEXT,
+        expirydate INTEGER,
+        servicepointid TEXT,
+        created_at INTEGER NOT NULL,
+        upload_status TEXT DEFAULT 'pending'
+      )
+    ''');
+
     // POS indexes
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_takes_created ON stock_takes(created_at DESC)',
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_receiptnumber ON sales_transactions(receiptnumber)',
@@ -707,6 +732,37 @@ class UnifiedDatabaseHelper {
         debugPrint('UnifiedDatabaseHelper: Migrated company_details to v7');
       } catch (e) {
         debugPrint('UnifiedDatabaseHelper: v7 company_details migration error: $e');
+      }
+    }
+
+    // Migration to version 8 - Add stock_takes table
+    if (oldVersion < 8) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS stock_takes (
+            id TEXT PRIMARY KEY,
+            inventoryid TEXT,
+            itemname TEXT NOT NULL,
+            code TEXT,
+            packaging TEXT,
+            quantity REAL NOT NULL,
+            costprice REAL NOT NULL DEFAULT 0,
+            amount REAL NOT NULL DEFAULT 0,
+            markup REAL NOT NULL DEFAULT 0,
+            sellingprice REAL NOT NULL DEFAULT 0,
+            batchnumber TEXT,
+            expirydate INTEGER,
+            servicepointid TEXT,
+            created_at INTEGER NOT NULL,
+            upload_status TEXT DEFAULT 'pending'
+          )
+        ''');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_stock_takes_created ON stock_takes(created_at DESC)',
+        );
+        debugPrint('UnifiedDatabaseHelper: Created stock_takes table (v8)');
+      } catch (e) {
+        debugPrint('UnifiedDatabaseHelper: v8 stock_takes migration error: $e');
       }
     }
   }
@@ -1515,6 +1571,35 @@ class UnifiedDatabaseHelper {
       await db.rawQuery('SELECT COUNT(*) FROM customers'),
     );
     return count ?? 0;
+  }
+
+  // ========================================================================
+  // POS STOCK TAKE METHODS
+  // ========================================================================
+
+  Future<void> insertStockTake(StockTake stockTake) async {
+    final db = database;
+    await db.insert(
+      'stock_takes',
+      stockTake.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<StockTake>> getStockTakes({String? servicePointId}) async {
+    final db = database;
+    final maps = await db.query(
+      'stock_takes',
+      where: servicePointId != null ? 'servicepointid = ?' : null,
+      whereArgs: servicePointId != null ? [servicePointId] : null,
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => StockTake.fromMap(map)).toList();
+  }
+
+  Future<void> deleteStockTake(String id) async {
+    final db = database;
+    await db.delete('stock_takes', where: 'id = ?', whereArgs: [id]);
   }
 
   // ========================================================================
