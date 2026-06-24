@@ -186,26 +186,18 @@ class _StockTakeFormState extends State<StockTakeForm> {
       body: SafeArea(
         child: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
+          child: Column(
             children: [
-              // Item summary header
-              if (widget.item.code.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    'Code: ${widget.item.code}',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                  ),
-                ),
-
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
                   children: [
+              // Item summary header card
+              _itemHeaderCard(),
+              const SizedBox(height: 16),
+
+              Column(
+                children: [
                     // 1. Packaging
                     _row(
                       'Packaging',
@@ -235,7 +227,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
                           }
                           return null;
                         },
-                        decoration: _cellDecoration(hint: 'Quantity at hand'),
+                        decoration: _cellDecoration(hint: '0'),
                       ),
                     ),
                     // 3. Cost price
@@ -253,7 +245,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
                           _recalculateAmount();
                           _recalculateMarkupFromSelling();
                         },
-                        decoration: _cellDecoration(hint: 'Cost price'),
+                        decoration: _cellDecoration(hint: '0'),
                       ),
                     ),
                     // 4. Amount (calculated)
@@ -280,7 +272,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                         ],
                         onChanged: (_) => _recalculateSellingFromMarkup(),
-                        decoration: _cellDecoration(hint: 'Markup %'),
+                        decoration: _cellDecoration(hint: '0.0 '),
                       ),
                     ),
                     // 6. Selling price
@@ -295,7 +287,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
                           FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                         ],
                         onChanged: (_) => _recalculateMarkupFromSelling(),
-                        decoration: _cellDecoration(hint: 'Selling price'),
+                        decoration: _cellDecoration(hint: '0'),
                       ),
                     ),
                     // 7. Batch number
@@ -303,7 +295,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
                       'Batch Number',
                       TextFormField(
                         controller: _batchController,
-                        decoration: _cellDecoration(hint: 'Batch number'),
+                        decoration: _cellDecoration(hint: '#'),
                       ),
                     ),
                     // 8. Expiry date
@@ -329,61 +321,10 @@ class _StockTakeFormState extends State<StockTakeForm> {
                     ),
                   ],
                 ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 28),
-
-              // Action buttons: Cancel, Save, Save & New
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Get.back(result: false),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _save(newAfter: false),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: FlavorColors.current.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text('Save'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _save(newAfter: true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Save & New',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _bottomBar(),
             ],
           ),
         ),
@@ -391,37 +332,125 @@ class _StockTakeFormState extends State<StockTakeForm> {
     );
   }
 
-  /// One table row: label on the left, input on the right.
-  Widget _row(String label, Widget field, {bool isLast = false}) {
+  Widget _itemHeaderCard() {
     return Container(
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        border: isLast
-            ? null
-            : Border(bottom: BorderSide(color: Colors.grey.shade300)),
+        color: FlavorColors.current.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: FlavorColors.current.primary.withOpacity(0.2),
+        ),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: FlavorColors.current.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.inventory_2_outlined,
+              color: FlavorColors.current.primaryDark,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.item.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+                if (widget.item.code.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Code: ${widget.item.code}',
+                    style: TextStyle(
+                      color: Colors.grey.shade700,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bottomBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Get.back(result: false),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text('Cancel'),
               ),
             ),
-            Container(
-              width: 1,
-              color: Colors.grey.shade300,
-            ),
+            const SizedBox(width: 10),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                child: field,
+              child: ElevatedButton(
+                onPressed: () => _save(newAfter: false),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: FlavorColors.current.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text('Save'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () => _save(newAfter: true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Save & New',
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ],
@@ -430,15 +459,51 @@ class _StockTakeFormState extends State<StockTakeForm> {
     );
   }
 
-  /// Borderless input used inside the table cells.
+  /// One form row: label on the left, input field on the right.
+  Widget _row(String label, Widget field, {bool isLast = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: field),
+        ],
+      ),
+    );
+  }
+
+  /// Input styling that clearly reads as an editable field.
   InputDecoration _cellDecoration({required String hint}) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: Colors.grey.shade400),
+    );
     return InputDecoration(
       hintText: hint,
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      border: InputBorder.none,
-      enabledBorder: InputBorder.none,
-      focusedBorder: InputBorder.none,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      border: border,
+      enabledBorder: border,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(
+          color: FlavorColors.current.primary,
+          width: 1.6,
+        ),
+      ),
     );
   }
 }
