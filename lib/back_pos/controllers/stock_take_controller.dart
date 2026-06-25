@@ -1,79 +1,138 @@
 import 'package:get/get.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/models/stock_take.dart';
+import 'package:bac_pos/back_pos/models/stock_take_session.dart';
 
 class StockTakeController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
 
-  var stockTakes = <StockTake>[].obs;
+  // Sessions shown on the list screen.
+  var sessions = <StockTakeSession>[].obs;
   var isLoading = false.obs;
 
-  /// Load saved stock takes, optionally filtered to a service point.
-  Future<void> loadStockTakes({String? servicePointId}) async {
+  // Items of the session currently being viewed.
+  var sessionItems = <StockTake>[].obs;
+  var isLoadingItems = false.obs;
+
+  // ---- Sessions ----
+
+  Future<void> loadSessions({String? servicePointId}) async {
     try {
       isLoading.value = true;
-      final takes = await _dbHelper.getStockTakes(servicePointId: servicePointId);
-      stockTakes.value = takes;
+      sessions.value =
+          await _dbHelper.getStockTakeSessions(servicePointId: servicePointId);
     } catch (e) {
-      stockTakes.clear();
+      sessions.clear();
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// Persist a stock take and refresh the in-memory list.
-  Future<void> addStockTake(
-    StockTake stockTake, {
+  Future<StockTakeSession> createSession({
+    String reference = '',
+    String note = '',
     String? servicePointId,
   }) async {
-    await _dbHelper.insertStockTake(stockTake);
-    await loadStockTakes(servicePointId: servicePointId);
+    final now = DateTime.now();
+    final session = StockTakeSession(
+      id: 'sts_${now.microsecondsSinceEpoch}',
+      reference: reference,
+      note: note,
+      servicePointId: servicePointId,
+      createdAt: now,
+      updatedAt: now,
+      uploadStatus: 'pending',
+    );
+    await _dbHelper.insertStockTakeSession(session);
+    await loadSessions(servicePointId: servicePointId);
+    return session;
   }
 
-  Future<void> deleteStockTake(String id, {String? servicePointId}) async {
+  Future<void> renameSession(
+    StockTakeSession session, {
+    String? reference,
+    String? note,
+    String? servicePointId,
+  }) async {
+    await _dbHelper.updateStockTakeSession(
+      session.copyWith(
+        reference: reference,
+        note: note,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    await loadSessions(servicePointId: servicePointId);
+  }
+
+  Future<void> deleteSession(String id, {String? servicePointId}) async {
+    await _dbHelper.deleteStockTakeSession(id);
+    await loadSessions(servicePointId: servicePointId);
+  }
+
+  // ---- Line items ----
+
+  Future<void> loadSessionItems(String sessionId) async {
+    try {
+      isLoadingItems.value = true;
+      sessionItems.value = await _dbHelper.getStockTakeItems(sessionId);
+    } catch (e) {
+      sessionItems.clear();
+    } finally {
+      isLoadingItems.value = false;
+    }
+  }
+
+  /// Insert or update a line item (same id => update), then refresh the items
+  /// of its session and bump the session's updated_at.
+  Future<void> saveItem(StockTake item) async {
+    await _dbHelper.insertStockTake(item);
+    if (item.stockTakeId.isNotEmpty) {
+      await _dbHelper.touchStockTakeSession(item.stockTakeId);
+      await loadSessionItems(item.stockTakeId);
+    }
+  }
+
+  Future<void> deleteItem(String id, {required String stockTakeId}) async {
     await _dbHelper.deleteStockTake(id);
-    await loadStockTakes(servicePointId: servicePointId);
+    await loadSessionItems(stockTakeId);
   }
 
-  /// Upload a single stock take to the server.
+  // ---- Upload / fiscalise (session level) ----
+
+  /// Upload a whole session to the server.
   ///
-  /// TODO: Wire this to the real stock-take upload endpoint once it exists.
-  /// For now it just marks the record as uploaded locally so the rest of the
-  /// flow (fiscalise, badges, "upload later") can be used and tested.
-  Future<void> uploadStockTake(
-    StockTake take, {
+  /// TODO: Wire to the real stock-take upload endpoint. For now it just marks
+  /// the session uploaded locally so the rest of the flow can be used/tested.
+  Future<void> uploadSession(
+    StockTakeSession session, {
     String? servicePointId,
   }) async {
-    // await _apiService.uploadStockTake(take.toServerJson());
-    await _dbHelper.updateStockTakeStatus(take.id, 'uploaded');
-    await loadStockTakes(servicePointId: servicePointId);
+    // await _apiService.uploadStockTakeSession(session, items);
+    await _dbHelper.updateStockTakeSessionStatus(session.id, 'uploaded');
+    await loadSessions(servicePointId: servicePointId);
   }
 
-  /// Fiscalise an already-uploaded stock take.
+  /// Fiscalise an already-uploaded session.
   ///
-  /// TODO: Wire this to the real fiscalise endpoint. Only call after a
-  /// successful upload (the UI enforces this).
-  Future<void> fiscaliseStockTake(
-    StockTake take, {
+  /// TODO: Wire to the real fiscalise endpoint.
+  Future<void> fiscaliseSession(
+    StockTakeSession session, {
     String? servicePointId,
   }) async {
-    // await _apiService.fiscaliseStockTake(take.id);
-    await _dbHelper.updateStockTakeStatus(take.id, 'fiscalised');
-    await loadStockTakes(servicePointId: servicePointId);
+    // await _apiService.fiscaliseStockTakeSession(session.id);
+    await _dbHelper.updateStockTakeSessionStatus(session.id, 'fiscalised');
+    await loadSessions(servicePointId: servicePointId);
   }
 
-  /// Upload every still-pending stock take. Returns how many were pushed.
-  ///
-  /// TODO: Replace the per-item local status flip with the real endpoint call
-  /// and proper success/failure handling.
+  /// Upload every still-pending session. Returns how many were pushed.
   Future<int> uploadAll({String? servicePointId}) async {
     final pending =
-        stockTakes.where((t) => t.uploadStatus == 'pending').toList();
-    for (final take in pending) {
-      // await _apiService.uploadStockTake(take.toServerJson());
-      await _dbHelper.updateStockTakeStatus(take.id, 'uploaded');
+        sessions.where((s) => s.uploadStatus == 'pending').toList();
+    for (final s in pending) {
+      // await _apiService.uploadStockTakeSession(...);
+      await _dbHelper.updateStockTakeSessionStatus(s.id, 'uploaded');
     }
-    await loadStockTakes(servicePointId: servicePointId);
+    await loadSessions(servicePointId: servicePointId);
     return pending.length;
   }
 }

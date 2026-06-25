@@ -1,5 +1,6 @@
 class StockTake {
   final String id;
+  final String stockTakeId; // parent stock-take (session) this item belongs to
   final String inventoryId;
   final String itemName;
   final String code;
@@ -17,6 +18,7 @@ class StockTake {
 
   StockTake({
     required this.id,
+    required this.stockTakeId,
     required this.inventoryId,
     required this.itemName,
     required this.code,
@@ -36,6 +38,7 @@ class StockTake {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'stock_take_id': stockTakeId,
       'inventoryid': inventoryId,
       'itemname': itemName,
       'code': code,
@@ -56,6 +59,7 @@ class StockTake {
   factory StockTake.fromMap(Map<String, dynamic> map) {
     return StockTake(
       id: map['id']?.toString() ?? '',
+      stockTakeId: map['stock_take_id']?.toString() ?? '',
       inventoryId: map['inventoryid']?.toString() ?? '',
       itemName: map['itemname']?.toString() ?? '',
       code: map['code']?.toString() ?? '',

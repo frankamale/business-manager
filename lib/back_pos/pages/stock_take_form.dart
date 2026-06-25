@@ -20,11 +20,15 @@ class StockTakeForm extends StatefulWidget {
   final InventoryItem? item;
   final StockTake? existing;
 
+  /// Parent stock take this item belongs to (required when adding a new item).
+  final String? stockTakeId;
+
   const StockTakeForm({
     super.key,
     this.item,
     this.existing,
     this.servicePoint,
+    this.stockTakeId,
   }) : assert(item != null || existing != null,
             'Provide either an item (new) or an existing stock take (edit)');
 
@@ -156,6 +160,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
   StockTake _buildStockTake() {
     return StockTake(
       id: widget.existing?.id ?? 'st_${DateTime.now().microsecondsSinceEpoch}',
+      stockTakeId: widget.existing?.stockTakeId ?? widget.stockTakeId ?? '',
       inventoryId: _inventoryId,
       itemName: _name,
       code: _code,
@@ -184,10 +189,7 @@ class _StockTakeFormState extends State<StockTakeForm> {
 
     setState(() => _isSaving = true);
     try {
-      await _stockTakeController.addStockTake(
-        _buildStockTake(),
-        servicePointId: widget.servicePoint?.id,
-      );
+      await _stockTakeController.saveItem(_buildStockTake());
       if (!mounted) return;
       // Pop the form route explicitly (Navigator, not Get.back, which can
       // close the snackbar overlay instead of the page). newAfter is returned
