@@ -9,6 +9,7 @@ import '../../models/inventory_data.dart';
 import '../../models/service_points.dart';
 import '../../widgets/inventory/data_table.dart';
 import '../../widgets/inventory/floating_search_bar.dart';
+import '../../../../back_pos/pages/stock_taking_list.dart';
 
 class InventoryPage extends StatefulWidget {
   const InventoryPage({super.key});
@@ -216,9 +217,19 @@ class _InventoryPageState extends State<InventoryPage>
                     ),
                     child: Align(
                       alignment: Alignment.bottomCenter,
-                      child: FloatingSearchBar(
-                        onSearchChanged: _handleSearchChanged,
-                        focusNode: _searchFocusNode,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: FloatingSearchBar(
+                              onSearchChanged: _handleSearchChanged,
+                              focusNode: _searchFocusNode,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 16.0),
+                            child: _buildInventoryActionsButton(context),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -261,6 +272,43 @@ class _InventoryPageState extends State<InventoryPage>
                 : _buildInventoryList(innerContext),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Action menu shown to the right of the search bar. Currently surfaces
+  /// Stock Taking; selecting it opens the stock taking page.
+  Widget _buildInventoryActionsButton(BuildContext context) {
+    return Container(
+
+      child: PopupMenuButton<String>(
+        icon: Icon(Icons.more_vert, color: AppColors.getAccentColor(context)),
+        tooltip: 'Actions',
+        color: AppColors.getSurfaceColor(context),
+        onSelected: (value) {
+          if (value == 'stock_taking') {
+            Get.to(() => const StockTakingList());
+          }
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem<String>(
+            value: 'stock_taking',
+            child: Row(
+              children: [
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 20,
+                  color: AppColors.getAccentColor(context),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Stock Taking',
+                  style: TextStyle(color: AppColors.getTextPrimaryColor(context)),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
