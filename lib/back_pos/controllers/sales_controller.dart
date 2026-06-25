@@ -182,21 +182,12 @@ class SalesController extends GetxController {
     };
   }
 
-  // Fiscalise a sale (EFRIS). Uses the sale as it is stored on the server (not
-  // the locally reconstructed body) and posts it to `rest/sales/fiscalise/`.
+  // Fiscalise a sale (EFRIS). Builds the same DtoSale payload used for the
+  // upload (via the shared builder) and posts it to `rest/sales/fiscalise/`.
+  // The caller is expected to have confirmed the sale is already uploaded.
   Future<Map<String, dynamic>> fiscaliseSale(String salesId) async {
-    final serverSale = await _apiService.fetchSingleTransaction(salesId);
-
-    if (serverSale.isEmpty) {
-      // A fiscalise call for a sale the server can't find returns 404, so make
-      // the cause explicit: the sale must be uploaded before it is fiscalised.
-      throw Exception(
-        'Cannot fiscalise: sale $salesId was not found on the server. '
-        'Upload the sale before fiscalising.',
-      );
-    }
-
-    return await _apiService.fiscaliseSale(serverSale);
+    final salePayload = await _buildSalePayload(salesId);
+    return await _apiService.fiscaliseSale(salePayload);
   }
 
   // Upload sale to server

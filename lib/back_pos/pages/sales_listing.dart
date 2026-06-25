@@ -986,6 +986,19 @@ class _SalesListingState extends State<SalesListing> {
           return;
         }
 
+        // A sale must be uploaded before it can be fiscalised.
+        final fiscaliseStatus = sale['upload_status'] as String? ?? 'pending';
+        if (fiscaliseStatus != 'uploaded') {
+          Get.snackbar(
+            'Not Uploaded',
+            'Upload sale $receiptNumber before fiscalising',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: FlavorColors.current.primaryDark,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
         // Show loading dialog
         Get.dialog(
           Center(
