@@ -7,7 +7,6 @@ class StockTakeSession {
   final DateTime? updatedAt;
   final String uploadStatus;
 
-  // Derived (not persisted on the row itself) - filled in by list queries.
   final int itemCount;
   final double totalAmount;
 

@@ -275,16 +275,21 @@ class _StockTakeSessionDetailState extends State<StockTakeSessionDetail> {
                     const Text('Upload'),
                   ]),
                 ),
-              if (_status == 'uploaded')
-                PopupMenuItem(
-                  value: 'fiscalise',
-                  child: Row(children: [
-                    Icon(Icons.receipt_long_outlined,
-                        size: 20, color: FlavorColors.current.primaryDark),
-                    const SizedBox(width: 12),
-                    const Text('Fiscalise'),
-                  ]),
-                ),
+              PopupMenuItem(
+                value: 'fiscalise',
+                // Only an uploaded (not yet fiscalised) session can be
+                // fiscalised; otherwise show it greyed-out.
+                enabled: _status == 'uploaded',
+                child: Row(children: [
+                  Icon(Icons.receipt_long_outlined,
+                      size: 20,
+                      color: _status == 'uploaded'
+                          ? FlavorColors.current.primaryDark
+                          : Colors.grey),
+                  const SizedBox(width: 12),
+                  const Text('Fiscalise'),
+                ]),
+              ),
               PopupMenuItem(
                 value: 'delete',
                 child: Row(children: [
