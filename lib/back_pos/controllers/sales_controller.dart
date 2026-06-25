@@ -1,5 +1,4 @@
 import 'package:get/get.dart';
-import 'package:uuid/uuid.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/sale_transaction.dart';
@@ -134,14 +133,15 @@ class SalesController extends GetxController {
     final customerId = firstTransaction.clientid;
     final salespersonId = firstTransaction.salespersonid ?? "00000000-0000-0000-0000-000000000000";
 
-    // Reconstruct line items from transactions
-    const uuid = Uuid();
+    // Reconstruct line items from transactions, reusing each line item's
+    // stored id so the upload (and the fiscalise that follows) send the same
+    // ids that were assigned when the sale was created locally.
     final lineItems = saleTransactions.asMap().entries.map((entry) {
       final index = entry.key;
       final transaction = entry.value;
 
       return {
-        "id": uuid.v4(),
+        "id": transaction.id,
         "salesid": salesId,
         "inventoryid": transaction.inventoryid ?? "00000000-0000-0000-0000-000000000000",
         "ipdid": transaction.ipdid ?? "00000000-0000-0000-0000-000000000000",
