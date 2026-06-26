@@ -397,6 +397,7 @@ class _StockTakeSessionDetailState extends State<StockTakeSessionDetail> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: DataTable(
+          showCheckboxColumn: false,
           headingRowColor: WidgetStatePropertyAll(
             FlavorColors.current.primary.withValues(alpha: 0.06),
           ),
