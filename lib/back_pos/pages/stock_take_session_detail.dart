@@ -125,7 +125,7 @@ class _StockTakeSessionDetailState extends State<StockTakeSessionDetail> {
           colorText: Colors.green.shade900,
         );
       }
-      if (mounted) Navigator.of(context).pop(); // back to the sessions list
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (Get.isDialogOpen ?? false) Get.back();
       Get.snackbar(

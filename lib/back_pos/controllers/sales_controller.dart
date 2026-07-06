@@ -187,7 +187,12 @@ class SalesController extends GetxController {
   // The caller is expected to have confirmed the sale is already uploaded.
   Future<Map<String, dynamic>> fiscaliseSale(String salesId) async {
     final salePayload = await _buildSalePayload(salesId);
-    return await _apiService.fiscaliseSale(salePayload);
+    final result = await _apiService.fiscaliseSale(salePayload);
+    // Persist the fiscalised state locally so the listing can show the
+    // indicator and disable the fiscalise button (status flows the same way
+    // as a stock take: pending -> uploaded -> fiscalised).
+    await _dbHelper.updateSaleUploadStatus(salesId, 'fiscalised');
+    return result;
   }
 
   // Upload sale to server

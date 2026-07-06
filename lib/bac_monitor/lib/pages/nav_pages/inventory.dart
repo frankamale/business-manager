@@ -225,10 +225,10 @@ class _InventoryPageState extends State<InventoryPage>
                               focusNode: _searchFocusNode,
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.only(right: 16.0),
-                            child: _buildInventoryActionsButton(context),
-                          ),
+                          // Padding(
+                          //   padding: const EdgeInsets.only(right: 16.0),
+                          //   child: _buildInventoryActionsButton(context),
+                          // ),
                         ],
                       ),
                     ),
