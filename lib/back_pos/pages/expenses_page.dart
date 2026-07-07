@@ -11,7 +11,6 @@ import 'package:bac_pos/flavors/flavor_colors.dart';
 import 'package:bac_pos/back_pos/widgets/expense_form_dialog.dart';
 import 'package:bac_pos/back_pos/widgets/expense_summary_card.dart';
 import 'package:bac_pos/back_pos/widgets/expense_list_item.dart';
-import 'package:bac_pos/back_pos/widgets/expense_empty_state.dart';
 import 'package:bac_pos/back_pos/widgets/expense_delete_dialog.dart';
 import 'package:bac_pos/back_pos/widgets/expense_detail_dialog.dart';
 import 'package:bac_pos/back_pos/widgets/expense_statistics_dialog.dart';

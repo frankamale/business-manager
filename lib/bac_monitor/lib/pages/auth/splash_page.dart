@@ -7,7 +7,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import '../../../../back_pos/utils/network_helper.dart';
 import '../../../../shared/widgets/app_logo.dart';
-import '../../../../shared/widgets/ui_helper.dart';
 import '../../../../shared/services/credential_helper.dart';
 import '../../additions/colors.dart';
 import '../../controllers/mon_dashboard_controller.dart';
@@ -59,11 +58,6 @@ class _SplashPageState extends State<SplashPage> {
       });
     }
     debugPrint('SplashPage: $message');
-  }
-
-  /// Retrieve stored credentials from FlutterSecureStorage
-  Future<Map<String, String?>> _getStoredCredentials() async {
-    return CredentialHelper.getStoredCredentials();
   }
 
   /// Check if we have valid stored credentials
@@ -547,42 +541,6 @@ class _SplashPageState extends State<SplashPage> {
     } catch (e) {
       debugPrint('SplashPage: Error loading data into controllers - $e');
       // Continue anyway - data can be loaded later
-    }
-  }
-
-  /// Reset and refresh all dashboard controllers for account switch
-  Future<void> _refreshDashboardControllers() async {
-    debugPrint('SplashPage: Refreshing dashboard controllers');
-
-    // Reset and refresh KPI Overview Controller
-    if (Get.isRegistered<MonKpiOverviewController>()) {
-      final kpiController = Get.find<MonKpiOverviewController>();
-      kpiController.isInitialized.value = false;
-      await kpiController.fetchKpiData();
-      kpiController.isInitialized.value = true;
-      debugPrint('SplashPage: KPI controller refreshed');
-    }
-
-    // Refresh Gross Profit Controller (doesn't have isInitialized)
-    if (Get.isRegistered<MonGrossProfitController>()) {
-      final grossProfitController = Get.find<MonGrossProfitController>();
-      await grossProfitController.fetchGrossProfitData();
-      debugPrint('SplashPage: Gross profit controller refreshed');
-    }
-
-    // Refresh Outstanding Payments Controller (doesn't have isInitialized)
-    if (Get.isRegistered<MonOutstandingPaymentsController>()) {
-      final outstandingController =
-          Get.find<MonOutstandingPaymentsController>();
-      await outstandingController.fetchOutstandingPaymentsData();
-      debugPrint('SplashPage: Outstanding payments controller refreshed');
-    }
-
-    // Refresh Sales Trends Controller (doesn't have isInitialized)
-    if (Get.isRegistered<MonSalesTrendsController>()) {
-      final salesTrendsController = Get.find<MonSalesTrendsController>();
-      await salesTrendsController.fetchAllData();
-      debugPrint('SplashPage: Sales trends controller refreshed');
     }
   }
 

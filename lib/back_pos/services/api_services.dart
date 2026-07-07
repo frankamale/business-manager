@@ -10,7 +10,6 @@ import '../models/auth_response.dart';
 import '../models/service_point.dart';
 import '../models/inventory_item.dart';
 import '../models/customer.dart';
-import '../models/sale_transaction.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../config.dart';
 
@@ -52,6 +51,9 @@ class PosApiService extends GetxService {
   static const String _isAdminKey = 'is_admin';
   static const String _branchIdKey = 'branch_id';
   static const String _companyIdKey = 'company_id';
+  static const String _companyNameKey = 'company_name';
+  static const String _companyLocationKey = 'company_location';
+  static const String _companyPhoneKey = 'company_phone';
   static const String _servicePointIdKey = 'service_point_id';
   static const String _serverUsernameKey = 'server_username';
   static const String _serverPasswordKey = 'server_password';
@@ -251,6 +253,35 @@ class PosApiService extends GetxService {
     await _secureStorage.write(key: _branchIdKey, value: branchId);
     await _secureStorage.write(key: _companyIdKey, value: companyId);
     await _secureStorage.write(key: _servicePointIdKey, value: servicePointId);
+
+    // Persist the real business name/location/phone (from activeBranch +
+    // activeBranch.company) so receipts can display them instead of the
+    // hard-coded flavor/app name.
+    final activeBranch = companyInfo['activeBranch'];
+    final branchMap = activeBranch is Map ? activeBranch : const {};
+    final company = branchMap['company'];
+    final companyMap = company is Map ? company : const {};
+
+    final companyName = (companyMap['name'] ?? branchMap['name']) as String?;
+    final location = (branchMap['address'] ?? companyMap['address']) as String?;
+    final phone = (branchMap['primaryPhone'] ??
+        branchMap['phone'] ??
+        branchMap['telephone'] ??
+        companyMap['primaryPhone'] ??
+        companyMap['phone'] ??
+        companyMap['telephone']) as String?;
+
+    print('[PosApiService] saveCompanyInfo - name=$companyName, location=$location, phone=$phone');
+
+    if (companyName != null && companyName.trim().isNotEmpty) {
+      await _secureStorage.write(key: _companyNameKey, value: companyName);
+    }
+    if (location != null && location.trim().isNotEmpty) {
+      await _secureStorage.write(key: _companyLocationKey, value: location);
+    }
+    if (phone != null && phone.trim().isNotEmpty) {
+      await _secureStorage.write(key: _companyPhoneKey, value: phone);
+    }
   }
 
   // Get company info
@@ -416,6 +447,41 @@ class PosApiService extends GetxService {
       } else {
         throw Exception(
           "Failed to update sale: ${response.statusCode} - ${response.body}",
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Fiscalise a sale (EFRIS). Sends a DtoSale payload to `rest/sales/fiscalise/`.
+  Future<Map<String, dynamic>> fiscaliseSale(Map<String, dynamic> saleData) async {
+    try {
+      final endpoint = "$baseurl/sales/fiscalise/";
+      final body = json.encode(saleData);
+      print('[PosApiService] fiscaliseSale - POST $endpoint');
+      // logcat truncates a single line at ~4KB, which makes a long body look
+      // cut off. Print the length and emit the body in chunks so the full
+      // payload is visible in the console.
+      print('[PosApiService] fiscaliseSale - payload length: ${body.length}');
+      const chunkSize = 800;
+      for (var i = 0; i < body.length; i += chunkSize) {
+        final end = (i + chunkSize < body.length) ? i + chunkSize : body.length;
+        print('[PosApiService] fiscaliseSale - payload[$i-$end]: ${body.substring(i, end)}');
+      }
+
+      final request = http.Request('POST', Uri.parse(endpoint));
+      request.headers['Content-Type'] = 'application/json';
+      request.body = body;
+
+      final streamedResponse = await _tokenRefreshInterceptor.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else {
+        throw Exception(
+          "Failed to fiscalise sale: ${response.statusCode} - ${response.body}",
         );
       }
     } catch (e) {

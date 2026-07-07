@@ -60,8 +60,7 @@ class _DateRangePickerState extends State<DateRangePicker> {
                     onPrimary: AppColors.getTextPrimaryColor(context),
                     surface: AppColors.getCardColor(context),
                     onSurface: AppColors.getTextPrimaryColor(context),
-                  ),
-            dialogBackgroundColor: AppColors.getCardColor(context),
+                  ), dialogTheme: DialogThemeData(backgroundColor: AppColors.getCardColor(context)),
           ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 400, maxWidth: 320),

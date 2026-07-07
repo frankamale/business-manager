@@ -7,6 +7,8 @@ import '../../back_pos/models/inventory_item.dart';
 import '../../back_pos/models/sale_transaction.dart';
 import '../../back_pos/models/customer.dart';
 import '../../back_pos/models/expense.dart';
+import '../../back_pos/models/stock_take.dart';
+import '../../back_pos/models/stock_take_session.dart';
 import '../../bac_monitor/lib/models/sync_tracker.dart';
 
 /// Unified Database Helper that combines POS and Monitor databases
@@ -69,7 +71,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 6,
+        version: 10,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -423,6 +425,8 @@ class UnifiedDatabaseHelper {
         activeBranchAddress TEXT,
         activeBranchPrimaryEmail TEXT,
         activeBranchCode TEXT,
+        companyName TEXT,
+        activeBranchPhone TEXT,
         efrisEnabled INTEGER
       )
     ''');
@@ -546,9 +550,53 @@ class UnifiedDatabaseHelper {
       )
     ''');
 
+    // Stock take sessions (POS) - a session bundles many counted items
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS stock_take_sessions (
+        id TEXT PRIMARY KEY,
+        reference TEXT,
+        note TEXT,
+        servicepointid TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER,
+        upload_status TEXT DEFAULT 'pending'
+      )
+    ''');
+
+    // Stock takes table (POS) - the line items counted within a stock take
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS stock_takes (
+        id TEXT PRIMARY KEY,
+        stock_take_id TEXT,
+        inventoryid TEXT,
+        itemname TEXT NOT NULL,
+        code TEXT,
+        packaging TEXT,
+        quantity REAL NOT NULL,
+        costprice REAL NOT NULL DEFAULT 0,
+        amount REAL NOT NULL DEFAULT 0,
+        markup REAL NOT NULL DEFAULT 0,
+        sellingprice REAL NOT NULL DEFAULT 0,
+        batchnumber TEXT,
+        expirydate INTEGER,
+        servicepointid TEXT,
+        created_at INTEGER NOT NULL,
+        upload_status TEXT DEFAULT 'pending'
+      )
+    ''');
+
     // POS indexes
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_salesId ON sales_transactions(salesId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_takes_created ON stock_takes(created_at DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_takes_stid ON stock_takes(stock_take_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_stock_take_sessions_created ON stock_take_sessions(created_at DESC)',
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_receiptnumber ON sales_transactions(receiptnumber)',
@@ -683,6 +731,118 @@ class UnifiedDatabaseHelper {
           'ALTER TABLE mon_inventory ADD COLUMN costprice REAL DEFAULT 0.0',
         );
       } catch (e) {
+      }
+    }
+
+    // Migration to version 7 - Add company name + branch phone to company_details
+    if (oldVersion < 7) {
+      try {
+        final columns = await db.rawQuery('PRAGMA table_info(company_details)');
+        final names =
+            columns.map((c) => (c['name'] as String).toLowerCase()).toSet();
+        if (!names.contains('companyname')) {
+          await db.execute(
+            'ALTER TABLE company_details ADD COLUMN companyName TEXT',
+          );
+        }
+        if (!names.contains('activebranchphone')) {
+          await db.execute(
+            'ALTER TABLE company_details ADD COLUMN activeBranchPhone TEXT',
+          );
+        }
+        debugPrint('UnifiedDatabaseHelper: Migrated company_details to v7');
+      } catch (e) {
+        debugPrint('UnifiedDatabaseHelper: v7 company_details migration error: $e');
+      }
+    }
+
+    // Migration to version 8 - Add stock_takes table
+    if (oldVersion < 8) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS stock_takes (
+            id TEXT PRIMARY KEY,
+            inventoryid TEXT,
+            itemname TEXT NOT NULL,
+            code TEXT,
+            packaging TEXT,
+            quantity REAL NOT NULL,
+            costprice REAL NOT NULL DEFAULT 0,
+            amount REAL NOT NULL DEFAULT 0,
+            markup REAL NOT NULL DEFAULT 0,
+            sellingprice REAL NOT NULL DEFAULT 0,
+            batchnumber TEXT,
+            expirydate INTEGER,
+            servicepointid TEXT,
+            created_at INTEGER NOT NULL,
+            upload_status TEXT DEFAULT 'pending'
+          )
+        ''');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_stock_takes_created ON stock_takes(created_at DESC)',
+        );
+        debugPrint('UnifiedDatabaseHelper: Created stock_takes table (v8)');
+      } catch (e) {
+        debugPrint('UnifiedDatabaseHelper: v8 stock_takes migration error: $e');
+      }
+    }
+
+    // Migration to version 9 - Add stock take sessions + link items to them
+    if (oldVersion < 9) {
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS stock_take_sessions (
+            id TEXT PRIMARY KEY,
+            reference TEXT,
+            note TEXT,
+            servicepointid TEXT,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER,
+            upload_status TEXT DEFAULT 'pending'
+          )
+        ''');
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_stock_take_sessions_created ON stock_take_sessions(created_at DESC)',
+        );
+        // Link existing line items to a session.
+        final cols = await db.rawQuery('PRAGMA table_info(stock_takes)');
+        final names =
+            cols.map((c) => (c['name'] as String).toLowerCase()).toSet();
+        if (!names.contains('session_id')) {
+          await db.execute('ALTER TABLE stock_takes ADD COLUMN session_id TEXT');
+        }
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_stock_takes_session ON stock_takes(session_id)',
+        );
+        debugPrint('UnifiedDatabaseHelper: Created stock_take_sessions (v9)');
+      } catch (e) {
+        debugPrint('UnifiedDatabaseHelper: v9 sessions migration error: $e');
+      }
+    }
+
+    // Migration to version 10 - Rename the stock-take FK column from
+    // session_id to stock_take_id (additively, preserving any existing links).
+    if (oldVersion < 10) {
+      try {
+        final cols = await db.rawQuery('PRAGMA table_info(stock_takes)');
+        final names =
+            cols.map((c) => (c['name'] as String).toLowerCase()).toSet();
+        if (!names.contains('stock_take_id')) {
+          await db.execute(
+              'ALTER TABLE stock_takes ADD COLUMN stock_take_id TEXT');
+        }
+        if (names.contains('session_id')) {
+          await db.execute(
+            'UPDATE stock_takes SET stock_take_id = session_id '
+            'WHERE stock_take_id IS NULL',
+          );
+        }
+        await db.execute(
+          'CREATE INDEX IF NOT EXISTS idx_stock_takes_stid ON stock_takes(stock_take_id)',
+        );
+        debugPrint('UnifiedDatabaseHelper: Renamed FK to stock_take_id (v10)');
+      } catch (e) {
+        debugPrint('UnifiedDatabaseHelper: v10 stock_take_id migration error: $e');
       }
     }
   }
@@ -1276,6 +1436,16 @@ class UnifiedDatabaseHelper {
     );
   }
 
+  /// Delete all transactions belonging to a single (local) sale.
+  Future<void> deleteSaleBySalesId(String salesId) async {
+    final db = database;
+    await db.delete(
+      'sales_transactions',
+      where: 'salesId = ?',
+      whereArgs: [salesId],
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getSalesByUploadStatus(
     String status,
   ) async {
@@ -1491,6 +1661,106 @@ class UnifiedDatabaseHelper {
       await db.rawQuery('SELECT COUNT(*) FROM customers'),
     );
     return count ?? 0;
+  }
+
+  // ========================================================================
+  // POS STOCK TAKE METHODS (sessions + line items)
+  // ========================================================================
+
+  // ---- Sessions ----
+
+  Future<void> insertStockTakeSession(StockTakeSession session) async {
+    final db = database;
+    await db.insert(
+      'stock_take_sessions',
+      session.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Returns sessions (most recent first) with a derived item count and total.
+  Future<List<StockTakeSession>> getStockTakeSessions({
+    String? servicePointId,
+  }) async {
+    final db = database;
+    final maps = await db.rawQuery(
+      '''
+      SELECT s.*,
+        (SELECT COUNT(*) FROM stock_takes t WHERE t.stock_take_id = s.id)
+            AS item_count,
+        (SELECT COALESCE(SUM(t.amount), 0) FROM stock_takes t
+            WHERE t.stock_take_id = s.id) AS total_amount
+      FROM stock_take_sessions s
+      ${servicePointId != null ? 'WHERE s.servicepointid = ?' : ''}
+      ORDER BY s.created_at DESC
+      ''',
+      servicePointId != null ? [servicePointId] : null,
+    );
+    return maps.map((m) => StockTakeSession.fromMap(m)).toList();
+  }
+
+  Future<void> updateStockTakeSession(StockTakeSession session) async {
+    final db = database;
+    await db.update(
+      'stock_take_sessions',
+      session.toMap(),
+      where: 'id = ?',
+      whereArgs: [session.id],
+    );
+  }
+
+  Future<void> updateStockTakeSessionStatus(String id, String status) async {
+    final db = database;
+    await db.update(
+      'stock_take_sessions',
+      {'upload_status': status, 'updated_at': DateTime.now().millisecondsSinceEpoch},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> touchStockTakeSession(String id) async {
+    final db = database;
+    await db.update(
+      'stock_take_sessions',
+      {'updated_at': DateTime.now().millisecondsSinceEpoch},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Delete a session and all of its line items.
+  Future<void> deleteStockTakeSession(String id) async {
+    final db = database;
+    await db.delete('stock_takes', where: 'stock_take_id = ?', whereArgs: [id]);
+    await db.delete('stock_take_sessions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // ---- Line items ----
+
+  Future<void> insertStockTake(StockTake stockTake) async {
+    final db = database;
+    await db.insert(
+      'stock_takes',
+      stockTake.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<StockTake>> getStockTakeItems(String stockTakeId) async {
+    final db = database;
+    final maps = await db.query(
+      'stock_takes',
+      where: 'stock_take_id = ?',
+      whereArgs: [stockTakeId],
+      orderBy: 'created_at ASC',
+    );
+    return maps.map((map) => StockTake.fromMap(map)).toList();
+  }
+
+  Future<void> deleteStockTake(String id) async {
+    final db = database;
+    await db.delete('stock_takes', where: 'id = ?', whereArgs: [id]);
   }
 
   // ========================================================================
@@ -1756,19 +2026,38 @@ class UnifiedDatabaseHelper {
     DatabaseExecutor? db,
   }) async {
     final executor = db ?? database;
+    final activeBranch = companyDetails['activeBranch'];
+    final company = activeBranch is Map ? activeBranch['company'] : null;
+    final addressToStore = activeBranch?['address'] ??
+        (company is Map ? company['address'] : null);
+    final companyNameToStore = company is Map ? company['name'] : null;
+    final phoneToStore = activeBranch?['primaryPhone'] ??
+        activeBranch?['phone'] ??
+        activeBranch?['telephone'] ??
+        (company is Map
+            ? (company['primaryPhone'] ?? company['phone'] ?? company['telephone'])
+            : null);
+    print('[UnifiedDB] insertCompanyDetails - incoming keys: ${companyDetails.keys.toList()}');
+    print('[UnifiedDB] insertCompanyDetails - activeBranch: $activeBranch');
+    print('[UnifiedDB] insertCompanyDetails - companyName=$companyNameToStore, address=$addressToStore, phone=$phoneToStore');
     await executor.insert('company_details', {
       'branch': companyDetails['branch'],
       'company': companyDetails['company'],
       'userCode': companyDetails['userCode'],
       'currentBranchName': companyDetails['currentBranchName'],
       'currentBranchCode': companyDetails['currentBranchCode'],
-      'activeBranchName': companyDetails['activeBranch']?['name'],
-      'activeBranchAddress': companyDetails['activeBranch']?['address'],
-      'activeBranchPrimaryEmail':
-          companyDetails['activeBranch']?['primaryEmail'],
-      'activeBranchCode': companyDetails['activeBranch']?['code'],
+      'activeBranchName': activeBranch?['name'],
+      'activeBranchAddress': addressToStore,
+      'activeBranchPrimaryEmail': activeBranch?['primaryEmail'],
+      'activeBranchCode': activeBranch?['code'],
+      'companyName': companyNameToStore,
+      'activeBranchPhone': phoneToStore,
       'efrisEnabled': companyDetails['efrisEnabled'] == true ? 1 : 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+    // Verify persistence by reading the row back
+    final verify = await executor.query('company_details', limit: 1);
+    print('[UnifiedDB] insertCompanyDetails - row after insert: ${verify.isNotEmpty ? verify.first : 'NO ROW'}');
   }
 
   Future<Map<String, dynamic>?> getCompanyDetails() async {

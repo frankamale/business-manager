@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:intl/intl.dart';
 import '../../../shared/database/unified_db_helper.dart';
 import '../../../back_pos/utils/network_helper.dart';
@@ -26,8 +25,7 @@ enum SyncScenario {
 /// 4. Mark loaded: syncManager.markTodayDataLoaded()
 class SyncStateManager extends GetxService {
   final _dbHelper = UnifiedDatabaseHelper.instance;
-  final _box = GetStorage();
-  
+
   // Track what data has been loaded into controllers during this session
   final _todayDataLoaded = false.obs;
   final _baselineLoaded = false.obs;

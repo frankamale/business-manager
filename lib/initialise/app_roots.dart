@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:bac_pos/back_pos/auth/splash_screen.dart';
 import 'package:bac_pos/bac_monitor/lib/pages/auth/splash_page.dart';
-import 'package:bac_pos/back_pos/pages/homepage.dart';
-import 'package:bac_pos/bac_monitor/lib/pages/bottom_nav.dart';
 import 'package:bac_pos/client/pages/client_home.dart';
 
 /// Root widget for the POS app

@@ -96,6 +96,51 @@ workflows:
           success: true
           failure: true
 
+  # ── BAC iOS Simulator (no signing) ───────────
+  bac-ios-simulator:
+    name: BAC iOS Simulator Build
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - komusoft_credentials
+    scripts:
+      - name: Get dependencies
+        script: flutter pub get
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios
+          pod install
+
+      - name: Build iOS app for simulator
+        script: |
+          flutter build ios --simulator --debug \
+            --dart-define=FLAVOR=bac \
+            --dart-define=APP_NAME="Business Manager" \
+            --dart-define=COMPANY_NAME="Komusoft Solutions" \
+            --dart-define=BOT_USERNAME="$BOT_USERNAME" \
+            --dart-define=BOT_PASSWORD="$BOT_PASSWORD"
+
+      - name: Package simulator .app
+        script: |
+          cd build/ios/iphonesimulator
+          zip -r "$CM_BUILD_DIR/Runner-simulator.zip" Runner.app
+
+    artifacts:
+      - Runner-simulator.zip
+      - build/ios/iphonesimulator/Runner.app
+    publishing:
+      email:
+        recipients:
+          - dev@komusoft.com
+        notify:
+          success: true
+          failure: true
+
   # ── Top Grade (Android) ──────────────────────
   top-grade-android:
     name: Top Grade Android Release

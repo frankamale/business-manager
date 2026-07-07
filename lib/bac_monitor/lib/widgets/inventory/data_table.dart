@@ -18,14 +18,14 @@ class InventoryDataTable extends StatelessWidget {
     return DataTable(
       headingRowHeight: 48,
       dataRowHeight: 80,
-      headingRowColor: MaterialStateProperty.all(
+      headingRowColor: WidgetStateProperty.all(
         AppColors.getSurfaceColor(context),
       ),
       headingTextStyle: TextStyle(
         color: AppColors.getTextPrimaryColor(context),
         fontWeight: FontWeight.bold,
       ),
-      dataRowColor: MaterialStateProperty.all(
+      dataRowColor: WidgetStateProperty.all(
         AppColors.getCardColor(context),
       ),
       dataTextStyle: TextStyle(

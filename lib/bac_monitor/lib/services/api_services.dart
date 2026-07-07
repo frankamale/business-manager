@@ -19,10 +19,6 @@ List<dynamic> _decodeJsonList(String jsonString) {
   return json.decode(jsonString) as List<dynamic>;
 }
 
-Map<String, dynamic> _decodeJsonMap(String jsonString) {
-  return json.decode(jsonString) as Map<String, dynamic>;
-}
-
 /// Parse double from various formats (int, double, String)
 double _parseDouble(dynamic value) {
   if (value == null) return 0.0;
@@ -550,6 +546,7 @@ class MonitorApiService extends GetxService {
       try {
         companyDetailsRes = await getWithAuth('/company/details');
         debugPrint("ApiService: Successfully fetched company details");
+        debugPrint("ApiService: /company/details status=${companyDetailsRes.statusCode}, body=${companyDetailsRes.body}");
       } catch (e) {
         debugPrint("ApiService: Failed to fetch /company/details -> $e");
         companyDetailsRes = null;
@@ -590,10 +587,13 @@ class MonitorApiService extends GetxService {
         }
       }
 
-      Map<String, dynamic> companyDetailsData = {}; 
+      Map<String, dynamic> companyDetailsData = {};
       if (companyDetailsRes != null && companyDetailsRes.body.isNotEmpty) {
         try {
           companyDetailsData = json.decode(companyDetailsRes.body);
+          debugPrint("ApiService: company details keys=${companyDetailsData.keys.toList()}");
+          debugPrint("ApiService: activeBranch=${companyDetailsData['activeBranch']}");
+          debugPrint("ApiService: activeBranch.address=${companyDetailsData['activeBranch']?['address']}");
         } catch (e) {
           debugPrint("ApiService: Failed to parse company details JSON -> $e");
         }
@@ -682,18 +682,28 @@ class MonitorApiService extends GetxService {
 
         // Insert company details (single record, no batch needed)
         if (companyDetailsData.isNotEmpty) {
+          final activeBranch = companyDetailsData['activeBranch'];
+          final company = activeBranch is Map ? activeBranch['company'] : null;
           await txn.insert('company_details', {
             'branch': companyDetailsData['branch'],
             'company': companyDetailsData['company'],
             'userCode': companyDetailsData['userCode'],
             'currentBranchName': companyDetailsData['currentBranchName'],
             'currentBranchCode': companyDetailsData['currentBranchCode'],
-            'activeBranchName': companyDetailsData['activeBranch']?['name'],
-            'activeBranchAddress':
-                companyDetailsData['activeBranch']?['address'],
-            'activeBranchPrimaryEmail':
-                companyDetailsData['activeBranch']?['primaryEmail'],
-            'activeBranchCode': companyDetailsData['activeBranch']?['code'],
+            'activeBranchName': activeBranch?['name'],
+            'activeBranchAddress': activeBranch?['address'] ??
+                (company is Map ? company['address'] : null),
+            'activeBranchPrimaryEmail': activeBranch?['primaryEmail'],
+            'activeBranchCode': activeBranch?['code'],
+            'companyName': company is Map ? company['name'] : null,
+            'activeBranchPhone': activeBranch?['primaryPhone'] ??
+                activeBranch?['phone'] ??
+                activeBranch?['telephone'] ??
+                (company is Map
+                    ? (company['primaryPhone'] ??
+                        company['phone'] ??
+                        company['telephone'])
+                    : null),
             'efrisEnabled': companyDetailsData['efrisEnabled'] == true ? 1 : 0,
           }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
@@ -806,12 +816,6 @@ class MonitorApiService extends GetxService {
       debugPrint("ApiService: syncRecentSales failed -> $e");
       rethrow;
     }
-  }
-
-  /// Legacy method - redirects to syncAllKpiData
-  Future<void> _syncRecentSalesLegacy() async {
-    // This method is kept for backward compatibility but now uses syncAllKpiData
-    await syncRecentSales();
   }
 
   /// KPI ID definitions for aggregated sales reports

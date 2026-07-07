@@ -3,12 +3,61 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/sale_transaction.dart';
 import '../config.dart';
 
 class PrintService {
   static final NumberFormat _currencyFormat = NumberFormat('#,###', 'en_US');
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+
+  // Must match the options/key used by PosApiService.saveCompanyInfo so the
+  // stored business name is readable here.
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  static const String _companyNameKey = 'company_name';
+  static const String _companyLocationKey = 'company_location';
+  static const String _companyPhoneKey = 'company_phone';
+  static const String _fallbackCompanyName = 'Komusoft Solutions LTD';
+
+  /// Resolves the business name printed on receipts.
+  /// Prefers the real company name fetched from the API
+  /// (activeBranch.company.name, persisted on login), then the flavor's
+  /// configured company name, then a hard-coded fallback.
+  static Future<String> resolveCompanyName() async {
+    try {
+      final stored = await _secureStorage.read(key: _companyNameKey);
+      if (stored != null && stored.trim().isNotEmpty) {
+        return stored.trim();
+      }
+    } catch (e) {
+      // ignore secure-storage read failures and fall back below
+    }
+    if (AppConfig.companyName.trim().isNotEmpty) {
+      return AppConfig.companyName.trim();
+    }
+    return _fallbackCompanyName;
+  }
+
+  /// Resolves the full receipt header: business name plus optional
+  /// location (address) and phone, all persisted on login. Empty/missing
+  /// values are returned as null so the receipt can omit them.
+  static Future<({String name, String? location, String? phone})>
+      resolveCompanyHeader() async {
+    final name = await resolveCompanyName();
+    String? location;
+    String? phone;
+    try {
+      final loc = await _secureStorage.read(key: _companyLocationKey);
+      if (loc != null && loc.trim().isNotEmpty) location = loc.trim();
+      final ph = await _secureStorage.read(key: _companyPhoneKey);
+      if (ph != null && ph.trim().isNotEmpty) phone = ph.trim();
+    } catch (e) {
+      // ignore secure-storage read failures; header still shows the name
+    }
+    return (name: name, location: location, phone: phone);
+  }
 
   // Generate receipt PDF
   static Future<Uint8List> generateReceiptPdf({
@@ -24,6 +73,14 @@ class PrintService {
     String? notes,
   }) async {
     final pdf = pw.Document();
+    final header = await resolveCompanyHeader();
+
+    // Derive change/owing from amountPaid vs totalAmount rather than the passed
+    // `balance` value, whose sign differs between callers (settle-bill vs
+    // payment screen). Tolerance covers floating-point rounding.
+    final bool isFullyPaid = amountPaid + 0.005 >= totalAmount;
+    final double changeDue = amountPaid - totalAmount; // >= 0 when fully paid
+    final double amountOwing = totalAmount - amountPaid; // > 0 when not fully paid
 
     pdf.addPage(
       pw.Page(
@@ -38,18 +95,30 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      header.name,
+                      textAlign: pw.TextAlign.center,
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
-                    pw.SizedBox(height: 4),
-                    pw.Text(
-                      AppConfig.description,
-                      style: pw.TextStyle(fontSize: 12),
-                    ),
-                    pw.SizedBox(height: 2),
+                    if (header.location != null) ...[
+                      pw.SizedBox(height: 3),
+                      pw.Text(
+                        header.location!,
+                        textAlign: pw.TextAlign.center,
+                        style: pw.TextStyle(fontSize: 11),
+                      ),
+                    ],
+                    if (header.phone != null) ...[
+                      pw.SizedBox(height: 1),
+                      pw.Text(
+                        'Tel: ${header.phone!}',
+                        textAlign: pw.TextAlign.center,
+                        style: pw.TextStyle(fontSize: 11),
+                      ),
+                    ],
+                    pw.SizedBox(height: 6),
                     pw.Text(
                       'SALES RECEIPT',
                       style: pw.TextStyle(
@@ -204,14 +273,29 @@ class PrintService {
                 ],
               ),
                 pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Balance:', style: pw.TextStyle(fontSize: 12)),
-                    pw.Text('UGX ${_currencyFormat.format(balance)}',
-                        style: pw.TextStyle(fontSize: 12)),
-                  ],
-                ),
+                // Show Change when fully paid (any overpayment), otherwise the
+                // outstanding Balance still owed.
+                if (isFullyPaid)
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Change:',
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                      pw.Text('UGX ${_currencyFormat.format(changeDue)}',
+                          style: pw.TextStyle(
+                              fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                    ],
+                  )
+                else
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Balance:', style: pw.TextStyle(fontSize: 12)),
+                      pw.Text('UGX ${_currencyFormat.format(amountOwing)}',
+                          style: pw.TextStyle(fontSize: 12)),
+                    ],
+                  ),
 
               pw.SizedBox(height: 2),
               pw.Row(
@@ -270,6 +354,7 @@ class PrintService {
     String? notes,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -284,7 +369,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
                         fontSize: 18,
                         fontWeight: pw.FontWeight.bold,
@@ -513,6 +598,7 @@ class PrintService {
     String? tableNumber,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -527,7 +613,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
 
                         fontSize: 16,
@@ -694,6 +780,7 @@ class PrintService {
     String? tableNumber,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -708,7 +795,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
                         fontSize: 16,
                         fontWeight: pw.FontWeight.bold,
@@ -969,6 +1056,7 @@ class PrintService {
     double? complementaryTotal,
   }) async {
     final pdf = pw.Document();
+    final companyName = await resolveCompanyName();
 
     pdf.addPage(
       pw.Page(
@@ -983,7 +1071,7 @@ class PrintService {
                 child: pw.Column(
                   children: [
                     pw.Text(
-                      AppConfig.companyName,
+                      companyName,
                       style: pw.TextStyle(
                         fontSize: 14,
                         fontWeight: pw.FontWeight.bold,

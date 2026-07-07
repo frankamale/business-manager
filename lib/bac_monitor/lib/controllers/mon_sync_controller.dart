@@ -5,12 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/api_services.dart';
 import '../services/kpi_sync_service.dart';
-import '../models/sync_tracker.dart';
 import 'mon_kpi_overview_controller.dart';
 import 'mon_salestrends_controller.dart';
 import 'mon_data_sync_controller.dart';
 import '../../../shared/database/unified_db_helper.dart';
-import '../../../back_pos/services/api_services.dart' as pos_api;
 import '../../../back_pos/utils/network_helper.dart';
 
 class MonSyncController extends GetxController {

@@ -1,13 +1,8 @@
-import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:bac_pos/back_pos/pages/homepage.dart';
-import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import '../../bac_monitor/lib/controllers/profile_controller.dart';
-import '../../shared/database/unified_db_helper.dart';
-import '../../bac_monitor/lib/services/api_services.dart' as monitor;
-import '../../bac_monitor/lib/services/account_manager.dart';
 import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../controllers/auth_controller.dart';

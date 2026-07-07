@@ -547,7 +547,7 @@ class _PosScreenState extends State<PosScreen> {
       );
       if (result['success'] == true) {
         final db = await UnifiedDatabaseHelper.instance.database;
-        final maps = await db!.query(
+        final maps = await db.query(
           'sales_transactions',
           where: 'receiptnumber = ?',
           whereArgs: [result['receiptnumber']],
@@ -705,7 +705,7 @@ class _PosScreenState extends State<PosScreen> {
       if (result['success'] == true) {
         // Get the sale transactions for printing
         final db = await UnifiedDatabaseHelper.instance.database;
-        final maps = await db!.query(
+        final maps = await db.query(
           'sales_transactions',
           where: 'receiptnumber = ?',
           whereArgs: [result['receiptnumber']],

@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'package:bac_pos/bac_monitor/lib/additions/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_storage/get_storage.dart';
 import '../back_pos/utils/network_helper.dart';
+import '../back_pos/controllers/auth_controller.dart';
 import '../shared/widgets/app_logo.dart';
-import '../shared/widgets/ui_helper.dart';
 import '../shared/services/credential_helper.dart';
 import 'app_roots.dart';
 import 'unified_login_screen.dart';
@@ -23,7 +22,6 @@ import '../bac_monitor/lib/controllers/mon_inventory_controller.dart';
 import '../bac_monitor/lib/services/api_services.dart';
 import '../bac_monitor/lib/services/sync_state_manager.dart';
 import '../shared/database/unified_db_helper.dart';
-import '../bac_monitor/lib/pages/bottom_nav.dart';
 
 /// Key for storing company ID in GetStorage for offline access
 const String kLastCompanyIdKey = 'last_company_id';
@@ -76,6 +74,11 @@ class ConnectivityController extends GetxController {
         isLoading.value = false;
         final hasCredentials = await _hasValidCredentials();
         if (hasCredentials) {
+          // Cache POS users while online so they're available later for
+          // offline POS login / Monitor->POS switching (admins never hit the
+          // POS splash on a normal open, so this is the only chance to sync).
+          await _cachePosUsers();
+
           // Get role FIRST before initializing controllers
           final role = await _getUserRole();
           
@@ -190,8 +193,24 @@ class ConnectivityController extends GetxController {
     await box.remove('customer_login_timestamp');
   }
 
-  Future<Map<String, String?>> _getStoredCredentials() async {
-    return CredentialHelper.getStoredCredentials();
+  /// Fetch POS users from the API and cache them in the company database while
+  /// online, so the POS login dropdown works later when offline (e.g. when an
+  /// admin switches Monitor->POS without a connection). Best-effort: never
+  /// blocks login if it fails.
+  Future<void> _cachePosUsers() async {
+    try {
+      final companyId =
+          await Get.find<MonitorApiService>().getStoredCompanyId();
+      if (companyId == null || companyId.isEmpty) return;
+
+      // syncUsersFromAPI writes into the company DB, so make sure it's open.
+      await UnifiedDatabaseHelper.instance.openForCompany(companyId);
+
+      await Get.find<AuthController>().syncUsersFromAPI();
+      debugPrint('SplashScreen: POS users cached for company $companyId');
+    } catch (e) {
+      debugPrint('SplashScreen: Failed to cache POS users - $e');
+    }
   }
 
   Future<bool> _hasValidCredentials() async {
@@ -311,24 +330,6 @@ class ConnectivityController extends GetxController {
     } catch (e) {
       debugPrint('SplashScreen: Error loading data from database - $e');
       // Continue even if data loading fails
-    }
-  }
-
-  Future<void> _performOfflineAuthAndNavigation() async {
-    // Load company details
-    await Get.find<MonOperatorController>().loadCompanyDetailsFromDb();
-    final role = await _getUserRole();
-
-    // Handle null role in offline mode
-    if (role == null || role.isEmpty) {
-      debugPrint(
-        'SplashScreen: User role is null in offline mode, defaulting to POS app',
-      );
-      Get.offAll(() => const PosAppRoot());
-    } else if (CredentialHelper.isAdminRole(role)) {
-      Get.offAll(() => const MonitorAppRoot());
-    } else {
-      Get.offAll(() => const PosAppRoot());
     }
   }
 

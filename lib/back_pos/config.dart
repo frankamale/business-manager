@@ -18,7 +18,7 @@ class AppConfig {
   static const String edition = 'Uganda Edition';
 
   /// Copyright text
-  static const String copyright = '© 2025 Komusoft Solutions';
+  static const String copyright = '© 2026 Komusoft Solutions';
   static const String phone = '(+256) 705 344 416';
 
   /// Primary color theme (used in gradients and branding)

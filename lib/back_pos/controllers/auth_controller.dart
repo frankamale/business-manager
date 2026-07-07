@@ -2,7 +2,6 @@ import 'package:get/get.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
-import 'package:bac_pos/back_pos/models/auth_response.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import 'package:bac_pos/back_pos/controllers/user_controller.dart';
 import '../../bac_monitor/lib/services/account_manager.dart';

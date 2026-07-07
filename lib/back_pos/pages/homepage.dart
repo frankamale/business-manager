@@ -11,7 +11,6 @@ import '../../shared/widgets/app_logo.dart';
 import '../config.dart';
 import '../services/api_services.dart';
 import '../../flavors/flavor_colors.dart';
-import '../utils/network_helper.dart';
 import '../../shared/utils/connectivity_helper.dart';
 
 class Homepage extends StatefulWidget {

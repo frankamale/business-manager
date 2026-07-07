@@ -459,9 +459,9 @@ class _SalesListingState extends State<SalesListing> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: cancelled > 0 
-                        ? Colors.red.shade700 
-                        : uploadStatus == 'uploaded' 
+                    color: cancelled > 0
+                        ? Colors.red.shade700
+                        : (uploadStatus == 'uploaded' || uploadStatus == 'fiscalised')
                             ? Colors.green.shade700
                             : uploadStatus == 'failed'
                                 ? Colors.red.shade700
@@ -543,7 +543,8 @@ class _SalesListingState extends State<SalesListing> {
                       onPressed: () => _handleEdit(sale),
                       icon: Icon(Icons.edit_note_outlined),
                       color: Colors.green.shade600,
-                      tooltip: uploadStatus == 'uploaded'
+                      tooltip: (uploadStatus == 'uploaded' ||
+                              uploadStatus == 'fiscalised')
                           ? 'View'
                           : 'Edit',
                       padding: EdgeInsets.all(8),
@@ -572,17 +573,27 @@ class _SalesListingState extends State<SalesListing> {
                         ),
                         PopupMenuItem(
                           value: 'fiscalise',
+                          // Disable once the sale has been fiscalised.
+                          enabled: uploadStatus != 'fiscalised',
                           child: Row(
                             children: [
                               Icon(
                                 Icons.receipt_long,
                                 size: 18,
-                                color: Colors.white,
+                                color: uploadStatus == 'fiscalised'
+                                    ? Colors.white38
+                                    : Colors.white,
                               ),
                               SizedBox(width: 8),
                               Text(
-                                'Fiscalise',
-                                style: TextStyle(color: Colors.white),
+                                uploadStatus == 'fiscalised'
+                                    ? 'Fiscalised'
+                                    : 'Fiscalise',
+                                style: TextStyle(
+                                  color: uploadStatus == 'fiscalised'
+                                      ? Colors.white38
+                                      : Colors.white,
+                                ),
                               ),
                             ],
                           ),
@@ -664,6 +675,8 @@ class _SalesListingState extends State<SalesListing> {
                   "Payment: $paymentType",
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
                 ),
+                Spacer(),
+                _buildFiscalIndicator(uploadStatus),
               ],
             ),
             SizedBox(height: 4),
@@ -741,6 +754,22 @@ class _SalesListingState extends State<SalesListing> {
 
             ],
         ),
+      ),
+    );
+  }
+
+  /// Icon-only indicator showing whether the sale has been fiscalised,
+  /// mirroring the indicator used on the stock-take listing.
+  Widget _buildFiscalIndicator(String uploadStatus) {
+    final fiscalised = uploadStatus == 'fiscalised';
+    return Tooltip(
+      message: fiscalised ? 'Fiscalised' : 'Not fiscalised',
+      child: Icon(
+        fiscalised
+            ? Icons.check_circle_rounded
+            : Icons.hourglass_bottom_rounded,
+        size: 16,
+        color: fiscalised ? Colors.green : Colors.blueGrey,
       ),
     );
   }
@@ -909,7 +938,7 @@ class _SalesListingState extends State<SalesListing> {
 
         // Check if already uploaded
         final uploadStatus = sale['upload_status'] as String? ?? 'pending';
-        if (uploadStatus == 'uploaded') {
+        if (uploadStatus == 'uploaded' || uploadStatus == 'fiscalised') {
           Get.snackbar(
             'Already Uploaded',
             'Sale $receiptNumber has already been uploaded to the server',
@@ -975,12 +1004,84 @@ class _SalesListingState extends State<SalesListing> {
         break;
 
       case 'fiscalise':
-        Get.snackbar(
-          'Not available for the moment ...', "Coming soon ",
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.orange.shade700,
-          colorText: Colors.white,
+        if (salesId == null) {
+          Get.snackbar(
+            'Error',
+            'Cannot fiscalise: Invalid sale ID',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        // A sale must be uploaded before it can be fiscalised.
+        final fiscaliseStatus = sale['upload_status'] as String? ?? 'pending';
+        if (fiscaliseStatus != 'uploaded') {
+          Get.snackbar(
+            'Not Uploaded',
+            'Upload sale $receiptNumber before fiscalising',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: FlavorColors.current.primaryDark,
+            colorText: Colors.white,
+          );
+          return;
+        }
+
+        // Show loading dialog
+        Get.dialog(
+          Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Fiscalising...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          barrierDismissible: false,
         );
+
+        try {
+          await salesController.fiscaliseSale(salesId);
+
+          // Close loading dialog
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+
+          Get.snackbar(
+            'Success',
+            'Sale $receiptNumber fiscalised successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade700,
+            colorText: Colors.white,
+            duration: Duration(seconds: 3),
+          );
+
+          // Refresh the sales list to reflect any updated status
+          await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
+        } catch (e) {
+          // Close loading dialog
+          if (Get.isDialogOpen ?? false) {
+            Get.back();
+          }
+
+          Get.snackbar(
+            'Fiscalise Failed',
+            'Failed to fiscalise sale $receiptNumber: ${e.toString()}',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+            duration: Duration(seconds: 5),
+          );
+        }
         break;
 
       case 'settleBill':
@@ -1010,7 +1111,7 @@ class _SalesListingState extends State<SalesListing> {
 
         final uploadStatus = sale['upload_status'] as String? ?? 'pending';
 
-         if (uploadStatus == 'uploaded') {
+         if (uploadStatus == 'uploaded' || uploadStatus == 'fiscalised') {
            await Get.to(
              () => SettleBillScreen(
                salesId: salesId,
@@ -1307,7 +1408,7 @@ class _SalesListingState extends State<SalesListing> {
           existingNotes: notes,
           existingSalespersonId: salespersonId,
           servicePoint: servicePoint,
-          isViewOnly: uploadStatus == 'uploaded',
+          isViewOnly: uploadStatus == 'uploaded' || uploadStatus == 'fiscalised',
         ),
         transition: Transition.rightToLeft,
       );
