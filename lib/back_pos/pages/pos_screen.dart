@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../widgets/barcode_scanner.dart';
 import 'payment_screen.dart';
+import 'sales_listing.dart';
 import '../models/inventory_item.dart';
 import '../models/service_point.dart';
 import '../controllers/inventory_controller.dart';
@@ -572,16 +573,23 @@ class _PosScreenState extends State<PosScreen> {
           issuedBy = currentUser.staff;
         }
 
-        // Print the bill
-        await PrintService.printBill(
-          receiptNumber: result['receiptnumber'],
-          customerName: customerName,
-          date: DateTime.now(),
-          items: items,
-          totalAmount: totalAmount,
-          issuedBy: issuedBy,
-          notes: notesController.text,
-        );
+        // Print the bill. Isolate printing so a print failure (e.g. no
+        // printer/print service reachable) can't abort the save flow and
+        // leave the user stranded on the POS screen with the sale already
+        // saved. Mirrors the payment screen's handling.
+        try {
+          await PrintService.printBill(
+            receiptNumber: result['receiptnumber'],
+            customerName: customerName,
+            date: DateTime.now(),
+            items: items,
+            totalAmount: totalAmount,
+            issuedBy: issuedBy,
+            notes: notesController.text,
+          );
+        } catch (printError) {
+          print('Failed to print bill: $printError');
+        }
 
         setState(() {
           // Dispose all price controllers
@@ -610,6 +618,11 @@ class _PosScreenState extends State<PosScreen> {
           backgroundColor: Colors.green[100],
           colorText: Colors.green[900],
         );
+
+        // Route to the sales listing, consistent with the paid sale flow
+        // (payment screen). Without this the user is left on the POS screen
+        // with no indication of where the saved bill went.
+        Get.off(() => SalesListing());
       } else {
         Get.snackbar(
           'Error',
