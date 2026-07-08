@@ -111,11 +111,6 @@ workflows:
       - name: Get dependencies
         script: flutter pub get
 
-      - name: Install CocoaPods dependencies
-        script: |
-          cd ios
-          pod install
-
       - name: Build iOS app for simulator
         script: |
           flutter build ios --simulator --debug \

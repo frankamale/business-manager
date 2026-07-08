@@ -42,6 +42,7 @@ class AccountManager extends GetxService {
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
     ),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   var accounts = <UserAccount>[].obs;

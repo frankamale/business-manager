@@ -15,6 +15,7 @@ class PrintService {
   // stored business name is readable here.
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
   static const String _companyNameKey = 'company_name';
   static const String _companyLocationKey = 'company_location';

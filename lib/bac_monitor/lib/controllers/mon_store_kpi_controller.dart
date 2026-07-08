@@ -55,6 +55,7 @@ class MonStoreKpiTrendController extends GetxController {
   Future<void> loadUserRole() async {
     const storage = FlutterSecureStorage(
       aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
     );
     userRole.value = await storage.read(key: "user_role") ?? "";
   }

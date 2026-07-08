@@ -9,6 +9,7 @@ class CredentialHelper {
 
   static final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   /// Retrieve stored credentials from FlutterSecureStorage

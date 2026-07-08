@@ -40,6 +40,7 @@ class TokenRefreshInterceptor extends http.BaseClient {
         _secureStorage = secureStorage ??
             const FlutterSecureStorage(
               aOptions: AndroidOptions(encryptedSharedPreferences: true),
+              iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
             ),
         _baseUrl = baseUrl;
 

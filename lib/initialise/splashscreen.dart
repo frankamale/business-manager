@@ -33,6 +33,7 @@ class ConnectivityController extends GetxController {
   var isOfflineMode = false.obs;  // Track if we're in offline mode
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
   Timer? _retryTimer;
 

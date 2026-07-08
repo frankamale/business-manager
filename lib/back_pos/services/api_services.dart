@@ -19,6 +19,7 @@ class PosApiService extends GetxService {
   // Initialize secure storage
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
   // Token refresh interceptor for automatic token refresh on 401 errors
