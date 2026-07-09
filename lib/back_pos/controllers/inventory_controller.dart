@@ -22,6 +22,12 @@ class InventoryController extends GetxController {
   int _currentPage = 0;
   int _totalItemCount = 0;
 
+  // Active service point filter (soldfrom). When set, resetting the list
+  // (clearing a search) should fall back to this filtered set rather than the
+  // full inventory, so the POS keeps showing only the current service point's
+  // items after each add.
+  String? _activeServicePointType;
+
   Timer? _searchDebounceTimer;
 
   @override
@@ -91,7 +97,7 @@ class InventoryController extends GetxController {
     _searchDebounceTimer?.cancel();
 
     if (query.isEmpty) {
-      filteredItems.value = inventoryItems.toList();
+      _resetToDefault();
       return;
     }
 
@@ -114,7 +120,18 @@ class InventoryController extends GetxController {
 
   void clearSearch() {
     _searchDebounceTimer?.cancel();
-    filteredItems.value = inventoryItems.toList();
+    _resetToDefault();
+  }
+
+  // Reset the visible list to its default state, honouring any active service
+  // point filter. Without this, clearing a search (e.g. after adding an item)
+  // would show every item instead of just the current service point's items.
+  void _resetToDefault() {
+    if (_activeServicePointType != null) {
+      filterByServicePointType(_activeServicePointType!);
+    } else {
+      filteredItems.value = inventoryItems.toList();
+    }
   }
 
   // Sync inventory from API to local database
@@ -228,6 +245,14 @@ class InventoryController extends GetxController {
     }
   }
 
+  // Clear any active service point filter and show all items. Call this when
+  // opening the POS without a service point so it doesn't inherit the filter
+  // from a previous service point session.
+  void clearServicePointFilter() {
+    _activeServicePointType = null;
+    filteredItems.value = inventoryItems.toList();
+  }
+
   // Get inventory item by ID
   InventoryItem? getInventoryItemById(String id) {
     try {
@@ -249,6 +274,7 @@ class InventoryController extends GetxController {
   // Filter by service point type (soldfrom)
   Future<void> filterByServicePointType(String servicePointType) async {
     try {
+      _activeServicePointType = servicePointType;
       isLoadingInventory.value = true;
 
       final results = await _dbHelper.getInventoryItemsBySoldFrom(servicePointType);

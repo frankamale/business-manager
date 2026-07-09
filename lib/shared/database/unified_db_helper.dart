@@ -71,7 +71,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 10,
+        version: 11,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -652,6 +652,27 @@ class UnifiedDatabaseHelper {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_sync_tracker_end_timestamp ON sync_tracker(end_timestamp DESC)',
     );
+
+    // EFRIS fiscal documents, cached per sale so a fiscal receipt can be
+    // (re)printed offline after fiscalisation. These fields only exist on the
+    // server (returned by GET /sales/{id}); we snapshot them here at
+    // fiscalise time. Keyed by the local salesId.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS fiscal_documents (
+        salesId TEXT PRIMARY KEY,
+        receiptnumber TEXT,
+        efriscode TEXT,
+        verificationcode TEXT,
+        efrisinvoiceid TEXT,
+        qrcode TEXT,
+        taxamount TEXT,
+        taxrate TEXT,
+        genno TEXT,
+        efrisstatus INTEGER,
+        efrismessage TEXT,
+        created_at INTEGER
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -844,6 +865,27 @@ class UnifiedDatabaseHelper {
       } catch (e) {
         debugPrint('UnifiedDatabaseHelper: v10 stock_take_id migration error: $e');
       }
+    }
+
+    // Migration to version 11 - Add fiscal_documents table so EFRIS fiscal
+    // receipts can be (re)printed offline after fiscalisation.
+    if (oldVersion < 11) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS fiscal_documents (
+          salesId TEXT PRIMARY KEY,
+          receiptnumber TEXT,
+          efriscode TEXT,
+          verificationcode TEXT,
+          efrisinvoiceid TEXT,
+          qrcode TEXT,
+          taxamount TEXT,
+          taxrate TEXT,
+          genno TEXT,
+          efrisstatus INTEGER,
+          efrismessage TEXT,
+          created_at INTEGER
+        )
+      ''');
     }
   }
 
@@ -1434,6 +1476,31 @@ class UnifiedDatabaseHelper {
       where: 'salesId = ?',
       whereArgs: [salesId],
     );
+  }
+
+  /// Upsert the cached EFRIS fiscal document for a sale. Called at fiscalise
+  /// time with the fields returned by the server so a fiscal receipt can be
+  /// reprinted offline. Keyed by salesId (replaces any prior snapshot).
+  Future<void> saveFiscalDocument(Map<String, dynamic> data) async {
+    final db = database;
+    await db.insert(
+      'fiscal_documents',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Read the cached fiscal document for a sale, or null if the sale has not
+  /// been fiscalised (or was fiscalised before this cache existed).
+  Future<Map<String, dynamic>?> getFiscalDocument(String salesId) async {
+    final db = database;
+    final rows = await db.query(
+      'fiscal_documents',
+      where: 'salesId = ?',
+      whereArgs: [salesId],
+      limit: 1,
+    );
+    return rows.isNotEmpty ? rows.first : null;
   }
 
   /// Delete all transactions belonging to a single (local) sale.

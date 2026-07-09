@@ -72,7 +72,19 @@ class PrintService {
     required String paymentMode,
     String? issuedBy,
     String? notes,
+    // EFRIS fiscal fields. When any are provided, a fiscal block (QR code,
+    // fiscal document number, verification code) is appended below the
+    // receipt. All null (the default) = a plain, non-fiscal receipt.
+    String? efrisCode,
+    String? verificationCode,
+    String? efrisInvoiceId,
+    String? qrCode,
+    String? taxAmount,
+    String? taxRate,
   }) async {
+    final bool hasFiscal = (efrisCode != null && efrisCode.isNotEmpty) ||
+        (qrCode != null && qrCode.isNotEmpty) ||
+        (verificationCode != null && verificationCode.isNotEmpty);
     final pdf = pw.Document();
     final header = await resolveCompanyHeader();
 
@@ -314,6 +326,92 @@ class PrintService {
                 pw.Text(notes, style: pw.TextStyle(fontSize: 10)),
               ],
 
+              // EFRIS fiscal block - appears below the receipt body: the QR
+              // code, fiscal document number and verification code.
+              if (hasFiscal) ...[
+                pw.SizedBox(height: 8),
+                pw.Divider(thickness: 1),
+                pw.Center(
+                  child: pw.Text(
+                    'FISCAL DOCUMENT',
+                    style: pw.TextStyle(
+                        fontSize: 12, fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+                pw.SizedBox(height: 4),
+                if (taxRate != null && taxRate.isNotEmpty ||
+                    taxAmount != null && taxAmount.isNotEmpty)
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        'Tax${_formatTaxRate(taxRate)}:',
+                        style: pw.TextStyle(fontSize: 11),
+                      ),
+                      pw.Text(
+                        'UGX ${_currencyFormat.format(double.tryParse(taxAmount ?? '') ?? 0)}',
+                        style: pw.TextStyle(fontSize: 11),
+                      ),
+                    ],
+                  ),
+                if (efrisCode != null && efrisCode.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Fiscal Doc No:',
+                          style: pw.TextStyle(fontSize: 11)),
+                      pw.Text(efrisCode,
+                          style: pw.TextStyle(
+                              fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                    ],
+                  ),
+                ],
+                if (verificationCode != null &&
+                    verificationCode.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Verification No:',
+                          style: pw.TextStyle(fontSize: 11)),
+                      pw.Text(verificationCode,
+                          style: pw.TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ],
+                if (efrisInvoiceId != null && efrisInvoiceId.isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text('Invoice ID:', style: pw.TextStyle(fontSize: 11)),
+                      pw.Text(efrisInvoiceId,
+                          style: pw.TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                ],
+                if (qrCode != null && qrCode.isNotEmpty) ...[
+                  pw.SizedBox(height: 8),
+                  pw.Center(
+                    child: pw.BarcodeWidget(
+                      barcode: pw.Barcode.qrCode(),
+                      data: qrCode,
+                      width: 90,
+                      height: 90,
+                      drawText: false,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Center(
+                    child: pw.Text(
+                      'Scan to verify on URA EFRIS',
+                      style: pw.TextStyle(fontSize: 8),
+                    ),
+                  ),
+                ],
+              ],
+
               pw.SizedBox(height: 8),
               pw.Divider(thickness: 1),
 
@@ -342,6 +440,15 @@ class PrintService {
     );
 
     return pdf.save();
+  }
+
+  /// Formats an EFRIS tax rate (e.g. "0.18") as a "(18%)" suffix, or "" when
+  /// absent/unparseable.
+  static String _formatTaxRate(String? taxRate) {
+    final rate = double.tryParse(taxRate ?? '');
+    if (rate == null || rate == 0) return '';
+    final pct = rate <= 1 ? rate * 100 : rate;
+    return ' (${pct.toStringAsFixed(pct.truncateToDouble() == pct ? 0 : 1)}%)';
   }
 
   // Generate bill PDF
@@ -1002,6 +1109,52 @@ class PrintService {
       paymentMode: paymentMode,
       issuedBy: issuedBy,
       notes: notes,
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdfBytes,
+    );
+  }
+
+  /// Print an EFRIS fiscal receipt: the normal receipt plus a fiscal block
+  /// (QR code, fiscal document number, verification code) below it. The
+  /// fiscal fields come from the cached fiscal_documents snapshot taken at
+  /// fiscalise time, so this works offline.
+  static Future<void> printFiscalReceipt({
+    required String receiptNumber,
+    required String customerName,
+    required DateTime date,
+    required List<SaleTransaction> items,
+    required double totalAmount,
+    required double amountPaid,
+    required double balance,
+    required String paymentMode,
+    String? issuedBy,
+    String? notes,
+    String? efrisCode,
+    String? verificationCode,
+    String? efrisInvoiceId,
+    String? qrCode,
+    String? taxAmount,
+    String? taxRate,
+  }) async {
+    final pdfBytes = await generateReceiptPdf(
+      receiptNumber: receiptNumber,
+      customerName: customerName,
+      date: date,
+      items: items,
+      totalAmount: totalAmount,
+      amountPaid: amountPaid,
+      balance: balance,
+      paymentMode: paymentMode,
+      issuedBy: issuedBy,
+      notes: notes,
+      efrisCode: efrisCode,
+      verificationCode: verificationCode,
+      efrisInvoiceId: efrisInvoiceId,
+      qrCode: qrCode,
+      taxAmount: taxAmount,
+      taxRate: taxRate,
     );
 
     await Printing.layoutPdf(

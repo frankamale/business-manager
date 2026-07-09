@@ -532,6 +532,27 @@ class _SalesListingState extends State<SalesListing> {
                               ],
                             ),
                           ),
+                          // Only offered once the sale is fiscalised - prints
+                          // the receipt with the EFRIS fiscal block (QR code,
+                          // fiscal document number, verification code).
+                          if (uploadStatus == 'fiscalised')
+                            PopupMenuItem(
+                              value: 'fiscal',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.verified,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Print Fiscal Document',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ];
                       },
                       icon: Icon(Icons.print),
@@ -879,6 +900,39 @@ class _SalesListingState extends State<SalesListing> {
               notes: notes.isNotEmpty ? notes : null,
             );
           }
+          break;
+
+        case 'fiscal':
+          final fiscal = await salesController.ensureFiscalDocument(salesId);
+          if (fiscal == null) {
+            Get.snackbar(
+              'Fiscal Document Unavailable',
+              'No fiscal document cached for this sale. Connect to the internet and open the sale once to reload it.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.red.shade700,
+              colorText: Colors.white,
+              duration: const Duration(seconds: 4),
+            );
+            return;
+          }
+          await PrintService.printFiscalReceipt(
+            receiptNumber: receiptNumber,
+            customerName: customerName,
+            date: date,
+            items: saleTransactions,
+            totalAmount: totalAmount,
+            amountPaid: amountPaid,
+            balance: balance,
+            paymentMode: paymentMode,
+            issuedBy: staffName,
+            notes: notes.isNotEmpty ? notes : null,
+            efrisCode: fiscal['efriscode'] as String?,
+            verificationCode: fiscal['verificationcode'] as String?,
+            efrisInvoiceId: fiscal['efrisinvoiceid'] as String?,
+            qrCode: fiscal['qrcode'] as String?,
+            taxAmount: fiscal['taxamount'] as String?,
+            taxRate: fiscal['taxrate'] as String?,
+          );
           break;
 
         case 'kot':

@@ -149,6 +149,39 @@ class _PosScreenState extends State<PosScreen> {
     });
   }
 
+  Future<bool> _confirmAction({
+    required String title,
+    required String message,
+    String confirmLabel = "Yes",
+    String cancelLabel = "No",
+    Color? confirmColor,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(cancelLabel),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: confirmColor ?? FlavorColors.current.primaryDark,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(confirmLabel),
+            ),
+          ],
+        );
+      },
+    );
+    return result ?? false;
+  }
+
   void _showItemDetailsDialog(int index) {
     final item = selectedItems[index];
     final inventoryItem = item['item'] as InventoryItem;
@@ -415,6 +448,10 @@ class _PosScreenState extends State<PosScreen> {
       inventoryController.filterByServicePointType(
         widget.servicePoint!.servicepointtype,
       );
+    } else {
+      // No service point for this session: make sure we don't inherit a
+      // service point filter left over from a previous session.
+      inventoryController.clearServicePointFilter();
     }
   }
 
@@ -1669,7 +1706,16 @@ class _PosScreenState extends State<PosScreen> {
                         const SizedBox(width: 3),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
+                              final confirmed = await _confirmAction(
+                                title: widget.existingSalesId != null
+                                    ? "Cancel Sale"
+                                    : "New Sale",
+                                message: widget.existingSalesId != null
+                                    ? "Are you sure you want to cancel this sale?"
+                                    : "Start a new sale? The current cart will be cleared.",
+                              );
+                              if (!confirmed || !mounted) return;
                               if (widget.existingSalesId != null) {
                                 Navigator.of(context).pop();
                               } else {
@@ -1971,7 +2017,15 @@ class _PosScreenState extends State<PosScreen> {
                         const SizedBox(width: 3),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () async {
+                              final confirmed = await _confirmAction(
+                                title: "Close",
+                                message:
+                                    "Are you sure you want to close this screen?",
+                              );
+                              if (!confirmed || !mounted) return;
+                              Navigator.pop(context);
+                            },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               backgroundColor: Colors.red.shade700,

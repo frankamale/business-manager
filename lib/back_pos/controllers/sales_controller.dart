@@ -192,7 +192,79 @@ class SalesController extends GetxController {
     // indicator and disable the fiscalise button (status flows the same way
     // as a stock take: pending -> uploaded -> fiscalised).
     await _dbHelper.updateSaleUploadStatus(salesId, 'fiscalised');
+
+    // Snapshot the EFRIS fiscal fields locally so a fiscal receipt (QR code,
+    // fiscal document number, verification code) can be printed - including
+    // offline - after fiscalisation. These fields live only on the server, so
+    // fetch the authoritative sale and cache them. Non-fatal on failure: the
+    // sale is still fiscalised, the fiscal receipt just won't be available
+    // until the next successful fetch.
+    try {
+      final serverSale = await _apiService.fetchSingleTransaction(salesId);
+      await _dbHelper.saveFiscalDocument({
+        'salesId': salesId,
+        'receiptnumber': serverSale['receiptnumber']?.toString(),
+        'efriscode': serverSale['efriscode']?.toString(),
+        'verificationcode': serverSale['verificationcode']?.toString(),
+        'efrisinvoiceid': serverSale['efrisinvoiceid']?.toString(),
+        'qrcode': serverSale['qrcode']?.toString(),
+        'taxamount': serverSale['taxamount']?.toString(),
+        'taxrate': serverSale['taxrate']?.toString(),
+        'genno': serverSale['genno']?.toString(),
+        'efrisstatus': serverSale['efrisstatus'] is int
+            ? serverSale['efrisstatus']
+            : int.tryParse(serverSale['efrisstatus']?.toString() ?? ''),
+        'efrismessage': serverSale['efrismessage']?.toString(),
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+      });
+    } catch (e) {
+      print('Failed to cache fiscal document for $salesId: $e');
+    }
+
     return result;
+  }
+
+  /// Cached EFRIS fiscal fields for a sale (or null if not fiscalised /
+  /// not yet cached). Used to print the fiscal receipt offline.
+  Future<Map<String, dynamic>?> getFiscalDocument(String salesId) async {
+    return await _dbHelper.getFiscalDocument(salesId);
+  }
+
+  /// Returns the cached fiscal document, falling back to fetching it from the
+  /// server (and caching it) when it isn't cached locally - e.g. sales that
+  /// were fiscalised before this cache existed. Returns null when it can be
+  /// resolved from neither source (typically offline with no cache).
+  Future<Map<String, dynamic>?> ensureFiscalDocument(String salesId) async {
+    final cached = await _dbHelper.getFiscalDocument(salesId);
+    if (cached != null) return cached;
+
+    try {
+      final serverSale = await _apiService.fetchSingleTransaction(salesId);
+      // Only cache if the server actually reports an EFRIS document.
+      final efriscode = serverSale['efriscode']?.toString();
+      if (efriscode == null || efriscode.isEmpty) return null;
+
+      await _dbHelper.saveFiscalDocument({
+        'salesId': salesId,
+        'receiptnumber': serverSale['receiptnumber']?.toString(),
+        'efriscode': efriscode,
+        'verificationcode': serverSale['verificationcode']?.toString(),
+        'efrisinvoiceid': serverSale['efrisinvoiceid']?.toString(),
+        'qrcode': serverSale['qrcode']?.toString(),
+        'taxamount': serverSale['taxamount']?.toString(),
+        'taxrate': serverSale['taxrate']?.toString(),
+        'genno': serverSale['genno']?.toString(),
+        'efrisstatus': serverSale['efrisstatus'] is int
+            ? serverSale['efrisstatus']
+            : int.tryParse(serverSale['efrisstatus']?.toString() ?? ''),
+        'efrismessage': serverSale['efrismessage']?.toString(),
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+      });
+      return await _dbHelper.getFiscalDocument(salesId);
+    } catch (e) {
+      print('Failed to resolve fiscal document for $salesId: $e');
+      return null;
+    }
   }
 
   // Upload sale to server
