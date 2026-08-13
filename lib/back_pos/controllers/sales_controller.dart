@@ -285,23 +285,30 @@ class SalesController extends GetxController {
       final servicePointId = firstTransaction.servicepointid ?? '';
       final customerId = firstTransaction.clientid;
 
-      // Check if sale already exists on server
+      // Check if sale already exists on server. Only treat it as existing when
+      // the server echoes back this sale's id - a 200 with an empty or wrapper
+      // body must not be mistaken for an existing sale.
       bool saleExistsOnServer = false;
       try {
         final existingSale = await _apiService.fetchSingleTransaction(salesId);
-        saleExistsOnServer = existingSale.isNotEmpty;
+        saleExistsOnServer =
+            existingSale['id']?.toString().toLowerCase() == salesId.toLowerCase();
         print('Sale $salesId already exists on server: $saleExistsOnServer');
       } catch (e) {
         print('Error checking if sale exists on server: $e');
         saleExistsOnServer = false;
       }
 
-      // Build the sale payload using the shared builder so the upload and the
-      // fiscalise request always send an identical body.
-      final salePayload = await _buildSalePayload(salesId);
-
-      // Create or update sale on server
+      // Create the sale on the server if it isn't there yet. When it already
+      // is, the sale body was persisted by an earlier attempt and this retry
+      // only exists because a later step (the payment) failed - so leave the
+      // sale alone and fall through to the payment reconciliation below, which
+      // pays only the outstanding balance the server reports.
       if (!saleExistsOnServer) {
+        // Build the sale payload using the shared builder so the upload and the
+        // fiscalise request always send an identical body.
+        final salePayload = await _buildSalePayload(salesId);
+
         // Log the sale payload being sent to server
         print('=== SALE PAYLOAD BEING SENT TO SERVER ===');
         print('Sale ID: $salesId');
@@ -313,16 +320,10 @@ class SalesController extends GetxController {
         // Create sale via API
         await _apiService.createSale(salePayload);
       } else {
-        // Log the update payload being sent to server
-        print('=== SALE UPDATE PAYLOAD BEING SENT TO SERVER ===');
+        print('=== SALE ALREADY ON SERVER - SKIPPING SALE WRITE ===');
         print('Sale ID: $salesId');
         print('Receipt Number: ${firstTransaction.receiptnumber}');
-        print('Update Payload JSON:');
-        print(salePayload);
-        print('=== END SALE UPDATE PAYLOAD ===');
-
-        // Update sale via API
-        await _apiService.updateSale(salesId, salePayload);
+        print('=== END SKIPPED SALE WRITE ===');
       }
 
       // If payment was made, create and post payment

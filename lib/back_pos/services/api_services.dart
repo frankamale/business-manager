@@ -431,30 +431,6 @@ class PosApiService extends GetxService {
     }
   }
 
-  Future<Map<String, dynamic>> updateSale(
-    String saleId,
-    Map<String, dynamic> saleData,
-  ) async {
-    try {
-      final request = http.Request('PUT', Uri.parse("$baseurl/sales/$saleId"));
-      request.headers['Content-Type'] = 'application/json';
-      request.body = json.encode(saleData);
-
-      final streamedResponse = await _tokenRefreshInterceptor.send(request);
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return json.decode(response.body);
-      } else {
-        throw Exception(
-          "Failed to update sale: ${response.statusCode} - ${response.body}",
-        );
-      }
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   /// Fiscalise a sale (EFRIS). Sends a DtoSale payload to `rest/sales/fiscalise/`.
   Future<Map<String, dynamic>> fiscaliseSale(Map<String, dynamic> saleData) async {
     try {
