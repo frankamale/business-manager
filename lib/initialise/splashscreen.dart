@@ -82,7 +82,10 @@ class ConnectivityController extends GetxController {
 
           // Get role FIRST before initializing controllers
           final role = await _getUserRole();
-          
+          // Username is used alongside the role to force cashier/branch
+          // accounts into the POS (see AppConfig.enableUsernamePosFiltering).
+          final username = GetStorage().read('last_username') as String?;
+
           // Handle null or empty role with fallback logic
           if (role == null || role.isEmpty) {
             debugPrint(
@@ -94,7 +97,9 @@ class ConnectivityController extends GetxController {
             if (userData != null && userData.containsKey('roles')) {
               final roles = userData['roles'] as List<dynamic>?;
 
-              if (roles != null && roles.isNotEmpty) {
+              if (roles != null &&
+                  roles.isNotEmpty &&
+                  CredentialHelper.shouldUseMonitorFromRoles(roles, username)) {
                 final fallbackRole = roles.first.toString();
                 await _secureStorage.write(
                   key: 'user_role',
@@ -117,13 +122,13 @@ class ConnectivityController extends GetxController {
               await _loadDataFromDatabase();
               Get.offAll(() => const PosAppRoot());
             }
-          } else if (CredentialHelper.isAdminRole(role)) {
+          } else if (CredentialHelper.shouldUseMonitorFromRole(role, username)) {
             // Admin user - initialize monitor controllers only
             _initializeControllersForRole('admin');
             await _loadDataFromDatabase();
             Get.offAll(() => const MonitorAppRoot());
           } else {
-            // Non-admin user - initialize POS controllers only
+            // Non-admin user (or filtered cashier/branch) - POS controllers only
             _initializeControllersForRole('pos');
             await _loadDataFromDatabase();
             Get.offAll(() => const PosAppRoot());
@@ -367,8 +372,9 @@ class ConnectivityController extends GetxController {
           // Load data from local database
           await _loadDataFromDatabase();
           
-          // Navigate based on role
-          if (CredentialHelper.isAdminRole(effectiveRole)) {
+          // Navigate based on role (cashier/branch usernames forced to POS)
+          if (CredentialHelper.shouldUseMonitorFromRole(
+              effectiveRole, lastUsername)) {
             Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());
@@ -387,8 +393,9 @@ class ConnectivityController extends GetxController {
           final effectiveRole = role ?? 'pos';
           _initializeControllersForRole(effectiveRole);
           await _loadDataFromDatabase();
-          
-          if (CredentialHelper.isAdminRole(effectiveRole)) {
+
+          if (CredentialHelper.shouldUseMonitorFromRole(
+              effectiveRole, lastUsername)) {
             Get.offAll(() => const MonitorAppRoot());
           } else {
             Get.offAll(() => const PosAppRoot());

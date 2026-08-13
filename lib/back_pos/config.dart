@@ -47,6 +47,11 @@ class AppConfig {
   /// Enable/disable debug logging
   static const bool enableDebugLogging = true;
 
+  static const bool enableUsernamePosFiltering = true;
+  /// Username substrings (case-insensitive) that force a user into the POS
+  /// regardless of their roles when [enableUsernamePosFiltering] is on.
+  /// Add more keywords here for further filtering.
+  static const List<String> posUsernameKeywords = ['cashier', 'br'];
   /// Default currency for the application
   static const String defaultCurrency = 'UGX';
 

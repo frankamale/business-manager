@@ -215,7 +215,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       await box.write('last_company_id', companyId);
       await box.write('last_username', username);
 
-      final isAdmin = CredentialHelper.isAdminFromRoles(roles);
+      final isAdmin = CredentialHelper.shouldUseMonitorFromRoles(roles, username);
       final userRole = isAdmin ? 'admin' : 'staff';
       await box.write('last_user_role', userRole);
 
@@ -228,7 +228,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
       );
     }
 
-    final isAdmin = CredentialHelper.isAdminFromRoles(roles);
+    final isAdmin = CredentialHelper.shouldUseMonitorFromRoles(roles, username);
     final targetSystem = isAdmin ? 'monitor' : 'pos';
 
     final account = UserAccount(
@@ -300,7 +300,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         await box.write('last_company_id', companyId);
         await box.write('last_username', username);
 
-        final isAdmin = CredentialHelper.isAdminFromRoles(roles);
+        final isAdmin = CredentialHelper.shouldUseMonitorFromRoles(roles, username);
         final userRole = isAdmin ? 'admin' : 'staff';
         await box.write('last_user_role', userRole);
 
@@ -313,7 +313,7 @@ class _UnifiedLoginScreenState extends State<UnifiedLoginScreen> {
         );
       }
 
-      final isAdmin = CredentialHelper.isAdminFromRoles(roles);
+      final isAdmin = CredentialHelper.shouldUseMonitorFromRoles(roles, username);
       final targetSystem = isAdmin ? 'monitor' : 'pos';
 
       final currentAccount = _accountManager.currentAccount.value;
