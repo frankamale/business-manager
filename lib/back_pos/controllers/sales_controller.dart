@@ -77,7 +77,12 @@ class SalesController extends GetxController {
       return {
         'paymentSummary': [],
         'categorySummary': [],
+        'itemsSummary': [],
+        'settledItems': [],
+        'complementaryItems': [],
+        'nonSettledItems': [],
         'complementaryTotal': 0.0,
+        'complementaryQuantity': 0.0,
         'overallTotal': {},
       };
     }

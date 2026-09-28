@@ -1207,10 +1207,26 @@ class PrintService {
     required int unpaidTransactions,
     required List<Map<String, dynamic>> paymentSummary,
     required List<Map<String, dynamic>> categorySummary,
+    List<Map<String, dynamic>> itemsSummary = const [],
+    List<Map<String, dynamic>> settledItems = const [],
+    List<Map<String, dynamic>> complementaryItems = const [],
+    List<Map<String, dynamic>> nonSettledItems = const [],
     double? complementaryTotal,
+    num complementaryQuantity = 0,
+    String? printedBy,
   }) async {
     final pdf = pw.Document();
-    final companyName = await resolveCompanyName();
+    final companyHeader = await resolveCompanyHeader();
+    final phone = companyHeader.phone ?? AppConfig.phone;
+    final reportDate = DateFormat('dd/MM/yyyy').format(date);
+    final printedByName = (printedBy ?? '').trim().isEmpty
+        ? 'Account'
+        : printedBy!.trim();
+    final paymentTotals = _aggregatePaymentSummary(paymentSummary);
+    final categoryTotals = _aggregateCategorySummary(categorySummary);
+    final settledGroups = _groupSettledItems(settledItems);
+    final complementaryGroups = _groupComplementaryItems(complementaryItems);
+    final nonSettledTotals = _aggregateNonSettledItems(nonSettledItems);
 
     pdf.addPage(
       pw.Page(
@@ -1220,131 +1236,107 @@ class PrintService {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Header
-              pw.Center(
-                child: pw.Column(
-                  children: [
-                    pw.Text(
-                      companyName,
-                      style: pw.TextStyle(
-                        fontSize: 14,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.SizedBox(height: 2),
-                    pw.Text(
-                      'DAILY SUMMARY',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.SizedBox(height: 2),
-                    pw.Text(
-                      DateFormat('dd MMM yyyy').format(date),
-                      style: pw.TextStyle(fontSize: 10),
-                    ),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 4),
               pw.Center(
                 child: pw.Text(
-                  'Transactions: $totalTransactions',
+                  companyHeader.name,
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 2),
+              pw.Center(
+                child: pw.Text(
+                  'Phone: $phone',
                   style: pw.TextStyle(fontSize: 9),
                 ),
               ),
-              pw.SizedBox(height: 6),
-              _buildDottedLine(),
-              pw.SizedBox(height: 6),
-
-              // Payment Methods Section - amounts received
-              pw.Center(
-                child: pw.Text(
-                  'PAYMENTS RECEIVED',
-                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
-                ),
-              ),
-              pw.SizedBox(height: 6),
-
-              // List each payment method
-              ...paymentSummary.where((payment) {
-                final type = (payment['paymenttype'] as String? ?? '').toLowerCase();
-                return type != 'pending' && type.isNotEmpty;
-              }).map((payment) {
-                final type = payment['paymenttype'] as String? ?? 'Unknown';
-                final amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
-                return pw.Padding(
-                  padding: pw.EdgeInsets.only(bottom: 3),
-                  child: _buildReceiptRow(type, amount),
-                );
-              }),
-
               pw.SizedBox(height: 4),
-              _buildDottedLine(),
-              pw.SizedBox(height: 6),
-
-              // Pending - amount yet to be paid
-              _buildReceiptRow('PENDING', pendingAmount, isBold: true),
-              pw.SizedBox(height: 2),
-              pw.Text(
-                '  (Not yet paid)',
-                style: pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic),
-              ),
-
-              pw.SizedBox(height: 6),
-              _buildDottedLine(),
-              pw.SizedBox(height: 6),
-
-              // Total - all sales
-              _buildReceiptRow('TOTAL SALES', totalSales, isBold: true, fontSize: 12),
-
-              pw.SizedBox(height: 8),
-              _buildDottedLine(),
-              pw.SizedBox(height: 6),
-
-              // Category Breakdown Section
               pw.Center(
                 child: pw.Text(
-                  'BY CATEGORY',
-                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+                  'DAILY SUMMARY',
+                  style: pw.TextStyle(
+                    fontSize: 12,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
               ),
+              pw.SizedBox(height: 4),
+              _buildTextRow('Date', reportDate, fontSize: 9),
+              _buildTextRow('Printed by', printedByName, fontSize: 9),
               pw.SizedBox(height: 6),
-
-              ...categorySummary.map((category) {
-                final catName = category['category'] as String? ?? 'Unknown';
-                final amount = (category['totalAmount'] as num?)?.toDouble() ?? 0.0;
-                return pw.Padding(
-                  padding: pw.EdgeInsets.only(bottom: 3),
-                  child: _buildReceiptRow(catName, amount),
-                );
-              }),
-
-              if (complementaryTotal != null && complementaryTotal > 0) ...[
-                pw.SizedBox(height: 3),
-                _buildReceiptRow('Complementary', complementaryTotal),
-              ],
-
+              _buildDottedLine(),
+              _buildSectionHeading('SUMMARY'),
+              _buildReceiptRow('Total Sales', totalSales, isBold: true, fontSize: 11),
+              _buildReceiptRow('Total Cash', paymentTotals['Cash'] ?? 0.0),
+              _buildReceiptRow('Total Card', paymentTotals['Card'] ?? 0.0),
+              _buildReceiptRow('Total M/Money', paymentTotals['M/Money'] ?? 0.0),
+              _buildReceiptRow('Total Credit', paymentTotals['Credit'] ?? 0.0),
+              _buildReceiptRow(
+                'Total Pending',
+                pendingAmount < 0 ? 0.0 : pendingAmount,
+                isBold: true,
+              ),
+              ..._orderedExtraPaymentRows(paymentTotals),
+              ..._orderedCategoryRows(categoryTotals),
+              _buildTextRow(
+                'Complementary Item Quantity',
+                _formatQuantity(complementaryQuantity),
+                fontSize: 9,
+              ),
+              if (complementaryTotal != null && complementaryTotal > 0)
+                _buildReceiptRow('Complementary Total', complementaryTotal),
+              pw.SizedBox(height: 6),
+              _buildDottedLine(),
+              _buildSectionHeading('Items Summary'),
+              if (itemsSummary.isEmpty)
+                _buildEmptyText('No items')
+              else
+                ...itemsSummary.map(
+                  (item) => _buildReceiptRow(
+                    '${_mapText(item, const ['item', 'inventoryname'], 'Unknown')} '
+                    '(${_formatQuantity(_mapValue(item, const ['quantity', 'qty']))})',
+                    _toDouble(_mapValue(item, const ['amount', 'totalAmount'])),
+                  ),
+                ),
+              _buildReceiptRow('Total', totalSales, isBold: true),
+              pw.SizedBox(height: 6),
+              _buildDottedLine(),
+              _buildSectionHeading('Settled Items'),
+              if (settledGroups.isEmpty)
+                _buildEmptyText('No settled items')
+              else
+                ..._buildSettledRows(settledGroups),
+              pw.SizedBox(height: 6),
+              _buildDottedLine(),
+              _buildSectionHeading('Complementary Items'),
+              if (complementaryGroups.isEmpty)
+                _buildEmptyText('No complementary items')
+              else
+                ...complementaryGroups.entries.map(
+                  (entry) => _buildTextRow(
+                    entry.key,
+                    _formatQuantity(entry.value),
+                    fontSize: 9,
+                  ),
+                ),
+              pw.SizedBox(height: 6),
+              _buildDottedLine(),
+              _buildSectionHeading('Non-Settled Items'),
+              if (nonSettledTotals.isEmpty)
+                _buildEmptyText('No non-settled items')
+              else
+                ..._orderedNonSettledRows(nonSettledTotals),
               pw.SizedBox(height: 8),
               _buildDottedLine(),
-              pw.SizedBox(height: 6),
-
-              // Footer
+              pw.SizedBox(height: 2),
               pw.Center(
                 child: pw.Text(
                   'Printed: ${DateFormat('dd/MM/yy HH:mm').format(DateTime.now())}',
-                  style: pw.TextStyle(fontSize: 8),
-                ),
-              ),
-              pw.SizedBox(height: 2),
-              pw.Center(
-                child: pw.Text(
-                  AppConfig.copyright,
                   style: pw.TextStyle(fontSize: 7),
                 ),
               ),
-              pw.SizedBox(height: 10),
             ],
           );
         },
@@ -1370,44 +1362,315 @@ class PrintService {
     );
   }
 
-  // Helper for receipt row with label and amount
-  static pw.Widget _buildReceiptRow(String label, double amount, {bool isBold = false, double fontSize = 10}) {
+  static pw.Widget _buildSectionHeading(String title) {
+    return pw.Padding(
+      padding: pw.EdgeInsets.only(top: 3, bottom: 3),
+      child: pw.Text(
+        title,
+        style: pw.TextStyle(
+          fontSize: 11,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _buildSubheading(String title) {
+    return pw.Padding(
+      padding: pw.EdgeInsets.only(top: 3, bottom: 1),
+      child: pw.Text(
+        title,
+        style: pw.TextStyle(
+          fontSize: 9,
+          fontWeight: pw.FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _buildTextRow(
+    String label,
+    String value, {
+    double fontSize = 10,
+    bool isBold = false,
+  }) {
     final style = pw.TextStyle(
       fontSize: fontSize,
       fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
     );
     return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Expanded(
-          child: pw.Text(label, style: style),
-        ),
-        pw.Text(
-          _currencyFormat.format(amount),
-          style: style,
-        ),
+        pw.Expanded(child: pw.Text(label, style: style)),
+        pw.SizedBox(width: 4),
+        pw.Text(value, style: style, textAlign: pw.TextAlign.right),
       ],
     );
+  }
+
+  static pw.Widget _buildEmptyText(String text) {
+    return pw.Padding(
+      padding: pw.EdgeInsets.symmetric(vertical: 2),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 9,
+          fontStyle: pw.FontStyle.italic,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _buildReceiptRow(
+    String label,
+    double amount, {
+    bool isBold = false,
+    double fontSize = 10,
+  }) {
+    return _buildTextRow(
+      label,
+      _currencyFormat.format(amount),
+      fontSize: fontSize,
+      isBold: isBold,
+    );
+  }
+
+  static double _toDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value == null) return 0.0;
+    return double.tryParse(value.toString().replaceAll(',', '')) ?? 0.0;
+  }
+
+  static int _toInt(Object? value) => _toDouble(value).round();
+
+  static Map<String, dynamic> _asMap(Object? value) {
+    if (value is! Map) return <String, dynamic>{};
+    return value.map(
+      (key, value) => MapEntry(key.toString(), value),
+    );
+  }
+
+  static List<Map<String, dynamic>> _asMapList(Object? value) {
+    if (value is! List) return <Map<String, dynamic>>[];
+    return value.whereType<Map>().map(_asMap).toList();
+  }
+
+  static String _formatQuantity(Object? value) {
+    final quantity = _toDouble(value);
+    if (quantity == quantity.roundToDouble()) return quantity.toInt().toString();
+    return quantity.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
+  static Object? _mapValue(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final value = map[key];
+      if (value != null) return value;
+    }
+    return null;
+  }
+
+  static String _mapText(
+    Map<String, dynamic> map,
+    List<String> keys, [
+    String fallback = 'Unknown',
+  ]) {
+    final value = _mapValue(map, keys)?.toString().trim() ?? '';
+    return value.isEmpty ? fallback : value;
+  }
+
+  static String _canonicalPaymentType(Object? value) {
+    final text = value?.toString().trim() ?? '';
+    final normalized = text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+    if (normalized == 'pending') return 'Pending';
+    if (normalized.contains('cash')) return 'Cash';
+    if (normalized.contains('card')) return 'Card';
+    if (normalized.contains('mobilemoney') ||
+        normalized.contains('mmoney') ||
+        normalized.contains('momo') ||
+        normalized.contains('mpesa') ||
+        normalized == 'mm') {
+      return 'M/Money';
+    }
+    if (normalized.contains('credit')) return 'Credit';
+    if (text.isEmpty) return 'Other';
+    return '${text[0].toUpperCase()}${text.substring(1)}';
+  }
+
+  static Map<String, double> _aggregatePaymentSummary(
+    List<Map<String, dynamic>> paymentSummary,
+  ) {
+    final totals = <String, double>{};
+    for (final payment in paymentSummary) {
+      final type = _canonicalPaymentType(
+        _mapValue(payment, const ['paymenttype', 'paymentType']),
+      );
+      if (type == 'Pending') continue;
+      final amount = _toDouble(
+        _mapValue(payment, const ['totalPaid', 'amountPaid', 'amount']),
+      );
+      totals.update(type, (value) => value + amount, ifAbsent: () => amount);
+    }
+    return totals;
+  }
+
+  static Map<String, double> _aggregateCategorySummary(
+    List<Map<String, dynamic>> categorySummary,
+  ) {
+    final totals = <String, double>{};
+    for (final category in categorySummary) {
+      final name = _mapText(category, const ['category'], 'Unknown');
+      final amount = _toDouble(
+        _mapValue(category, const ['totalAmount', 'amount']),
+      );
+      totals.update(name, (value) => value + amount, ifAbsent: () => amount);
+    }
+    return totals;
+  }
+
+  static Map<String, Map<String, Map<String, double>>>
+      _groupSettledItems(List<Map<String, dynamic>> settledItems) {
+    final groups = <String, Map<String, Map<String, double>>>{};
+    for (final item in settledItems) {
+      final payment = _canonicalPaymentType(
+        _mapValue(item, const ['paymenttype', 'paymentType']),
+      );
+      if (payment == 'Pending') continue;
+      final itemName = _mapText(item, const ['item', 'inventoryname']);
+      final paymentItems = groups.putIfAbsent(payment, () => {});
+      final values = paymentItems.putIfAbsent(
+        itemName,
+        () => {'quantity': 0.0, 'amount': 0.0},
+      );
+      values['quantity'] = values['quantity']! + _toDouble(
+            _mapValue(item, const ['quantity', 'qty']),
+          );
+      values['amount'] = values['amount']! + _toDouble(
+            _mapValue(item, const ['amount', 'totalAmount']),
+          );
+    }
+    return groups;
+  }
+
+  static Map<String, double> _groupComplementaryItems(
+    List<Map<String, dynamic>> complementaryItems,
+  ) {
+    final groups = <String, double>{};
+    for (final item in complementaryItems) {
+      final category = _mapText(item, const ['category'], 'Uncategorized');
+      final quantity = _toDouble(
+        _mapValue(item, const ['quantity', 'qty']),
+      );
+      groups.update(
+        category,
+        (value) => value + quantity,
+        ifAbsent: () => quantity,
+      );
+    }
+    return groups;
+  }
+
+  static Map<String, Map<String, double>> _aggregateNonSettledItems(
+    List<Map<String, dynamic>> nonSettledItems,
+  ) {
+    final totals = <String, Map<String, double>>{};
+    for (final item in nonSettledItems) {
+      final itemName = _mapText(item, const ['item', 'inventoryname']);
+      final values = totals.putIfAbsent(
+        itemName,
+        () => {'quantity': 0.0, 'balance': 0.0},
+      );
+      values['quantity'] = values['quantity']! + _toDouble(
+            _mapValue(item, const ['quantity', 'qty']),
+          );
+      values['balance'] = values['balance']! + _toDouble(
+            _mapValue(item, const ['balance', 'totalBalance', 'amount']),
+          );
+    }
+    return totals;
+  }
+
+  static List<pw.Widget> _orderedExtraPaymentRows(
+    Map<String, double> paymentTotals,
+  ) {
+    const fixed = {'Cash', 'Card', 'M/Money', 'Credit'};
+    final labels = paymentTotals.keys
+        .where((label) => !fixed.contains(label))
+        .toList()
+      ..sort();
+    return labels
+        .map((label) => _buildReceiptRow('Total $label', paymentTotals[label]!))
+        .toList();
+  }
+
+  static List<pw.Widget> _orderedCategoryRows(
+    Map<String, double> categoryTotals,
+  ) {
+    return categoryTotals.entries
+        .map((entry) => _buildReceiptRow('Total ${entry.key}', entry.value))
+        .toList();
+  }
+
+  static List<pw.Widget> _buildSettledRows(
+    Map<String, Map<String, Map<String, double>>> settledGroups,
+  ) {
+    const fixedOrder = ['Cash', 'Card', 'M/Money', 'Credit'];
+    final payments = settledGroups.keys.toList()
+      ..sort((left, right) {
+        final leftIndex = fixedOrder.indexOf(left);
+        final rightIndex = fixedOrder.indexOf(right);
+        if (leftIndex == -1 && rightIndex == -1) return left.compareTo(right);
+        if (leftIndex == -1) return 1;
+        if (rightIndex == -1) return -1;
+        return leftIndex.compareTo(rightIndex);
+      });
+    final rows = <pw.Widget>[];
+    for (final payment in payments) {
+      rows.add(_buildSubheading('BY ${payment.toUpperCase()}'));
+      final items = settledGroups[payment]!.keys.toList()..sort();
+      for (final item in items) {
+        final values = settledGroups[payment]![item]!;
+        rows.add(
+          _buildReceiptRow(
+            '$item (${_formatQuantity(values['quantity'])})',
+            values['amount']!,
+          ),
+        );
+      }
+    }
+    return rows;
+  }
+
+  static List<pw.Widget> _orderedNonSettledRows(
+    Map<String, Map<String, double>> nonSettledTotals,
+  ) {
+    final items = nonSettledTotals.keys.toList()..sort();
+    return items
+        .map(
+          (item) => _buildReceiptRow(
+            '$item (${_formatQuantity(nonSettledTotals[item]!['quantity'])})',
+            nonSettledTotals[item]!['balance']!,
+          ),
+        )
+        .toList();
   }
 
   // Print daily summary
   static Future<void> printDailySummary({
     required DateTime date,
     required Map<String, dynamic> summaryData,
+    String? printedBy,
   }) async {
-    final overallTotal = summaryData['overallTotal'] as Map<String, dynamic>? ?? {};
-    final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
-    final fullyPaidAmount = (overallTotal['fullyPaidAmount'] as num?)?.toDouble() ?? 0.0;
-    final partialPaymentAmount = (overallTotal['partialPaymentAmount'] as num?)?.toDouble() ?? 0.0;
-    final pendingAmount = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
-    final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
-    final fullyPaidTransactions = overallTotal['fullyPaidTransactions'] as int? ?? 0;
-    final partialPaymentTransactions = overallTotal['partialPaymentTransactions'] as int? ?? 0;
-    final unpaidTransactions = overallTotal['unpaidTransactions'] as int? ?? 0;
-
-    final paymentSummary = summaryData['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
-    final categorySummary = summaryData['categorySummary'] as List<Map<String, dynamic>>? ?? [];
-    final complementaryTotal = (summaryData['complementaryTotal'] as num?)?.toDouble();
+    final overallTotal = _asMap(summaryData['overallTotal']);
+    final totalSales = _toDouble(overallTotal['totalSales']);
+    final fullyPaidAmount = _toDouble(overallTotal['fullyPaidAmount']);
+    final partialPaymentAmount = _toDouble(overallTotal['partialPaymentAmount']);
+    final pendingAmount = _toDouble(overallTotal['totalBalance']);
+    final totalTransactions = _toInt(overallTotal['totalTransactions']);
+    final fullyPaidTransactions = _toInt(overallTotal['fullyPaidTransactions']);
+    final partialPaymentTransactions =
+        _toInt(overallTotal['partialPaymentTransactions']);
+    final unpaidTransactions = _toInt(overallTotal['unpaidTransactions']);
 
     final pdfBytes = await generateDailySummaryPdf(
       date: date,
@@ -1419,9 +1682,15 @@ class PrintService {
       fullyPaidTransactions: fullyPaidTransactions,
       partialPaymentTransactions: partialPaymentTransactions,
       unpaidTransactions: unpaidTransactions,
-      paymentSummary: paymentSummary,
-      categorySummary: categorySummary,
-      complementaryTotal: complementaryTotal,
+      paymentSummary: _asMapList(summaryData['paymentSummary']),
+      categorySummary: _asMapList(summaryData['categorySummary']),
+      itemsSummary: _asMapList(summaryData['itemsSummary']),
+      settledItems: _asMapList(summaryData['settledItems']),
+      complementaryItems: _asMapList(summaryData['complementaryItems']),
+      nonSettledItems: _asMapList(summaryData['nonSettledItems']),
+      complementaryTotal: _toDouble(summaryData['complementaryTotal']),
+      complementaryQuantity: _toDouble(summaryData['complementaryQuantity']),
+      printedBy: printedBy,
     );
 
     await Printing.layoutPdf(
@@ -1433,20 +1702,18 @@ class PrintService {
   static Future<void> shareDailySummary({
     required DateTime date,
     required Map<String, dynamic> summaryData,
+    String? printedBy,
   }) async {
-    final overallTotal = summaryData['overallTotal'] as Map<String, dynamic>? ?? {};
-    final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
-    final fullyPaidAmount = (overallTotal['fullyPaidAmount'] as num?)?.toDouble() ?? 0.0;
-    final partialPaymentAmount = (overallTotal['partialPaymentAmount'] as num?)?.toDouble() ?? 0.0;
-    final pendingAmount = (overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0;
-    final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
-    final fullyPaidTransactions = overallTotal['fullyPaidTransactions'] as int? ?? 0;
-    final partialPaymentTransactions = overallTotal['partialPaymentTransactions'] as int? ?? 0;
-    final unpaidTransactions = overallTotal['unpaidTransactions'] as int? ?? 0;
-
-    final paymentSummary = summaryData['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
-    final categorySummary = summaryData['categorySummary'] as List<Map<String, dynamic>>? ?? [];
-    final complementaryTotal = (summaryData['complementaryTotal'] as num?)?.toDouble();
+    final overallTotal = _asMap(summaryData['overallTotal']);
+    final totalSales = _toDouble(overallTotal['totalSales']);
+    final fullyPaidAmount = _toDouble(overallTotal['fullyPaidAmount']);
+    final partialPaymentAmount = _toDouble(overallTotal['partialPaymentAmount']);
+    final pendingAmount = _toDouble(overallTotal['totalBalance']);
+    final totalTransactions = _toInt(overallTotal['totalTransactions']);
+    final fullyPaidTransactions = _toInt(overallTotal['fullyPaidTransactions']);
+    final partialPaymentTransactions =
+        _toInt(overallTotal['partialPaymentTransactions']);
+    final unpaidTransactions = _toInt(overallTotal['unpaidTransactions']);
 
     final pdfBytes = await generateDailySummaryPdf(
       date: date,
@@ -1458,9 +1725,15 @@ class PrintService {
       fullyPaidTransactions: fullyPaidTransactions,
       partialPaymentTransactions: partialPaymentTransactions,
       unpaidTransactions: unpaidTransactions,
-      paymentSummary: paymentSummary,
-      categorySummary: categorySummary,
-      complementaryTotal: complementaryTotal,
+      paymentSummary: _asMapList(summaryData['paymentSummary']),
+      categorySummary: _asMapList(summaryData['categorySummary']),
+      itemsSummary: _asMapList(summaryData['itemsSummary']),
+      settledItems: _asMapList(summaryData['settledItems']),
+      complementaryItems: _asMapList(summaryData['complementaryItems']),
+      nonSettledItems: _asMapList(summaryData['nonSettledItems']),
+      complementaryTotal: _toDouble(summaryData['complementaryTotal']),
+      complementaryQuantity: _toDouble(summaryData['complementaryQuantity']),
+      printedBy: printedBy,
     );
 
     final dateStr = DateFormat('yyyy-MM-dd').format(date);

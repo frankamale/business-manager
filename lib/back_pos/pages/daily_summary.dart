@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:get/get.dart';
+import '../controllers/auth_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../services/print_service.dart';
+import '../../bac_monitor/lib/services/account_manager.dart';
 import '../../flavors/flavor_colors.dart';
 
 class DailySummary extends StatefulWidget {
@@ -17,6 +19,33 @@ class _DailySummaryState extends State<DailySummary> {
   DateTime selectedDate = DateTime.now();
   Map<String, dynamic>? summaryData;
   bool isLoading = true;
+
+  String get _printedByName {
+    if (Get.isRegistered<AuthController>()) {
+      final user = Get.find<AuthController>().currentUser.value;
+      final localName = user?.name.trim() ?? '';
+      if (localName.isNotEmpty) return localName;
+      final localUsername = user?.username.trim() ?? '';
+      if (localUsername.isNotEmpty) return localUsername;
+    }
+
+    if (Get.isRegistered<AccountManager>()) {
+      final account = Get.find<AccountManager>().currentAccount.value;
+      if (account != null) {
+        final candidates = <Object?>[
+          account.userData['name'],
+          account.userData['staff'],
+          account.username,
+        ];
+        for (final candidate in candidates) {
+          final value = candidate?.toString().trim() ?? '';
+          if (value.isNotEmpty) return value;
+        }
+      }
+    }
+
+    return 'Account';
+  }
 
   @override
   void initState() {
@@ -220,7 +249,6 @@ class _DailySummaryState extends State<DailySummary> {
 
     final overallTotal = summaryData?['overallTotal'] as Map<String, dynamic>? ?? {};
     final totalSales = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
-    final totalPaid = (overallTotal['totalPaid'] as num?)?.toDouble() ?? 0.0;
     // totalBalance is the actual amount not yet received by cashiers
     final pendingAmount = ((overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0) > 0 ? ((overallTotal['totalBalance'] as num?)?.toDouble() ?? 0.0) : 0.0 ;
     final totalTransactions = overallTotal['totalTransactions'] as int? ?? 0;
@@ -228,17 +256,23 @@ class _DailySummaryState extends State<DailySummary> {
     final paymentSummary = summaryData?['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
     final categorySummary = summaryData?['categorySummary'] as List<Map<String, dynamic>>? ?? [];
     final complementaryTotal = (summaryData?['complementaryTotal'] as num?)?.toDouble() ?? 0.0;
+    final complementaryQuantity =
+        (summaryData?['complementaryQuantity'] as num?)?.toDouble() ?? 0.0;
+    final complementaryQuantityText = complementaryQuantity ==
+            complementaryQuantity.roundToDouble()
+        ? complementaryQuantity.toInt().toString()
+        : complementaryQuantity
+            .toStringAsFixed(2)
+            .replaceFirst(RegExp(r'\.?0+$'), '');
 
     // Build payment method list
     final paymentData = <Map<String, dynamic>>[];
-    double totalPaidAmount = 0.0;
 
     for (var payment in paymentSummary) {
       final type = payment['paymenttype'] as String? ?? 'Unknown';
       if (type.toLowerCase() == 'pending') continue;
 
-      double amount = (overallTotal['totalSales'] as num?)?.toDouble() ?? 0.0;
-      totalPaidAmount += amount;
+      double amount = (payment['totalPaid'] as num?)?.toDouble() ?? 0.0;
 
       IconData icon;
       Color color;
@@ -274,6 +308,12 @@ class _DailySummaryState extends State<DailySummary> {
       });
     }
 
+    paymentData.add({
+      'icon': Icons.card_giftcard,
+      'label': 'Complementary Items',
+      'amount': '$complementaryQuantityText items',
+      'color': Colors.teal,
+    });
 
     // Add Pending row
     paymentData.add({
@@ -602,6 +642,7 @@ class _DailySummaryState extends State<DailySummary> {
                   await PrintService.printDailySummary(
                     date: selectedDate,
                     summaryData: summaryData!,
+                    printedBy: _printedByName,
                   );
                 } catch (e) {
                   Get.snackbar(
@@ -625,6 +666,7 @@ class _DailySummaryState extends State<DailySummary> {
                   await PrintService.shareDailySummary(
                     date: selectedDate,
                     summaryData: summaryData!,
+                    printedBy: _printedByName,
                   );
                 } catch (e) {
                   Get.snackbar(

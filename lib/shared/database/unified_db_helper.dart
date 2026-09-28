@@ -1561,6 +1561,7 @@ class UnifiedDatabaseHelper {
       23,
       59,
       59,
+      999,
     ).millisecondsSinceEpoch;
 
     final paymentSummary = await db.rawQuery(
@@ -1568,6 +1569,7 @@ class UnifiedDatabaseHelper {
       SELECT paymenttype, SUM(amountpaid) as totalPaid
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
+        AND cancelled = 0
       GROUP BY paymenttype
     ''',
       [startMillis, endMillis],
@@ -1578,16 +1580,88 @@ class UnifiedDatabaseHelper {
       SELECT category, SUM(amount) as totalAmount
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
+        AND cancelled = 0
       GROUP BY category
+      ORDER BY category COLLATE NOCASE
+    ''',
+      [startMillis, endMillis],
+    );
+
+    final itemsSummary = await db.rawQuery(
+      '''
+      SELECT
+        inventoryname AS item,
+        SUM(quantity) AS quantity,
+        SUM(amount) AS amount
+      FROM sales_transactions
+      WHERE transactiondate BETWEEN ? AND ?
+        AND cancelled = 0
+      GROUP BY inventoryname
+      ORDER BY inventoryname COLLATE NOCASE
+    ''',
+      [startMillis, endMillis],
+    );
+
+    final settledItems = await db.rawQuery(
+      '''
+      SELECT
+        paymenttype,
+        inventoryname AS item,
+        SUM(quantity) AS quantity,
+        SUM(amount) AS amount
+      FROM sales_transactions
+      WHERE transactiondate BETWEEN ?
+        AND ?
+        AND cancelled = 0
+        AND balance <= 0.005
+        AND amountpaid > 0.005
+        AND complimentaryid = 0
+      GROUP BY paymenttype, inventoryname
+      ORDER BY paymenttype COLLATE NOCASE, inventoryname COLLATE NOCASE
+    ''',
+      [startMillis, endMillis],
+    );
+
+    final complementaryItems = await db.rawQuery(
+      '''
+      SELECT
+        category,
+        SUM(quantity) AS quantity,
+        SUM(amount) AS amount
+      FROM sales_transactions
+      WHERE transactiondate BETWEEN ? AND ?
+        AND cancelled = 0
+        AND complimentaryid > 0
+      GROUP BY category
+      ORDER BY category COLLATE NOCASE
+    ''',
+      [startMillis, endMillis],
+    );
+
+    final nonSettledItems = await db.rawQuery(
+      '''
+      SELECT
+        inventoryname AS item,
+        SUM(quantity) AS quantity,
+        SUM(balance) AS balance
+      FROM sales_transactions
+      WHERE transactiondate BETWEEN ? AND ?
+        AND cancelled = 0
+        AND balance > 0.005
+        AND complimentaryid = 0
+      GROUP BY inventoryname
+      ORDER BY inventoryname COLLATE NOCASE
     ''',
       [startMillis, endMillis],
     );
 
     final complementaryTotal = await db.rawQuery(
       '''
-      SELECT SUM(amount) as total
+      SELECT SUM(amount) AS total
       FROM sales_transactions
-      WHERE transactiondate BETWEEN ? AND ? AND complimentaryid > 0
+      WHERE transactiondate BETWEEN ? AND ?
+        AND cancelled = 0
+        AND complimentaryid > 0
     ''',
       [startMillis, endMillis],
     );
@@ -1595,12 +1669,13 @@ class UnifiedDatabaseHelper {
     final overallTotal = await db.rawQuery(
       '''
       SELECT
-        SUM(amount) as totalSales,
-        SUM(amountpaid) as totalPaid,
-        SUM(balance) as totalBalance,
-        COUNT(DISTINCT salesId) as totalTransactions
+        SUM(amount) AS totalSales,
+        SUM(amountpaid) AS totalPaid,
+        SUM(balance) AS totalBalance,
+        COUNT(DISTINCT salesId) AS totalTransactions
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
+        AND cancelled = 0
     ''',
       [startMillis, endMillis],
     );
@@ -1608,9 +1683,18 @@ class UnifiedDatabaseHelper {
     return {
       'paymentSummary': paymentSummary,
       'categorySummary': categorySummary,
+      'itemsSummary': itemsSummary,
+      'settledItems': settledItems,
+      'complementaryItems': complementaryItems,
+      'nonSettledItems': nonSettledItems,
       'complementaryTotal': complementaryTotal.isNotEmpty
           ? complementaryTotal[0]['total'] ?? 0.0
           : 0.0,
+      'complementaryQuantity': complementaryItems.fold<num>(
+        0,
+        (sum, item) =>
+            sum + ((item['quantity'] as num?)?.toDouble() ?? 0.0),
+      ).toDouble(),
       'overallTotal': overallTotal.isNotEmpty ? overallTotal[0] : {},
     };
   }
