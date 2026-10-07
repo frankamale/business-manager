@@ -1738,6 +1738,12 @@ class UnifiedDatabaseHelper {
     return result.isNotEmpty ? result.first['currency_id'] as String : null;
   }
 
+  /// Reads the cached cash accounts so they stay available offline.
+  Future<List<Map<String, dynamic>>> getCashAccounts() async {
+    final db = database;
+    return db.query('cash_accounts', orderBy: 'accountname ASC');
+  }
+
   // ========================================================================
   // POS CUSTOMERS METHODS
   // ========================================================================

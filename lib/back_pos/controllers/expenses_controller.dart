@@ -86,11 +86,44 @@ class ExpensesController extends GetxController {
   Future<void> loadCashAccounts() async {
     try {
       final accounts = await _apiService.fetchCashAccounts();
-      cashAccounts.value = accounts;
+      if (accounts.isNotEmpty) {
+        cashAccounts.value = accounts;
+        // Cache for offline use (also done by the splash, but keep the local
+        // cache fresh whenever this runs)
+        try {
+          await _db.insertCashAccounts(accounts);
+        } catch (e) {
+          debugPrint('ExpensesController: Failed to cache cash accounts: $e');
+        }
+        return;
+      }
     } catch (e) {
-      // If failed to load, continue with empty list
-      cashAccounts.value = [];
+      // Offline or server error - fall back to the cached list below
     }
+
+    // Fall back to the cash accounts cached in the local database
+    try {
+      await _ensureDatabaseOpen();
+      final cached = await _db.getCashAccounts();
+      if (cached.isNotEmpty) {
+        // DB rows use snake_case columns; expose the keys this controller uses
+        cashAccounts.value = cached
+            .map(
+              (a) => {
+                'id': a['id'],
+                'accountname': a['accountname'],
+                'currencyid': a['currency_id'],
+                'currency': a['currency_name'],
+                'paymentmode_name': a['paymentmode_name'],
+              },
+            )
+            .toList();
+        return;
+      }
+    } catch (e) {
+      debugPrint('ExpensesController: Failed to load cached cash accounts: $e');
+    }
+    cashAccounts.value = [];
   }
 
   Map<String, dynamic> _getDefaultCashAccount() {

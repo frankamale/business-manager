@@ -1,12 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:uuid/uuid.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:bac_pos/back_pos/models/customer.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/inventory_item.dart';
+import 'package:bac_pos/back_pos/models/users.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
+import 'auth_controller.dart';
 import 'sales_controller.dart';
 import 'package:bac_pos/back_pos/services/settings_service.dart';
 
@@ -45,8 +48,99 @@ class PaymentController extends GetxController {
     }
   }
 
+  /// Opens the last known company database when it is closed so local
+  /// queries (cash accounts, saving sales) keep working offline instead of
+  /// throwing "Database not opened".
+  Future<void> _ensureDatabaseOpen() async {
+    if (_dbHelper.isDatabaseOpen) return;
+
+    String? companyId;
+    try {
+      final companyInfo = await _apiService.getCompanyInfo();
+      companyId = companyInfo['companyId'];
+    } catch (e) {
+      companyId = null;
+    }
+
+    if (companyId == null || companyId.isEmpty) {
+      try {
+        companyId = GetStorage().read('last_company_id') as String?;
+      } catch (e) {
+        companyId = null;
+      }
+    }
+
+    if (companyId != null && companyId.isNotEmpty) {
+      await _dbHelper.openForCompany(companyId);
+    }
+  }
+
+  /// Resolves the acting user's info from offline-safe sources first (the
+  /// locally logged-in user in SQLite), then stored server data. Only throws
+  /// when neither source is available.
+  Map<String, dynamic> _resolveUserContext({
+    required String? requestedSalespersonId,
+    required Map<String, String> companyInfo,
+    Map<String, dynamic>? userData,
+    User? localUser,
+  }) {
+    if (userData == null && localUser == null) {
+      throw Exception(
+        'User information not available. Please refresh and try again.',
+      );
+    }
+
+    String? firstNonEmpty(List<String?> values) {
+      for (final value in values) {
+        if (value != null && value.isNotEmpty) return value;
+      }
+      return null;
+    }
+
+    final userId =
+        firstNonEmpty([userData?['userId']?.toString(), localUser?.id]) ??
+            '00000000-0000-0000-0000-000000000000';
+
+    final salespersonId = firstNonEmpty([
+      requestedSalespersonId,
+      localUser?.salespersonid,
+      localUser?.staffid,
+      userData?['salespersonid']?.toString(),
+      userData?['staffid']?.toString(),
+      userId,
+    ])!;
+
+    final issuedByName =
+        firstNonEmpty([
+          localUser?.staff,
+          localUser?.name,
+          userData?['username']?.toString(),
+        ]) ??
+        '';
+
+    final branchId =
+        firstNonEmpty([companyInfo['branchId'], localUser?.branch]) ?? '';
+
+    final companyId =
+        firstNonEmpty([
+          companyInfo['companyId'],
+          localUser?.companyid,
+          _dbHelper.currentCompanyId,
+        ]) ??
+        '';
+
+    return {
+      'userId': userId,
+      'salespersonId': salespersonId,
+      'issuedByName': issuedByName,
+      'branchId': branchId,
+      'companyId': companyId,
+    };
+  }
+
   Future<Map<String, dynamic>> _getDefaultCashAccount() async {
     debugPrint('=== DEBUG: _getDefaultCashAccount START ===');
+    await _ensureDatabaseOpen();
     final db = await _dbHelper.database;
     debugPrint('Database instance: ${db != null ? "available" : "NULL"}');
 
@@ -339,28 +433,27 @@ class PaymentController extends GetxController {
     isProcessing.value = true;
 
     try {
-      // Get user and company info
+      // Get user and company info - the locally logged-in user works offline
+      await _ensureDatabaseOpen();
       final userData = await _apiService.getStoredUserData();
       final companyInfo = await _apiService.getCompanyInfo();
+      final localUser = Get.isRegistered<AuthController>()
+          ? Get.find<AuthController>().currentUser.value
+          : null;
 
-      if (userData == null) {
-        throw Exception(
-          'User information not available. Please refresh and try again.',
-        );
-      }
+      final userContext = _resolveUserContext(
+        requestedSalespersonId: salespersonId,
+        companyInfo: companyInfo,
+        userData: userData,
+        localUser: localUser,
+      );
 
-      final userId =
-          userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
-      final actualSalespersonId =
-          salespersonId ??
-          userData['salespersonid'] ??
-          userData['staffid'] ??
-          userId;
-      final branchId = companyInfo['branchId'] ?? '';
-      final companyId = companyInfo['companyId'] ?? '';
+      final actualSalespersonId = userContext['salespersonId'];
+      final branchId = userContext['branchId'];
+      final companyId = userContext['companyId'];
       final actualServicePointId =
           servicePointId ?? companyInfo['servicePointId'] ?? branchId;
-      final issuedByName = userData['staff'] ?? userData['name'] ?? '';
+      final issuedByName = userContext['issuedByName'];
 
       // Get customer name
       String customerName = 'Cash Customer';
@@ -425,25 +518,24 @@ class PaymentController extends GetxController {
     isProcessing.value = true;
 
     try {
-      // Get user and company info
+      // Get user and company info - the locally logged-in user works offline
+      await _ensureDatabaseOpen();
       final userData = await _apiService.getStoredUserData();
       final companyInfo = await _apiService.getCompanyInfo();
+      final localUser = Get.isRegistered<AuthController>()
+          ? Get.find<AuthController>().currentUser.value
+          : null;
 
-      if (userData == null) {
-        throw Exception(
-          'User information not available. Please refresh and try again.',
-        );
-      }
+      final userContext = _resolveUserContext(
+        requestedSalespersonId: salespersonId,
+        companyInfo: companyInfo,
+        userData: userData,
+        localUser: localUser,
+      );
 
-      final userId =
-          userData['userId'] ?? "00000000-0000-0000-0000-000000000000";
-      final actualSalespersonId =
-          salespersonId ??
-          userData['salespersonid'] ??
-          userData['staffid'] ??
-          userId;
-      final branchId = companyInfo['branchId'] ?? '';
-      final companyId = companyInfo['companyId'] ?? '';
+      final actualSalespersonId = userContext['salespersonId'];
+      final branchId = userContext['branchId'];
+      final companyId = userContext['companyId'];
 
       // Get original service point ID from existing sale to preserve it
       String actualServicePointId = servicePointId ?? '';
@@ -461,7 +553,7 @@ class PaymentController extends GetxController {
         }
       }
 
-      final issuedByName = userData['staff'] ?? userData['name'] ?? '';
+      final issuedByName = userContext['issuedByName'];
 
       // Get customer name
       String customerName = 'Cash Customer';
