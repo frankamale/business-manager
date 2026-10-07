@@ -1112,6 +1112,7 @@ class _PosScreenState extends State<PosScreen> {
                     // Salesperson Display
                     if (!isKeyboardVisible) ...[
                       Row(
+                        key: const ValueKey('pos_salesperson_row'),
                         children: [
                           const SizedBox(
                             width: 85,
@@ -1158,6 +1159,7 @@ class _PosScreenState extends State<PosScreen> {
 
                     // Reference Field
                     Row(
+                      key: const ValueKey('pos_reference_row'),
                       children: [
                         const SizedBox(
                           width: 80,
@@ -1192,6 +1194,7 @@ class _PosScreenState extends State<PosScreen> {
 
                     // Notes Field
                     Row(
+                      key: const ValueKey('pos_notes_row'),
                       children: [
                         const SizedBox(
                           width: 80,
