@@ -45,28 +45,40 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     );
     _animationController.forward();
     _loadCompanyDetails();
-    _loadPrefillUsername();
-    
-    // Auto-select the prefilled username after userRoles are loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_prefilledUsername != null && _authController.userRoles.isNotEmpty) {
-        final roles = _authController.userRoles;
-        // Try to find a role that matches the prefilled username
-        String? matchedRole;
-        for (final role in roles) {
-          if (role.toLowerCase() == _prefilledUsername!.toLowerCase() ||
-              role.toLowerCase().contains(_prefilledUsername!.toLowerCase())) {
-            matchedRole = role;
-            break;
-          }
-        }
-        if (matchedRole != null) {
-          setState(() {
-            selectedItem = matchedRole;
-          });
-        }
+    _initRolesAndPrefill();
+  }
+
+  // Reload roles whenever this screen is shown: AuthController.onInit runs
+  // before the database is opened, so after an offline restart (or a failed
+  // server login) userRoles can still be empty here.
+  Future<void> _initRolesAndPrefill() async {
+    await Future.wait([
+      _loadPrefillUsername(),
+      _authController.loadUserRoles(),
+    ]);
+    if (!mounted) return;
+    _applyPrefillUsername();
+  }
+
+  void _applyPrefillUsername() {
+    if (_prefilledUsername == null || _authController.userRoles.isEmpty) {
+      return;
+    }
+    final roles = _authController.userRoles;
+    // Try to find a role that matches the prefilled username
+    String? matchedRole;
+    for (final role in roles) {
+      if (role.toLowerCase() == _prefilledUsername!.toLowerCase() ||
+          role.toLowerCase().contains(_prefilledUsername!.toLowerCase())) {
+        matchedRole = role;
+        break;
       }
-    });
+    }
+    if (matchedRole != null) {
+      setState(() {
+        selectedItem = matchedRole;
+      });
+    }
   }
 
   Future<void> _loadPrefillUsername() async {

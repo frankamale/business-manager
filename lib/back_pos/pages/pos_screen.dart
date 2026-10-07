@@ -1229,13 +1229,13 @@ class _PosScreenState extends State<PosScreen> {
 
                     // Selected Items Container
                     Container(
-                      height: 500,
                       decoration: BoxDecoration(
                         border: Border.all(color: FlavorColors.current.light),
                         borderRadius: BorderRadius.circular(8),
                         color: FlavorColors.current.surface,
                       ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Header
@@ -1287,17 +1287,26 @@ class _PosScreenState extends State<PosScreen> {
                               ],
                             ),
                           ),
-                          // Items Lis
-
-                          Expanded(
-                            child: selectedItems.isEmpty
-                                ? const Center(
-                                    child: Text(
-                                      "No items selected",
-                                      style: TextStyle(color: Colors.grey),
-                                    ),
-                                  )
-                                : ListView.builder(
+                          // Items list. Shrink-wrapped and non-scrollable so
+                          // the whole page scrolls as one surface: a nested
+                          // ListView here would compete with the outer
+                          // SingleChildScrollView for every drag and make the
+                          // page stick once the list is taller than the screen.
+                          if (selectedItems.isEmpty)
+                            const SizedBox(
+                              height: 180,
+                              child: Center(
+                                child: Text(
+                                  "No items selected",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
                                     itemCount: selectedItems.length,
                                     itemBuilder: (context, index) {
                                       final item = selectedItems[index];
@@ -1615,7 +1624,6 @@ class _PosScreenState extends State<PosScreen> {
                                       );
                                     },
                                   ),
-                          ),
                         ],
                       ),
                     ),

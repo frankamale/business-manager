@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/service_point.dart';
@@ -28,6 +29,8 @@ class ServicePointController extends GetxController {
     try {
       isLoadingServicePoints.value = true;
 
+      await _ensureDatabaseOpen();
+
       final points = await _dbHelper.getServicePoints();
       servicePoints.value = points;
 
@@ -37,6 +40,35 @@ class ServicePointController extends GetxController {
       isLoadingServicePoints.value = false;
     } catch (e) {
       isLoadingServicePoints.value = false;
+    }
+  }
+
+  /// Opens the last known company database when it is closed.
+  /// Without this, getServicePoints() throws "Database not opened" and the
+  /// list stays empty (e.g. after a failed server login or when the splash
+  /// screen skipped the smart sync on an offline start).
+  Future<void> _ensureDatabaseOpen() async {
+    if (_dbHelper.isDatabaseOpen) return;
+
+    final companyId = await _readCompanyIdFromStorage();
+    if (companyId != null && companyId.isNotEmpty) {
+      await _dbHelper.openForCompany(companyId);
+    }
+  }
+
+  Future<String?> _readCompanyIdFromStorage() async {
+    try {
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId'];
+      if (companyId != null && companyId.isNotEmpty) return companyId;
+    } catch (e) {
+      // Fall back to GetStorage below
+    }
+
+    try {
+      return GetStorage().read('last_company_id') as String?;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -89,11 +121,15 @@ class ServicePointController extends GetxController {
   Future<void> refreshServicePoints() async {
     final hasNetwork = await NetworkHelper.hasConnection();
     if (!hasNetwork) {
-      Get.snackbar(
-        'Offline',
-        'Cannot refresh without internet connection',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      // Fall back to cache so the list can still be (re)populated offline
+      await loadServicePointsFromCache();
+      if (servicePoints.isEmpty) {
+        Get.snackbar(
+          'Offline',
+          'Cannot refresh without internet connection',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
       return;
     }
     await syncServicePointsFromAPI(showMessage: true);

@@ -48,6 +48,18 @@ class _HomepageState extends State<Homepage>
     );
     _animationController.forward();
     _loadCompanyDetails();
+    _loadServicePoints();
+  }
+
+  // Load service points here instead of relying on the splash screen: some
+  // offline paths navigate straight to this screen without running the smart
+  // sync, which left the grid showing "No service points available".
+  Future<void> _loadServicePoints() async {
+    await _servicePointController.loadServicePointsFromCache();
+    // syncServicePointsFromAPI checks connectivity and exits early if offline
+    if (_servicePointController.servicePoints.isEmpty) {
+      await _servicePointController.syncServicePointsFromAPI();
+    }
   }
 
   @override

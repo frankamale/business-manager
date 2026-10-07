@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
@@ -9,7 +10,8 @@ import '../../bac_monitor/lib/services/account_manager.dart';
 class AuthController extends GetxController {
   final _dbHelper = UnifiedDatabaseHelper.instance;
   final PosApiService _apiService = Get.find<PosApiService>();
-   final AccountManager _accountManager = Get.find();
+  final AccountManager _accountManager = Get.find();
+  final GetStorage _storage = GetStorage();
 
   // Reactive list of user roles
   var userRoles = <String>[].obs;
@@ -33,11 +35,43 @@ class AuthController extends GetxController {
   Future<void> loadUserRoles() async {
     try {
       isLoadingRoles.value = true;
+      await _ensureDatabaseOpen();
       final roles = await _dbHelper.getAllRoles();
       userRoles.value = roles;
-      isLoadingRoles.value = false;
     } catch (e) {
+      // Keep any previously loaded roles instead of clearing them
+    } finally {
       isLoadingRoles.value = false;
+    }
+  }
+
+  /// Opens the last known company database when it is closed.
+  /// Without this, getAllRoles() throws "Database not opened" because
+  /// AuthController.onInit runs before the splash screen opens the database,
+  /// or after a failed serverLogin left it closed - leaving the
+  /// "Select Account" dropdown empty on offline logins.
+  Future<void> _ensureDatabaseOpen() async {
+    if (_dbHelper.isDatabaseOpen) return;
+
+    final companyId = await _readCompanyIdFromStorage();
+    if (companyId != null && companyId.isNotEmpty) {
+      await _dbHelper.openForCompany(companyId);
+    }
+  }
+
+  Future<String?> _readCompanyIdFromStorage() async {
+    try {
+      final companyInfo = await _apiService.getCompanyInfo();
+      final companyId = companyInfo['companyId'];
+      if (companyId != null && companyId.isNotEmpty) return companyId;
+    } catch (e) {
+      // Fall back to GetStorage below
+    }
+
+    try {
+      return _storage.read('last_company_id') as String?;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -188,13 +222,15 @@ class AuthController extends GetxController {
   /// Returns login result with user data, or null on failure
   /// closeDatabase: if true, closes any existing database before opening the new company's database
   Future<Map<String, dynamic>?> serverLogin(String username, String password, {bool closeDatabase = true}) async {
+    bool closedByUs = false;
     try {
       String usernameLower = username;
       isLoggingIn.value = true;
 
       // Close the existing database before new authentication
       if (closeDatabase) {
-        UnifiedDatabaseHelper.instance.close();
+        await UnifiedDatabaseHelper.instance.close();
+        closedByUs = true;
       }
 
       // Authenticate with server
@@ -251,6 +287,13 @@ class AuthController extends GetxController {
         'password': password,
       };
     } catch (e) {
+      // Authentication failed after the database was closed - reopen the
+      // last company's database so local queries (users, roles, sales) keep
+      // working instead of throwing "Database not opened"
+      if (closedByUs) {
+        await _ensureDatabaseOpen();
+      }
+
       final errorString = e.toString();
       // print('Server Login Error: $errorString');
 
