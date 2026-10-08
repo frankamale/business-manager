@@ -58,6 +58,21 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
     ]);
     if (!mounted) return;
     _applyPrefillUsername();
+    _applyKitchenDefault();
+  }
+
+  void _applyKitchenDefault() {
+    if (selectedItem != null || _authController.userRoles.isEmpty) {
+      return;
+    }
+    final roles = _authController.userRoles;
+    final kitchen = roles.firstWhere(
+      (role) => role.toLowerCase().contains('kitchen'),
+      orElse: () => roles.first,
+    );
+    setState(() {
+      selectedItem = kitchen;
+    });
   }
 
   void _applyPrefillUsername() {
@@ -108,8 +123,11 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
         _isLoading = true;
       });
 
+      final roles = _authController.userRoles;
+      final account = roles.isNotEmpty ? roles.first : selectedItem;
+
       final success = await _authController.login(
-        selectedItem!,
+        account!,
         _passwordController.text,
       );
 
@@ -267,7 +285,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                                   fontSize: 16,
                                 ),
                                 decoration: InputDecoration(
-                                  labelText: 'Select Account',
+                                  labelText: 'Kitchen Account',
                                   labelStyle: TextStyle(color: labelColor),
                                   prefixIcon: Icon(
                                     Icons.account_circle_outlined,
