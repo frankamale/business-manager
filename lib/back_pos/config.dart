@@ -65,7 +65,7 @@ class AppConfig {
   static const String currencyDisplayName = 'Uganda Shillings';
 
   /// Receipt number prefix
-  static const String receiptPrefix = 'REC-';
+  static const String receiptPrefix = 'RCPT-';
 
   /// Receipt number padding length
   static const int receiptNumberPadding = 4;

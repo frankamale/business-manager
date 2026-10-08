@@ -734,13 +734,6 @@ class _PosScreenState extends State<PosScreen> {
       }
 
       if (result['success'] == true) {
-        Get.snackbar(
-          'Saved',
-          'Bill saved locally. It can be edited and uploaded later.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green[100],
-          colorText: Colors.green[900],
-        );
         if (widget.existingSalesId != null) {
           Navigator.of(context).pop(true);
         } else {

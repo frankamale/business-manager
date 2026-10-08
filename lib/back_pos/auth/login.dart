@@ -124,10 +124,31 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
       });
 
       final roles = _authController.userRoles;
-      final account = roles.isNotEmpty ? roles.first : selectedItem;
+      String? account;
+      if (roles.isNotEmpty) {
+        final salespeople = await _authController.getSalespeople();
+        final salespersonUsernames =
+            salespeople.map((user) => user.username).toSet();
+        account = roles.firstWhere(
+          (role) => salespersonUsernames.contains(role),
+          orElse: () => roles.first,
+        );
+      }
+      account ??= selectedItem;
+      if (account == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        Get.snackbar(
+          'Login Failed',
+          'No account available. Please try again.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
 
       final success = await _authController.login(
-        account!,
+        account,
         _passwordController.text,
       );
 
@@ -275,64 +296,33 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
                             ),
                             const SizedBox(height: 40),
 
-                            Obx(
-                              () => DropdownButtonFormField<String>(
-                                value: selectedItem,
-                                borderRadius: BorderRadius.circular(8),
-                                dropdownColor: cardColor,
-                                style: TextStyle(
-                                  color: inputTextColor,
-                                  fontSize: 16,
-                                ),
-                                decoration: InputDecoration(
-                                  labelText: 'Kitchen Account',
-                                  labelStyle: TextStyle(color: labelColor),
-                                  prefixIcon: Icon(
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: inputFillColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: borderColor),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
                                     Icons.account_circle_outlined,
                                     color: iconColor,
+                                    size: 22,
                                   ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: borderColor,
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Kitchen Account',
+                                    style: TextStyle(
+                                      color: inputTextColor,
+                                      fontSize: 16,
                                     ),
                                   ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: borderColor,
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
-                                      color: FlavorColors.current.primaryDark,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  filled: true,
-                                  fillColor: inputFillColor,
-                                ),
-                                hint: const Text('Select your account'),
-                                items: _authController.userRoles.map((
-                                  String item,
-                                ) {
-                                  return DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  );
-                                }).toList(),
-                                onChanged: (String? value) {
-                                  setState(() {
-                                    selectedItem = value;
-                                  });
-                                },
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please select an account';
-                                  }
-                                  return null;
-                                },
+                                ],
                               ),
                             ),
                             const SizedBox(height: 20),

@@ -7,6 +7,7 @@ import 'package:bac_pos/back_pos/models/customer.dart';
 import 'package:bac_pos/back_pos/services/api_services.dart';
 import 'package:bac_pos/back_pos/models/inventory_item.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
+import 'package:bac_pos/back_pos/config.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import 'auth_controller.dart';
@@ -30,22 +31,7 @@ class PaymentController extends GetxController {
 
   // Initialize receipt counter from database
   Future<void> _initializeReceiptCounter() async {
-    try {
-      final latestReceiptNumber = await _getLatestReceiptNumber();
-      if (latestReceiptNumber != null) {
-        // Extract numeric part from receipt number (e.g., "REC-0005" -> 5)
-        final numericPart = latestReceiptNumber.replaceAll(
-          RegExp(r'[^0-9]'),
-          '',
-        );
-        if (numericPart.isNotEmpty) {
-          final latestNumber = int.tryParse(numericPart) ?? 0;
-          receiptCounter.value = latestNumber + 1;
-        }
-      }
-    } catch (e) {
-      receiptCounter.value = 1;
-    }
+    receiptCounter.value = await _nextReceiptSequence();
   }
 
   /// Opens the last known company database when it is closed so local
@@ -161,35 +147,41 @@ class PaymentController extends GetxController {
     return result.first;
   }
 
-  // Get the latest receipt number from database
-  Future<String?> _getLatestReceiptNumber() async {
+  // Get the next receipt sequence from database (highest RCPT- number + 1)
+  Future<int> _nextReceiptSequence() async {
     try {
+      await _ensureDatabaseOpen();
       final db = await _dbHelper.database;
 
       final result = await db.rawQuery(
-        'SELECT receiptnumber FROM sales_transactions ORDER BY transactiondate DESC LIMIT 1',
+        'SELECT receiptnumber FROM sales_transactions WHERE receiptnumber LIKE ?',
+        ['${AppConfig.receiptPrefix}%'],
       );
 
-      if (result.isNotEmpty) {
-        return result.first['receiptnumber'] as String?;
+      var maxSequence = 0;
+      for (final row in result) {
+        final digits = (row['receiptnumber']?.toString() ?? '')
+            .replaceAll(RegExp(r'[^0-9]'), '');
+        final value = int.tryParse(digits);
+        if (value != null && value > maxSequence) {
+          maxSequence = value;
+        }
       }
-      return null;
+      return maxSequence + 1;
     } catch (e) {
-      return null;
+      // Fall back to the in-memory counter when the database is unavailable
+      return receiptCounter.value;
     }
   }
 
-  // Generate unique receipt number
-  String generateReceiptNumber() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-
-    // Convert timestamp to 6 digits using modulo
-    final shortNumber = timestamp % 1000000;
-
-    // Pad with leading zeros if needed
-    final receiptNumber = shortNumber.toString().padLeft(6, '0');
-
-    return 'REC-$receiptNumber';
+  // Generate unique receipt number in increasing order (RCPT-0001, RCPT-0002, ...)
+  Future<String> generateReceiptNumber() async {
+    final sequence = await _nextReceiptSequence();
+    receiptCounter.value = sequence + 1;
+    final receiptNumber = sequence
+        .toString()
+        .padLeft(AppConfig.receiptNumberPadding, '0');
+    return '${AppConfig.receiptPrefix}$receiptNumber';
   }
 
   // Create sale payload
