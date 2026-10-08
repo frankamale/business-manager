@@ -680,6 +680,92 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
+  // Close button: save the bill exactly as it is - locally only, no upload
+  // and no printing - so it shows up in the bill listing and can be edited
+  // and uploaded later.
+  Future<void> _closeAndSaveBill() async {
+    if (widget.isViewOnly || selectedItems.isEmpty) {
+      Navigator.pop(context);
+      return;
+    }
+
+    try {
+      final paymentController = Get.find<PaymentController>();
+      final Map<String, dynamic> result;
+
+      if (widget.existingSalesId != null) {
+        // Preserve any payment already recorded on the bill: the local save
+        // derives amountpaid from amountTendered.
+        double alreadyPaid = 0;
+        try {
+          final existing = await UnifiedDatabaseHelper.instance
+              .getSaleTransactionsBySalesId(widget.existingSalesId!);
+          alreadyPaid = existing.fold<double>(
+            0.0,
+            (sum, transaction) => sum + transaction.amountpaid,
+          );
+        } catch (e) {
+          // Keep 0 - the update still saves, payment info may be reset
+        }
+
+        result = await paymentController.updateSale(
+          existingSalesId: widget.existingSalesId!,
+          existingReceiptNumber: widget.existingReceiptNumber!,
+          cartItems: selectedItems,
+          amountTendered: alreadyPaid,
+          customerId: selectedCustomerId,
+          reference: refController.text,
+          notes: notesController.text,
+          salespersonId: selectedSalespersonId,
+          servicePointId: widget.servicePoint?.id,
+          attemptUpload: false,
+        );
+      } else {
+        result = await paymentController.processSaleAndPayment(
+          cartItems: selectedItems,
+          customerId: selectedCustomerId,
+          reference: refController.text,
+          notes: notesController.text,
+          salespersonId: selectedSalespersonId,
+          servicePointId: widget.servicePoint?.id,
+          amountTendered: 0,
+          attemptUpload: false,
+        );
+      }
+
+      if (result['success'] == true) {
+        Get.snackbar(
+          'Saved',
+          'Bill saved locally. It can be edited and uploaded later.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green[100],
+          colorText: Colors.green[900],
+        );
+        if (widget.existingSalesId != null) {
+          Navigator.of(context).pop(true);
+        } else {
+          Get.off(() => SalesListing());
+        }
+      } else {
+        Get.snackbar(
+          'Error',
+          'Failed to save bill',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red[100],
+          colorText: Colors.red[900],
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'An error occurred',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red[100],
+        colorText: Colors.red[900],
+      );
+    }
+  }
+
   Future<void> _updateSale() async {
     if (selectedItems.isEmpty) {
       Get.snackbar(
@@ -2031,11 +2117,13 @@ class _PosScreenState extends State<PosScreen> {
                             onPressed: () async {
                               final confirmed = await _confirmAction(
                                 title: "Close",
-                                message:
-                                    "Are you sure you want to close this screen?",
+                                message: widget.isViewOnly ||
+                                        selectedItems.isEmpty
+                                    ? "Are you sure you want to close this screen?"
+                                    : "Save this bill as it is and close? It will be stored locally and can be edited or uploaded later.",
                               );
                               if (!confirmed || !mounted) return;
-                              Navigator.pop(context);
+                              await _closeAndSaveBill();
                             },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),

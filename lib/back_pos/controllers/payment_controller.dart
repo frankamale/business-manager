@@ -417,6 +417,8 @@ class PaymentController extends GetxController {
   }
 
   // Process sale and payment
+  // attemptUpload: false keeps the sale local only (saved as 'pending') so
+  // it can be edited and uploaded later from the bill listing.
   Future<Map<String, dynamic>> processSaleAndPayment({
     required List<Map<String, dynamic>> cartItems,
     required double amountTendered,
@@ -425,6 +427,7 @@ class PaymentController extends GetxController {
     required String? notes,
     required String? salespersonId,
     String? servicePointId,
+    bool attemptUpload = true,
   }) async {
     if (cartItems.isEmpty) {
       throw Exception('No items in cart');
@@ -489,7 +492,9 @@ class PaymentController extends GetxController {
         customerName: customerName,
       );
 
-      await _attemptUploadAfterSave(saleId);
+      if (attemptUpload) {
+        await _attemptUploadAfterSave(saleId);
+      }
 
       return result;
     } catch (e) {
@@ -500,6 +505,8 @@ class PaymentController extends GetxController {
   }
 
   // Update existing sale
+  // attemptUpload: false keeps the change local only (upload status untouched)
+  // so it can be uploaded later from the bill listing.
   Future<Map<String, dynamic>> updateSale({
     required String existingSalesId,
     required String existingReceiptNumber,
@@ -510,6 +517,7 @@ class PaymentController extends GetxController {
     required String? notes,
     required String? salespersonId,
     String? servicePointId,
+    bool attemptUpload = true,
   }) async {
     if (cartItems.isEmpty) {
       throw Exception('No items in cart');
@@ -592,7 +600,9 @@ class PaymentController extends GetxController {
       );
 
       // Attempt to upload updated sale to server automatically
-      await _attemptUploadAfterSave(existingSalesId);
+      if (attemptUpload) {
+        await _attemptUploadAfterSave(existingSalesId);
+      }
 
       return result;
     } catch (e) {
