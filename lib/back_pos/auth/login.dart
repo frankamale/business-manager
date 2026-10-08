@@ -127,12 +127,22 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
       String? account;
       if (roles.isNotEmpty) {
         final salespeople = await _authController.getSalespeople();
-        final salespersonUsernames =
-            salespeople.map((user) => user.username).toSet();
-        account = roles.firstWhere(
-          (role) => salespersonUsernames.contains(role),
-          orElse: () => roles.first,
+        final salespersonByUsername = {
+          for (final user in salespeople) user.username: user,
+        };
+        // Prefer a cashier that has a salesperson id
+        final candidates =
+            roles.where((role) => salespersonByUsername.containsKey(role));
+        final cashier = candidates.where(
+          (role) => salespersonByUsername[role]!.role
+              .toLowerCase()
+              .contains('cashier_general'),
         );
+        if (cashier.isNotEmpty) {
+          account = cashier.first;
+        } else if (candidates.isNotEmpty) {
+          account = candidates.first;
+        }
       }
       account ??= selectedItem;
       if (account == null) {
