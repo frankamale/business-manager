@@ -8,6 +8,7 @@ import '../back_pos/controllers/auth_controller.dart';
 import '../shared/widgets/app_logo.dart';
 import '../shared/services/credential_helper.dart';
 import 'app_roots.dart';
+import 'background_login.dart';
 import 'unified_login_screen.dart';
 import '../bac_monitor/lib/controllers/mon_operator_controller.dart';
 import '../bac_monitor/lib/controllers/mon_sync_controller.dart';
@@ -73,66 +74,42 @@ class ConnectivityController extends GetxController {
       if (hasConnection) {
         isConnected.value = true;
         isLoading.value = false;
-        final hasCredentials = await _hasValidCredentials();
+        var hasCredentials = await _hasValidCredentials();
+        if (!hasCredentials) {
+          // No stored session - post the inbuilt (--dart-define) credentials
+          // in the background instead of showing the server login screen.
+          hasCredentials = await BackgroundLogin.run();
+        }
         if (hasCredentials) {
           // Cache POS users while online so they're available later for
           // offline POS login / Monitor->POS switching (admins never hit the
           // POS splash on a normal open, so this is the only chance to sync).
           await _cachePosUsers();
 
-          // Get role FIRST before initializing controllers
+          // Keep the resolved role cached for offline use, but this build
+          // always opens the POS - never the Monitor - on app open.
           final role = await _getUserRole();
-          // Username is used alongside the role to force cashier/branch
-          // accounts into the POS (see AppConfig.enableUsernamePosFiltering).
-          final username = GetStorage().read('last_username') as String?;
-
-          // Handle null or empty role with fallback logic
           if (role == null || role.isEmpty) {
             debugPrint(
-              'SplashScreen: User role is null or empty, using fallback logic',
+              'SplashScreen: User role is null or empty, caching role from user data',
             );
-            // Try to determine role from user data as fallback
-            final userData = await Get.find<MonitorApiService>()
-                .getStoredUserData();
-            if (userData != null && userData.containsKey('roles')) {
-              final roles = userData['roles'] as List<dynamic>?;
-
-              if (roles != null &&
-                  roles.isNotEmpty &&
-                  CredentialHelper.shouldUseMonitorFromRoles(roles, username)) {
-                final fallbackRole = roles.first.toString();
-                await _secureStorage.write(
-                  key: 'user_role',
-                  value: fallbackRole,
-                );
-                // Initialize controllers based on role
-                _initializeControllersForRole(fallbackRole);
-                await _loadDataFromDatabase();
-                Get.offAll(() => const MonitorAppRoot());
-              } else {
-                // Default to POS
-                _initializeControllersForRole('pos');
-                await _loadDataFromDatabase();
-                Get.offAll(() => const PosAppRoot());
-              }
-            } else {
-              // If still no role, default to POS (non-admin)
-              debugPrint('SplashScreen: No role found, defaulting to POS app');
-              _initializeControllersForRole('pos');
-              await _loadDataFromDatabase();
-              Get.offAll(() => const PosAppRoot());
+            final userData =
+                await Get.find<MonitorApiService>().getStoredUserData();
+            final roles = userData?['roles'] as List<dynamic>?;
+            final username = GetStorage().read('last_username') as String?;
+            if (roles != null &&
+                roles.isNotEmpty &&
+                CredentialHelper.shouldUseMonitorFromRoles(roles, username)) {
+              await _secureStorage.write(
+                key: 'user_role',
+                value: roles.first.toString(),
+              );
             }
-          } else if (CredentialHelper.shouldUseMonitorFromRole(role, username)) {
-            // Admin user - initialize monitor controllers only
-            _initializeControllersForRole('admin');
-            await _loadDataFromDatabase();
-            Get.offAll(() => const MonitorAppRoot());
-          } else {
-            // Non-admin user (or filtered cashier/branch) - POS controllers only
-            _initializeControllersForRole('pos');
-            await _loadDataFromDatabase();
-            Get.offAll(() => const PosAppRoot());
           }
+
+          _initializeControllersForRole('pos');
+          await _loadDataFromDatabase();
+          Get.offAll(() => const PosAppRoot());
         } else {
           // Wait 2 seconds then navigate to login
           Future.delayed(const Duration(seconds: 2), () {
@@ -372,13 +349,8 @@ class ConnectivityController extends GetxController {
           // Load data from local database
           await _loadDataFromDatabase();
           
-          // Navigate based on role (cashier/branch usernames forced to POS)
-          if (CredentialHelper.shouldUseMonitorFromRole(
-              effectiveRole, lastUsername)) {
-            Get.offAll(() => const MonitorAppRoot());
-          } else {
-            Get.offAll(() => const PosAppRoot());
-          }
+          // This build always opens the POS - never the Monitor - on open.
+          Get.offAll(() => const PosAppRoot());
         } catch (e) {
           debugPrint('SplashScreen: Error opening offline database - $e');
           _setError();
@@ -394,12 +366,8 @@ class ConnectivityController extends GetxController {
           _initializeControllersForRole(effectiveRole);
           await _loadDataFromDatabase();
 
-          if (CredentialHelper.shouldUseMonitorFromRole(
-              effectiveRole, lastUsername)) {
-            Get.offAll(() => const MonitorAppRoot());
-          } else {
-            Get.offAll(() => const PosAppRoot());
-          }
+          // This build always opens the POS - never the Monitor - on open.
+          Get.offAll(() => const PosAppRoot());
         } else {
           _setError();
         }

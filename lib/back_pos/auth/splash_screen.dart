@@ -1,3 +1,4 @@
+import 'package:bac_pos/initialise/background_login.dart';
 import 'package:bac_pos/initialise/unified_login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -41,6 +42,7 @@ class _SplashScreenState extends State<SplashScreen>
   bool _hasError = false;
   bool _isOfflineMode = false;
   bool _hasCachedData = false;
+  bool _backgroundLoginAttempted = false;
 
   // Logging helper
   void _log(String message, {String level = 'INFO'}) {
@@ -109,6 +111,22 @@ class _SplashScreenState extends State<SplashScreen>
       _log('authenticateApp: Server credentials exist = $hasServerCredentials');
 
       if (!hasServerCredentials) {
+        // First time - post the inbuilt (--dart-define) credentials in the
+        // background before falling back to the server login screen.
+        if (!_backgroundLoginAttempted && AppConfig.hasAutoLogin) {
+          _backgroundLoginAttempted = true;
+          _log('authenticateApp: No credentials, trying inbuilt background login');
+          setState(() {
+            _statusMessage = 'Signing in...';
+          });
+          final signedIn = await BackgroundLogin.run();
+          if (signedIn) {
+            _log('authenticateApp: Inbuilt background login succeeded');
+            await _authenticateApp();
+            return;
+          }
+        }
+
         // First time - navigate to server login
         _log('authenticateApp: No credentials found, redirecting to server login');
         setState(() {

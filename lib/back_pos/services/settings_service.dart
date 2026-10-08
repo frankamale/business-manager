@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:get/get.dart';
 import 'package:bac_pos/initialise/app_roots.dart';
+import 'package:bac_pos/initialise/splashscreen.dart' show kLastCompanyIdKey;
+import 'package:bac_pos/bac_monitor/lib/services/api_services.dart';
+import 'package:bac_pos/shared/services/credential_helper.dart';
 
 class SettingsService {
   static const String _autoUploadKey = 'auto_upload_sales';
@@ -32,7 +36,34 @@ class SettingsService {
     _box.write(_priceEditingKey, enabled);
   }
 
-  void navigateToMonitorApp() {
+  /// Jump straight to the Monitor, regardless of the logged-in user's role.
+  /// If no monitor session exists yet, the app signs in silently with the
+  /// stored server credentials before navigating.
+  Future<void> navigateToMonitorApp() async {
+    try {
+      final monitorApi = Get.find<MonitorApiService>();
+      final token = await monitorApi.getStoredToken();
+      if (token == null || token.isEmpty) {
+        final credentials = await CredentialHelper.getStoredCredentials();
+        final username = credentials['username'];
+        final password = credentials['password'];
+        if (username != null &&
+            username.isNotEmpty &&
+            password != null &&
+            password.isNotEmpty) {
+          await monitorApi.login(username, password);
+        }
+        final companyId = await monitorApi.getStoredCompanyId() ??
+            _box.read(kLastCompanyIdKey) as String?;
+        if (companyId != null && companyId.isNotEmpty) {
+          await monitorApi.storeCompanyId(companyId);
+        }
+      }
+    } catch (e) {
+      // Fall through - the monitor splash shows its own login if the silent
+      // sign-in could not establish a session.
+      debugPrint('SettingsService: Silent monitor sign-in failed - $e');
+    }
     Get.offAll(() => const MonitorAppRoot());
   }
 }

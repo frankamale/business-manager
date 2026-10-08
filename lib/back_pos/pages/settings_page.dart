@@ -71,13 +71,9 @@ class SettingsPage extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  // Conditionally render Monitor App link for admin users only
-                  Obx(() {
-                    final user = authController.currentUser.value;
-                    final isAdmin =
-                        user != null && user.role.toLowerCase().contains('admin');
-        
-                    if (isAdmin) {
+                  // Monitor App link - available to every user in this build
+                  Builder(
+                    builder: (context) {
                       return ListTile(
                         leading: const Icon(Icons.monitor),
                         title: const Text('Monitor App'),
@@ -249,10 +245,8 @@ class SettingsPage extends StatelessWidget {
                           );
                         },
                       );
-                    } else {
-                      return Container();
                     }
-                  }),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.cloud_upload),
                     title: const Text('Auto Upload Sales'),

@@ -17,6 +17,12 @@ class AppConfig {
   /// Edition/version info
   static const String edition = 'Uganda Edition';
 
+  /// Inbuilt credentials the app posts itself on open (see BackgroundLogin).
+  static const String autoLoginUsername = FlavorConfig.autoLoginUsername;
+  static const String autoLoginPassword = FlavorConfig.autoLoginPassword;
+  static bool get hasAutoLogin => FlavorConfig.hasAutoLogin;
+
+
   /// Copyright text
   static const String copyright = '© 2026 Komusoft Solutions';
   static const String phone = '(+256) 705 344 416';
