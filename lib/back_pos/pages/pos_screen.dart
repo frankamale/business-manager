@@ -2115,14 +2115,6 @@ class _PosScreenState extends State<PosScreen> {
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {
-                              final confirmed = await _confirmAction(
-                                title: "Close",
-                                message: widget.isViewOnly ||
-                                        selectedItems.isEmpty
-                                    ? "Are you sure you want to close this screen?"
-                                    : "Save this bill as it is and close? It will be stored locally and can be edited or uploaded later.",
-                              );
-                              if (!confirmed || !mounted) return;
                               await _closeAndSaveBill();
                             },
                             style: ElevatedButton.styleFrom(
