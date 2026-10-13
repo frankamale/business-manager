@@ -158,7 +158,7 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
       }
 
       final success = await _authController.login(
-        account,
+        account, 
         _passwordController.text,
       );
 
