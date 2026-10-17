@@ -575,7 +575,7 @@ class _DailySummaryState extends State<DailySummary> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: _handleCommit,
                       icon: const Icon(Icons.check_circle_outline),
                       label: const Text("Commit"),
                       style: ElevatedButton.styleFrom(
@@ -689,5 +689,56 @@ class _DailySummaryState extends State<DailySummary> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleCommit() async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Confirm Day End'),
+        content: const Text(
+          'Are you sure you want to commit? The previous sales will be archived and the bill listing will start fresh for the next day.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: FlavorColors.current.primaryDark,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final archivedCount = await _salesController.commitDailySummary();
+      Get.snackbar(
+        'Success',
+        archivedCount > 0
+            ? '$archivedCount sale record(s) archived. Ready for a new day.'
+            : 'No sales to clear. Ready for a new day.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green.shade700,
+        colorText: Colors.white,
+      );
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to commit day: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.shade700,
+        colorText: Colors.white,
+      );
+    }
   }
 }

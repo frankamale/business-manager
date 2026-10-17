@@ -71,7 +71,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 11,
+        version: 12,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -213,6 +213,62 @@ class UnifiedDatabaseHelper {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS sales_transactions (
         id TEXT PRIMARY KEY,
+        purchaseordernumber TEXT,
+        internalrefno INTEGER NOT NULL,
+        issuedby TEXT NOT NULL,
+        receiptnumber TEXT,
+        receivedby TEXT,
+        remarks TEXT NOT NULL,
+        transactiondate INTEGER NOT NULL,
+        costcentre TEXT,
+        destinationbp TEXT NOT NULL,
+        paymentmode TEXT NOT NULL,
+        sourcefacility TEXT NOT NULL,
+        genno TEXT NOT NULL,
+        paymenttype TEXT NOT NULL,
+        validtill INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        quantity REAL NOT NULL,
+        unitquantity REAL NOT NULL,
+        amount REAL NOT NULL,
+        amountpaid REAL NOT NULL,
+        balance REAL NOT NULL,
+        sellingprice REAL NOT NULL,
+        costprice REAL NOT NULL,
+        sellingprice_original REAL NOT NULL,
+        inventoryname TEXT NOT NULL,
+        category TEXT NOT NULL,
+        subcategory TEXT NOT NULL,
+        gnrtd INTEGER NOT NULL,
+        printed INTEGER NOT NULL,
+        redeemed INTEGER NOT NULL,
+        cancelled INTEGER NOT NULL,
+        patron TEXT NOT NULL,
+        department TEXT NOT NULL,
+        packsize INTEGER NOT NULL,
+        packaging TEXT NOT NULL,
+        complimentaryid INTEGER NOT NULL,
+        salesId TEXT NOT NULL,
+        upload_status TEXT DEFAULT 'pending',
+        uploaded_at INTEGER,
+        upload_error TEXT,
+        inventoryid TEXT,
+        ipdid TEXT,
+        clientid TEXT,
+        companyid TEXT,
+        branchid TEXT,
+        servicepointid TEXT,
+        salespersonid TEXT
+      )
+    ''');
+
+    // Archived sales transactions (POS) - holds committed/closed days so the
+    // live sales_transactions table can start the next day on a clean slate.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS archived_sales_transactions (
+        archive_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        archived_at INTEGER NOT NULL,
+        id TEXT,
         purchaseordernumber TEXT,
         internalrefno INTEGER NOT NULL,
         issuedby TEXT NOT NULL,
@@ -887,6 +943,69 @@ class UnifiedDatabaseHelper {
         )
       ''');
     }
+
+    // Migration to version 12 - Add archived_sales_transactions so committing
+    // the daily summary can move old sales out of the live table (day-end close)
+    // instead of deleting them outright.
+    if (oldVersion < 12) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS archived_sales_transactions (
+          archive_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          archived_at INTEGER NOT NULL,
+          id TEXT,
+          purchaseordernumber TEXT,
+          internalrefno INTEGER NOT NULL,
+          issuedby TEXT NOT NULL,
+          receiptnumber TEXT,
+          receivedby TEXT,
+          remarks TEXT NOT NULL,
+          transactiondate INTEGER NOT NULL,
+          costcentre TEXT,
+          destinationbp TEXT NOT NULL,
+          paymentmode TEXT NOT NULL,
+          sourcefacility TEXT NOT NULL,
+          genno TEXT NOT NULL,
+          paymenttype TEXT NOT NULL,
+          validtill INTEGER NOT NULL,
+          currency TEXT NOT NULL,
+          quantity REAL NOT NULL,
+          unitquantity REAL NOT NULL,
+          amount REAL NOT NULL,
+          amountpaid REAL NOT NULL,
+          balance REAL NOT NULL,
+          sellingprice REAL NOT NULL,
+          costprice REAL NOT NULL,
+          sellingprice_original REAL NOT NULL,
+          inventoryname TEXT NOT NULL,
+          category TEXT NOT NULL,
+          subcategory TEXT NOT NULL,
+          gnrtd INTEGER NOT NULL,
+          printed INTEGER NOT NULL,
+          redeemed INTEGER NOT NULL,
+          cancelled INTEGER NOT NULL,
+          patron TEXT NOT NULL,
+          department TEXT NOT NULL,
+          packsize INTEGER NOT NULL,
+          packaging TEXT NOT NULL,
+          complimentaryid INTEGER NOT NULL,
+          salesId TEXT NOT NULL,
+          upload_status TEXT DEFAULT 'pending',
+          uploaded_at INTEGER,
+          upload_error TEXT,
+          inventoryid TEXT,
+          ipdid TEXT,
+          clientid TEXT,
+          companyid TEXT,
+          branchid TEXT,
+          servicepointid TEXT,
+          salespersonid TEXT
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_archived_sales_transactiondate '
+        'ON archived_sales_transactions(transactiondate DESC)',
+      );
+    }
   }
 
   /// Ensure index exists on salesId for existing databases (call during migration)
@@ -1446,6 +1565,77 @@ class UnifiedDatabaseHelper {
   Future<void> deleteAllSaleTransactions() async {
     final db = database;
     await db.delete('sales_transactions');
+  }
+
+  /// Move every row in the live sales_transactions table into
+  /// archived_sales_transactions and empty the live table. Used by the daily
+  /// summary "Commit" action to close the day while keeping the old sales.
+  /// Runs inside a transaction so the archive copy and the clear either both
+  /// happen or neither does.
+  Future<int> archiveAndClearSaleTransactions() async {
+    final db = database;
+    int archivedCount = 0;
+
+    await db.transaction((txn) async {
+      final count = Sqflite.firstIntValue(
+        await txn.rawQuery('SELECT COUNT(*) FROM sales_transactions'),
+      );
+      archivedCount = count ?? 0;
+
+      if (archivedCount == 0) return;
+
+      final archivedAt = DateTime.now().millisecondsSinceEpoch;
+      final columns = await txn.rawQuery('PRAGMA table_info(sales_transactions)');
+      final sourceColumns = columns.map((c) => c['name'] as String).toList();
+
+      // Copy only columns that also exist in the archive table.
+      final archiveCols = await txn.rawQuery(
+        'PRAGMA table_info(archived_sales_transactions)',
+      );
+      final archiveColumnNames =
+          archiveCols.map((c) => (c['name'] as String).toLowerCase()).toSet();
+      final sharedColumns = sourceColumns
+          .where((name) => archiveColumnNames.contains(name.toLowerCase()))
+          .toList();
+
+      final quoted = sharedColumns.map((c) => '"$c"').join(', ');
+      await txn.execute(
+        'INSERT INTO archived_sales_transactions '
+        '("archived_at", $quoted) '
+        'SELECT ?, $quoted FROM sales_transactions',
+        [archivedAt],
+      );
+
+      await txn.delete('sales_transactions');
+    });
+
+    return archivedCount;
+  }
+
+  /// Read archived sales within an optional date range (inclusive), ordered
+  /// newest first. Pass no range to get everything.
+  Future<List<SaleTransaction>> getArchivedSales({
+    int? startDate,
+    int? endDate,
+  }) async {
+    final db = database;
+    final where = <String>[];
+    final args = <Object?>[];
+    if (startDate != null) {
+      where.add('transactiondate >= ?');
+      args.add(startDate);
+    }
+    if (endDate != null) {
+      where.add('transactiondate <= ?');
+      args.add(endDate);
+    }
+    final maps = await db.query(
+      'archived_sales_transactions',
+      where: where.isEmpty ? null : where.join(' AND '),
+      whereArgs: args.isEmpty ? null : args,
+      orderBy: 'transactiondate DESC',
+    );
+    return maps.map((map) => SaleTransaction.fromMap(map)).toList();
   }
 
   Future<int> getSalesCount() async {

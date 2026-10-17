@@ -120,6 +120,35 @@ class SalesController extends GetxController {
     }
   }
 
+  // Commit the day: move all live sales into the archive table and clear the
+  // working list so the next day starts on a fresh slate. Returns how many
+  // transactions were archived.
+  Future<int> commitDailySummary() async {
+    try {
+      final archivedCount = await _dbHelper.archiveAndClearSaleTransactions();
+      salesTransactions.clear();
+      groupedSales.clear();
+      return archivedCount;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Read sales that were archived by a previous day-end commit.
+  Future<List<SaleTransaction>> getArchivedSales({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      return await _dbHelper.getArchivedSales(
+        startDate: startDate?.millisecondsSinceEpoch,
+        endDate: endDate?.millisecondsSinceEpoch,
+      );
+    } catch (e) {
+      return [];
+    }
+  }
+
   // Builds the DtoSale payload from the local sale transactions. Both the sale
   // upload and the fiscalisation use this single builder so the two requests
   // always send an identical body.
