@@ -113,8 +113,8 @@ class SalesController extends GetxController {
   Future<void> clearAllSales() async {
     try {
       await _dbHelper.deleteAllSaleTransactions();
-      salesTransactions.clear();
-      groupedSales.clear();
+      salesTransactions.value = [];
+      groupedSales.value = [];
     } catch (e) {
       rethrow;
     }
@@ -126,8 +126,8 @@ class SalesController extends GetxController {
   Future<int> commitDailySummary() async {
     try {
       final archivedCount = await _dbHelper.archiveAndClearSaleTransactions();
-      salesTransactions.clear();
-      groupedSales.clear();
+      salesTransactions.value = [];
+      groupedSales.value = [];
       return archivedCount;
     } catch (e) {
       rethrow;

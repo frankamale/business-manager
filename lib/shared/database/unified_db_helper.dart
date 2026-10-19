@@ -1522,7 +1522,7 @@ class UnifiedDatabaseHelper {
         ? 'WHERE servicepointid = ?'
         : '';
     final whereArgs = servicePointId != null ? [servicePointId] : <dynamic>[];
-    return await db.rawQuery('''
+    final rows = await db.rawQuery('''
       SELECT
         salesId,
         receiptnumber,
@@ -1546,6 +1546,9 @@ class UnifiedDatabaseHelper {
       GROUP BY salesId
       ORDER BY transactiondate DESC
     ''', whereArgs);
+    // rawQuery returns a read-only result set on mobile; copy it into a
+    // growable list so callers can safely mutate/clear it.
+    return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 
   Future<List<SaleTransaction>> getSaleTransactionsByDateRange(
