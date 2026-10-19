@@ -18,6 +18,81 @@ class PrintService {
   static const pw.EdgeInsets _roll58Margin =
       pw.EdgeInsets.symmetric(horizontal: 5, vertical: 6);
 
+  // Renders a receipt/report. Android's print spooler fits each PDF page into
+  // the printer media while preserving the aspect ratio, which made long
+  // receipts print narrower. A content-sized single page is used when it is
+  // short enough for the spooler to scale by width, so short receipts print
+  // full-width with no wasted paper. Taller content is split across evenly-sized
+  // pages that each stay below the width-limited height (see _renderReport).
+  static Future<Uint8List> _renderReport(
+    PdfPageFormat mediaFormat,
+    List<pw.Widget> Function() buildChildren,
+  ) async {
+    pw.Widget content() => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: buildChildren(),
+        );
+
+    pw.Document build(PdfPageFormat format, {required bool paginate}) {
+      final doc = pw.Document();
+      if (paginate && format.height.isFinite) {
+        doc.addPage(
+          pw.MultiPage(
+            pageFormat: format,
+            margin: _roll58Margin,
+            maxPages: 1000,
+            build: (context) => [content()],
+          ),
+        );
+      } else {
+        doc.addPage(
+          pw.Page(
+            pageFormat: format,
+            margin: _roll58Margin,
+            build: (context) => content(),
+          ),
+        );
+      }
+      return doc;
+    }
+
+    // Measure the content on a content-sized page (infinite height). The page
+    // format is only resolved to the real content height when the document is
+    // saved, so the document must be saved before the height can be read.
+    final single = build(_roll58, paginate: false);
+    final singleBytes = await single.save();
+    final double contentHeight =
+        single.document.page(0)?.pageFormat.height ?? 0;
+    final double mediaWidth = mediaFormat.width;
+    final double mediaHeight = mediaFormat.height;
+
+    if (!mediaWidth.isFinite ||
+        !mediaHeight.isFinite ||
+        mediaWidth <= 0 ||
+        mediaHeight <= 0 ||
+        contentHeight <= 0) {
+      return singleBytes;
+    }
+
+    // Android's print spooler fits the whole PDF page inside the printer media
+    // while preserving the aspect ratio. It fills the media width only while
+    // the page is no taller than mediaHeight * pageWidth / mediaWidth. Taller
+    // pages are scaled down to fit the media height, which is why long receipts
+    // printed narrower. Keeping every page at or below this height forces the
+    // spooler to scale by width, so the printed width stays constant.
+    final double widthLimitedHeight =
+        mediaHeight * _roll58.width / mediaWidth;
+    final double usableHeight = widthLimitedHeight - _roll58Margin.vertical;
+    if (usableHeight <= 0 || contentHeight <= usableHeight) {
+      return singleBytes;
+    }
+
+    final int pages = (contentHeight / usableHeight).ceil();
+    final double pageHeight = contentHeight / pages + _roll58Margin.vertical;
+    return build(PdfPageFormat(_roll58.width, pageHeight), paginate: true)
+        .save();
+  }
+
   // Must match the options/key used by PosApiService.saveCompanyInfo so the
   // stored business name is readable here.
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
@@ -89,11 +164,11 @@ class PrintService {
     String? qrCode,
     String? taxAmount,
     String? taxRate,
+    PdfPageFormat? pageFormat,
   }) async {
     final bool hasFiscal = (efrisCode != null && efrisCode.isNotEmpty) ||
         (qrCode != null && qrCode.isNotEmpty) ||
         (verificationCode != null && verificationCode.isNotEmpty);
-    final pdf = pw.Document();
     final header = await resolveCompanyHeader();
 
     // Derive change/owing from amountPaid vs totalAmount rather than the passed
@@ -103,14 +178,7 @@ class PrintService {
     final double changeDue = amountPaid - totalAmount; // >= 0 when fully paid
     final double amountOwing = totalAmount - amountPaid; // > 0 when not fully paid
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: _roll58,
-        margin: _roll58Margin,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
+    return _renderReport(pageFormat ?? _roll58, () => [
               // Company Header
               pw.Center(
                 child: pw.Column(
@@ -450,13 +518,7 @@ class PrintService {
                 ),
               ),
               pw.SizedBox(height: 8),
-            ],
-          );
-        },
-      ),
-    );
-
-    return pdf.save();
+      ]);
   }
 
   /// Formats an EFRIS tax rate (e.g. "0.18") as a "(18%)" suffix, or "" when
@@ -476,18 +538,11 @@ class PrintService {
     required double totalAmount,
     String? reference,
     String? notes,
+    PdfPageFormat? pageFormat,
   }) async {
-    final pdf = pw.Document();
     final companyName = await resolveCompanyName();
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: _roll58,
-        margin: _roll58Margin,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
+    return _renderReport(pageFormat ?? _roll58, () => [
               // Company Header
               pw.Center(
                 child: pw.Column(
@@ -670,13 +725,7 @@ class PrintService {
                 ),
               ),
               pw.SizedBox(height: 8),
-            ],
-          );
-        },
-      ),
-    );
-
-    return pdf.save();
+      ]);
   }
 
   static Future<void> printBill({
@@ -687,17 +736,16 @@ class PrintService {
     String? reference,
     String? notes,
   }) async {
-    final pdfBytes = await generateBillPdf(
-      receiptNumber: receiptNumber,
-      date: date,
-      items: items,
-      totalAmount: totalAmount,
-      reference: reference,
-      notes: notes,
-    );
-
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
+      onLayout: (PdfPageFormat format) => generateBillPdf(
+        receiptNumber: receiptNumber,
+        date: date,
+        items: items,
+        totalAmount: totalAmount,
+        reference: reference,
+        notes: notes,
+        pageFormat: format,
+      ),
     );
   }
 
@@ -709,18 +757,11 @@ class PrintService {
     String? issuedBy,
     String? notes,
     String? tableNumber,
+    PdfPageFormat? pageFormat,
   }) async {
-    final pdf = pw.Document();
     final companyName = await resolveCompanyName();
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: _roll58,
-        margin: _roll58Margin,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
+    return _renderReport(pageFormat ?? _roll58, () => [
               // Header
               pw.Center(
                 child: pw.Column(
@@ -851,13 +892,7 @@ class PrintService {
                 ),
               ),
               pw.SizedBox(height: 8),
-            ],
-          );
-        },
-      ),
-    );
-
-    return pdf.save();
+      ]);
   }
 
   // Print KOT
@@ -869,17 +904,16 @@ class PrintService {
     String? notes,
     String? tableNumber,
   }) async {
-    final pdfBytes = await generateKotPdf(
-      receiptNumber: receiptNumber,
-      date: date,
-      items: items,
-      issuedBy: issuedBy,
-      notes: notes,
-      tableNumber: tableNumber,
-    );
-
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
+      onLayout: (PdfPageFormat format) => generateKotPdf(
+        receiptNumber: receiptNumber,
+        date: date,
+        items: items,
+        issuedBy: issuedBy,
+        notes: notes,
+        tableNumber: tableNumber,
+        pageFormat: format,
+      ),
     );
   }
 
@@ -891,18 +925,11 @@ class PrintService {
     String? issuedBy,
     String? notes,
     String? tableNumber,
+    PdfPageFormat? pageFormat,
   }) async {
-    final pdf = pw.Document();
     final companyName = await resolveCompanyName();
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: _roll58,
-        margin: _roll58Margin,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
+    return _renderReport(pageFormat ?? _roll58, () => [
               // Header
               pw.Center(
                 child: pw.Column(
@@ -1032,13 +1059,7 @@ class PrintService {
                 ),
               ),
               pw.SizedBox(height: 8),
-            ],
-          );
-        },
-      ),
-    );
-
-    return pdf.save();
+      ]);
   }
 
   // Print BOT
@@ -1050,17 +1071,16 @@ class PrintService {
     String? notes,
     String? tableNumber,
   }) async {
-    final pdfBytes = await generateBotPdf(
-      receiptNumber: receiptNumber,
-      date: date,
-      items: items,
-      issuedBy: issuedBy,
-      notes: notes,
-      tableNumber: tableNumber,
-    );
-
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
+      onLayout: (PdfPageFormat format) => generateBotPdf(
+        receiptNumber: receiptNumber,
+        date: date,
+        items: items,
+        issuedBy: issuedBy,
+        notes: notes,
+        tableNumber: tableNumber,
+        pageFormat: format,
+      ),
     );
   }
 
@@ -1102,22 +1122,21 @@ class PrintService {
     String? reference,
     String? notes,
   }) async {
-    final pdfBytes = await generateReceiptPdf(
-      receiptNumber: receiptNumber,
-      customerName: customerName,
-      date: date,
-      items: items,
-      totalAmount: totalAmount,
-      amountPaid: amountPaid,
-      balance: balance,
-      paymentMode: paymentMode,
-      issuedBy: issuedBy,
-      reference: reference,
-      notes: notes,
-    );
-
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
+      onLayout: (PdfPageFormat format) => generateReceiptPdf(
+        receiptNumber: receiptNumber,
+        customerName: customerName,
+        date: date,
+        items: items,
+        totalAmount: totalAmount,
+        amountPaid: amountPaid,
+        balance: balance,
+        paymentMode: paymentMode,
+        issuedBy: issuedBy,
+        reference: reference,
+        notes: notes,
+        pageFormat: format,
+      ),
     );
   }
 
@@ -1143,27 +1162,26 @@ class PrintService {
     String? taxAmount,
     String? taxRate,
   }) async {
-    final pdfBytes = await generateReceiptPdf(
-      receiptNumber: receiptNumber,
-      customerName: customerName,
-      date: date,
-      items: items,
-      totalAmount: totalAmount,
-      amountPaid: amountPaid,
-      balance: balance,
-      paymentMode: paymentMode,
-      issuedBy: issuedBy,
-      notes: notes,
-      efrisCode: efrisCode,
-      verificationCode: verificationCode,
-      efrisInvoiceId: efrisInvoiceId,
-      qrCode: qrCode,
-      taxAmount: taxAmount,
-      taxRate: taxRate,
-    );
-
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
+      onLayout: (PdfPageFormat format) => generateReceiptPdf(
+        receiptNumber: receiptNumber,
+        customerName: customerName,
+        date: date,
+        items: items,
+        totalAmount: totalAmount,
+        amountPaid: amountPaid,
+        balance: balance,
+        paymentMode: paymentMode,
+        issuedBy: issuedBy,
+        notes: notes,
+        efrisCode: efrisCode,
+        verificationCode: verificationCode,
+        efrisInvoiceId: efrisInvoiceId,
+        qrCode: qrCode,
+        taxAmount: taxAmount,
+        taxRate: taxRate,
+        pageFormat: format,
+      ),
     );
   }
 
@@ -1221,8 +1239,8 @@ class PrintService {
     double? complementaryTotal,
     num complementaryQuantity = 0,
     String? printedBy,
+    PdfPageFormat? pageFormat,
   }) async {
-    final pdf = pw.Document();
     final companyHeader = await resolveCompanyHeader();
     final phone = companyHeader.phone ?? AppConfig.phone;
     final reportDate = DateFormat('dd/MM/yyyy').format(date);
@@ -1235,14 +1253,7 @@ class PrintService {
     final complementaryGroups = _groupComplementaryItems(complementaryItems);
     final nonSettledTotals = _aggregateNonSettledItems(nonSettledItems);
 
-    pdf.addPage(
-      pw.Page(
-        pageFormat: _roll58,
-        margin: _roll58Margin,
-        build: (context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
+    return _renderReport(pageFormat ?? _roll58, () => [
               pw.Center(
                 child: pw.Text(
                   companyHeader.name,
@@ -1344,13 +1355,7 @@ class PrintService {
                   style: pw.TextStyle(fontSize: 7),
                 ),
               ),
-            ],
-          );
-        },
-      ),
-    );
-
-    return pdf.save();
+      ]);
   }
 
   // Helper for dotted line separator
@@ -1679,29 +1684,28 @@ class PrintService {
         _toInt(overallTotal['partialPaymentTransactions']);
     final unpaidTransactions = _toInt(overallTotal['unpaidTransactions']);
 
-    final pdfBytes = await generateDailySummaryPdf(
-      date: date,
-      totalSales: totalSales,
-      fullyPaidAmount: fullyPaidAmount,
-      partialPaymentAmount: partialPaymentAmount,
-      pendingAmount: pendingAmount,
-      totalTransactions: totalTransactions,
-      fullyPaidTransactions: fullyPaidTransactions,
-      partialPaymentTransactions: partialPaymentTransactions,
-      unpaidTransactions: unpaidTransactions,
-      paymentSummary: _asMapList(summaryData['paymentSummary']),
-      categorySummary: _asMapList(summaryData['categorySummary']),
-      itemsSummary: _asMapList(summaryData['itemsSummary']),
-      settledItems: _asMapList(summaryData['settledItems']),
-      complementaryItems: _asMapList(summaryData['complementaryItems']),
-      nonSettledItems: _asMapList(summaryData['nonSettledItems']),
-      complementaryTotal: _toDouble(summaryData['complementaryTotal']),
-      complementaryQuantity: _toDouble(summaryData['complementaryQuantity']),
-      printedBy: printedBy,
-    );
-
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdfBytes,
+      onLayout: (PdfPageFormat format) => generateDailySummaryPdf(
+        date: date,
+        totalSales: totalSales,
+        fullyPaidAmount: fullyPaidAmount,
+        partialPaymentAmount: partialPaymentAmount,
+        pendingAmount: pendingAmount,
+        totalTransactions: totalTransactions,
+        fullyPaidTransactions: fullyPaidTransactions,
+        partialPaymentTransactions: partialPaymentTransactions,
+        unpaidTransactions: unpaidTransactions,
+        paymentSummary: _asMapList(summaryData['paymentSummary']),
+        categorySummary: _asMapList(summaryData['categorySummary']),
+        itemsSummary: _asMapList(summaryData['itemsSummary']),
+        settledItems: _asMapList(summaryData['settledItems']),
+        complementaryItems: _asMapList(summaryData['complementaryItems']),
+        nonSettledItems: _asMapList(summaryData['nonSettledItems']),
+        complementaryTotal: _toDouble(summaryData['complementaryTotal']),
+        complementaryQuantity: _toDouble(summaryData['complementaryQuantity']),
+        printedBy: printedBy,
+        pageFormat: format,
+      ),
     );
   }
 
