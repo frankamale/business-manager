@@ -6,6 +6,7 @@ import '../controllers/sales_controller.dart';
 import '../services/print_service.dart';
 import '../../bac_monitor/lib/services/account_manager.dart';
 import '../../flavors/flavor_colors.dart';
+import '../../shared/utils/business_day.dart';
 
 class DailySummary extends StatefulWidget {
   const DailySummary({super.key});
@@ -441,6 +442,14 @@ class _DailySummaryState extends State<DailySummary> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Business day: ${BusinessDay.rangeLabel(selectedDate)}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Divider(color: Colors.white30),
                     const SizedBox(height: 8),
@@ -692,11 +701,16 @@ class _DailySummaryState extends State<DailySummary> {
   }
 
   Future<void> _handleCommit() async {
+    final dayEnd = BusinessDay.endOf(selectedDate);
+    final dayHasEnded = !DateTime.now().isBefore(dayEnd);
+
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Confirm Day End'),
-        content: const Text(
-          'Are you sure you want to commit? The previous sales will be archived and the bill listing will start fresh for the next day.',
+        content: Text(
+          'This will archive all sales from ${BusinessDay.rangeLabel(selectedDate)} '
+          'and remove them from the bill listing.'
+          '${dayHasEnded ? '' : ' Note: this day has not ended yet — sales made after this commit will still count toward it.'}',
         ),
         actions: [
           TextButton(
@@ -718,12 +732,12 @@ class _DailySummaryState extends State<DailySummary> {
     if (confirmed != true) return;
 
     try {
-      final archivedCount = await _salesController.commitDailySummary();
+      final archivedCount = await _salesController.commitDailySummary(selectedDate);
       Get.snackbar(
         'Success',
         archivedCount > 0
-            ? '$archivedCount sale record(s) archived. Ready for a new day.'
-            : 'No sales to clear. Ready for a new day.',
+            ? '$archivedCount sale record(s) for this day archived.'
+            : 'No sales found for this day to archive.',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green.shade700,
         colorText: Colors.white,

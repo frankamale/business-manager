@@ -120,14 +120,15 @@ class SalesController extends GetxController {
     }
   }
 
-  // Commit the day: move all live sales into the archive table and clear the
-  // working list so the next day starts on a fresh slate. Returns how many
-  // transactions were archived.
-  Future<int> commitDailySummary() async {
+  // Commit the day: move the selected business day's live sales into the
+  // archive table and reload the working lists so any sales outside that day
+  // remain. Returns how many transactions were archived.
+  Future<int> commitDailySummary(DateTime date) async {
     try {
-      final archivedCount = await _dbHelper.archiveAndClearSaleTransactions();
-      salesTransactions.value = [];
-      groupedSales.value = [];
+      final archivedCount = await _dbHelper.archiveAndClearSaleTransactions(
+        date.millisecondsSinceEpoch,
+      );
+      await loadSalesFromCache();
       return archivedCount;
     } catch (e) {
       rethrow;

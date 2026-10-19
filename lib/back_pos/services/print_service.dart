@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/sale_transaction.dart';
+import '../../shared/utils/business_day.dart';
 import '../config.dart';
 
 class PrintService {
@@ -1218,7 +1219,7 @@ class PrintService {
     final pdf = pw.Document();
     final companyHeader = await resolveCompanyHeader();
     final phone = companyHeader.phone ?? AppConfig.phone;
-    final reportDate = DateFormat('dd/MM/yyyy').format(date);
+    final reportDate = BusinessDay.rangeLabel(date);
     final printedByName = (printedBy ?? '').trim().isEmpty
         ? 'Account'
         : printedBy!.trim();

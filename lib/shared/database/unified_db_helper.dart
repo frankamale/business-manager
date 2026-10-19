@@ -10,6 +10,7 @@ import '../../back_pos/models/expense.dart';
 import '../../back_pos/models/stock_take.dart';
 import '../../back_pos/models/stock_take_session.dart';
 import '../../bac_monitor/lib/models/sync_tracker.dart';
+import '../utils/business_day.dart';
 
 /// Unified Database Helper that combines POS and Monitor databases
 
@@ -1570,18 +1571,30 @@ class UnifiedDatabaseHelper {
     await db.delete('sales_transactions');
   }
 
-  /// Move every row in the live sales_transactions table into
-  /// archived_sales_transactions and empty the live table. Used by the daily
-  /// summary "Commit" action to close the day while keeping the old sales.
-  /// Runs inside a transaction so the archive copy and the clear either both
-  /// happen or neither does.
-  Future<int> archiveAndClearSaleTransactions() async {
+  /// Move every row of the given business day in the live sales_transactions
+  /// table into archived_sales_transactions. Used by the daily summary
+  /// "Commit" action to close the day while keeping the old sales. The day
+  /// runs from 08:30 on [date] to 08:30 the next calendar day; sales outside
+  /// that window stay in the live table. Runs inside a transaction so the
+  /// archive copy and the clear either both happen or neither does.
+  Future<int> archiveAndClearSaleTransactions(int date) async {
     final db = database;
     int archivedCount = 0;
 
+    final startMillis = BusinessDay.startOf(
+      DateTime.fromMillisecondsSinceEpoch(date),
+    ).millisecondsSinceEpoch;
+    final endMillis = BusinessDay.endOf(
+      DateTime.fromMillisecondsSinceEpoch(date),
+    ).millisecondsSinceEpoch;
+
     await db.transaction((txn) async {
       final count = Sqflite.firstIntValue(
-        await txn.rawQuery('SELECT COUNT(*) FROM sales_transactions'),
+        await txn.rawQuery(
+          'SELECT COUNT(*) FROM sales_transactions '
+          'WHERE transactiondate >= ? AND transactiondate < ?',
+          [startMillis, endMillis],
+        ),
       );
       archivedCount = count ?? 0;
 
@@ -1605,11 +1618,16 @@ class UnifiedDatabaseHelper {
       await txn.execute(
         'INSERT INTO archived_sales_transactions '
         '("archived_at", $quoted) '
-        'SELECT ?, $quoted FROM sales_transactions',
-        [archivedAt],
+        'SELECT ?, $quoted FROM sales_transactions '
+        'WHERE transactiondate >= ? AND transactiondate < ?',
+        [archivedAt, startMillis, endMillis],
       );
 
-      await txn.delete('sales_transactions');
+      await txn.delete(
+        'sales_transactions',
+        where: 'transactiondate >= ? AND transactiondate < ?',
+        whereArgs: [startMillis, endMillis],
+      );
     });
 
     return archivedCount;
@@ -1739,23 +1757,17 @@ class UnifiedDatabaseHelper {
     );
   }
 
+  /// Aggregates for the business day that starts at 08:30 on [date] and ends
+  /// at 08:30 the next calendar day (late-night sales belong to the day the
+  /// business day started on).
   Future<Map<String, dynamic>> getDailySummary(int date) async {
     final db = database;
-    final startOfDay = DateTime.fromMillisecondsSinceEpoch(date);
-    final startMillis = DateTime(
-      startOfDay.year,
-      startOfDay.month,
-      startOfDay.day,
-    ).millisecondsSinceEpoch;
-    final endMillis = DateTime(
-      startOfDay.year,
-      startOfDay.month,
-      startOfDay.day,
-      23,
-      59,
-      59,
-      999,
-    ).millisecondsSinceEpoch;
+    final selectedDate = DateTime.fromMillisecondsSinceEpoch(date);
+    // Business day: [date 08:30, next date 08:30). The queries use BETWEEN
+    // (inclusive), so subtract 1 ms from the exclusive end.
+    final startMillis = BusinessDay.startOf(selectedDate).millisecondsSinceEpoch;
+    final endMillis =
+        BusinessDay.endOf(selectedDate).millisecondsSinceEpoch - 1;
 
     final paymentSummary = await db.rawQuery(
       '''
