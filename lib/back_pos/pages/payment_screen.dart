@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../controllers/customer_controller.dart';
 import '../controllers/payment_controller.dart';
-import '../controllers/auth_controller.dart';
 import '../services/print_service.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
@@ -129,14 +128,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
           customerName = customer.fullnames;
         }
 
-        // Get current user (cashier) for issuedBy field
-        String cashierName = 'Cashier';
-        final authController = Get.find<AuthController>();
-        final currentUser = authController.currentUser.value;
-        if (currentUser != null) {
-          cashierName = currentUser.staff ?? currentUser.name ?? 'Cashier';
-        }
-
         if (hasPayment) {
           await PrintService.printReceipt(
             receiptNumber: receiptnumber,
@@ -147,17 +138,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
             amountPaid: amountTendered,
             balance: balance,
             paymentMode: 'Cash',
-            issuedBy: cashierName,
+            reference: widget.reference,
             notes: widget.notes,
           );
         } else {
           await PrintService.printBill(
             receiptNumber: receiptnumber,
-            customerName: customerName,
             date: DateTime.now(),
             items: items,
             totalAmount: totalAmount,
-            issuedBy: cashierName,
+            reference: widget.reference,
             notes: widget.notes,
           );
         }

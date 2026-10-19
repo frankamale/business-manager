@@ -72,6 +72,7 @@ class PrintService {
     required double balance,
     required String paymentMode,
     String? issuedBy,
+    String? reference,
     String? notes,
     // EFRIS fiscal fields. When any are provided, a fiscal block (QR code,
     // fiscal document number, verification code) is appended below the
@@ -166,22 +167,31 @@ class PrintService {
                 ],
               ),
               pw.SizedBox(height: 2),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Issued By:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                  pw.Text(issuedBy ?? 'Cashier', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
-              pw.SizedBox(height: 2),
-              
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
-                  pw.Text(customerName, style: pw.TextStyle(fontSize: 12)),
-                ],
-              ),
+              if (hasFiscal) ...[
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Issued By:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(issuedBy ?? 'Cashier', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+                pw.SizedBox(height: 2),
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
+                    pw.Text(customerName, style: pw.TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ] else ...[
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('Reference:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(reference ?? '-', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+              ],
               pw.SizedBox(height: 4),
               pw.Divider(thickness: 1),
 
@@ -455,11 +465,10 @@ class PrintService {
   // Generate bill PDF
   static Future<Uint8List> generateBillPdf({
     required String receiptNumber,
-    required String customerName,
     required DateTime date,
     required List<SaleTransaction> items,
     required double totalAmount,
-    String? issuedBy,
+    String? reference,
     String? notes,
   }) async {
     final pdf = pw.Document();
@@ -526,17 +535,8 @@ class PrintService {
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Issued By:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                  pw.Text(issuedBy ?? 'Cashier', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
-              pw.SizedBox(height: 2),
-
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Customer:', style: pw.TextStyle(fontSize: 12)),
-                  pw.Text(customerName, style: pw.TextStyle(fontSize: 12)),
+                  pw.Text('Reference:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(reference ?? '-', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                 ],
               ),
               pw.SizedBox(height: 4),
@@ -675,20 +675,18 @@ class PrintService {
 
   static Future<void> printBill({
     required String receiptNumber,
-    required String customerName,
     required DateTime date,
     required List<SaleTransaction> items,
     required double totalAmount,
-    String? issuedBy,
+    String? reference,
     String? notes,
   }) async {
     final pdfBytes = await generateBillPdf(
       receiptNumber: receiptNumber,
-      customerName: customerName,
       date: date,
       items: items,
       totalAmount: totalAmount,
-      issuedBy: issuedBy,
+      reference: reference,
       notes: notes,
     );
 
@@ -1063,20 +1061,18 @@ class PrintService {
   // Share bill as PDF
   static Future<void> shareBill({
     required String receiptNumber,
-    required String customerName,
     required DateTime date,
     required List<SaleTransaction> items,
     required double totalAmount,
-    String? issuedBy,
+    String? reference,
     String? notes,
   }) async {
     final pdfBytes = await generateBillPdf(
       receiptNumber: receiptNumber,
-      customerName: customerName,
       date: date,
       items: items,
       totalAmount: totalAmount,
-      issuedBy: issuedBy,
+      reference: reference,
       notes: notes,
     );
 
@@ -1097,6 +1093,7 @@ class PrintService {
     required double balance,
     required String paymentMode,
     String? issuedBy,
+    String? reference,
     String? notes,
   }) async {
     final pdfBytes = await generateReceiptPdf(
@@ -1109,6 +1106,7 @@ class PrintService {
       balance: balance,
       paymentMode: paymentMode,
       issuedBy: issuedBy,
+      reference: reference,
       notes: notes,
     );
 
@@ -1174,6 +1172,7 @@ class PrintService {
     required double balance,
     required String paymentMode,
     String? issuedBy,
+    String? reference,
     String? notes,
   }) async {
     final pdfBytes = await generateReceiptPdf(
@@ -1186,6 +1185,7 @@ class PrintService {
       balance: balance,
       paymentMode: paymentMode,
       issuedBy: issuedBy,
+      reference: reference,
       notes: notes,
     );
 

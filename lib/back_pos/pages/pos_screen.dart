@@ -592,24 +592,6 @@ class _PosScreenState extends State<PosScreen> {
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
 
-        // Get customer name
-        String customerName = 'Cash Customer';
-        if (selectedCustomerId != null) {
-          final customer = customerController.getCustomerById(
-            selectedCustomerId!,
-          );
-          if (customer != null) {
-            customerName = customer.fullnames;
-          }
-        }
-
-        // Get salesperson name
-        String issuedBy = '';
-        final currentUser = authController.currentUser.value;
-        if (currentUser != null) {
-          issuedBy = currentUser.staff;
-        }
-
         // Print the bill. Isolate printing so a print failure (e.g. no
         // printer/print service reachable) can't abort the save flow and
         // leave the user stranded on the POS screen with the sale already
@@ -617,11 +599,10 @@ class _PosScreenState extends State<PosScreen> {
         try {
           await PrintService.printBill(
             receiptNumber: result['receiptnumber'],
-            customerName: customerName,
             date: DateTime.now(),
             items: items,
             totalAmount: totalAmount,
-            issuedBy: issuedBy,
+            reference: refController.text.isNotEmpty ? refController.text : null,
             notes: notesController.text,
           );
         } catch (printError) {
@@ -841,32 +822,13 @@ class _PosScreenState extends State<PosScreen> {
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
 
-        // Get customer name
-        String customerName = 'Cash Customer';
-        if (selectedCustomerId != null) {
-          final customer = customerController.getCustomerById(
-            selectedCustomerId!,
-          );
-          if (customer != null) {
-            customerName = customer.fullnames;
-          }
-        }
-
-        // Get salesperson name
-        String issuedBy = '';
-        final currentUser = authController.currentUser.value;
-        if (currentUser != null) {
-          issuedBy = currentUser.staff;
-        }
-
         // Print the updated bill
         await PrintService.printBill(
           receiptNumber: result['receiptnumber'],
-          customerName: customerName,
           date: DateTime.now(),
           items: items,
           totalAmount: totalAmount,
-          issuedBy: issuedBy,
+          reference: refController.text.isNotEmpty ? refController.text : null,
           notes: notesController.text,
         );
 

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 
 import '../controllers/payment_controller.dart';
-import '../controllers/auth_controller.dart';
 import '../controllers/sales_controller.dart';
 import '../services/print_service.dart';
 import '../models/sale_transaction.dart';
@@ -151,12 +150,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
         final date = DateTime.fromMillisecondsSinceEpoch(
           firstTransaction.transactiondate,
         );
-
-        String cashierName = 'Cashier';
-        final currentUser = Get.find<AuthController>().currentUser.value;
-        if (currentUser != null) {
-          cashierName = currentUser.staff;
-        }
+        final reference = firstTransaction.purchaseordernumber ?? '';
 
         try {
           await PrintService.printReceipt(
@@ -168,7 +162,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
             amountPaid: currentPaid + amountTendered,
             balance: outstandingBalance - amountTendered,
             paymentMode: 'Cash',
-            issuedBy: cashierName,
+            reference: reference.isNotEmpty ? reference : null,
             notes: notes.isNotEmpty ? notes : null,
           );
         } catch (printError) {

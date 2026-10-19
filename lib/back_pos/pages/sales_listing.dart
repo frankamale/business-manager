@@ -498,40 +498,6 @@ class _SalesListingState extends State<SalesListing> {
                               ],
                             ),
                           ),
-                          PopupMenuItem(
-                            value: 'kot',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.restaurant,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Print KOT',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'bot',
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.local_bar,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Print BOT',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ],
-                            ),
-                          ),
                           // Only offered once the sale is fiscalised - prints
                           // the receipt with the EFRIS fiscal block (QR code,
                           // fiscal document number, verification code).
@@ -879,11 +845,10 @@ class _SalesListingState extends State<SalesListing> {
           if (isUnpaid) {
             await PrintService.printBill(
               receiptNumber: receiptNumber,
-              customerName: customerName,
               date: date,
               items: saleTransactions,
               totalAmount: totalAmount,
-              issuedBy: staffName,
+              reference: reference.isNotEmpty ? reference : null,
               notes: notes.isNotEmpty ? notes : null,
             );
           } else {
@@ -896,7 +861,7 @@ class _SalesListingState extends State<SalesListing> {
               amountPaid: amountPaid,
               balance: balance,
               paymentMode: paymentMode,
-              issuedBy: staffName,
+              reference: reference.isNotEmpty ? reference : null,
               notes: notes.isNotEmpty ? notes : null,
             );
           }
@@ -932,30 +897,8 @@ class _SalesListingState extends State<SalesListing> {
             qrCode: fiscal['qrcode'] as String?,
             taxAmount: fiscal['taxamount'] as String?,
             taxRate: fiscal['taxrate'] as String?,
-          );
-          break;
-
-        case 'kot':
-          await PrintService.printKot(
-            receiptNumber: receiptNumber,
-            date: date,
-            items: saleTransactions,
-            issuedBy: staffName,
-            notes: notes.isNotEmpty ? notes : null,
-            tableNumber: reference.isNotEmpty ? reference : null,
-          );
-          break;
-
-        case 'bot':
-          await PrintService.printBot(
-            receiptNumber: receiptNumber,
-            date: date,
-            items: saleTransactions,
-            issuedBy: staffName,
-            notes: notes.isNotEmpty ? notes : null,
-            tableNumber: reference.isNotEmpty ? reference : null,
-          );
-          break;
+            );
+            break;
       }
     } catch (e) {
       // Close loading dialog if still open
