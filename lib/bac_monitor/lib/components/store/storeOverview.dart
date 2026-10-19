@@ -19,8 +19,7 @@ class StoreOverview extends StatelessWidget {
     return Obx(() {
       // Load user role and check if user role contains 'fg' (gym)
       kpiTrendController.loadUserRole();
-      //final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
-      final isGym = false;
+      final isGym = kpiTrendController.userRole.value.toLowerCase().contains('fg');
 
       return Container(
         color: AppColors.getBackgroundColor(context),

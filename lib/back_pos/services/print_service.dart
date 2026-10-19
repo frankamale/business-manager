@@ -12,6 +12,13 @@ class PrintService {
   static final NumberFormat _currencyFormat = NumberFormat('#,###', 'en_US');
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
+  // Thermal receipts/reports print on 58mm roll paper. Full page width is
+  // 58mm; a 5mm side margin keeps content inside the usual printable area.
+  static const PdfPageFormat _roll58 =
+      PdfPageFormat(58 * PdfPageFormat.mm, double.infinity);
+  static const pw.EdgeInsets _roll58Margin =
+      pw.EdgeInsets.symmetric(horizontal: 5, vertical: 6);
+
   // Must match the options/key used by PosApiService.saveCompanyInfo so the
   // stored business name is readable here.
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
@@ -99,8 +106,8 @@ class PrintService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        margin: pw.EdgeInsets.all(8),
+        pageFormat: _roll58,
+        margin: _roll58Margin,
         build: (context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -476,8 +483,8 @@ class PrintService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        margin: pw.EdgeInsets.all(8),
+        pageFormat: _roll58,
+        margin: _roll58Margin,
         build: (context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -709,8 +716,8 @@ class PrintService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        margin: pw.EdgeInsets.all(8),
+        pageFormat: _roll58,
+        margin: _roll58Margin,
         build: (context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -891,8 +898,8 @@ class PrintService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        margin: pw.EdgeInsets.all(8),
+        pageFormat: _roll58,
+        margin: _roll58Margin,
         build: (context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1219,7 +1226,7 @@ class PrintService {
     final pdf = pw.Document();
     final companyHeader = await resolveCompanyHeader();
     final phone = companyHeader.phone ?? AppConfig.phone;
-    final reportDate = BusinessDay.rangeLabel(date);
+    final reportDate = BusinessDay.shortRangeLabel(date);
     final printedByName = (printedBy ?? '').trim().isEmpty
         ? 'Account'
         : printedBy!.trim();
@@ -1231,8 +1238,8 @@ class PrintService {
 
     pdf.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        margin: pw.EdgeInsets.all(8),
+        pageFormat: _roll58,
+        margin: _roll58Margin,
         build: (context) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1241,7 +1248,7 @@ class PrintService {
                 child: pw.Text(
                   companyHeader.name,
                   style: pw.TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -1250,7 +1257,7 @@ class PrintService {
               pw.Center(
                 child: pw.Text(
                   'Phone: $phone',
-                  style: pw.TextStyle(fontSize: 9),
+                  style: pw.TextStyle(fontSize: 11),
                 ),
               ),
               pw.SizedBox(height: 4),
@@ -1258,18 +1265,18 @@ class PrintService {
                 child: pw.Text(
                   'DAILY SUMMARY',
                   style: pw.TextStyle(
-                    fontSize: 12,
+                    fontSize: 15,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
               ),
               pw.SizedBox(height: 4),
-              _buildTextRow('Date', reportDate, fontSize: 9),
-              _buildTextRow('Printed by', printedByName, fontSize: 9),
+              _buildTextRow('Date', reportDate, fontSize: 12),
+              _buildTextRow('Printed by', printedByName, fontSize: 12),
               pw.SizedBox(height: 6),
               _buildDottedLine(),
               _buildSectionHeading('SUMMARY'),
-              _buildReceiptRow('Total Sales', totalSales, isBold: true, fontSize: 11),
+              _buildReceiptRow('Total Sales', totalSales, isBold: true, fontSize: 13),
               _buildReceiptRow('Total Cash', paymentTotals['Cash'] ?? 0.0),
               _buildReceiptRow('Total Card', paymentTotals['Card'] ?? 0.0),
               _buildReceiptRow('Total M/Money', paymentTotals['M/Money'] ?? 0.0),
@@ -1284,7 +1291,7 @@ class PrintService {
               _buildTextRow(
                 'Complementary Item Quantity',
                 _formatQuantity(complementaryQuantity),
-                fontSize: 9,
+                fontSize: 12,
               ),
               if (complementaryTotal != null && complementaryTotal > 0)
                 _buildReceiptRow('Complementary Total', complementaryTotal),
@@ -1312,7 +1319,7 @@ class PrintService {
                   (entry) => _buildTextRow(
                     entry.key,
                     _formatQuantity(entry.value),
-                    fontSize: 9,
+                    fontSize: 12,
                   ),
                 ),
               pw.SizedBox(height: 6),
@@ -1369,7 +1376,7 @@ class PrintService {
       child: pw.Text(
         title,
         style: pw.TextStyle(
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: pw.FontWeight.bold,
         ),
       ),
@@ -1382,7 +1389,7 @@ class PrintService {
       child: pw.Text(
         title,
         style: pw.TextStyle(
-          fontSize: 9,
+          fontSize: 11,
           fontWeight: pw.FontWeight.bold,
         ),
       ),
@@ -1392,7 +1399,7 @@ class PrintService {
   static pw.Widget _buildTextRow(
     String label,
     String value, {
-    double fontSize = 10,
+    double fontSize = 12,
     bool isBold = false,
   }) {
     final style = pw.TextStyle(
@@ -1416,7 +1423,7 @@ class PrintService {
       child: pw.Text(
         text,
         style: pw.TextStyle(
-          fontSize: 9,
+          fontSize: 10,
           fontStyle: pw.FontStyle.italic,
         ),
       ),
@@ -1427,7 +1434,7 @@ class PrintService {
     String label,
     double amount, {
     bool isBold = false,
-    double fontSize = 10,
+    double fontSize = 12,
   }) {
     return _buildTextRow(
       label,

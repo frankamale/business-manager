@@ -39,6 +39,19 @@ class BusinessDay {
         '${_timeLabel(endOf(date))}';
   }
 
+  /// Compact range for narrow receipts (e.g. 58mm paper), e.g.
+  /// "17 – 18 Oct 2026". Falls back to both months when they differ, e.g.
+  /// "31 Oct – 1 Nov 2026".
+  static String shortRangeLabel(DateTime date) {
+    final start = startOf(date);
+    final end = endOf(date);
+    if (start.year == end.year && start.month == end.month) {
+      return '${start.day} – ${end.day} ${DateFormat('MMM yyyy').format(start)}';
+    }
+    return '${DateFormat('d MMM').format(start)} – '
+        '${DateFormat('d MMM yyyy').format(end)}';
+  }
+
   static String _timeLabel(DateTime time) {
     final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
     final minute = time.minute.toString().padLeft(2, '0');
