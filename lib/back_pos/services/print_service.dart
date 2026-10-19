@@ -1304,13 +1304,6 @@ class PrintService {
               _buildReceiptRow('Total', totalSales, isBold: true),
               pw.SizedBox(height: 6),
               _buildDottedLine(),
-              _buildSectionHeading('Settled Items'),
-              if (settledGroups.isEmpty)
-                _buildEmptyText('No settled items')
-              else
-                ..._buildSettledRows(settledGroups),
-              pw.SizedBox(height: 6),
-              _buildDottedLine(),
               _buildSectionHeading('Complementary Items'),
               if (complementaryGroups.isEmpty)
                 _buildEmptyText('No complementary items')
@@ -1322,6 +1315,13 @@ class PrintService {
                     fontSize: 9,
                   ),
                 ),
+              pw.SizedBox(height: 6),
+              _buildDottedLine(),
+              _buildSectionHeading('Settled Items'),
+              if (settledGroups.isEmpty)
+                _buildEmptyText('No settled items')
+              else
+                ..._buildSettledRows(settledGroups),
               pw.SizedBox(height: 6),
               _buildDottedLine(),
               _buildSectionHeading('Non-Settled Items'),
@@ -1558,12 +1558,12 @@ class PrintService {
   ) {
     final groups = <String, double>{};
     for (final item in complementaryItems) {
-      final category = _mapText(item, const ['category'], 'Uncategorized');
+      final name = _mapText(item, const ['item', 'inventoryname'], 'Unknown');
       final quantity = _toDouble(
         _mapValue(item, const ['quantity', 'qty']),
       );
       groups.update(
-        category,
+        name,
         (value) => value + quantity,
         ifAbsent: () => quantity,
       );

@@ -1830,6 +1830,7 @@ class UnifiedDatabaseHelper {
     final complementaryItems = await db.rawQuery(
       '''
       SELECT
+        inventoryname AS item,
         category,
         SUM(quantity) AS quantity,
         SUM(amount) AS amount
@@ -1837,8 +1838,8 @@ class UnifiedDatabaseHelper {
       WHERE transactiondate BETWEEN ? AND ?
         AND cancelled = 0
         AND complimentaryid > 0
-      GROUP BY category
-      ORDER BY category COLLATE NOCASE
+      GROUP BY inventoryname
+      ORDER BY inventoryname COLLATE NOCASE
     ''',
       [startMillis, endMillis],
     );

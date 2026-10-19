@@ -227,6 +227,13 @@ class _DailySummaryState extends State<DailySummary> {
     );
   }
 
+  String _formatSummaryQuantity(double quantity) {
+    if (quantity == quantity.roundToDouble()) {
+      return quantity.toInt().toString();
+    }
+    return quantity.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(selectedDate);
@@ -256,6 +263,8 @@ class _DailySummaryState extends State<DailySummary> {
 
     final paymentSummary = summaryData?['paymentSummary'] as List<Map<String, dynamic>>? ?? [];
     final categorySummary = summaryData?['categorySummary'] as List<Map<String, dynamic>>? ?? [];
+    final complementaryItems =
+        summaryData?['complementaryItems'] as List<Map<String, dynamic>>? ?? [];
     final complementaryTotal = (summaryData?['complementaryTotal'] as num?)?.toDouble() ?? 0.0;
     final complementaryQuantity =
         (summaryData?['complementaryQuantity'] as num?)?.toDouble() ?? 0.0;
@@ -363,6 +372,19 @@ class _DailySummaryState extends State<DailySummary> {
         'label': '$catName Amount',
         'amount': 'UGX ${currencyFormat.format(amount)}',
         'color': color,
+      });
+    }
+
+    // Build complementary items data (one row per product)
+    final complementaryData = <Map<String, dynamic>>[];
+    for (var item in complementaryItems) {
+      final name = item['item'] as String? ?? 'Unknown';
+      final quantity = (item['quantity'] as num?)?.toDouble() ?? 0.0;
+      complementaryData.add({
+        'icon': Icons.card_giftcard,
+        'label': name,
+        'amount': '${_formatSummaryQuantity(quantity)} qty',
+        'color': Colors.teal,
       });
     }
 
@@ -523,6 +545,14 @@ class _DailySummaryState extends State<DailySummary> {
                       _buildSummaryTable(
                         title: "Sales Summary by Category",
                         data: categoryData,
+                      ),
+                    const SizedBox(height: 16),
+
+                    // Complementary Items Table
+                    if (complementaryData.isNotEmpty)
+                      _buildSummaryTable(
+                        title: "Complementary Items",
+                        data: complementaryData,
                       ),
                     const SizedBox(height: 16),
 

@@ -308,9 +308,13 @@ class PaymentController extends GetxController {
     required String actualServicePointId,
     required String issuedByName,
     required String customerName,
+    int? transactionDate,
   }) async {
     const uuid = Uuid();
-    final transactionTimestamp = DateTime.now().millisecondsSinceEpoch;
+    // Reuse the original entry time when editing an existing bill; only a
+    // brand-new sale falls back to "now".
+    final transactionTimestamp =
+        transactionDate ?? DateTime.now().millisecondsSinceEpoch;
 
     // Calculate totals
     final totalAmount = calculateTotalAmount(cartItems);
@@ -537,20 +541,27 @@ class PaymentController extends GetxController {
       final branchId = userContext['branchId'];
       final companyId = userContext['companyId'];
 
-      // Get original service point ID from existing sale to preserve it
+      // Load the existing sale before it's replaced so we can keep the time
+      // the bill was first entered and its original service point.
+      int? originalTransactionDate;
       String actualServicePointId = servicePointId ?? '';
-      if (actualServicePointId.isEmpty) {
-        try {
-          final existingTransactions = await _dbHelper
-              .getSaleTransactionsBySalesId(existingSalesId);
-          if (existingTransactions.isNotEmpty) {
+      try {
+        final existingTransactions = await _dbHelper
+            .getSaleTransactionsBySalesId(existingSalesId);
+        if (existingTransactions.isNotEmpty) {
+          originalTransactionDate = existingTransactions
+              .map((transaction) => transaction.transactiondate)
+              .reduce((a, b) => a < b ? a : b);
+          if (actualServicePointId.isEmpty) {
             actualServicePointId =
                 existingTransactions.first.servicepointid ?? '';
           }
-        } catch (e) {
-          // If can't get existing, fall back to current
-          actualServicePointId = companyInfo['servicePointId'] ?? branchId;
         }
+      } catch (e) {
+        // If the existing sale can't be read, fall back to the current context
+      }
+      if (actualServicePointId.isEmpty) {
+        actualServicePointId = companyInfo['servicePointId'] ?? branchId;
       }
 
       final issuedByName = userContext['issuedByName'];
@@ -589,6 +600,7 @@ class PaymentController extends GetxController {
         actualServicePointId: actualServicePointId,
         issuedByName: issuedByName,
         customerName: customerName,
+        transactionDate: originalTransactionDate,
       );
 
       // Attempt to upload updated sale to server automatically
