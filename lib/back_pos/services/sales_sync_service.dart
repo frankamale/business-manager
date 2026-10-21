@@ -94,8 +94,6 @@ class SalesSyncService extends GetxService {
       }
       print('Total partial payments found in server data: $partialPaymentCount');
 
-      await _dbHelper.syncLocalSalesWithServerData();
-
       // Update sync metadata
       await _dbHelper.updateSyncMetadata(
         'server_sales',

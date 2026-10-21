@@ -138,10 +138,14 @@ class _LoginState extends State<Login> with SingleTickerProviderStateMixin {
               .toLowerCase()
               .contains('cashier_general'),
         );
-        if (cashier.isNotEmpty) {
-          account = cashier.first;
-        } else if (candidates.isNotEmpty) {
-          account = candidates.first;
+        final orderedCandidates = [
+          ...cashier,
+          ...candidates.where((role) => !cashier.contains(role)),
+        ];
+        if (orderedCandidates.length > 1) {
+          account = orderedCandidates[1];
+        } else if (orderedCandidates.isNotEmpty) {
+          account = orderedCandidates.first;
         }
       }
       account ??= selectedItem;

@@ -2282,39 +2282,6 @@ class UnifiedDatabaseHelper {
     return maps.isNotEmpty ? maps.first : null;
   }
 
-  Future<void> syncLocalSalesWithServerData() async {
-    final db = database;
-    final localSalesIds = await db.rawQuery(
-      'SELECT DISTINCT salesId FROM sales_transactions',
-    );
-
-    for (var row in localSalesIds) {
-      final salesId = row['salesId'] as String;
-      final serverSale = await getServerSaleBySalesId(salesId);
-
-      if (serverSale != null) {
-        final serverAmountPaid =
-            (serverSale['amountpaid'] as num?)?.toDouble() ?? 0.0;
-        final serverBalance =
-            (serverSale['balance'] as num?)?.toDouble() ?? 0.0;
-        final serverPaymentMode =
-            serverSale['paymentmode'] as String? ?? 'Cash';
-
-        await db.update(
-          'sales_transactions',
-          {
-            'amountpaid': serverAmountPaid,
-            'balance': serverBalance,
-            'paymentmode': serverPaymentMode,
-            'paymenttype': serverPaymentMode,
-          },
-          where: 'salesId = ?',
-          whereArgs: [salesId],
-        );
-      }
-    }
-  }
-
   Future<int> getServerSalesCount() async {
     final db = database;
     final count = Sqflite.firstIntValue(
