@@ -30,6 +30,19 @@ class BusinessDay {
         cutoffMinute,
       );
 
+  /// The business day that contains [moment], identified by the date it
+  /// opened on. A moment before 08:30 belongs to the business day that
+  /// opened the previous calendar day, e.g. 21 Oct 02:00 falls in the
+  /// business day of 20 Oct (20 Oct 08:30 - 21 Oct 08:30).
+  static DateTime containing(DateTime moment) {
+    final isBeforeCutoff =
+        moment.hour < cutoffHour ||
+            (moment.hour == cutoffHour && moment.minute < cutoffMinute);
+    return isBeforeCutoff
+        ? DateTime(moment.year, moment.month, moment.day - 1)
+        : DateTime(moment.year, moment.month, moment.day);
+  }
+
   /// Human-readable range, e.g. "17 Oct 2026, 8:30 AM – 18 Oct 2026, 8:30 AM".
   static String rangeLabel(DateTime date) {
     final dateFormat = DateFormat('d MMM yyyy');

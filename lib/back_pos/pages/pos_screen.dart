@@ -587,8 +587,8 @@ class _PosScreenState extends State<PosScreen> {
         final db = await UnifiedDatabaseHelper.instance.database;
         final maps = await db.query(
           'sales_transactions',
-          where: 'receiptnumber = ?',
-          whereArgs: [result['receiptnumber']],
+          where: 'salesId = ?',
+          whereArgs: [result['saleId']],
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
 
@@ -817,8 +817,8 @@ class _PosScreenState extends State<PosScreen> {
         final db = await UnifiedDatabaseHelper.instance.database;
         final maps = await db.query(
           'sales_transactions',
-          where: 'receiptnumber = ?',
-          whereArgs: [result['receiptnumber']],
+          where: 'salesId = ?',
+          whereArgs: [result['saleId']],
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
 

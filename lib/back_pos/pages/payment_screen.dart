@@ -116,8 +116,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final db = await UnifiedDatabaseHelper.instance.database;
         final maps = await db.query(
           'sales_transactions',
-          where: 'receiptnumber = ?',
-          whereArgs: [receiptnumber],
+          where: 'salesId = ?',
+          whereArgs: [result['saleId']],
         );
         final items = maps.map((m) => SaleTransaction.fromMap(m)).toList();
         String customerid = widget.customer ?? 'Cash Customer';

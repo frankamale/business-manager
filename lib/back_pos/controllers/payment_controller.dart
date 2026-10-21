@@ -9,6 +9,7 @@ import 'package:bac_pos/back_pos/models/inventory_item.dart';
 import 'package:bac_pos/back_pos/models/users.dart';
 import 'package:bac_pos/back_pos/config.dart';
 import 'package:bac_pos/shared/database/unified_db_helper.dart';
+import 'package:bac_pos/shared/utils/business_day.dart';
 import 'package:bac_pos/back_pos/utils/network_helper.dart';
 import 'auth_controller.dart';
 import 'sales_controller.dart';
@@ -147,16 +148,42 @@ class PaymentController extends GetxController {
     return result.first;
   }
 
-  // Get the next receipt sequence from database (highest RCPT- number + 1)
+  // Get the next receipt sequence for the current business day (the highest
+  // RCPT- number sold during this business day + 1). The sequence restarts
+  // when the day resets at 08:30, so every business day numbers its
+  // receipts from RCPT-0001. Committed (archived) days are included too so
+  // a day closed mid-day cannot reissue a number that was already used.
   Future<int> _nextReceiptSequence() async {
     try {
       await _ensureDatabaseOpen();
       final db = await _dbHelper.database;
 
+      final businessDay = BusinessDay.containing(DateTime.now());
+      final startMillis =
+          BusinessDay.startOf(businessDay).millisecondsSinceEpoch;
+      final endMillis = BusinessDay.endOf(businessDay).millisecondsSinceEpoch;
+      final prefix = '${AppConfig.receiptPrefix}%';
+
       final result = await db.rawQuery(
-        'SELECT receiptnumber FROM sales_transactions WHERE receiptnumber LIKE ?',
-        ['${AppConfig.receiptPrefix}%'],
+        'SELECT receiptnumber FROM sales_transactions '
+        'WHERE receiptnumber LIKE ? AND transactiondate >= ? AND transactiondate < ?',
+        [prefix, startMillis, endMillis],
       );
+
+      // Archived rows belong to a committed business day. Read them
+      // separately so a missing archive table (older database) doesn't
+      // break the sequence.
+      try {
+        result.addAll(
+          await db.rawQuery(
+            'SELECT receiptnumber FROM archived_sales_transactions '
+            'WHERE receiptnumber LIKE ? AND transactiondate >= ? AND transactiondate < ?',
+            [prefix, startMillis, endMillis],
+          ),
+        );
+      } catch (_) {
+        // Ignore - the live table alone still keeps the sequence moving.
+      }
 
       var maxSequence = 0;
       for (final row in result) {
