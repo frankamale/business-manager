@@ -220,13 +220,24 @@ class SalesController extends GetxController {
   // Fiscalise a sale (EFRIS). Builds the same DtoSale payload used for the
   // upload (via the shared builder) and posts it to `rest/sales/fiscalise/`.
   // The caller is expected to have confirmed the sale is already uploaded.
+  //
+  // When EFRIS answers with "invoice already uploaded", the invoice is on
+  // EFRIS even though the call failed - that is not an error, so the sale is
+  // marked with its status and the fiscal document is cached instead of
+  // failing the action.
   Future<Map<String, dynamic>> fiscaliseSale(String salesId) async {
     final salePayload = await _buildSalePayload(salesId);
-    final result = await _apiService.fiscaliseSale(salePayload);
-    // Persist the fiscalised state locally so the listing can show the
-    // indicator and disable the fiscalise button (status flows the same way
-    // as a stock take: pending -> uploaded -> fiscalised).
-    await _dbHelper.updateSaleUploadStatus(salesId, 'fiscalised');
+
+    Map<String, dynamic> result;
+    var alreadyOnEfris = false;
+    try {
+      result = await _apiService.fiscaliseSale(salePayload);
+    } catch (e) {
+      if (!_isAlreadyOnEfrisError(e)) rethrow;
+      print('Sale $salesId is already on EFRIS: $e');
+      alreadyOnEfris = true;
+      result = <String, dynamic>{};
+    }
 
     // Snapshot the EFRIS fiscal fields locally so a fiscal receipt (QR code,
     // fiscal document number, verification code) can be printed - including
@@ -234,9 +245,10 @@ class SalesController extends GetxController {
     // fetch the authoritative sale and cache them. Non-fatal on failure: the
     // sale is still fiscalised, the fiscal receipt just won't be available
     // until the next successful fetch.
+    final fiscalDocument = <String, dynamic>{};
     try {
       final serverSale = await _apiService.fetchSingleTransaction(salesId);
-      await _dbHelper.saveFiscalDocument({
+      fiscalDocument.addAll({
         'salesId': salesId,
         'receiptnumber': serverSale['receiptnumber']?.toString(),
         'efriscode': serverSale['efriscode']?.toString(),
@@ -252,11 +264,46 @@ class SalesController extends GetxController {
         'efrismessage': serverSale['efrismessage']?.toString(),
         'created_at': DateTime.now().millisecondsSinceEpoch,
       });
+      await _dbHelper.saveFiscalDocument(fiscalDocument);
     } catch (e) {
       print('Failed to cache fiscal document for $salesId: $e');
     }
 
-    return result;
+    // The sale counts as fiscalised when EFRIS holds a fiscal document for
+    // it. Without one the invoice is only known to be uploaded, so the sale
+    // keeps the uploaded status and can be fiscalised again later.
+    final isOnEfris = !alreadyOnEfris || _hasEfrisDocument(fiscalDocument);
+    final status = isOnEfris ? 'fiscalised' : 'uploaded';
+
+    // Persist the state locally so the listing can show the indicator and
+    // disable the fiscalise button (status flows the same way as a stock
+    // take: pending -> uploaded -> fiscalised).
+    await _dbHelper.updateSaleUploadStatus(salesId, status);
+
+    return {
+      ...result,
+      'status': status,
+      'fiscalised': isOnEfris,
+      'alreadyUploaded': alreadyOnEfris,
+    };
+  }
+
+  /// True when a fiscalise failure is EFRIS reporting that the invoice was
+  /// already uploaded, meaning the sale is on EFRIS after all.
+  bool _isAlreadyOnEfrisError(Object error) {
+    final message = error.toString().toLowerCase();
+    if (!message.contains('already')) return false;
+    return message.contains('efris') ||
+        message.contains('uploaded') ||
+        message.contains('fiscal');
+  }
+
+  /// True when the server sale carries an EFRIS fiscal document.
+  bool _hasEfrisDocument(Map<String, dynamic> fiscalDocument) {
+    bool hasValue(String? value) => value != null && value.trim().isNotEmpty;
+    return hasValue(fiscalDocument['efriscode']?.toString()) ||
+        hasValue(fiscalDocument['efrisinvoiceid']?.toString()) ||
+        hasValue(fiscalDocument['qrcode']?.toString());
   }
 
   /// Cached EFRIS fiscal fields for a sale (or null if not fiscalised /

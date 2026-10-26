@@ -1046,16 +1046,26 @@ class _SalesListingState extends State<SalesListing> {
         );
 
         try {
-          await salesController.fiscaliseSale(salesId);
+          final fiscaliseResult = await salesController.fiscaliseSale(salesId);
 
           // Close loading dialog
           if (Get.isDialogOpen ?? false) {
             Get.back();
           }
 
+          // EFRIS already holds the invoice - the sale is marked instead of
+          // failing, so report what the status ended up being.
+          final alreadyUploaded = fiscaliseResult['alreadyUploaded'] == true;
+          final isFiscalised = fiscaliseResult['fiscalised'] == true;
+          final message = alreadyUploaded
+              ? (isFiscalised
+                  ? 'Sale $receiptNumber is already on EFRIS - marked as fiscalised'
+                  : 'Sale $receiptNumber is already on EFRIS - marked as uploaded')
+              : 'Sale $receiptNumber fiscalised successfully';
+
           Get.snackbar(
             'Success',
-            'Sale $receiptNumber fiscalised successfully',
+            message,
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.green.shade700,
             colorText: Colors.white,
