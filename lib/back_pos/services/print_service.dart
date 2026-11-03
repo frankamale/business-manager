@@ -1242,7 +1242,7 @@ class PrintService {
     PdfPageFormat? pageFormat,
   }) async {
     final companyHeader = await resolveCompanyHeader();
-    final phone = companyHeader.phone ?? AppConfig.phone;
+    const phone = '0772236608';
     final reportDate = DateFormat('dd/MM/yyyy').format(date);
     final printedByName = (printedBy ?? '').trim().isEmpty
         ? 'Account'
