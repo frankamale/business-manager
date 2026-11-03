@@ -72,7 +72,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 12,
+        version: 13,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -182,33 +182,7 @@ class UnifiedDatabaseHelper {
     ''');
 
     // Inventory table (POS)
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS inventory (
-        id TEXT PRIMARY KEY,
-        ipdid TEXT NOT NULL,
-        code TEXT NOT NULL,
-        externalserial TEXT NOT NULL,
-        name TEXT NOT NULL,
-        category TEXT NOT NULL,
-        price REAL NOT NULL,
-        costprice REAL,
-        packsize REAL NOT NULL,
-        packaging TEXT NOT NULL,
-        packagingid TEXT NOT NULL,
-        soldfrom TEXT NOT NULL,
-        shortform TEXT NOT NULL,
-        packagingcode TEXT NOT NULL,
-        efris INTEGER NOT NULL,
-        efrisid TEXT NOT NULL,
-        measurmentunitidefris TEXT NOT NULL,
-        measurmentunit TEXT NOT NULL,
-        measurmentunitid TEXT NOT NULL,
-        vatcategoryid TEXT NOT NULL,
-        branchid TEXT NOT NULL,
-        companyid TEXT NOT NULL,
-        downloadlink TEXT
-      )
-    ''');
+    await _createInventoryTable(db);
 
     // Sales transactions table (POS)
     await db.execute('''
@@ -1007,6 +981,50 @@ class UnifiedDatabaseHelper {
         'ON archived_sales_transactions(transactiondate DESC)',
       );
     }
+
+    // Migration to version 13 - Key inventory on (id, ipdid) so every
+    // packaging of an item is kept. The old table already lost the
+    // overwritten packagings, so it is rebuilt empty; the next inventory sync
+    // sees an empty table and does a full download.
+    if (oldVersion < 13) {
+      await db.execute('DROP TABLE IF EXISTS inventory');
+      await _createInventoryTable(db);
+    }
+  }
+
+  /// POS inventory table. One item can be sold in several packagings (e.g.
+  /// a bottle and a tot): those rows share the item `id` but each has its own
+  /// `ipdid`, so the key is (id, ipdid) - keying on `id` alone made the last
+  /// packaging synced overwrite the others.
+  static Future<void> _createInventoryTable(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS inventory (
+        id TEXT NOT NULL,
+        ipdid TEXT NOT NULL,
+        code TEXT NOT NULL,
+        externalserial TEXT NOT NULL,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        price REAL NOT NULL,
+        costprice REAL,
+        packsize REAL NOT NULL,
+        packaging TEXT NOT NULL,
+        packagingid TEXT NOT NULL,
+        soldfrom TEXT NOT NULL,
+        shortform TEXT NOT NULL,
+        packagingcode TEXT NOT NULL,
+        efris INTEGER NOT NULL,
+        efrisid TEXT NOT NULL,
+        measurmentunitidefris TEXT NOT NULL,
+        measurmentunit TEXT NOT NULL,
+        measurmentunitid TEXT NOT NULL,
+        vatcategoryid TEXT NOT NULL,
+        branchid TEXT NOT NULL,
+        companyid TEXT NOT NULL,
+        downloadlink TEXT,
+        PRIMARY KEY (id, ipdid)
+      )
+    ''');
   }
 
   /// Ensure index exists on salesId for existing databases (call during migration)
@@ -1912,8 +1930,30 @@ class UnifiedDatabaseHelper {
   Future<void> insertCashAccounts(List<Map<String, dynamic>> accounts) async {
     final db = database;
     final batch = db.batch();
-    await db.delete('cash_accounts');
+    final incomingIds = accounts
+        .map((a) => a['id'])
+        .whereType<String>()
+        .toList();
+    // Drop only accounts the server no longer returns; keep the rest so an
+    // incomplete server record can't wipe a working cached account.
+    if (incomingIds.isEmpty) {
+      batch.delete('cash_accounts');
+    } else {
+      batch.delete(
+        'cash_accounts',
+        where: 'id NOT IN (${List.filled(incomingIds.length, '?').join(',')})',
+        whereArgs: incomingIds,
+      );
+    }
     for (final a in accounts) {
+      final currency = a['currency'];
+      // Missing id or currency: keep the already-saved account unchanged.
+      if (a['id'] == null ||
+          currency is! Map ||
+          currency['id'] == null ||
+          currency['code'] == null) {
+        continue;
+      }
       batch.insert('cash_accounts', {
         'id': a['id'],
         'accountname': a['accountname'],

@@ -264,6 +264,10 @@ class SalesController extends GetxController {
         'efrismessage': serverSale['efrismessage']?.toString(),
         'created_at': DateTime.now().millisecondsSinceEpoch,
       });
+      print(
+        'Fiscalise $salesId - EFRIS status: ${fiscalDocument['efrisstatus']}, '
+        'message: ${fiscalDocument['efrismessage']}',
+      );
       await _dbHelper.saveFiscalDocument(fiscalDocument);
     } catch (e) {
       print('Failed to cache fiscal document for $salesId: $e');

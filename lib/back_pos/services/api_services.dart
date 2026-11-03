@@ -440,12 +440,7 @@ class PosApiService extends GetxService {
       // logcat truncates a single line at ~4KB, which makes a long body look
       // cut off. Print the length and emit the body in chunks so the full
       // payload is visible in the console.
-      print('[PosApiService] fiscaliseSale - payload length: ${body.length}');
-      const chunkSize = 800;
-      for (var i = 0; i < body.length; i += chunkSize) {
-        final end = (i + chunkSize < body.length) ? i + chunkSize : body.length;
-        print('[PosApiService] fiscaliseSale - payload[$i-$end]: ${body.substring(i, end)}');
-      }
+      _printChunked('[PosApiService] fiscaliseSale - payload', body);
 
       final request = http.Request('POST', Uri.parse(endpoint));
       request.headers['Content-Type'] = 'application/json';
@@ -454,15 +449,32 @@ class PosApiService extends GetxService {
       final streamedResponse = await _tokenRefreshInterceptor.send(request);
       final response = await http.Response.fromStream(streamedResponse);
 
+      print('[PosApiService] fiscaliseSale - response status: ${response.statusCode}');
+      _printChunked('[PosApiService] fiscaliseSale - response body', response.body);
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       } else {
+        print('[PosApiService] fiscaliseSale - ERROR from backend (${response.statusCode})');
         throw Exception(
           "Failed to fiscalise sale: ${response.statusCode} - ${response.body}",
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('[PosApiService] fiscaliseSale - FAILED: $e');
+      print('[PosApiService] fiscaliseSale - stack trace: $stackTrace');
       rethrow;
+    }
+  }
+
+  /// logcat truncates a single line at ~4KB, so long text is printed with its
+  /// length and then in chunks, keeping the full content visible.
+  void _printChunked(String label, String text) {
+    print('$label length: ${text.length}');
+    const chunkSize = 800;
+    for (var i = 0; i < text.length; i += chunkSize) {
+      final end = (i + chunkSize < text.length) ? i + chunkSize : text.length;
+      print('$label[$i-$end]: ${text.substring(i, end)}');
     }
   }
 
