@@ -88,10 +88,35 @@ class _PosScreenState extends State<PosScreen> {
         (allowAllUsersPayment && role == 'waiter');
   }
 
+  /// Cart identity for an inventory item. An item sold in several
+  /// packagings (bottle, tot, ...) shares one `id` across them, so each
+  /// packaging is told apart by its `ipdid`.
+  static String _inventoryKey(InventoryItem item) =>
+      item.ipdid.isNotEmpty ? item.ipdid : item.id;
+
+  /// Cart identity of a cart line (also used to key its price controller).
+  static String _cartKey(Map<String, dynamic> cartItem) {
+    final item = cartItem['item'];
+    if (item is InventoryItem) return _inventoryKey(item);
+    return cartItem['id'].toString();
+  }
+
+  /// Cart line label: the item name plus its packaging, so packagings of
+  /// the same item (e.g. "Each" vs "TOT") can be told apart in the cart.
+  static String _cartLabel(Map<String, dynamic> cartItem) {
+    final name = cartItem['name'].toString();
+    final item = cartItem['item'];
+    if (item is InventoryItem && item.packaging.trim().isNotEmpty) {
+      return '$name (${item.packaging.trim()})';
+    }
+    return name;
+  }
+
   void _addItemToCart(InventoryItem item) {
     setState(() {
+      final key = _inventoryKey(item);
       final existingItemIndex = selectedItems.indexWhere(
-        (cartItem) => cartItem['id'] == item.id,
+        (cartItem) => _cartKey(cartItem) == key,
       );
 
       if (existingItemIndex != -1) {
@@ -111,7 +136,7 @@ class _PosScreenState extends State<PosScreen> {
         });
 
         // Create a controller for this item's price
-        _priceControllers[item.id] = TextEditingController(
+        _priceControllers[key] = TextEditingController(
           text: item.price.toStringAsFixed(0),
         );
       }
@@ -122,8 +147,8 @@ class _PosScreenState extends State<PosScreen> {
     setState(() {
       final item = selectedItems[index];
       // Dispose the price controller for this item
-      _priceControllers[item['id']]?.dispose();
-      _priceControllers.remove(item['id']);
+      _priceControllers[_cartKey(item)]?.dispose();
+      _priceControllers.remove(_cartKey(item));
       selectedItems.removeAt(index);
     });
   }
@@ -392,7 +417,7 @@ class _PosScreenState extends State<PosScreen> {
                                   selectedItems[index]['quantity'] = newQty;
                                   selectedItems[index]['price'] = newPrice;
                                   selectedItems[index]['amount'] = newQty * newPrice;
-                                  _priceControllers[item['id']]?.text = newPrice.toStringAsFixed(0);
+                                  _priceControllers[_cartKey(item)]?.text = newPrice.toStringAsFixed(0);
                                 });
                                 Navigator.of(context).pop();
                               },
@@ -462,7 +487,7 @@ class _PosScreenState extends State<PosScreen> {
         selectedItems.addAll(widget.existingItems!);
         // Create price controllers for existing items
         for (var item in widget.existingItems!) {
-          _priceControllers[item['id']] = TextEditingController(
+          _priceControllers[_cartKey(item)] = TextEditingController(
             text: (item['price'] as num).toStringAsFixed(0),
           );
         }
@@ -1256,7 +1281,7 @@ class _PosScreenState extends State<PosScreen> {
                                                       children: [
                                                         Flexible(
                                                           child: Text(
-                                                            item['name'],
+                                                            _cartLabel(item),
                                                             style: const TextStyle(
                                                               fontSize: 14,
                                                               fontWeight:
@@ -1384,7 +1409,7 @@ class _PosScreenState extends State<PosScreen> {
                                                               filled: true,
                                                             ),
                                                             controller:
-                                                                _priceControllers[item['id']],
+                                                                _priceControllers[_cartKey(item)],
                                                             onChanged:
                                                                 (widget.isViewOnly ||
                                                                     !settingsController

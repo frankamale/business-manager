@@ -1180,7 +1180,14 @@ class _SalesListingState extends State<SalesListing> {
                final inventoryItems = inventoryController.inventoryItems;
 
                // First try to find by inventoryid
-               var inventoryItem = inventoryItems.firstWhereOrNull(
+               // Match the exact packaging (ipdid) first - one item can have several
+               // packagings sharing the same inventoryid - then fall back to the id.
+               var inventoryItem = (transaction.ipdid ?? '').isNotEmpty
+                   ? inventoryItems.firstWhereOrNull(
+                       (item) => item.ipdid == transaction.ipdid,
+                     )
+                   : null;
+               inventoryItem ??= inventoryItems.firstWhereOrNull(
                  (item) => item.id == transaction.inventoryid,
                );
 
@@ -1352,7 +1359,14 @@ class _SalesListingState extends State<SalesListing> {
         // Try to find the inventory item by name or ID
         final inventoryItems = inventoryController.inventoryItems;
 
-        var inventoryItem = inventoryItems.firstWhereOrNull(
+        // Match the exact packaging (ipdid) first - one item can have several
+        // packagings sharing the same inventoryid - then fall back to the id.
+        var inventoryItem = (transaction.ipdid ?? '').isNotEmpty
+            ? inventoryItems.firstWhereOrNull(
+                (item) => item.ipdid == transaction.ipdid,
+              )
+            : null;
+        inventoryItem ??= inventoryItems.firstWhereOrNull(
           (item) => item.id == transaction.inventoryid,
         );
 
