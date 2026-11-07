@@ -276,28 +276,28 @@ class PrintService {
                     flex: 3,
                     child: pw.Text('Item',
                         style: pw.TextStyle(
-                            fontSize: 13, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 1,
                     child: pw.Text('Qty',
                         textAlign: pw.TextAlign.center,
                         style: pw.TextStyle(
-                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Price',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Amount',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                 ],
               ),
@@ -610,28 +610,28 @@ class PrintService {
                     flex: 3,
                     child: pw.Text('Item',
                         style: pw.TextStyle(
-                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 1,
                     child: pw.Text('Qty',
                         textAlign: pw.TextAlign.center,
                         style: pw.TextStyle(
-                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Price',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Text('Amount',
                         textAlign: pw.TextAlign.right,
                         style: pw.TextStyle(
-                            fontSize: 11, fontWeight: pw.FontWeight.bold)),
+                            fontSize: 10, fontWeight: pw.FontWeight.bold)),
                   ),
                 ],
               ),
