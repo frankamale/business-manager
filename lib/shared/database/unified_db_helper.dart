@@ -1990,6 +1990,42 @@ class UnifiedDatabaseHelper {
     return db.query('cash_accounts', orderBy: 'accountname ASC');
   }
 
+  /// The cash account POS payments are posted to. Order of preference:
+  /// 1. [preferredId] - the account chosen in Settings, if it still exists;
+  /// 2. the "Kitchen" account (default);
+  /// 3. the first POS account in the main currency (previous behaviour).
+  Future<Map<String, dynamic>?> getPosCashAccount(String? preferredId) async {
+    final db = database;
+
+    if (preferredId != null && preferredId.isNotEmpty) {
+      final chosen = await db.query(
+        'cash_accounts',
+        where: 'id = ?',
+        whereArgs: [preferredId],
+        limit: 1,
+      );
+      if (chosen.isNotEmpty) return chosen.first;
+    }
+
+    final kitchen = await db.query(
+      'cash_accounts',
+      where: 'LOWER(accountname) LIKE ?',
+      whereArgs: ['%kitchen%'],
+      // Prefer a main-currency POS kitchen account when there are several.
+      orderBy: 'main_currency DESC, pos DESC, accountname ASC',
+      limit: 1,
+    );
+    if (kitchen.isNotEmpty) return kitchen.first;
+
+    final fallback = await db.query(
+      'cash_accounts',
+      where: 'pos = 1 AND main_currency = 1',
+      orderBy: 'accountname ASC',
+      limit: 1,
+    );
+    return fallback.isNotEmpty ? fallback.first : null;
+  }
+
   // ========================================================================
   // POS CUSTOMERS METHODS
   // ========================================================================

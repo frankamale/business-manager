@@ -131,21 +131,20 @@ class PaymentController extends GetxController {
     final db = await _dbHelper.database;
     debugPrint('Database instance: ${db != null ? "available" : "NULL"}');
 
-    final result = await db.query(
-      'cash_accounts',
-      where: 'pos = 1 AND main_currency = 1',
-      limit: 1,
+    // The account chosen in Settings, else the Kitchen account, else the
+    // first POS main-currency account.
+    final account = await _dbHelper.getPosCashAccount(
+      _settingsService.getPosCashAccountId(),
     );
-    debugPrint('Cash accounts query result count: ${result.length}');
-    debugPrint('Cash accounts query result: $result');
+    debugPrint('Cash account selected: $account');
 
-    if (result.isEmpty) {
+    if (account == null) {
       debugPrint('=== DEBUG: ERROR - No POS cash account configured ===');
       throw Exception('No POS cash account configured');
     }
 
     debugPrint('=== DEBUG: _getDefaultCashAccount END ===');
-    return result.first;
+    return account;
   }
 
   // Get the next receipt sequence for the current business day (the highest

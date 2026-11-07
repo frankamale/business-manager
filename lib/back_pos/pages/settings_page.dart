@@ -290,6 +290,17 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                   ListTile(
+                    leading: const Icon(Icons.account_balance_wallet),
+                    title: const Text('Cash Account'),
+                    subtitle: Obx(
+                      () => Text(
+                        'Payments go to: ${settingsController.posCashAccountName.value}',
+                      ),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () => settingsController.choosePosCashAccount(),
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.refresh),
                     title: const Text('Reload POS Data'),
                     subtitle: const Text('Refresh all app data'),

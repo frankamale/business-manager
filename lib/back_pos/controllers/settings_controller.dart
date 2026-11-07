@@ -11,6 +11,9 @@ class SettingsController extends GetxController {
   RxBool paymentAccessForAllUsers = false.obs;
   RxBool priceEditingEnabled = false.obs;
 
+  /// Name of the cash account POS payments currently go to.
+  RxString posCashAccountName = ''.obs;
+
   // Text controllers for authentication
   TextEditingController usernameController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
@@ -22,6 +25,87 @@ class SettingsController extends GetxController {
     paymentAccessForAllUsers.value = _settingsService
         .getPaymentAccessForAllUsers();
     priceEditingEnabled.value = _settingsService.getPriceEditingEnabled();
+    loadPosCashAccountName();
+  }
+
+  Future<void> loadPosCashAccountName() async {
+    try {
+      final account = await _dbHelper.getPosCashAccount(
+        _settingsService.getPosCashAccountId(),
+      );
+      posCashAccountName.value =
+          account?['accountname']?.toString() ?? 'Not configured';
+    } catch (e) {
+      posCashAccountName.value = 'Not available';
+    }
+  }
+
+  /// Lets an admin/supervisor pick the cash account POS payments go to.
+  /// "Default" clears the choice so the Kitchen account is used.
+  Future<void> choosePosCashAccount() async {
+    List<Map<String, dynamic>> accounts;
+    try {
+      accounts = await _dbHelper.getCashAccounts();
+    } catch (e) {
+      Get.snackbar('Error', 'Could not load cash accounts: $e');
+      return;
+    }
+    if (accounts.isEmpty) {
+      Get.snackbar(
+        'Cash Account',
+        'No cash accounts found. Reload POS data and try again.',
+      );
+      return;
+    }
+
+    // Payments are recorded in the main currency, so only offer those
+    // accounts when any are flagged.
+    final mainCurrency =
+        accounts.where((a) => a['main_currency'] == 1).toList();
+    if (mainCurrency.isNotEmpty) accounts = mainCurrency;
+
+    final currentId = _settingsService.getPosCashAccountId();
+    const defaultChoice = '__default__';
+
+    final picked = await Get.dialog<String>(
+      SimpleDialog(
+        title: const Text('Cash Account for Payments'),
+        children: [
+          RadioListTile<String>(
+            value: defaultChoice,
+            groupValue: currentId ?? defaultChoice,
+            title: const Text('Default (Kitchen)'),
+            onChanged: (v) => Get.back(result: v),
+          ),
+          ...accounts.map(
+            (a) => RadioListTile<String>(
+              value: a['id'] as String,
+              groupValue: currentId ?? defaultChoice,
+              title: Text(a['accountname']?.toString() ?? 'Unnamed'),
+              subtitle: Text(
+                [a['paymentmode_name'], a['currency_code']]
+                    .where((s) => s != null && s.toString().isNotEmpty)
+                    .join(' · '),
+              ),
+              onChanged: (v) => Get.back(result: v),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+
+    final newId = picked == defaultChoice ? null : picked;
+    if (newId == currentId) return;
+
+    if (!await showAuthDialog()) return;
+
+    _settingsService.setPosCashAccountId(newId);
+    await loadPosCashAccountName();
+    Get.snackbar(
+      'Settings',
+      'Payments will go to ${posCashAccountName.value}',
+    );
   }
 
   @override

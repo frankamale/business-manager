@@ -10,7 +10,22 @@ class SettingsService {
   static const String _autoUploadKey = 'auto_upload_sales';
   static const String _paymentAccessKey = 'payment_access_all_users';
   static const String _priceEditingKey = 'price_editing_enabled';
+  static const String _posCashAccountKey = 'pos_cash_account_id';
   final GetStorage _box = GetStorage();
+
+  /// The cash account chosen for POS payments, or null to use the default
+  /// (the Kitchen account).
+  String? getPosCashAccountId() {
+    return _box.read(_posCashAccountKey) as String?;
+  }
+
+  void setPosCashAccountId(String? id) {
+    if (id == null) {
+      _box.remove(_posCashAccountKey);
+    } else {
+      _box.write(_posCashAccountKey, id);
+    }
+  }
 
   bool getAutoUploadEnabled() {
     return _box.read(_autoUploadKey) ?? true;
