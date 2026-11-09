@@ -9,6 +9,7 @@ import '../controllers/sales_controller.dart';
 import '../services/print_service.dart';
 import '../models/sale_transaction.dart';
 import '../../flavors/flavor_colors.dart';
+import '../widgets/payment_method_selector.dart';
 
 class SettleBillScreen extends StatefulWidget {
   final String salesId;
@@ -37,8 +38,17 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
   String customerName = 'Cash Customer';
   String notes = '';
   List<SaleTransaction> saleTransactions = [];
+  List<Map<String, dynamic>> _cashAccounts = [];
+  String? _selectedCashAccountId;
 
   bool isLoading = true;
+
+  String get _selectedPaymentModeName {
+    final account = _cashAccounts.firstWhereOrNull(
+      (a) => a['id'] == _selectedCashAccountId,
+    );
+    return account?['paymentmode_name']?.toString() ?? 'Cash';
+  }
 
   @override
   void initState() {
@@ -85,6 +95,23 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
       );
 
       outstandingBalance = totalAmount - currentPaid;
+
+      // Prefill the payment with the outstanding balance, selected so typing replaces it
+      if (outstandingBalance > 0) {
+        final prefill = _numberFormat.format(outstandingBalance.round());
+        amountTenderedController.value = TextEditingValue(
+          text: prefill,
+          selection: TextSelection(baseOffset: 0, extentOffset: prefill.length),
+        );
+      }
+
+      try {
+        _cashAccounts = await _paymentController.getPosCashAccounts();
+        _selectedCashAccountId =
+            PaymentMethodSelector.defaultAccountId(_cashAccounts);
+      } catch (e) {
+        debugPrint('Failed to load cash accounts: $e');
+      }
 
       final clientId = transactionData['clientid'];
       if (clientId != null) {
@@ -144,6 +171,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
       await _paymentController.settleUploadedSale(
         widget.salesId,
         amountTendered,
+        cashAccountId: _selectedCashAccountId,
       );
 
       if (saleTransactions.isNotEmpty) {
@@ -167,7 +195,7 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
             totalAmount: totalAmount,
             amountPaid: currentPaid + amountTendered,
             balance: outstandingBalance - amountTendered,
-            paymentMode: 'Cash',
+            paymentMode: _selectedPaymentModeName,
             issuedBy: cashierName,
             notes: notes.isNotEmpty ? notes : null,
           );
@@ -352,6 +380,15 @@ class _SettleBillScreenState extends State<SettleBillScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 10),
+
+                                    PaymentMethodSelector(
+                                      accounts: _cashAccounts,
+                                      selectedId: _selectedCashAccountId,
+                                      onSelected: (id) => setState(
+                                        () => _selectedCashAccountId = id,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
 
                                     // Amount input with input formatter and grouped separators
                                     TextFormField(

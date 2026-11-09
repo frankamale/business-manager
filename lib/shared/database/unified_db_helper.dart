@@ -71,7 +71,7 @@ class UnifiedDatabaseHelper {
 
       _database = await openDatabase(
         path,
-        version: 11,
+        version: 12,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
         onOpen: (db) async {
@@ -258,7 +258,8 @@ class UnifiedDatabaseHelper {
         companyid TEXT,
         branchid TEXT,
         servicepointid TEXT,
-        salespersonid TEXT
+        salespersonid TEXT,
+        cashaccountid TEXT
       )
     ''');
 
@@ -277,7 +278,10 @@ class UnifiedDatabaseHelper {
         main_currency INTEGER,
         branchid TEXT,
         companyid TEXT,
-        pos INTEGER
+        pos INTEGER,
+        paymentmode_id INTEGER,
+        defaultbank INTEGER,
+        preferedbank INTEGER
       )
     ''');
 
@@ -886,6 +890,24 @@ class UnifiedDatabaseHelper {
           created_at INTEGER
         )
       ''');
+    }
+
+    // Migration to version 12 - Payment methods: remember which cash account
+    // each sale was paid into, and cache the payment mode id and preferred flags.
+    if (oldVersion < 12) {
+      const alters = [
+        'ALTER TABLE sales_transactions ADD COLUMN cashaccountid TEXT',
+        'ALTER TABLE cash_accounts ADD COLUMN paymentmode_id INTEGER',
+        'ALTER TABLE cash_accounts ADD COLUMN defaultbank INTEGER',
+        'ALTER TABLE cash_accounts ADD COLUMN preferedbank INTEGER',
+      ];
+      for (final sql in alters) {
+        try {
+          await db.execute(sql);
+        } catch (e) {
+          debugPrint('UnifiedDatabaseHelper: v12 migration skipped "$sql": $e');
+        }
+      }
     }
   }
 
@@ -1708,6 +1730,7 @@ class UnifiedDatabaseHelper {
     final batch = db.batch();
     await db.delete('cash_accounts');
     for (final a in accounts) {
+      if (a['isdeleted'] == true) continue;
       batch.insert('cash_accounts', {
         'id': a['id'],
         'accountname': a['accountname'],
@@ -1722,6 +1745,9 @@ class UnifiedDatabaseHelper {
         'branchid': a['branch'],
         'companyid': a['company'],
         'pos': a['pos'] == true ? 1 : 0,
+        'paymentmode_id': a['paymentMode']?['id'],
+        'defaultbank': a['defaultbank'] == true ? 1 : 0,
+        'preferedbank': a['preferedBank'] == true ? 1 : 0,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
@@ -1742,6 +1768,41 @@ class UnifiedDatabaseHelper {
   Future<List<Map<String, dynamic>>> getCashAccounts() async {
     final db = database;
     return db.query('cash_accounts', orderBy: 'accountname ASC');
+  }
+
+  /// POS payment methods: one per cash account, preferred/default first.
+  Future<List<Map<String, dynamic>>> getPosCashAccounts() async {
+    final db = database;
+    return db.query(
+      'cash_accounts',
+      where: 'pos = 1',
+      orderBy:
+          'COALESCE(preferedbank, 0) DESC, COALESCE(defaultbank, 0) DESC, accountname ASC',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getCashAccountById(String id) async {
+    final db = database;
+    final result = await db.query(
+      'cash_accounts',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  /// The cash account a locally saved sale was paid into, if one was chosen.
+  Future<String?> getSaleCashAccountId(String salesId) async {
+    final db = database;
+    final result = await db.query(
+      'sales_transactions',
+      columns: ['cashaccountid'],
+      where: 'salesId = ? AND cashaccountid IS NOT NULL',
+      whereArgs: [salesId],
+      limit: 1,
+    );
+    return result.isNotEmpty ? result.first['cashaccountid'] as String? : null;
   }
 
   // ========================================================================

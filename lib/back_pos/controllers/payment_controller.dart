@@ -161,6 +161,30 @@ class PaymentController extends GetxController {
     return result.first;
   }
 
+  /// POS payment methods (one per cash account) from the offline cache.
+  Future<List<Map<String, dynamic>>> getPosCashAccounts() async {
+    await _ensureDatabaseOpen();
+    return _dbHelper.getPosCashAccounts();
+  }
+
+  /// The selected cash account, or the default POS account when none is chosen.
+  Future<Map<String, dynamic>> _resolveCashAccount(String? cashAccountId) async {
+    if (cashAccountId != null && cashAccountId.isNotEmpty) {
+      await _ensureDatabaseOpen();
+      final account = await _dbHelper.getCashAccountById(cashAccountId);
+      if (account != null) return account;
+    }
+    return _getDefaultCashAccount();
+  }
+
+  static String cashAccountLabel(Map<String, dynamic> account) {
+    for (final key in ['accountname', 'accountnumber', 'reference']) {
+      final value = account[key]?.toString() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return 'Account';
+  }
+
   // Get the latest receipt number from database
   Future<String?> _getLatestReceiptNumber() async {
     try {
@@ -261,6 +285,7 @@ class PaymentController extends GetxController {
     required String? companyId,
     required String? currencyid,
     required String? categoryid,
+    String? cashAccountId,
   }) async {
     debugPrint('=== DEBUG: createPaymentPayload START ===');
     debugPrint('saleId: $saleId');
@@ -270,8 +295,8 @@ class PaymentController extends GetxController {
     
     const uuid = Uuid();
 
-    debugPrint('Getting default cash account...');
-    final cashAccount = await _getDefaultCashAccount();
+    debugPrint('Getting cash account (selected: $cashAccountId)...');
+    final cashAccount = await _resolveCashAccount(cashAccountId);
     debugPrint('Cash account found: ${cashAccount['id']} - ${cashAccount['paymentmode_name']}');
 
     final paymentPayload = {
@@ -283,7 +308,7 @@ class PaymentController extends GetxController {
       "transactiontypeid": 1,
       "amount": paymentAmount,
       "method": cashAccount['paymentmode_name'] ?? "Cash",
-      "methodId": 1,
+      "methodId": cashAccount['paymentmode_id'] ?? 1,
       "chequeno": "",
       "cashaccountid": cashAccount['id'],
       "paydate": paymentTimestamp,
@@ -316,6 +341,7 @@ class PaymentController extends GetxController {
     required String actualServicePointId,
     required String issuedByName,
     required String customerName,
+    Map<String, dynamic>? cashAccount,
   }) async {
     const uuid = Uuid();
     final transactionTimestamp = DateTime.now().millisecondsSinceEpoch;
@@ -324,6 +350,9 @@ class PaymentController extends GetxController {
     final totalAmount = calculateTotalAmount(cartItems);
     // Cap payment at total amount - excess is change returned to customer, not recorded as payment
     final paymentAmount = amountTendered > totalAmount ? totalAmount : amountTendered;
+    final String accountModeName =
+        cashAccount?['paymentmode_name']?.toString() ?? 'Cash';
+    final paymentModeName = paymentAmount > 0 ? accountModeName : 'Pending';
 
     // Create sale transaction for each line item
     final List<Map<String, dynamic>> saleTransactions = [];
@@ -352,10 +381,10 @@ class PaymentController extends GetxController {
         'transactiondate': transactionTimestamp,
         'costcentre': '',
         'destinationbp': customerName,
-        'paymentmode': paymentAmount > 0 ? 'Cash' : 'Pending',
+        'paymentmode': paymentModeName,
         'sourcefacility': branchId,
         'genno': reference ?? '',
-        'paymenttype': paymentAmount > 0 ? 'Cash' : 'Pending',
+        'paymenttype': paymentModeName,
         'validtill': transactionTimestamp,
         'currency': 'Uganda Shillings',
         'quantity': quantity,
@@ -389,6 +418,7 @@ class PaymentController extends GetxController {
         'branchid': branchId,
         'servicepointid': actualServicePointId,
         'salespersonid': actualSalespersonId,
+        'cashaccountid': paymentAmount > 0 ? (cashAccount?['id']) : null,
       };
 
       saleTransactions.add(transaction);
@@ -425,6 +455,7 @@ class PaymentController extends GetxController {
     required String? notes,
     required String? salespersonId,
     String? servicePointId,
+    String? cashAccountId,
   }) async {
     if (cartItems.isEmpty) {
       throw Exception('No items in cart');
@@ -487,6 +518,9 @@ class PaymentController extends GetxController {
         actualServicePointId: actualServicePointId,
         issuedByName: issuedByName,
         customerName: customerName,
+        cashAccount: cashAccountId != null
+            ? await _dbHelper.getCashAccountById(cashAccountId)
+            : null,
       );
 
       await _attemptUploadAfterSave(saleId);
@@ -510,6 +544,7 @@ class PaymentController extends GetxController {
     required String? notes,
     required String? salespersonId,
     String? servicePointId,
+    String? cashAccountId,
   }) async {
     if (cartItems.isEmpty) {
       throw Exception('No items in cart');
@@ -589,6 +624,9 @@ class PaymentController extends GetxController {
         actualServicePointId: actualServicePointId,
         issuedByName: issuedByName,
         customerName: customerName,
+        cashAccount: cashAccountId != null
+            ? await _dbHelper.getCashAccountById(cashAccountId)
+            : null,
       );
 
       // Attempt to upload updated sale to server automatically
@@ -618,7 +656,11 @@ class PaymentController extends GetxController {
   }
 
   // Settle an uploaded sale by posting payment directly
-  Future<void> settleUploadedSale(String salesId, double amountTendered) async {
+  Future<void> settleUploadedSale(
+    String salesId,
+    double amountTendered, {
+    String? cashAccountId,
+  }) async {
     debugPrint('=== DEBUG: settleUploadedSale START ===');
     debugPrint('salesId: $salesId');
     debugPrint('amountTendered: $amountTendered');
@@ -685,8 +727,9 @@ class PaymentController extends GetxController {
         companyId: transactionData['companyId'],
         currencyid : transactionData['currencyid'],
         categoryid: "44444444-1111-1111-1111-111111111111",
-
+        cashAccountId: cashAccountId,
       );
+      final paymentModeName = paymentPayload['method'] ?? 'Cash';
       debugPrint('Payment payload created: $paymentPayload');
 
       // Log the payment payload being sent to server
@@ -739,8 +782,8 @@ class PaymentController extends GetxController {
             {
               'amountpaid': newAmountPaid,
               'balance': newBalance,
-              'paymentmode': 'Cash',
-              'paymenttype': 'Cash',
+              'paymentmode': paymentModeName,
+              'paymenttype': paymentModeName,
             },
             where: 'id = ?',
             whereArgs: [transaction.id],

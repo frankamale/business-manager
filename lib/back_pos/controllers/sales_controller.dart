@@ -385,6 +385,8 @@ class SalesController extends GetxController {
             companyId: companyId,
             currencyid: null,
             categoryid: "44444444-1111-1111-1111-111111111111",
+            // The payment method chosen when the sale was made (null = default POS account)
+            cashAccountId: await _dbHelper.getSaleCashAccountId(salesId),
           );
 
           // Log the payment payload being sent to server

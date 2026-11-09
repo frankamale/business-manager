@@ -9,6 +9,7 @@ import '../services/print_service.dart';
 import '../../shared/database/unified_db_helper.dart';
 import '../models/sale_transaction.dart';
 import '../../flavors/flavor_colors.dart';
+import '../widgets/payment_method_selector.dart';
 
 class PaymentScreen extends StatefulWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -44,6 +45,40 @@ class _PaymentScreenState extends State<PaymentScreen> {
   final TextEditingController amountTenderedController =
       TextEditingController();
   final CustomerController customerController = Get.find();
+  List<Map<String, dynamic>> _cashAccounts = [];
+  String? _selectedCashAccountId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Prefill the amount tendered with the amount due
+    final due = totalAmount.round().toString();
+    amountTenderedController.value = TextEditingValue(
+      text: due,
+      selection: TextSelection(baseOffset: 0, extentOffset: due.length),
+    );
+    _loadCashAccounts();
+  }
+
+  Future<void> _loadCashAccounts() async {
+    try {
+      final accounts = await _paymentController.getPosCashAccounts();
+      if (!mounted) return;
+      setState(() {
+        _cashAccounts = accounts;
+        _selectedCashAccountId = PaymentMethodSelector.defaultAccountId(accounts);
+      });
+    } catch (e) {
+      debugPrint('Failed to load cash accounts: $e');
+    }
+  }
+
+  String get _selectedPaymentModeName {
+    final account = _cashAccounts.firstWhereOrNull(
+      (a) => a['id'] == _selectedCashAccountId,
+    );
+    return account?['paymentmode_name']?.toString() ?? 'Cash';
+  }
 
   String formatMoney(double amount) {
     return _numberFormat.format(amount.toInt());
@@ -96,6 +131,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           notes: widget.notes,
           salespersonId: widget.salespersonId,
           servicePointId: widget.servicePointId,
+          cashAccountId: _selectedCashAccountId,
         );
       } else {
         // Create new sale
@@ -107,6 +143,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           notes: widget.notes,
           salespersonId: widget.salespersonId,
           servicePointId: widget.servicePointId,
+          cashAccountId: _selectedCashAccountId,
         );
       }
 
@@ -146,7 +183,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             totalAmount: totalAmount,
             amountPaid: amountTendered,
             balance: balance,
-            paymentMode: 'Cash',
+            paymentMode: _selectedPaymentModeName,
             issuedBy: cashierName,
             notes: widget.notes,
           );
@@ -283,6 +320,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       totalAmount,
                       Colors.red[700]!,
                       fontSize: isKeyboardVisible ? 20 : 24,
+                    ),
+                    const SizedBox(height: 12),
+
+                    PaymentMethodSelector(
+                      accounts: _cashAccounts,
+                      selectedId: _selectedCashAccountId,
+                      onSelected: (id) =>
+                          setState(() => _selectedCashAccountId = id),
                     ),
                     const SizedBox(height: 12),
 
