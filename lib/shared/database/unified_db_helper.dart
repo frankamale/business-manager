@@ -1248,6 +1248,18 @@ class UnifiedDatabaseHelper {
     return maps.map((map) => InventoryItem.fromMap(map)).toList();
   }
 
+  /// Every packaging row of an item (same id), smallest pack first.
+  Future<List<InventoryItem>> getInventoryPackagings(String itemId) async {
+    final db = database;
+    final maps = await db.query(
+      'inventory',
+      where: 'id = ?',
+      whereArgs: [itemId],
+      orderBy: 'packsize ASC',
+    );
+    return maps.map((map) => InventoryItem.fromMap(map)).toList();
+  }
+
   /// Search inventory by barcode (exact match on code OR externalserial)
   Future<InventoryItem?> getInventoryByBarcode(String barcode) async {
     final db = database;

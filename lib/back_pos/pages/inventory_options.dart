@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../models/service_point.dart';
 import 'stock_taking_list.dart';
+import 'price_checker.dart';
 import '../../flavors/flavor_colors.dart';
 
 /// Inventory hub for a service point. Currently exposes Stock Taking; more
@@ -47,6 +48,12 @@ class InventoryOptions extends StatelessWidget {
                 () => Get.to(
                   () => StockTakingList(servicePoint: servicePoint),
                 ),
+              ),
+              _tile(
+                'PRICE CHECKER',
+                Icons.price_check,
+                color,
+                () => Get.to(() => PriceChecker(color: color)),
               ),
             ],
           ),
