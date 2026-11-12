@@ -585,8 +585,24 @@ class _SalesListingState extends State<SalesListing> {
                             ],
                           ),
                         ),
+                        // Void is only offered for sales that never reached
+                        // the server (pending, or a failed upload).
+                        if (SalesController.canVoidStatus(uploadStatus, cancelled))
+                          PopupMenuItem(
+                            value: 'void',
+                            child: Row(
+                              children: [
+                                Icon(Icons.block, size: 18, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Void',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
                         // Only show settle bill option for cashier roles
-                        if (_isCashierRole()) ...[
+                        if (_isCashierRole() && cancelled == 0) ...[
                           PopupMenuItem(
                             value: 'settleBill',
                             child: Row(
@@ -698,7 +714,7 @@ class _SalesListingState extends State<SalesListing> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  "CANCELLED",
+                  "VOIDED",
                   style: TextStyle(
                     fontSize: 11,
                     color: Colors.red.shade700,
@@ -920,7 +936,65 @@ class _SalesListingState extends State<SalesListing> {
     final receiptNumber = sale['receiptnumber'] as String? ?? '';
     final salesId = sale['salesId'] as String?;
 
+    final isVoided = (sale['cancelled'] as int? ?? 0) > 0 ||
+        sale['upload_status'] == 'voided';
+    if (isVoided && action != 'void') {
+      Get.snackbar(
+        'Sale Voided',
+        'Sale $receiptNumber has been voided',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: FlavorColors.current.primaryDark,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     switch (action) {
+      case 'void':
+        if (salesId == null) return;
+        final confirmed = await Get.dialog<bool>(
+          AlertDialog(
+            title: Text('Void Sale'),
+            content: Text(
+              'Void sale $receiptNumber? It will not be uploaded and will be '
+              'excluded from the daily summary. This cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Get.back(result: false),
+                child: Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Get.back(result: true),
+                child: Text('Void', style: TextStyle(color: Colors.red.shade700)),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) return;
+
+        try {
+          await salesController.voidSale(salesId);
+          await salesController.loadSalesFromCache(servicePointId: widget.servicePoint?.id);
+          Get.snackbar(
+            'Sale Voided',
+            'Sale $receiptNumber has been voided',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green.shade700,
+            colorText: Colors.white,
+          );
+        } catch (e) {
+          Get.snackbar(
+            'Void Failed',
+            e.toString().replaceFirst('Exception: ', ''),
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red.shade700,
+            colorText: Colors.white,
+            duration: Duration(seconds: 5),
+          );
+        }
+        break;
+
       case 'upload':
         if (salesId == null) {
           Get.snackbar(
@@ -1429,7 +1503,9 @@ class _SalesListingState extends State<SalesListing> {
           existingNotes: notes,
           existingSalespersonId: salespersonId,
           servicePoint: servicePoint,
-          isViewOnly: uploadStatus == 'uploaded' || uploadStatus == 'fiscalised',
+          isViewOnly: uploadStatus == 'uploaded' ||
+              uploadStatus == 'fiscalised' ||
+              uploadStatus == 'voided',
         ),
         transition: Transition.rightToLeft,
       );

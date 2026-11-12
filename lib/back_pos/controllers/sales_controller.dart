@@ -353,6 +353,60 @@ class SalesController extends GetxController {
     }
   }
 
+  /// True when the sale's upload status allows it to be voided locally.
+  static bool canVoidStatus(String? uploadStatus, int cancelled) {
+    final status = uploadStatus ?? 'pending';
+    return cancelled == 0 && (status == 'pending' || status == 'failed');
+  }
+
+  // Void a sale that has not been uploaded yet. A 'failed' upload may have
+  // created the sale on the server before a later step (the payment) failed,
+  // so for those the server is checked first and the void is refused if the
+  // sale exists there - or if the server can't be reached to confirm.
+  Future<void> voidSale(String salesId) async {
+    final transactions = await _dbHelper.getSaleTransactionsBySalesId(salesId);
+    if (transactions.isEmpty) {
+      throw Exception('Sale not found');
+    }
+
+    final first = transactions.first;
+    if (first.cancelled != 0 || first.uploadStatus == 'voided') {
+      throw Exception('Sale is already voided');
+    }
+    if (!canVoidStatus(first.uploadStatus, first.cancelled)) {
+      throw Exception('Sale has already been uploaded and cannot be voided');
+    }
+
+    if (first.uploadStatus == 'failed') {
+      try {
+        final serverSale = await _apiService.fetchSingleTransaction(salesId);
+        if (serverSale['id']?.toString().toLowerCase() == salesId.toLowerCase()) {
+          throw _VoidRefused(
+            'This sale already exists on the server and cannot be voided',
+          );
+        }
+      } on _VoidRefused {
+        rethrow;
+      } catch (e) {
+        // A non-200 response (e.g. 404) means the server doesn't have it.
+        // Anything else (no network, timeout) means we can't confirm.
+        if (!e.toString().contains('Failed to fetch transaction:')) {
+          throw Exception(
+            'Could not confirm with the server that this sale was not uploaded. '
+            'Check your connection and try again.',
+          );
+        }
+      }
+    }
+
+    final updated = await _dbHelper.voidSaleBySalesId(salesId);
+    if (updated == 0) {
+      throw Exception('Sale could not be voided');
+    }
+
+    await loadSalesFromCache(servicePointId: currentServicePointId.value);
+  }
+
   // Upload sale to server
   Future<void> uploadSaleToServer(String salesId) async {
     try {
@@ -365,6 +419,14 @@ class SalesController extends GetxController {
 
       // Get the first transaction for common fields
       final firstTransaction = saleTransactions.first;
+
+      // A voided sale must never reach the server. Return without touching
+      // the status so it stays 'voided'.
+      if (firstTransaction.cancelled != 0 ||
+          firstTransaction.uploadStatus == 'voided') {
+        print('Sale $salesId is voided - skipping upload');
+        return;
+      }
 
       // Stored IDs from the local transaction, reused by the payment payload below
       final companyId = firstTransaction.companyid ?? '';
@@ -509,4 +571,11 @@ class SalesController extends GetxController {
       rethrow;
     }
   }
+}
+
+class _VoidRefused implements Exception {
+  final String message;
+  _VoidRefused(this.message);
+  @override
+  String toString() => message;
 }

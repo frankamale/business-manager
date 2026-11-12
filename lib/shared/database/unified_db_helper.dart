@@ -1732,6 +1732,24 @@ class UnifiedDatabaseHelper {
     return rows.isNotEmpty ? rows.first : null;
   }
 
+  /// Void a local sale that never reached the server: every line is marked
+  /// cancelled (so daily summaries skip it) and the upload status becomes
+  /// 'voided' (so it is never picked up for upload). The rows are kept for
+  /// audit. Only rows still pending/failed are touched; returns rows changed.
+  Future<int> voidSaleBySalesId(String salesId) async {
+    final db = database;
+    return await db.update(
+      'sales_transactions',
+      {
+        'cancelled': 1,
+        'upload_status': 'voided',
+        'upload_error': null,
+      },
+      where: "salesId = ? AND (upload_status IS NULL OR upload_status IN ('pending', 'failed'))",
+      whereArgs: [salesId],
+    );
+  }
+
   /// Delete all transactions belonging to a single (local) sale.
   Future<void> deleteSaleBySalesId(String salesId) async {
     final db = database;
