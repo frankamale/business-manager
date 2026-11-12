@@ -1236,12 +1236,22 @@ class UnifiedDatabaseHelper {
   Future<List<InventoryItem>> searchInventoryItems(
     String query, {
     int limit = 200,
+    String? soldFrom,
   }) async {
     final db = database;
+    // When soldFrom is given (POS opened for a service point), only that
+    // service point's items may match.
     final maps = await db.query(
       'inventory',
-      where: 'name LIKE ? OR code LIKE ? OR category LIKE ?',
-      whereArgs: ['%$query%', '%$query%', '%$query%'],
+      where: soldFrom != null
+          ? '(name LIKE ? OR code LIKE ? OR category LIKE ?) AND soldfrom = ?'
+          : 'name LIKE ? OR code LIKE ? OR category LIKE ?',
+      whereArgs: [
+        '%$query%',
+        '%$query%',
+        '%$query%',
+        if (soldFrom != null) soldFrom,
+      ],
       orderBy: 'name ASC',
       limit: limit,
     );

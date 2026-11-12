@@ -63,6 +63,15 @@ class _PosScreenState extends State<PosScreen> {
   String? selectedCustomerId;
   final TextEditingController refController = TextEditingController();
   final TextEditingController notesController = TextEditingController();
+  // Focus nodes for Ref/Notes: while either has focus the header must not
+  // collapse for the keyboard, otherwise the layout shifts up under the
+  // user's finger and the tap lands on the Notes field instead of Ref.
+  final FocusNode _refFocusNode = FocusNode();
+  final FocusNode _notesFocusNode = FocusNode();
+
+  void _onRefNotesFocusChanged() {
+    if (mounted) setState(() {});
+  }
 
   final List<Map<String, dynamic>> selectedItems = [];
 
@@ -443,6 +452,8 @@ class _PosScreenState extends State<PosScreen> {
     }
 
     searchController.addListener(_onSearchChanged);
+    _refFocusNode.addListener(_onRefNotesFocusChanged);
+    _notesFocusNode.addListener(_onRefNotesFocusChanged);
 
     if (widget.servicePoint != null) {
       inventoryController.filterByServicePointType(
@@ -499,8 +510,15 @@ class _PosScreenState extends State<PosScreen> {
   void dispose() {
     refController.dispose();
     notesController.dispose();
+    _refFocusNode.removeListener(_onRefNotesFocusChanged);
+    _notesFocusNode.removeListener(_onRefNotesFocusChanged);
+    _refFocusNode.dispose();
+    _notesFocusNode.dispose();
     searchController.removeListener(_onSearchChanged);
     searchController.dispose();
+    // The inventory controller is shared (inventory list, stock take picker),
+    // so don't leave this POS's service point filter/search applied to them.
+    inventoryController.clearServicePointFilter();
     // Dispose all price controllers
     for (var controller in _priceControllers.values) {
       controller.dispose();
@@ -952,7 +970,11 @@ class _PosScreenState extends State<PosScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    // Only compact the layout for the keyboard when Ref/Notes aren't being
+    // edited; collapsing while they're tapped shifts the fields mid-tap.
+    final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0 &&
+        !_refFocusNode.hasFocus &&
+        !_notesFocusNode.hasFocus;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -1174,7 +1196,10 @@ class _PosScreenState extends State<PosScreen> {
                         Expanded(
                           child: TextField(
                             controller: refController,
+                            focusNode: _refFocusNode,
                             readOnly: widget.isViewOnly,
+                            textInputAction: TextInputAction.next,
+                            onSubmitted: (_) => _notesFocusNode.requestFocus(),
                             decoration: InputDecoration(
                               hintText: "Reference number",
                               contentPadding: const EdgeInsets.symmetric(
@@ -1209,6 +1234,7 @@ class _PosScreenState extends State<PosScreen> {
                         Expanded(
                           child: TextField(
                             controller: notesController,
+                            focusNode: _notesFocusNode,
                             readOnly: widget.isViewOnly,
                             decoration: InputDecoration(
                               hintText: "Add notes",

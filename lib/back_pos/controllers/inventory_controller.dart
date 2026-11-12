@@ -28,6 +28,19 @@ class InventoryController extends GetxController {
   // items after each add.
   String? _activeServicePointType;
 
+  // Text of the current search ('' when not searching).
+  String _activeQuery = '';
+
+  // Bumped every time something decides what filteredItems should show.
+  // Async loads check it before writing, so a slow, older search/filter can't
+  // overwrite a newer result (e.g. unfiltered results landing after a reset).
+  int _listVersion = 0;
+
+  // True when the visible list is a search or service point view, so loading
+  // more of the full inventory must not replace it.
+  bool get _hasActiveView =>
+      _activeServicePointType != null || _activeQuery.isNotEmpty;
+
   Timer? _searchDebounceTimer;
 
   @override
@@ -47,7 +60,15 @@ class InventoryController extends GetxController {
       _totalItemCount = await _dbHelper.getInventoryTotalCount();
       final items = await _dbHelper.getInventoryItems(limit: pageSize, offset: 0);
       inventoryItems.addAll(items);
-      filteredItems.value = inventoryItems.toList();
+      if (_hasActiveView) {
+        // e.g. a background sync finished while the POS was filtered/searching:
+        // re-run the current view against the fresh data instead of showing
+        // the whole inventory.
+        _refreshActiveView();
+      } else {
+        _listVersion++;
+        filteredItems.value = inventoryItems.toList();
+      }
 
       final cats = await _dbHelper.getInventoryCategories();
       categories.value = cats;
@@ -73,7 +94,12 @@ class InventoryController extends GetxController {
       final offset = _currentPage * pageSize;
       final items = await _dbHelper.getInventoryItems(limit: pageSize, offset: offset);
       inventoryItems.addAll(items);
-      filteredItems.value = inventoryItems.toList();
+      // Pages are from the full inventory; only show them when no search or
+      // service point view is active (search/filter queries aren't paged).
+      if (!_hasActiveView) {
+        _listVersion++;
+        filteredItems.value = inventoryItems.toList();
+      }
 
       if (inventoryItems.length >= _totalItemCount) {
         hasMoreItems.value = false;
@@ -95,32 +121,52 @@ class InventoryController extends GetxController {
   // Search inventory items - queries directly from DB
   void searchInventory(String query) {
     _searchDebounceTimer?.cancel();
+    _activeQuery = query.trim();
 
-    if (query.isEmpty) {
+    if (_activeQuery.isEmpty) {
       _resetToDefault();
       return;
     }
 
+    // Invalidate any in-flight search/filter right away so it can't land
+    // during the debounce window.
+    _listVersion++;
     isLoadingInventory.value = true;
     _searchDebounceTimer = Timer(const Duration(milliseconds: 300), () async {
-      await _executeSearch(query);
+      await _executeSearch(_activeQuery);
     });
   }
 
   Future<void> _executeSearch(String query) async {
+    final version = ++_listVersion;
     try {
-      final results = await _dbHelper.searchInventoryItems(query, limit: 200);
+      final results = await _dbHelper.searchInventoryItems(
+        query,
+        limit: 200,
+        soldFrom: _activeServicePointType,
+      );
+      if (version != _listVersion) return; // superseded
       filteredItems.value = results;
     } catch (e) {
-      filteredItems.clear();
+      if (version == _listVersion) filteredItems.clear();
     } finally {
-      isLoadingInventory.value = false;
+      if (version == _listVersion) isLoadingInventory.value = false;
     }
   }
 
   void clearSearch() {
     _searchDebounceTimer?.cancel();
+    _activeQuery = '';
     _resetToDefault();
+  }
+
+  // Re-run whatever view is active (search and/or service point filter).
+  void _refreshActiveView() {
+    if (_activeQuery.isNotEmpty) {
+      _executeSearch(_activeQuery);
+    } else {
+      _resetToDefault();
+    }
   }
 
   // Reset the visible list to its default state, honouring any active service
@@ -130,6 +176,8 @@ class InventoryController extends GetxController {
     if (_activeServicePointType != null) {
       filterByServicePointType(_activeServicePointType!);
     } else {
+      _listVersion++;
+      isLoadingInventory.value = false;
       filteredItems.value = inventoryItems.toList();
     }
   }
@@ -249,7 +297,11 @@ class InventoryController extends GetxController {
   // opening the POS without a service point so it doesn't inherit the filter
   // from a previous service point session.
   void clearServicePointFilter() {
+    _searchDebounceTimer?.cancel();
     _activeServicePointType = null;
+    _activeQuery = '';
+    _listVersion++;
+    isLoadingInventory.value = false;
     filteredItems.value = inventoryItems.toList();
   }
 
@@ -273,16 +325,18 @@ class InventoryController extends GetxController {
 
   // Filter by service point type (soldfrom)
   Future<void> filterByServicePointType(String servicePointType) async {
+    _activeServicePointType = servicePointType;
+    final version = ++_listVersion;
     try {
-      _activeServicePointType = servicePointType;
       isLoadingInventory.value = true;
 
       final results = await _dbHelper.getInventoryItemsBySoldFrom(servicePointType);
+      if (version != _listVersion) return; // superseded by a newer search/filter
       filteredItems.value = results;
-
-      isLoadingInventory.value = false;
     } catch (e) {
-      isLoadingInventory.value = false;
+      // keep the current list
+    } finally {
+      if (version == _listVersion) isLoadingInventory.value = false;
     }
   }
 }
