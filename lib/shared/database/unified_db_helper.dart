@@ -1805,6 +1805,17 @@ class UnifiedDatabaseHelper {
     final endMillis =
         BusinessDay.endOf(selectedDate).millisecondsSinceEpoch - 1;
 
+    // Packagings other than "each"/"offering" get their initial appended, e.g. "Gin (T)" for a
+    // tot, so each packaging of an item is listed on its own line.
+    const itemLabel = """
+      inventoryname || CASE
+        WHEN TRIM(COALESCE(packaging, '')) = ''
+          OR LOWER(TRIM(packaging)) IN ('each', 'offering')
+        THEN ''
+        ELSE ' (' || UPPER(SUBSTR(TRIM(packaging), 1, 1)) || ')'
+      END
+    """;
+
     final paymentSummary = await db.rawQuery(
       '''
       SELECT paymenttype, SUM(amountpaid) as totalPaid
@@ -1831,14 +1842,14 @@ class UnifiedDatabaseHelper {
     final itemsSummary = await db.rawQuery(
       '''
       SELECT
-        inventoryname AS item,
+        $itemLabel AS item,
         SUM(quantity) AS quantity,
         SUM(amount) AS amount
       FROM sales_transactions
       WHERE transactiondate BETWEEN ? AND ?
         AND cancelled = 0
-      GROUP BY inventoryname
-      ORDER BY inventoryname COLLATE NOCASE
+      GROUP BY item
+      ORDER BY item COLLATE NOCASE
     ''',
       [startMillis, endMillis],
     );
@@ -1847,7 +1858,7 @@ class UnifiedDatabaseHelper {
       '''
       SELECT
         paymenttype,
-        inventoryname AS item,
+        $itemLabel AS item,
         SUM(quantity) AS quantity,
         SUM(amount) AS amount
       FROM sales_transactions
@@ -1857,7 +1868,7 @@ class UnifiedDatabaseHelper {
         AND balance <= 0.005
         AND amountpaid > 0.005
         AND complimentaryid = 0
-      GROUP BY paymenttype, inventoryname
+      GROUP BY paymenttype, item
       ORDER BY paymenttype COLLATE NOCASE, inventoryname COLLATE NOCASE
     ''',
       [startMillis, endMillis],
@@ -1866,7 +1877,7 @@ class UnifiedDatabaseHelper {
     final complementaryItems = await db.rawQuery(
       '''
       SELECT
-        inventoryname AS item,
+        $itemLabel AS item,
         category,
         SUM(quantity) AS quantity,
         SUM(amount) AS amount
@@ -1874,8 +1885,8 @@ class UnifiedDatabaseHelper {
       WHERE transactiondate BETWEEN ? AND ?
         AND cancelled = 0
         AND complimentaryid > 0
-      GROUP BY inventoryname
-      ORDER BY inventoryname COLLATE NOCASE
+      GROUP BY item
+      ORDER BY item COLLATE NOCASE
     ''',
       [startMillis, endMillis],
     );
@@ -1883,7 +1894,7 @@ class UnifiedDatabaseHelper {
     final nonSettledItems = await db.rawQuery(
       '''
       SELECT
-        inventoryname AS item,
+        $itemLabel AS item,
         SUM(quantity) AS quantity,
         SUM(balance) AS balance
       FROM sales_transactions
@@ -1891,8 +1902,8 @@ class UnifiedDatabaseHelper {
         AND cancelled = 0
         AND balance > 0.005
         AND complimentaryid = 0
-      GROUP BY inventoryname
-      ORDER BY inventoryname COLLATE NOCASE
+      GROUP BY item
+      ORDER BY item COLLATE NOCASE
     ''',
       [startMillis, endMillis],
     );
