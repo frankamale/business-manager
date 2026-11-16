@@ -93,7 +93,7 @@ class MyApp extends StatelessWidget {
       final controller = Get.find<ThemeController>();
       return GetMaterialApp(
         title: AppConfig.appName,
-        debugShowCheckedModeBanner: true,
+        debugShowCheckedModeBanner: false,
 
         // Light theme configuration
         theme: ThemeData(
